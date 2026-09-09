@@ -1,0 +1,6 @@
+.matilda
+MATILDA.md
+.vscode
+debug
+*.rdbg
+.clangd

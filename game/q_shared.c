@@ -1044,16 +1044,15 @@ va
 
 does a varargs printf into a temp buffer, so I don't need to have
 varargs versions of all text functions.
-FIXME: make this buffer size safe someday
 ============
 */
 char	*va(char *format, ...)
 {
 	va_list		argptr;
 	static char		string[1024];
-	
+
 	va_start (argptr, format);
-	vsprintf (string, format,argptr);
+	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
 	return string;	
@@ -1232,6 +1231,28 @@ void Com_sprintf (char *dest, int size, char *fmt, ...)
 	if (len >= size)
 		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
 	strncpy (dest, bigbuffer, size-1);
+}
+
+/*
+============
+Q_vsnprintf
+
+vsprintf into a sized buffer; the destination is always null-terminated
+on overflow, which even MSVC's _vsnprintf doesn't guarantee
+============
+*/
+int Q_vsnprintf (char *str, size_t size, char *format, va_list ap)
+{
+	int		len;
+
+#ifdef _MSC_VER
+	len = _vsnprintf (str, size, format, ap);
+	str[size-1] = 0;
+#else
+	len = vsnprintf (str, size, format, ap);
+#endif
+
+	return len;
 }
 
 /*

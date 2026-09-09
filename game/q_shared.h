@@ -219,6 +219,7 @@ char *COM_Parse (char **data_p);
 // data is an in/out parm, returns a parsed out token
 
 void Com_sprintf (char *dest, int size, char *fmt, ...);
+int	Q_vsnprintf (char *str, size_t size, char *format, va_list ap);
 
 void Com_PageInMemory (byte *buffer, int size);
 
