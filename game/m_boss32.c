@@ -25,8 +25,8 @@ Makron -- Final Boss
 ==============================================================================
 */
 
-#include "g_local.h"
-#include "m_boss32.h"
+/* already inlined above: game/g_local.h */
+/* already inlined above: game/m_boss32.h */
 
 qboolean visible (edict_t *self, edict_t *other);
 

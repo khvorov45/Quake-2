@@ -19,9 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include <float.h>
 
-#include "../client/client.h"
-#include "../client/snd_loc.h"
-#include "winquake.h"
+/* already inlined above: client/client.h */
+/* already inlined above: client/snd_loc.h */
+/* already inlined above: win32/winquake.h */
 
 #define iDirectSoundCreate(a,b,c)	pDirectSoundCreate(a,b,c)
 

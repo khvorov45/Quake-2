@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // cmodel.c -- model loading
 
-#include "qcommon.h"
+/* already inlined above: qcommon/qcommon.h */
 
 typedef struct
 {

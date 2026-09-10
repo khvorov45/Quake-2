@@ -19,10 +19,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // sys_win.h
 
-#include "../qcommon/qcommon.h"
-#include "../game/game.h"
-#include "winquake.h"
-#include "resource.h"
+/* already inlined above: qcommon/qcommon.h */
+/* already inlined above: game/game.h */
+/* already inlined above: win32/winquake.h */
+/* ============ begin inlined header: win32/resource.h ============ */
+//{{NO_DEPENDENCIES}}
+// Microsoft Developer Studio generated include file.
+// Used by q2.rc
+//
+#define IDI_ICON1                       101
+
+// Next default values for new objects
+// 
+#ifdef APSTUDIO_INVOKED
+#ifndef APSTUDIO_READONLY_SYMBOLS
+#define _APS_NEXT_RESOURCE_VALUE        103
+#define _APS_NEXT_COMMAND_VALUE         40001
+#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_SYMED_VALUE           101
+#endif
+#endif
+/* ============ end inlined header: win32/resource.h ============ */
 #include <errno.h>
 #include <float.h>
 #include <fcntl.h>
@@ -30,7 +47,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <direct.h>
 #include <io.h>
 #include <conio.h>
-#include "../win32/conproc.h"
+/* already inlined above: win32/conproc.h */
 
 #define MINIMUM_WIN_MEMORY	0x0a00000
 #define MAXIMUM_WIN_MEMORY	0x1000000
