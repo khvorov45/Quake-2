@@ -1,55 +1,3 @@
-/*
-============================================================================
- QUAK2SP
-
- Single translation unit for the Quake 2 single-player build.
-
- Every source file of the engine, campaign game logic, and GL renderer is
- #included below; build_sp_clang.bat feeds this one file to clang-cl and
- out pops debug\quake2.exe. The DLL boundaries (gamex86.dll, ref_gl.dll)
- are gone â€” game logic and renderer are statically linked.
-
- Order matters only for macros/statics that leak across inclusions; the
- sequence follows the layout of the original three binaries.
-============================================================================
-*/
-
-/*
- * Order-sensitive pre-pass:
- * 1. qcommon.h first  â€” sets up q_shared.h and, critically, the svc_/clc_
- *    protocol constants AS AN ENUM, because g_local.h re-defines a subset of
- *    them as object-like macros (same values, by design).  Enum first,
- *    macros second, or qcommon.h's enum turns into preprocessor mush.
- * 2. g_local.h second â€” defines GAME_INCLUDE before game.h is ever reached,
- *    so the whole TU compiles against the FULL gclient_s/edict_s layouts
- *    (the engine-visible short structs in game.h are strict prefixes of
- *    them, so server code compiles identically against the full layout).
- *    Every later server.h/game.h inclusion is then a harmless no-op.
- */
-/* ============ begin inlined header: qcommon/qcommon.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-#ifndef QCOMMON_H
-#define QCOMMON_H
-
 // qcommon.h -- definitions common between client and server, but not game.dll
 
 /* ============ begin inlined header: game/q_shared.h ============ */
@@ -63,7 +11,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -158,7 +106,7 @@ typedef enum {false, true}	qboolean;
 
 #define	PRINT_ALL			0
 #define PRINT_DEVELOPER		1		// only print when "developer 1"
-#define PRINT_ALERT			2		
+#define PRINT_ALERT			2
 
 
 // destination class for gi.multicast()
@@ -518,7 +466,7 @@ typedef struct
 
 // pmove_state_t is the information necessary for client side movement
 // prediction
-typedef enum 
+typedef enum
 {
 	// can accelerate and turn
 	PM_NORMAL,
@@ -1240,7 +1188,7 @@ typedef struct
 	int			gunframe;
 
 	float		blend[4];		// rgba full screen effect
-	
+
 	float		fov;			// horizontal field of view
 
 	int			rdflags;		// refdef flags
@@ -1250,7 +1198,7 @@ typedef struct
 
 
 // ==================
-// PGM 
+// PGM
 #define VIDREF_GL		1
 #define VIDREF_SOFT		2
 #define VIDREF_OTHER	3
@@ -1460,7 +1408,7 @@ enum svc_ops_e
 	svc_stufftext,				// [string] stuffed into client's console buffer, should be \n terminated
 	svc_serverdata,				// [long] protocol ...
 	svc_configstring,			// [short] [string]
-	svc_spawnbaseline,		
+	svc_spawnbaseline,
 	svc_centerprint,			// [string] to put in center of the screen
 	svc_download,				// [short] size [size bytes]
 	svc_playerinfo,				// variable
@@ -1477,7 +1425,7 @@ enum svc_ops_e
 enum clc_ops_e
 {
 	clc_bad,
-	clc_nop, 		
+	clc_nop,
 	clc_move,				// [[usercmd_t]
 	clc_userinfo,			// [[userinfo string]
 	clc_stringcmd			// [string] message
@@ -1873,7 +1821,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -1963,7 +1911,7 @@ typedef struct
 	short	t;
 } dstvert_t;
 
-typedef struct 
+typedef struct
 {
 	short	index_xyz[3];
 	short	index_st[3];
@@ -2019,7 +1967,7 @@ typedef struct
 	int			ofs_st;			// byte offset from start for stverts
 	int			ofs_tris;		// offset for dtriangles
 	int			ofs_frames;		// offset for first frame
-	int			ofs_glcmds;	
+	int			ofs_glcmds;
 	int			ofs_end;		// end of file
 
 } dmdl_t;
@@ -2148,7 +2096,7 @@ typedef struct
 typedef struct
 {
 	int			ident;
-	int			version;	
+	int			version;
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
@@ -2278,7 +2226,7 @@ typedef struct
 	short		side;
 
 	int			firstedge;		// we must support > 64k edges
-	short		numedges;	
+	short		numedges;
 	short		texinfo;
 
 // lighting info
@@ -2545,10 +2493,6 @@ void SV_Init (void);
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
 void SV_Frame (int msec);
 
-#endif	// QCOMMON_H
-
-
-
 /* ============ end inlined header: qcommon/qcommon.h ============ */
 /* ============ begin inlined header: game/g_local.h ============ */
 /*
@@ -2561,7 +2505,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -2592,7 +2536,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -2611,7 +2555,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -2679,7 +2623,7 @@ struct edict_s
 
 	// FIXME: move these fields to a server private sv_entity_t
 	link_t		area;				// linked to a division node or leaf
-	
+
 	int			num_clusters;		// if -1, use headnode instead
 	int			clusternums[MAX_ENT_CLUSTERS];
 	int			headnode;			// unused if num_clusters != -1
@@ -2830,7 +2774,7 @@ typedef struct
 
 	// The edict array is allocated in the game dll so it
 	// can vary in size from one game to another.
-	// 
+	//
 	// The size will be fixed when ge->Init() is called
 	struct edict_s	*edicts;
 	int			edict_size;
@@ -2904,9 +2848,9 @@ typedef enum
 	DAMAGE_AIM			// auto targeting recognizes this
 } damage_t;
 
-typedef enum 
+typedef enum
 {
-	WEAPON_READY, 
+	WEAPON_READY,
 	WEAPON_ACTIVATING,
 	WEAPON_DROPPING,
 	WEAPON_FIRING
@@ -3035,15 +2979,15 @@ typedef struct
 #define IT_POWERUP		32
 
 // gitem_t->weapmodel for weapons indicates model index
-#define WEAP_BLASTER			1 
-#define WEAP_SHOTGUN			2 
-#define WEAP_SUPERSHOTGUN		3 
-#define WEAP_MACHINEGUN			4 
-#define WEAP_CHAINGUN			5 
-#define WEAP_GRENADES			6 
-#define WEAP_GRENADELAUNCHER	7 
-#define WEAP_ROCKETLAUNCHER		8 
-#define WEAP_HYPERBLASTER		9 
+#define WEAP_BLASTER			1
+#define WEAP_SHOTGUN			2
+#define WEAP_SUPERSHOTGUN		3
+#define WEAP_MACHINEGUN			4
+#define WEAP_CHAINGUN			5
+#define WEAP_GRENADES			6
+#define WEAP_GRENADELAUNCHER	7
+#define WEAP_ROCKETLAUNCHER		8
+#define WEAP_HYPERBLASTER		9
 #define WEAP_RAILGUN			10
 #define WEAP_BFG				11
 
@@ -3385,7 +3329,7 @@ extern	cvar_t	*sv_maplist;
 #define FFL_NOSPAWN			2
 
 typedef enum {
-	F_INT, 
+	F_INT,
 	F_FLOAT,
 	F_LSTRING,			// string on disk, pointer in memory, TAG_LEVEL
 	F_GSTRING,			// string on disk, pointer in memory, TAG_GAME
@@ -3791,7 +3735,7 @@ struct edict_s
 
 	// FIXME: move these fields to a server private sv_entity_t
 	link_t		area;				// linked to a division node or leaf
-	
+
 	int			num_clusters;		// if -1, use headnode instead
 	int			clusternums[MAX_ENT_CLUSTERS];
 	int			headnode;			// unused if num_clusters != -1
@@ -3816,7 +3760,7 @@ struct edict_s
 
 	char		*model;
 	float		freetime;			// sv.time when the object was freed
-	
+
 	//
 	// only used locally in game, not by server
 	//
@@ -3943,7 +3887,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -4280,7 +4224,7 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-#if !id386 || defined __linux__ 
+#if !id386 || defined __linux__
 int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 {
 	float	dist1, dist2;
@@ -4295,7 +4239,7 @@ int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 			return 2;
 		return 3;
 	}
-	
+
 // general case
 	switch (p->signbits)
 	{
@@ -4358,11 +4302,11 @@ __declspec( naked ) int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplan
 	__asm {
 
 		push ebx
-			
+
 		cmp bops_initialized, 1
 		je  initialized
 		mov bops_initialized, 1
-		
+
 		mov Ljmptab[0*4], offset Lcase0
 		mov Ljmptab[1*4], offset Lcase1
 		mov Ljmptab[2*4], offset Lcase2
@@ -4371,7 +4315,7 @@ __declspec( naked ) int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplan
 		mov Ljmptab[5*4], offset Lcase5
 		mov Ljmptab[6*4], offset Lcase6
 		mov Ljmptab[7*4], offset Lcase7
-			
+
 initialized:
 
 		mov edx,ds:dword ptr[4+12+esp]
@@ -4608,7 +4552,7 @@ int VectorCompare (vec3_t v1, vec3_t v2)
 {
 	if (v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2])
 			return 0;
-			
+
 	return 1;
 }
 
@@ -4627,7 +4571,7 @@ vec_t VectorNormalize (vec3_t v)
 		v[1] *= ilength;
 		v[2] *= ilength;
 	}
-		
+
 	return length;
 
 }
@@ -4646,7 +4590,7 @@ vec_t VectorNormalize2 (vec3_t v, vec3_t out)
 		out[1] = v[1]*ilength;
 		out[2] = v[2]*ilength;
 	}
-		
+
 	return length;
 
 }
@@ -4698,7 +4642,7 @@ vec_t VectorLength(vec3_t v)
 {
 	int		i;
 	float	length;
-	
+
 	length = 0;
 	for (i=0 ; i< 3 ; i++)
 		length += v[i]*v[i];
@@ -4742,7 +4686,7 @@ COM_SkipPath
 char *COM_SkipPath (char *pathname)
 {
 	char	*last;
-	
+
 	last = pathname;
 	while (*pathname)
 	{
@@ -4794,15 +4738,15 @@ COM_FileBase
 void COM_FileBase (char *in, char *out)
 {
 	char *s, *s2;
-	
+
 	s = in + strlen(in) - 1;
-	
+
 	while (s != in && *s != '.')
 		s--;
-	
+
 	for (s2 = s ; s2 != in && *s2 != '/' ; s2--)
 	;
-	
+
 	if (s-s2 < 2)
 		out[0] = 0;
 	else
@@ -4823,9 +4767,9 @@ Returns the path up to, but not including the last /
 void COM_FilePath (char *in, char *out)
 {
 	char *s;
-	
+
 	s = in + strlen(in) - 1;
-	
+
 	while (s != in && *s != '/')
 		s--;
 
@@ -4923,8 +4867,8 @@ float FloatSwap (float f)
 		float	f;
 		byte	b[4];
 	} dat1, dat2;
-	
-	
+
+
 	dat1.f = f;
 	dat2.b[0] = dat1.b[3];
 	dat2.b[1] = dat1.b[2];
@@ -4947,7 +4891,7 @@ void Swap_Init (void)
 {
 	byte	swaptest[2] = {1,0};
 
-// set the byte swapping variables in a portable manner	
+// set the byte swapping variables in a portable manner
 	if ( *(short *)swaptest == 1)
 	{
 		bigendien = false;
@@ -4990,7 +4934,7 @@ char	*va(char *format, ...)
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	return string;	
+	return string;
 }
 
 
@@ -5012,13 +4956,13 @@ char *COM_Parse (char **data_p)
 	data = *data_p;
 	len = 0;
 	com_token[0] = 0;
-	
+
 	if (!data)
 	{
 		*data_p = NULL;
 		return "";
 	}
-		
+
 // skip whitespace
 skipwhite:
 	while ( (c = *data) <= ' ')
@@ -5030,7 +4974,7 @@ skipwhite:
 		}
 		data++;
 	}
-	
+
 // skip // comments
 	if (c=='/' && data[1] == '/')
 	{
@@ -5124,7 +5068,7 @@ int Q_stricmp (char *s1, char *s2)
 int Q_strncasecmp (char *s1, char *s2, int n)
 {
 	int		c1, c2;
-	
+
 	do
 	{
 		c1 = *s1++;
@@ -5132,7 +5076,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 
 		if (!n--)
 			return 0;		// strings are equal until end point
-		
+
 		if (c1 != c2)
 		{
 			if (c1 >= 'a' && c1 <= 'z')
@@ -5143,7 +5087,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 				return -1;		// strings not equal
 		}
 	} while (c1);
-	
+
 	return 0;		// strings are equal
 }
 
@@ -5213,7 +5157,7 @@ char *Info_ValueForKey (char *s, char *key)
 								// work without stomping on each other
 	static	int	valueindex;
 	char	*o;
-	
+
 	valueindex ^= 1;
 	if (*s == '\\')
 		s++;
@@ -5386,7 +5330,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -5468,7 +5412,7 @@ Adds command text at the end of the buffer
 void Cbuf_AddText (char *text)
 {
 	int		l;
-	
+
 	l = strlen (text);
 
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
@@ -5504,10 +5448,10 @@ void Cbuf_InsertText (char *text)
 	}
 	else
 		temp = NULL;	// shut up compiler
-		
+
 // add the entire text of the file
 	Cbuf_AddText (text);
-	
+
 // add the copied off data
 	if (templen)
 	{
@@ -5593,11 +5537,11 @@ void Cbuf_Execute (void)
 			if (text[i] == '\n')
 				break;
 		}
-			
-				
+
+
 		memcpy (line, text, i);
 		line[i] = 0;
-		
+
 // delete the text from the command buffer and move remaining commands down
 // this is necessary because commands (exec, alias) can insert data at the
 // beginning of the text buffer
@@ -5613,7 +5557,7 @@ void Cbuf_Execute (void)
 
 // execute the command line
 		Cmd_ExecuteString (line);
-		
+
 		if (cmd_wait)
 		{
 			// skip out while text still remains in buffer, leaving it
@@ -5688,7 +5632,7 @@ qboolean Cbuf_AddLateCommands (void)
 	}
 	if (!s)
 		return false;
-		
+
 	text = Z_Malloc (s+1);
 	text[0] = 0;
 	for (i=1 ; i<argc ; i++)
@@ -5697,11 +5641,11 @@ qboolean Cbuf_AddLateCommands (void)
 		if (i != argc-1)
 			strcat (text, " ");
 	}
-	
+
 // pull out the commands
 	build = Z_Malloc (s+1);
 	build[0] = 0;
-	
+
 	for (i=0 ; i<s-1 ; i++)
 	{
 		if (text[i] == '+')
@@ -5713,7 +5657,7 @@ qboolean Cbuf_AddLateCommands (void)
 
 			c = text[j];
 			text[j] = 0;
-			
+
 			strcat (build, text+i);
 			strcat (build, "\n");
 			text[j] = c;
@@ -5724,7 +5668,7 @@ qboolean Cbuf_AddLateCommands (void)
 	ret = (build[0] != 0);
 	if (ret)
 		Cbuf_AddText (build);
-	
+
 	Z_Free (text);
 	Z_Free (build);
 
@@ -5764,7 +5708,7 @@ void Cmd_Exec_f (void)
 		return;
 	}
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
-	
+
 	// the file doesn't have a trailing 0, so we need to copy it off
 	f2 = Z_Malloc(len+1);
 	memcpy (f2, f, len);
@@ -5787,7 +5731,7 @@ Just prints the rest of the line to the console
 void Cmd_Echo_f (void)
 {
 	int		i;
-	
+
 	for (i=1 ; i<Cmd_Argc() ; i++)
 		Com_Printf ("%s ",Cmd_Argv(i));
 	Com_Printf ("\n");
@@ -5838,7 +5782,7 @@ void Cmd_Alias_f (void)
 		a->next = cmd_alias;
 		cmd_alias = a;
 	}
-	strcpy (a->name, s);	
+	strcpy (a->name, s);
 
 // copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
@@ -5850,7 +5794,7 @@ void Cmd_Alias_f (void)
 			strcat (cmd, " ");
 	}
 	strcat (cmd, "\n");
-	
+
 	a->value = CopyString (cmd);
 }
 
@@ -5896,7 +5840,7 @@ char	*Cmd_Argv (int arg)
 {
 	if ( (unsigned)arg >= cmd_argc )
 		return cmd_null_string;
-	return cmd_argv[arg];	
+	return cmd_argv[arg];
 }
 
 /*
@@ -5951,7 +5895,7 @@ char *Cmd_MacroExpandString (char *text)
 		token = COM_Parse (&start);
 		if (!start)
 			continue;
-	
+
 		token = Cvar_VariableString (token);
 
 		j = strlen(token);
@@ -6003,10 +5947,10 @@ void Cmd_TokenizeString (char *text, qboolean macroExpand)
 // clear the args from the last string
 	for (i=0 ; i<cmd_argc ; i++)
 		Z_Free (cmd_argv[i]);
-		
+
 	cmd_argc = 0;
 	cmd_args[0] = 0;
-	
+
 	// macro expand the text
 	if (macroExpand)
 		text = Cmd_MacroExpandString (text);
@@ -6020,7 +5964,7 @@ void Cmd_TokenizeString (char *text, qboolean macroExpand)
 		{
 			text++;
 		}
-		
+
 		if (*text == '\n')
 		{	// a newline seperates commands in the buffer
 			text++;
@@ -6045,7 +5989,7 @@ void Cmd_TokenizeString (char *text, qboolean macroExpand)
 				else
 					break;
 		}
-			
+
 		com_token = COM_Parse (&text);
 		if (!text)
 			return;
@@ -6057,7 +6001,7 @@ void Cmd_TokenizeString (char *text, qboolean macroExpand)
 			cmd_argc++;
 		}
 	}
-	
+
 }
 
 
@@ -6069,14 +6013,14 @@ Cmd_AddCommand
 void	Cmd_AddCommand (char *cmd_name, xcommand_t function)
 {
 	cmd_function_t	*cmd;
-	
+
 // fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0])
 	{
 		Com_Printf ("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 		return;
 	}
-	
+
 // fail if the command already exists
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
 	{
@@ -6152,12 +6096,12 @@ char *Cmd_CompleteCommand (char *partial)
 	cmd_function_t	*cmd;
 	int				len;
 	cmdalias_t		*a;
-	
+
 	len = strlen(partial);
-	
+
 	if (!len)
 		return NULL;
-		
+
 // check for exact match
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
 		if (!strcmp (partial,cmd->name))
@@ -6187,12 +6131,12 @@ FIXME: lookupnoadd the token to speed search?
 ============
 */
 void	Cmd_ExecuteString (char *text)
-{	
+{
 	cmd_function_t	*cmd;
 	cmdalias_t		*a;
 
 	Cmd_TokenizeString (text, true);
-			
+
 	// execute the command line
 	if (!Cmd_Argc())
 		return;		// no tokens
@@ -6226,7 +6170,7 @@ void	Cmd_ExecuteString (char *text)
 			return;
 		}
 	}
-	
+
 	// check cvars
 	if (Cvar_Command ())
 		return;
@@ -6280,7 +6224,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -6484,7 +6428,7 @@ void CMod_LoadNodes (lump_t *l)
 	int			child;
 	cnode_t		*out;
 	int			i, j, count;
-	
+
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Com_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size");
@@ -6522,7 +6466,7 @@ void CMod_LoadBrushes (lump_t *l)
 	dbrush_t	*in;
 	cbrush_t	*out;
 	int			i, count;
-	
+
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Com_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size");
@@ -6555,7 +6499,7 @@ void CMod_LoadLeafs (lump_t *l)
 	cleaf_t		*out;
 	dleaf_t 	*in;
 	int			count;
-	
+
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Com_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size");
@@ -6567,7 +6511,7 @@ void CMod_LoadLeafs (lump_t *l)
 	if (count > MAX_MAP_PLANES)
 		Com_Error (ERR_DROP, "Map has too many planes");
 
-	out = map_leafs;	
+	out = map_leafs;
 	numleafs = count;
 	numclusters = 0;
 
@@ -6611,7 +6555,7 @@ void CMod_LoadPlanes (lump_t *l)
 	dplane_t 	*in;
 	int			count;
 	int			bits;
-	
+
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Com_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size");
@@ -6623,7 +6567,7 @@ void CMod_LoadPlanes (lump_t *l)
 	if (count > MAX_MAP_PLANES)
 		Com_Error (ERR_DROP, "Map has too many planes");
 
-	out = map_planes;	
+	out = map_planes;
 	numplanes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -6653,7 +6597,7 @@ void CMod_LoadLeafBrushes (lump_t *l)
 	unsigned short	*out;
 	unsigned short 	*in;
 	int			count;
-	
+
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Com_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size");
@@ -6694,7 +6638,7 @@ void CMod_LoadBrushSides (lump_t *l)
 	if (count > MAX_MAP_BRUSHSIDES)
 		Com_Error (ERR_DROP, "Map has too many planes");
 
-	out = map_brushsides;	
+	out = map_brushsides;
 	numbrushsides = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -7032,7 +6976,7 @@ void CM_InitBoxHull (void)
 		p->signbits = 0;
 		VectorClear (p->normal);
 		p->normal[i>>1] = -1;
-	}	
+	}
 }
 
 
@@ -7079,7 +7023,7 @@ int CM_PointLeafnum_r (vec3_t p, int num)
 	{
 		node = map_nodes + num;
 		plane = node->plane;
-		
+
 		if (plane->type < 3)
 			d = p[plane->type] - plane->dist;
 		else
@@ -7134,7 +7078,7 @@ void CM_BoxLeafnums_r (int nodenum)
 			leaf_list[leaf_count++] = -1 - nodenum;
 			return;
 		}
-	
+
 		node = &map_nodes[nodenum];
 		plane = node->plane;
 //		s = BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
@@ -7217,7 +7161,7 @@ int	CM_TransformedPointContents (vec3_t p, int headnode, vec3_t origin, vec3_t a
 	VectorSubtract (p, origin, p_l);
 
 	// rotate start and end into the models frame of reference
-	if (headnode != box_headnode && 
+	if (headnode != box_headnode &&
 	(angles[0] || angles[1] || angles[2]) )
 	{
 		AngleVectors (angles, forward, right, up);
@@ -7589,7 +7533,7 @@ return;
 		frac = 0;
 	if (frac > 1)
 		frac = 1;
-		
+
 	midf = p1f + (p2f - p1f)*frac;
 	for (i=0 ; i<3 ; i++)
 		mid[i] = p1[i] + frac*(p2[i] - p1[i]);
@@ -7602,7 +7546,7 @@ return;
 		frac2 = 0;
 	if (frac2 > 1)
 		frac2 = 1;
-		
+
 	midf = p1f + (p2f - p1f)*frac2;
 	for (i=0 ; i<3 ; i++)
 		mid[i] = p1[i] + frac2*(p2[i] - p1[i]);
@@ -7737,7 +7681,7 @@ trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
 	VectorSubtract (end, origin, end_l);
 
 	// rotate start and end into the models frame of reference
-	if (headnode != box_headnode && 
+	if (headnode != box_headnode &&
 	(angles[0] || angles[1] || angles[2]) )
 		rotated = true;
 	else
@@ -7805,7 +7749,7 @@ void CM_DecompressVis (byte *in, byte *out)
 	byte	*out_p;
 	int		row;
 
-	row = (numclusters+7)>>3;	
+	row = (numclusters+7)>>3;
 	out_p = out;
 
 	if (!in || !numvisibility)
@@ -7815,7 +7759,7 @@ void CM_DecompressVis (byte *in, byte *out)
 			*out_p++ = 0xff;
 			row--;
 		}
-		return;		
+		return;
 	}
 
 	do
@@ -7825,7 +7769,7 @@ void CM_DecompressVis (byte *in, byte *out)
 			*out_p++ = *in++;
 			continue;
 		}
-	
+
 		c = in[1];
 		in += 2;
 		if ((out_p - out) + c > row)
@@ -8052,7 +7996,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -8163,7 +8107,7 @@ void Com_Printf (char *fmt, ...)
 	}
 
 	Con_Print (msg);
-		
+
 	// also echo to debugging console
 	Sys_ConsoleOutput (msg);
 
@@ -8171,7 +8115,7 @@ void Com_Printf (char *fmt, ...)
 	if (logfile_active && logfile_active->value)
 	{
 		char	name[MAX_QPATH];
-		
+
 		if (!logfile)
 		{
 			Com_sprintf (name, sizeof(name), "%s/qconsole.log", FS_Gamedir ());
@@ -8196,14 +8140,14 @@ void Com_DPrintf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-		
+
 	if (!developer || !developer->value)
 		return;			// don't confuse non-developers with techie stuff...
 
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
-	
+
 	Com_Printf ("%s", msg);
 }
 
@@ -8229,7 +8173,7 @@ void Com_Error (int code, char *fmt, ...)
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
-	
+
 	if (code == ERR_DISCONNECT)
 	{
 		CL_Drop ();
@@ -8326,7 +8270,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -8335,168 +8279,168 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-{-0.525731, 0.000000, 0.850651}, 
-{-0.442863, 0.238856, 0.864188}, 
-{-0.295242, 0.000000, 0.955423}, 
-{-0.309017, 0.500000, 0.809017}, 
-{-0.162460, 0.262866, 0.951056}, 
-{0.000000, 0.000000, 1.000000}, 
-{0.000000, 0.850651, 0.525731}, 
-{-0.147621, 0.716567, 0.681718}, 
-{0.147621, 0.716567, 0.681718}, 
-{0.000000, 0.525731, 0.850651}, 
-{0.309017, 0.500000, 0.809017}, 
-{0.525731, 0.000000, 0.850651}, 
-{0.295242, 0.000000, 0.955423}, 
-{0.442863, 0.238856, 0.864188}, 
-{0.162460, 0.262866, 0.951056}, 
-{-0.681718, 0.147621, 0.716567}, 
-{-0.809017, 0.309017, 0.500000}, 
-{-0.587785, 0.425325, 0.688191}, 
-{-0.850651, 0.525731, 0.000000}, 
-{-0.864188, 0.442863, 0.238856}, 
-{-0.716567, 0.681718, 0.147621}, 
-{-0.688191, 0.587785, 0.425325}, 
-{-0.500000, 0.809017, 0.309017}, 
-{-0.238856, 0.864188, 0.442863}, 
-{-0.425325, 0.688191, 0.587785}, 
-{-0.716567, 0.681718, -0.147621}, 
-{-0.500000, 0.809017, -0.309017}, 
-{-0.525731, 0.850651, 0.000000}, 
-{0.000000, 0.850651, -0.525731}, 
-{-0.238856, 0.864188, -0.442863}, 
-{0.000000, 0.955423, -0.295242}, 
-{-0.262866, 0.951056, -0.162460}, 
-{0.000000, 1.000000, 0.000000}, 
-{0.000000, 0.955423, 0.295242}, 
-{-0.262866, 0.951056, 0.162460}, 
-{0.238856, 0.864188, 0.442863}, 
-{0.262866, 0.951056, 0.162460}, 
-{0.500000, 0.809017, 0.309017}, 
-{0.238856, 0.864188, -0.442863}, 
-{0.262866, 0.951056, -0.162460}, 
-{0.500000, 0.809017, -0.309017}, 
-{0.850651, 0.525731, 0.000000}, 
-{0.716567, 0.681718, 0.147621}, 
-{0.716567, 0.681718, -0.147621}, 
-{0.525731, 0.850651, 0.000000}, 
-{0.425325, 0.688191, 0.587785}, 
-{0.864188, 0.442863, 0.238856}, 
-{0.688191, 0.587785, 0.425325}, 
-{0.809017, 0.309017, 0.500000}, 
-{0.681718, 0.147621, 0.716567}, 
-{0.587785, 0.425325, 0.688191}, 
-{0.955423, 0.295242, 0.000000}, 
-{1.000000, 0.000000, 0.000000}, 
-{0.951056, 0.162460, 0.262866}, 
-{0.850651, -0.525731, 0.000000}, 
-{0.955423, -0.295242, 0.000000}, 
-{0.864188, -0.442863, 0.238856}, 
-{0.951056, -0.162460, 0.262866}, 
-{0.809017, -0.309017, 0.500000}, 
-{0.681718, -0.147621, 0.716567}, 
-{0.850651, 0.000000, 0.525731}, 
-{0.864188, 0.442863, -0.238856}, 
-{0.809017, 0.309017, -0.500000}, 
-{0.951056, 0.162460, -0.262866}, 
-{0.525731, 0.000000, -0.850651}, 
-{0.681718, 0.147621, -0.716567}, 
-{0.681718, -0.147621, -0.716567}, 
-{0.850651, 0.000000, -0.525731}, 
-{0.809017, -0.309017, -0.500000}, 
-{0.864188, -0.442863, -0.238856}, 
-{0.951056, -0.162460, -0.262866}, 
-{0.147621, 0.716567, -0.681718}, 
-{0.309017, 0.500000, -0.809017}, 
-{0.425325, 0.688191, -0.587785}, 
-{0.442863, 0.238856, -0.864188}, 
-{0.587785, 0.425325, -0.688191}, 
-{0.688191, 0.587785, -0.425325}, 
-{-0.147621, 0.716567, -0.681718}, 
-{-0.309017, 0.500000, -0.809017}, 
-{0.000000, 0.525731, -0.850651}, 
-{-0.525731, 0.000000, -0.850651}, 
-{-0.442863, 0.238856, -0.864188}, 
-{-0.295242, 0.000000, -0.955423}, 
-{-0.162460, 0.262866, -0.951056}, 
-{0.000000, 0.000000, -1.000000}, 
-{0.295242, 0.000000, -0.955423}, 
-{0.162460, 0.262866, -0.951056}, 
-{-0.442863, -0.238856, -0.864188}, 
-{-0.309017, -0.500000, -0.809017}, 
-{-0.162460, -0.262866, -0.951056}, 
-{0.000000, -0.850651, -0.525731}, 
-{-0.147621, -0.716567, -0.681718}, 
-{0.147621, -0.716567, -0.681718}, 
-{0.000000, -0.525731, -0.850651}, 
-{0.309017, -0.500000, -0.809017}, 
-{0.442863, -0.238856, -0.864188}, 
-{0.162460, -0.262866, -0.951056}, 
-{0.238856, -0.864188, -0.442863}, 
-{0.500000, -0.809017, -0.309017}, 
-{0.425325, -0.688191, -0.587785}, 
-{0.716567, -0.681718, -0.147621}, 
-{0.688191, -0.587785, -0.425325}, 
-{0.587785, -0.425325, -0.688191}, 
-{0.000000, -0.955423, -0.295242}, 
-{0.000000, -1.000000, 0.000000}, 
-{0.262866, -0.951056, -0.162460}, 
-{0.000000, -0.850651, 0.525731}, 
-{0.000000, -0.955423, 0.295242}, 
-{0.238856, -0.864188, 0.442863}, 
-{0.262866, -0.951056, 0.162460}, 
-{0.500000, -0.809017, 0.309017}, 
-{0.716567, -0.681718, 0.147621}, 
-{0.525731, -0.850651, 0.000000}, 
-{-0.238856, -0.864188, -0.442863}, 
-{-0.500000, -0.809017, -0.309017}, 
-{-0.262866, -0.951056, -0.162460}, 
-{-0.850651, -0.525731, 0.000000}, 
-{-0.716567, -0.681718, -0.147621}, 
-{-0.716567, -0.681718, 0.147621}, 
-{-0.525731, -0.850651, 0.000000}, 
-{-0.500000, -0.809017, 0.309017}, 
-{-0.238856, -0.864188, 0.442863}, 
-{-0.262866, -0.951056, 0.162460}, 
-{-0.864188, -0.442863, 0.238856}, 
-{-0.809017, -0.309017, 0.500000}, 
-{-0.688191, -0.587785, 0.425325}, 
-{-0.681718, -0.147621, 0.716567}, 
-{-0.442863, -0.238856, 0.864188}, 
-{-0.587785, -0.425325, 0.688191}, 
-{-0.309017, -0.500000, 0.809017}, 
-{-0.147621, -0.716567, 0.681718}, 
-{-0.425325, -0.688191, 0.587785}, 
-{-0.162460, -0.262866, 0.951056}, 
-{0.442863, -0.238856, 0.864188}, 
-{0.162460, -0.262866, 0.951056}, 
-{0.309017, -0.500000, 0.809017}, 
-{0.147621, -0.716567, 0.681718}, 
-{0.000000, -0.525731, 0.850651}, 
-{0.425325, -0.688191, 0.587785}, 
-{0.587785, -0.425325, 0.688191}, 
-{0.688191, -0.587785, 0.425325}, 
-{-0.955423, 0.295242, 0.000000}, 
-{-0.951056, 0.162460, 0.262866}, 
-{-1.000000, 0.000000, 0.000000}, 
-{-0.850651, 0.000000, 0.525731}, 
-{-0.955423, -0.295242, 0.000000}, 
-{-0.951056, -0.162460, 0.262866}, 
-{-0.864188, 0.442863, -0.238856}, 
-{-0.951056, 0.162460, -0.262866}, 
-{-0.809017, 0.309017, -0.500000}, 
-{-0.864188, -0.442863, -0.238856}, 
-{-0.951056, -0.162460, -0.262866}, 
-{-0.809017, -0.309017, -0.500000}, 
-{-0.681718, 0.147621, -0.716567}, 
-{-0.681718, -0.147621, -0.716567}, 
-{-0.850651, 0.000000, -0.525731}, 
-{-0.688191, 0.587785, -0.425325}, 
-{-0.587785, 0.425325, -0.688191}, 
-{-0.425325, 0.688191, -0.587785}, 
-{-0.425325, -0.688191, -0.587785}, 
-{-0.587785, -0.425325, -0.688191}, 
-{-0.688191, -0.587785, -0.425325}, 
+{-0.525731, 0.000000, 0.850651},
+{-0.442863, 0.238856, 0.864188},
+{-0.295242, 0.000000, 0.955423},
+{-0.309017, 0.500000, 0.809017},
+{-0.162460, 0.262866, 0.951056},
+{0.000000, 0.000000, 1.000000},
+{0.000000, 0.850651, 0.525731},
+{-0.147621, 0.716567, 0.681718},
+{0.147621, 0.716567, 0.681718},
+{0.000000, 0.525731, 0.850651},
+{0.309017, 0.500000, 0.809017},
+{0.525731, 0.000000, 0.850651},
+{0.295242, 0.000000, 0.955423},
+{0.442863, 0.238856, 0.864188},
+{0.162460, 0.262866, 0.951056},
+{-0.681718, 0.147621, 0.716567},
+{-0.809017, 0.309017, 0.500000},
+{-0.587785, 0.425325, 0.688191},
+{-0.850651, 0.525731, 0.000000},
+{-0.864188, 0.442863, 0.238856},
+{-0.716567, 0.681718, 0.147621},
+{-0.688191, 0.587785, 0.425325},
+{-0.500000, 0.809017, 0.309017},
+{-0.238856, 0.864188, 0.442863},
+{-0.425325, 0.688191, 0.587785},
+{-0.716567, 0.681718, -0.147621},
+{-0.500000, 0.809017, -0.309017},
+{-0.525731, 0.850651, 0.000000},
+{0.000000, 0.850651, -0.525731},
+{-0.238856, 0.864188, -0.442863},
+{0.000000, 0.955423, -0.295242},
+{-0.262866, 0.951056, -0.162460},
+{0.000000, 1.000000, 0.000000},
+{0.000000, 0.955423, 0.295242},
+{-0.262866, 0.951056, 0.162460},
+{0.238856, 0.864188, 0.442863},
+{0.262866, 0.951056, 0.162460},
+{0.500000, 0.809017, 0.309017},
+{0.238856, 0.864188, -0.442863},
+{0.262866, 0.951056, -0.162460},
+{0.500000, 0.809017, -0.309017},
+{0.850651, 0.525731, 0.000000},
+{0.716567, 0.681718, 0.147621},
+{0.716567, 0.681718, -0.147621},
+{0.525731, 0.850651, 0.000000},
+{0.425325, 0.688191, 0.587785},
+{0.864188, 0.442863, 0.238856},
+{0.688191, 0.587785, 0.425325},
+{0.809017, 0.309017, 0.500000},
+{0.681718, 0.147621, 0.716567},
+{0.587785, 0.425325, 0.688191},
+{0.955423, 0.295242, 0.000000},
+{1.000000, 0.000000, 0.000000},
+{0.951056, 0.162460, 0.262866},
+{0.850651, -0.525731, 0.000000},
+{0.955423, -0.295242, 0.000000},
+{0.864188, -0.442863, 0.238856},
+{0.951056, -0.162460, 0.262866},
+{0.809017, -0.309017, 0.500000},
+{0.681718, -0.147621, 0.716567},
+{0.850651, 0.000000, 0.525731},
+{0.864188, 0.442863, -0.238856},
+{0.809017, 0.309017, -0.500000},
+{0.951056, 0.162460, -0.262866},
+{0.525731, 0.000000, -0.850651},
+{0.681718, 0.147621, -0.716567},
+{0.681718, -0.147621, -0.716567},
+{0.850651, 0.000000, -0.525731},
+{0.809017, -0.309017, -0.500000},
+{0.864188, -0.442863, -0.238856},
+{0.951056, -0.162460, -0.262866},
+{0.147621, 0.716567, -0.681718},
+{0.309017, 0.500000, -0.809017},
+{0.425325, 0.688191, -0.587785},
+{0.442863, 0.238856, -0.864188},
+{0.587785, 0.425325, -0.688191},
+{0.688191, 0.587785, -0.425325},
+{-0.147621, 0.716567, -0.681718},
+{-0.309017, 0.500000, -0.809017},
+{0.000000, 0.525731, -0.850651},
+{-0.525731, 0.000000, -0.850651},
+{-0.442863, 0.238856, -0.864188},
+{-0.295242, 0.000000, -0.955423},
+{-0.162460, 0.262866, -0.951056},
+{0.000000, 0.000000, -1.000000},
+{0.295242, 0.000000, -0.955423},
+{0.162460, 0.262866, -0.951056},
+{-0.442863, -0.238856, -0.864188},
+{-0.309017, -0.500000, -0.809017},
+{-0.162460, -0.262866, -0.951056},
+{0.000000, -0.850651, -0.525731},
+{-0.147621, -0.716567, -0.681718},
+{0.147621, -0.716567, -0.681718},
+{0.000000, -0.525731, -0.850651},
+{0.309017, -0.500000, -0.809017},
+{0.442863, -0.238856, -0.864188},
+{0.162460, -0.262866, -0.951056},
+{0.238856, -0.864188, -0.442863},
+{0.500000, -0.809017, -0.309017},
+{0.425325, -0.688191, -0.587785},
+{0.716567, -0.681718, -0.147621},
+{0.688191, -0.587785, -0.425325},
+{0.587785, -0.425325, -0.688191},
+{0.000000, -0.955423, -0.295242},
+{0.000000, -1.000000, 0.000000},
+{0.262866, -0.951056, -0.162460},
+{0.000000, -0.850651, 0.525731},
+{0.000000, -0.955423, 0.295242},
+{0.238856, -0.864188, 0.442863},
+{0.262866, -0.951056, 0.162460},
+{0.500000, -0.809017, 0.309017},
+{0.716567, -0.681718, 0.147621},
+{0.525731, -0.850651, 0.000000},
+{-0.238856, -0.864188, -0.442863},
+{-0.500000, -0.809017, -0.309017},
+{-0.262866, -0.951056, -0.162460},
+{-0.850651, -0.525731, 0.000000},
+{-0.716567, -0.681718, -0.147621},
+{-0.716567, -0.681718, 0.147621},
+{-0.525731, -0.850651, 0.000000},
+{-0.500000, -0.809017, 0.309017},
+{-0.238856, -0.864188, 0.442863},
+{-0.262866, -0.951056, 0.162460},
+{-0.864188, -0.442863, 0.238856},
+{-0.809017, -0.309017, 0.500000},
+{-0.688191, -0.587785, 0.425325},
+{-0.681718, -0.147621, 0.716567},
+{-0.442863, -0.238856, 0.864188},
+{-0.587785, -0.425325, 0.688191},
+{-0.309017, -0.500000, 0.809017},
+{-0.147621, -0.716567, 0.681718},
+{-0.425325, -0.688191, 0.587785},
+{-0.162460, -0.262866, 0.951056},
+{0.442863, -0.238856, 0.864188},
+{0.162460, -0.262866, 0.951056},
+{0.309017, -0.500000, 0.809017},
+{0.147621, -0.716567, 0.681718},
+{0.000000, -0.525731, 0.850651},
+{0.425325, -0.688191, 0.587785},
+{0.587785, -0.425325, 0.688191},
+{0.688191, -0.587785, 0.425325},
+{-0.955423, 0.295242, 0.000000},
+{-0.951056, 0.162460, 0.262866},
+{-1.000000, 0.000000, 0.000000},
+{-0.850651, 0.000000, 0.525731},
+{-0.955423, -0.295242, 0.000000},
+{-0.951056, -0.162460, 0.262866},
+{-0.864188, 0.442863, -0.238856},
+{-0.951056, 0.162460, -0.262866},
+{-0.809017, 0.309017, -0.500000},
+{-0.864188, -0.442863, -0.238856},
+{-0.951056, -0.162460, -0.262866},
+{-0.809017, -0.309017, -0.500000},
+{-0.681718, 0.147621, -0.716567},
+{-0.681718, -0.147621, -0.716567},
+{-0.850651, 0.000000, -0.525731},
+{-0.688191, 0.587785, -0.425325},
+{-0.587785, 0.425325, -0.688191},
+{-0.425325, 0.688191, -0.587785},
+{-0.425325, -0.688191, -0.587785},
+{-0.587785, -0.425325, -0.688191},
+{-0.688191, -0.587785, -0.425325},
 /* ============ end inlined header: client/anorms.h ============ */
 };
 
@@ -8507,7 +8451,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void MSG_WriteChar (sizebuf_t *sb, int c)
 {
 	byte	*buf;
-	
+
 #ifdef PARANOID
 	if (c < -128 || c > 127)
 		Com_Error (ERR_FATAL, "MSG_WriteChar: range error");
@@ -8520,7 +8464,7 @@ void MSG_WriteChar (sizebuf_t *sb, int c)
 void MSG_WriteByte (sizebuf_t *sb, int c)
 {
 	byte	*buf;
-	
+
 #ifdef PARANOID
 	if (c < 0 || c > 255)
 		Com_Error (ERR_FATAL, "MSG_WriteByte: range error");
@@ -8533,7 +8477,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c)
 void MSG_WriteShort (sizebuf_t *sb, int c)
 {
 	byte	*buf;
-	
+
 #ifdef PARANOID
 	if (c < ((short)0x8000) || c > (short)0x7fff)
 		Com_Error (ERR_FATAL, "MSG_WriteShort: range error");
@@ -8547,7 +8491,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c)
 void MSG_WriteLong (sizebuf_t *sb, int c)
 {
 	byte	*buf;
-	
+
 	buf = SZ_GetSpace (sb, 4);
 	buf[0] = c&0xff;
 	buf[1] = (c>>8)&0xff;
@@ -8562,11 +8506,11 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 		float	f;
 		int	l;
 	} dat;
-	
-	
+
+
 	dat.f = f;
 	dat.l = LittleLong (dat.l);
-	
+
 	SZ_Write (sb, &dat.l, 4);
 }
 
@@ -8634,7 +8578,7 @@ void MSG_WriteDeltaUsercmd (sizebuf_t *buf, usercmd_t *from, usercmd_t *cmd)
 		MSG_WriteShort (buf, cmd->angles[1]);
 	if (bits & CM_ANGLE3)
 		MSG_WriteShort (buf, cmd->angles[2]);
-	
+
 	if (bits & CM_FORWARD)
 		MSG_WriteShort (buf, cmd->forwardmove);
 	if (bits & CM_SIDE)
@@ -8656,7 +8600,7 @@ void MSG_WriteDir (sizebuf_t *sb, vec3_t dir)
 {
 	int		i, best;
 	float	d, bestd;
-	
+
 	if (!dir)
 	{
 		MSG_WriteByte (sb, 0);
@@ -8720,12 +8664,12 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 		bits |= U_ORIGIN3;
 
 	if ( to->angles[0] != from->angles[0] )
-		bits |= U_ANGLE1;		
+		bits |= U_ANGLE1;
 	if ( to->angles[1] != from->angles[1] )
 		bits |= U_ANGLE2;
 	if ( to->angles[2] != from->angles[2] )
 		bits |= U_ANGLE3;
-		
+
 	if ( to->skinnum != from->skinnum )
 	{
 		if ((unsigned)to->skinnum < 256)
@@ -8735,7 +8679,7 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 		else
 			bits |= (U_SKIN8|U_SKIN16);
 	}
-		
+
 	if ( to->frame != from->frame )
 	{
 		if (to->frame < 256)
@@ -8753,7 +8697,7 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 		else
 			bits |= U_EFFECTS8|U_EFFECTS16;
 	}
-	
+
 	if ( to->renderfx != from->renderfx )
 	{
 		if (to->renderfx < 256)
@@ -8763,14 +8707,14 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 		else
 			bits |= U_RENDERFX8|U_RENDERFX16;
 	}
-	
+
 	if ( to->solid != from->solid )
 		bits |= U_SOLID;
 
 	// event is not delta compressed, just 0 compressed
 	if ( to->event  )
 		bits |= U_EVENT;
-	
+
 	if ( to->modelindex != from->modelindex )
 		bits |= U_MODEL;
 	if ( to->modelindex2 != from->modelindex2 )
@@ -8863,7 +8807,7 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 		MSG_WriteShort (msg, to->renderfx);
 
 	if (bits & U_ORIGIN1)
-		MSG_WriteCoord (msg, to->origin[0]);		
+		MSG_WriteCoord (msg, to->origin[0]);
 	if (bits & U_ORIGIN2)
 		MSG_WriteCoord (msg, to->origin[1]);
 	if (bits & U_ORIGIN3)
@@ -8907,48 +8851,48 @@ void MSG_BeginReading (sizebuf_t *msg)
 int MSG_ReadChar (sizebuf_t *msg_read)
 {
 	int	c;
-	
+
 	if (msg_read->readcount+1 > msg_read->cursize)
 		c = -1;
 	else
 		c = (signed char)msg_read->data[msg_read->readcount];
 	msg_read->readcount++;
-	
+
 	return c;
 }
 
 int MSG_ReadByte (sizebuf_t *msg_read)
 {
 	int	c;
-	
+
 	if (msg_read->readcount+1 > msg_read->cursize)
 		c = -1;
 	else
 		c = (unsigned char)msg_read->data[msg_read->readcount];
 	msg_read->readcount++;
-	
+
 	return c;
 }
 
 int MSG_ReadShort (sizebuf_t *msg_read)
 {
 	int	c;
-	
+
 	if (msg_read->readcount+2 > msg_read->cursize)
 		c = -1;
-	else		
+	else
 		c = (short)(msg_read->data[msg_read->readcount]
 		+ (msg_read->data[msg_read->readcount+1]<<8));
-	
+
 	msg_read->readcount += 2;
-	
+
 	return c;
 }
 
 int MSG_ReadLong (sizebuf_t *msg_read)
 {
 	int	c;
-	
+
 	if (msg_read->readcount+4 > msg_read->cursize)
 		c = -1;
 	else
@@ -8956,9 +8900,9 @@ int MSG_ReadLong (sizebuf_t *msg_read)
 		+ (msg_read->data[msg_read->readcount+1]<<8)
 		+ (msg_read->data[msg_read->readcount+2]<<16)
 		+ (msg_read->data[msg_read->readcount+3]<<24);
-	
+
 	msg_read->readcount += 4;
-	
+
 	return c;
 }
 
@@ -8970,7 +8914,7 @@ float MSG_ReadFloat (sizebuf_t *msg_read)
 		float	f;
 		int	l;
 	} dat;
-	
+
 	if (msg_read->readcount+4 > msg_read->cursize)
 		dat.f = -1;
 	else
@@ -8981,17 +8925,17 @@ float MSG_ReadFloat (sizebuf_t *msg_read)
 		dat.b[3] =	msg_read->data[msg_read->readcount+3];
 	}
 	msg_read->readcount += 4;
-	
+
 	dat.l = LittleLong (dat.l);
 
-	return dat.f;	
+	return dat.f;
 }
 
 char *MSG_ReadString (sizebuf_t *msg_read)
 {
 	static char	string[2048];
 	int		l,c;
-	
+
 	l = 0;
 	do
 	{
@@ -9001,9 +8945,9 @@ char *MSG_ReadString (sizebuf_t *msg_read)
 		string[l] = c;
 		l++;
 	} while (l < sizeof(string)-1);
-	
+
 	string[l] = 0;
-	
+
 	return string;
 }
 
@@ -9011,7 +8955,7 @@ char *MSG_ReadStringLine (sizebuf_t *msg_read)
 {
 	static char	string[2048];
 	int		l,c;
-	
+
 	l = 0;
 	do
 	{
@@ -9021,9 +8965,9 @@ char *MSG_ReadStringLine (sizebuf_t *msg_read)
 		string[l] = c;
 		l++;
 	} while (l < sizeof(string)-1);
-	
+
 	string[l] = 0;
-	
+
 	return string;
 }
 
@@ -9056,7 +9000,7 @@ void MSG_ReadDeltaUsercmd (sizebuf_t *msg_read, usercmd_t *from, usercmd_t *move
 	memcpy (move, from, sizeof(*move));
 
 	bits = MSG_ReadByte (msg_read);
-		
+
 // read current angles
 	if (bits & CM_ANGLE1)
 		move->angles[0] = MSG_ReadShort (msg_read);
@@ -9064,7 +9008,7 @@ void MSG_ReadDeltaUsercmd (sizebuf_t *msg_read, usercmd_t *from, usercmd_t *move
 		move->angles[1] = MSG_ReadShort (msg_read);
 	if (bits & CM_ANGLE3)
 		move->angles[2] = MSG_ReadShort (msg_read);
-		
+
 // read movement
 	if (bits & CM_FORWARD)
 		move->forwardmove = MSG_ReadShort (msg_read);
@@ -9072,7 +9016,7 @@ void MSG_ReadDeltaUsercmd (sizebuf_t *msg_read, usercmd_t *from, usercmd_t *move
 		move->sidemove = MSG_ReadShort (msg_read);
 	if (bits & CM_UP)
 		move->upmove = MSG_ReadShort (msg_read);
-	
+
 // read buttons
 	if (bits & CM_BUTTONS)
 		move->buttons = MSG_ReadByte (msg_read);
@@ -9115,35 +9059,35 @@ void SZ_Clear (sizebuf_t *buf)
 void *SZ_GetSpace (sizebuf_t *buf, int length)
 {
 	void	*data;
-	
+
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
 			Com_Error (ERR_FATAL, "SZ_GetSpace: overflow without allowoverflow set");
-		
+
 		if (length > buf->maxsize)
 			Com_Error (ERR_FATAL, "SZ_GetSpace: %i is > full buffer size", length);
-			
+
 		Com_Printf ("SZ_GetSpace: overflow\n");
-		SZ_Clear (buf); 
+		SZ_Clear (buf);
 		buf->overflowed = true;
 	}
 
 	data = buf->data + buf->cursize;
 	buf->cursize += length;
-	
+
 	return data;
 }
 
 void SZ_Write (sizebuf_t *buf, void *data, int length)
 {
-	memcpy (SZ_GetSpace(buf,length),data,length);		
+	memcpy (SZ_GetSpace(buf,length),data,length);
 }
 
 void SZ_Print (sizebuf_t *buf, char *data)
 {
 	int		len;
-	
+
 	len = strlen(data)+1;
 
 	if (buf->cursize)
@@ -9172,13 +9116,13 @@ where the given parameter apears, or 0 if not present
 int COM_CheckParm (char *parm)
 {
 	int		i;
-	
+
 	for (i=1 ; i<com_argc ; i++)
 	{
 		if (!strcmp (parm,com_argv[i]))
 			return i;
 	}
-		
+
 	return 0;
 }
 
@@ -9244,7 +9188,7 @@ void COM_AddParm (char *parm)
 int	memsearch (byte *start, int count, int search)
 {
 	int		i;
-	
+
 	for (i=0 ; i<count ; i++)
 		if (start[i] == search)
 			return i;
@@ -9255,7 +9199,7 @@ int	memsearch (byte *start, int count, int search)
 char *CopyString (char *in)
 {
 	char	*out;
-	
+
 	out = Z_Malloc (strlen(in)+1);
 	strcpy (out, in);
 	return out;
@@ -9389,7 +9333,7 @@ Z_TagMalloc
 void *Z_TagMalloc (int size, int tag)
 {
 	zhead_t	*z;
-	
+
 	size = size + sizeof(zhead_t);
 	z = malloc(size);
 	if (!z)
@@ -9706,7 +9650,7 @@ void Qcommon_Init (int argc, char **argv)
 		SCR_EndLoadingPlaque ();
 	}
 
-	Com_Printf ("====== Quake2 Initialized ======\n\n");	
+	Com_Printf ("====== Quake2 Initialized ======\n\n");
 }
 
 /*
@@ -9780,12 +9724,12 @@ void Qcommon_Frame (int msec)
 	SV_Frame (msec);
 
 	if (host_speeds->value)
-		time_between = Sys_Milliseconds ();		
+		time_between = Sys_Milliseconds ();
 
 	CL_Frame (msec);
 
 	if (host_speeds->value)
-		time_after = Sys_Milliseconds ();		
+		time_after = Sys_Milliseconds ();
 
 
 	if (host_speeds->value)
@@ -9801,7 +9745,7 @@ void Qcommon_Frame (int msec)
 		cl -= rf;
 		Com_Printf ("all:%3i sv:%3i gm:%3i cl:%3i rf:%3i\n",
 			all, sv, gm, cl, rf);
-	}	
+	}
 }
 
 /*
@@ -9824,7 +9768,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -9918,7 +9862,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -9957,7 +9901,7 @@ Cvar_FindVar
 static cvar_t *Cvar_FindVar (char *var_name)
 {
 	cvar_t	*var;
-	
+
 	for (var=cvar_vars ; var ; var=var->next)
 		if (!strcmp (var_name, var->name))
 			return var;
@@ -9973,7 +9917,7 @@ Cvar_VariableValue
 float Cvar_VariableValue (char *var_name)
 {
 	cvar_t	*var;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return 0;
@@ -9989,7 +9933,7 @@ Cvar_VariableString
 char *Cvar_VariableString (char *var_name)
 {
 	cvar_t *var;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return "";
@@ -10006,12 +9950,12 @@ char *Cvar_CompleteVariable (char *partial)
 {
 	cvar_t		*cvar;
 	int			len;
-	
+
 	len = strlen(partial);
-	
+
 	if (!len)
 		return NULL;
-		
+
 	// check exact match
 	for (cvar=cvar_vars ; cvar ; cvar=cvar->next)
 		if (!strcmp (partial,cvar->name))
@@ -10037,7 +9981,7 @@ The flags will be or'ed in if the variable exists.
 cvar_t *Cvar_Get (char *var_name, char *var_value, int flags)
 {
 	cvar_t	*var;
-	
+
 	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO))
 	{
 		if (!Cvar_InfoValidate (var_name))
@@ -10161,9 +10105,9 @@ cvar_t *Cvar_Set2 (char *var_name, char *value, qboolean force)
 
 	if (var->flags & CVAR_USERINFO)
 		userinfo_modified = true;	// transmit at next oportunity
-	
+
 	Z_Free (var->string);	// free the old value string
-	
+
 	var->string = CopyString(value);
 	var->value = atof (var->string);
 
@@ -10198,7 +10142,7 @@ Cvar_FullSet
 cvar_t *Cvar_FullSet (char *var_name, char *value, int flags)
 {
 	cvar_t	*var;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 	{	// create it
@@ -10209,9 +10153,9 @@ cvar_t *Cvar_FullSet (char *var_name, char *value, int flags)
 
 	if (var->flags & CVAR_USERINFO)
 		userinfo_modified = true;	// transmit at next oportunity
-	
+
 	Z_Free (var->string);	// free the old value string
-	
+
 	var->string = CopyString(value);
 	var->value = atof (var->string);
 	var->flags = flags;
@@ -10278,7 +10222,7 @@ qboolean Cvar_Command (void)
 	v = Cvar_FindVar (Cmd_Argv(0));
 	if (!v)
 		return false;
-		
+
 // perform a variable print or set
 	if (Cmd_Argc() == 1)
 	{
@@ -10447,7 +10391,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -10564,7 +10508,7 @@ Creates any directories needed to store the given filename
 void	FS_CreatePath (char *path)
 {
 	char	*ofs;
-	
+
 	for (ofs = path+1 ; *ofs ; ofs++)
 	{
 		if (*ofs == '/')
@@ -10654,7 +10598,7 @@ int FS_FOpenFile (char *filename, FILE **file)
 			Com_sprintf (netpath, sizeof(netpath), "%s%s",link->to, filename+link->fromlength);
 			*file = fopen (netpath, "rb");
 			if (*file)
-			{		
+			{
 				Com_DPrintf ("link file: %s\n",netpath);
 				return FS_filelength (*file);
 			}
@@ -10680,30 +10624,30 @@ int FS_FOpenFile (char *filename, FILE **file)
 				// open a new file on the pakfile
 					*file = fopen (pak->filename, "rb");
 					if (!*file)
-						Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);	
+						Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);
 					fseek (*file, pak->files[i].filepos, SEEK_SET);
 					return pak->files[i].filelen;
 				}
 		}
 		else
-		{		
+		{
 	// check a file in the directory tree
-			
+
 			Com_sprintf (netpath, sizeof(netpath), "%s/%s",search->filename, filename);
-			
+
 			*file = fopen (netpath, "rb");
 			if (!*file)
 				continue;
-			
+
 			Com_DPrintf ("FindFile: %s\n",netpath);
 
 			return FS_filelength (*file);
 		}
-		
+
 	}
-	
+
 	Com_DPrintf ("FindFile: can't find %s\n", filename);
-	
+
 	*file = NULL;
 	return -1;
 }
@@ -10725,11 +10669,11 @@ int FS_FOpenFile (char *filename, FILE **file)
 	if (!strcmp(filename, "config.cfg") || !strncmp(filename, "players/", 8))
 	{
 		Com_sprintf (netpath, sizeof(netpath), "%s/%s",FS_Gamedir(), filename);
-		
+
 		*file = fopen (netpath, "rb");
 		if (!*file)
 			return -1;
-		
+
 		Com_DPrintf ("FindFile: %s\n",netpath);
 
 		return FS_filelength (*file);
@@ -10753,13 +10697,13 @@ int FS_FOpenFile (char *filename, FILE **file)
 		// open a new file on the pakfile
 			*file = fopen (pak->filename, "rb");
 			if (!*file)
-				Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);	
+				Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);
 			fseek (*file, pak->files[i].filepos, SEEK_SET);
 			return pak->files[i].filelen;
 		}
-	
+
 	Com_DPrintf ("FindFile: can't find %s\n", filename);
-	
+
 	*file = NULL;
 	return -1;
 }
@@ -10840,7 +10784,7 @@ int FS_LoadFile (char *path, void **buffer)
 			*buffer = NULL;
 		return -1;
 	}
-	
+
 	if (!buffer)
 	{
 		fclose (h);
@@ -10930,7 +10874,7 @@ pack_t *FS_LoadPackFile (char *packfile)
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
 	pack->files = newfiles;
-	
+
 	Com_Printf ("Added packfile %s (%i files)\n", packfile, numpackfiles);
 	return pack;
 }
@@ -10941,7 +10885,7 @@ pack_t *FS_LoadPackFile (char *packfile)
 FS_AddGameDirectory
 
 Sets fs_gamedir, adds the directory to the head of the path,
-then loads and adds pak1.pak pak2.pak ... 
+then loads and adds pak1.pak pak2.pak ...
 ================
 */
 void FS_AddGameDirectory (char *dir)
@@ -10973,7 +10917,7 @@ void FS_AddGameDirectory (char *dir)
 		search = Z_Malloc (sizeof(searchpath_t));
 		search->pack = pak;
 		search->next = fs_searchpaths;
-		fs_searchpaths = search;		
+		fs_searchpaths = search;
 	}
 
 
@@ -11003,9 +10947,9 @@ void FS_ExecAutoexec (void)
 
 	dir = Cvar_VariableString("gamedir");
 	if (*dir)
-		Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, dir); 
+		Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, dir);
 	else
-		Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, BASEDIRNAME); 
+		Com_sprintf(name, sizeof(name), "%s/%s/autoexec.cfg", fs_basedir->string, BASEDIRNAME);
 	if (Sys_FindFirst(name, 0, SFF_SUBDIR | SFF_HIDDEN | SFF_SYSTEM))
 		Cbuf_AddText ("exec autoexec.cfg\n");
 	Sys_FindClose();
@@ -11185,7 +11129,7 @@ void FS_Dir_f( void )
 
 		while ( *tmp != 0 )
 		{
-			if ( *tmp == '\\' ) 
+			if ( *tmp == '\\' )
 				*tmp = '/';
 			tmp++;
 		}
@@ -11286,7 +11230,7 @@ void FS_InitFilesystem (void)
 
 	//
 	// cddir <path>
-	// Logically concatenates the cddir after the basedir for 
+	// Logically concatenates the cddir after the basedir for
 	// allows the game to run from outside the data tree
 	//
 	fs_cddir = Cvar_Get ("cddir", "", CVAR_NOSET);
@@ -11328,17 +11272,17 @@ typedef unsigned int UINT4;
 typedef unsigned long int UINT4;
 #endif
 
-  
+
 /* MD4.H - header file for MD4C.C */
 
-/* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. 
+/* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991.
 
 All rights reserved.
-  
-License to copy and use this software is granted provided that it is identified as the “RSA Data Security, Inc. MD4 Message-Digest Algorithm” in all material mentioning or referencing this software or this function.
-License is also granted to make and use derivative works provided that such works are identified as “derived from the RSA Data Security, Inc. MD4 Message-Digest Algorithm” in all material mentioning or referencing the derived work.
-RSA Data Security, Inc. makes no representations concerning either the merchantability of this software or the suitability of this software for any particular purpose. It is provided “as is” without express or implied warranty of any kind.
-  
+
+License to copy and use this software is granted provided that it is identified as the ï¿½RSA Data Security, Inc. MD4 Message-Digest Algorithmï¿½ in all material mentioning or referencing this software or this function.
+License is also granted to make and use derivative works provided that such works are identified as ï¿½derived from the RSA Data Security, Inc. MD4 Message-Digest Algorithmï¿½ in all material mentioning or referencing the derived work.
+RSA Data Security, Inc. makes no representations concerning either the merchantability of this software or the suitability of this software for any particular purpose. It is provided ï¿½as isï¿½ without express or implied warranty of any kind.
+
 These notices must be retained in any copies of any part of this documentation and/or software. */
 
 /* MD4 context. */
@@ -11351,21 +11295,21 @@ typedef struct {
 void MD4Init (MD4_CTX *);
 void MD4Update (MD4_CTX *, unsigned char *, unsigned int);
 void MD4Final (unsigned char [16], MD4_CTX *);
-  
 
-  
+
+
 /* MD4C.C - RSA Data Security, Inc., MD4 message-digest algorithm */
 /* Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
-  
+
 License to copy and use this software is granted provided that it is identified as the
 RSA Data Security, Inc. MD4 Message-Digest Algorithm
  in all material mentioning or referencing this software or this function.
-License is also granted to make and use derivative works provided that such works are identified as 
+License is also granted to make and use derivative works provided that such works are identified as
 derived from the RSA Data Security, Inc. MD4 Message-Digest Algorithm
 in all material mentioning or referencing the derived work.
 RSA Data Security, Inc. makes no representations concerning either the merchantability of this software or the suitability of this software for any particular purpose. It is provided
 as is without express or implied warranty of any kind.
-  
+
 These notices must be retained in any copies of any part of this documentation and/or software. */
 
 /* Constants for MD4Transform routine.  */
@@ -11470,7 +11414,7 @@ void MD4Final (unsigned char digest[16], MD4_CTX *context)
 
 	/* Append length (before padding) */
 	MD4Update (context, bits, 8);
-	
+
 	/* Store state in digest */
 	Encode (digest, context->state, 16);
 
@@ -11584,7 +11528,7 @@ unsigned Com_BlockChecksum (void *buffer, int length)
 	MD4Init (&ctx);
 	MD4Update (&ctx, (unsigned char *)buffer, length);
 	MD4Final ( (unsigned char *)digest, &ctx);
-	
+
 	val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
 
 	return val;
@@ -11601,7 +11545,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -11707,7 +11651,7 @@ void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, byte *data)
 
 // write the packet header
 	SZ_Init (&send, send_buf, sizeof(send_buf));
-	
+
 	MSG_WriteLong (&send, -1);	// -1 sequence means out of band
 	SZ_Write (&send, data, length);
 
@@ -11726,7 +11670,7 @@ void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...)
 {
 	va_list		argptr;
 	static char		string[MAX_MSGLEN - 4];
-	
+
 	va_start (argptr, format);
 	vsprintf (string, format,argptr);
 	va_end (argptr);
@@ -11745,7 +11689,7 @@ called to open a channel to a remote system
 void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport)
 {
 	memset (chan, 0, sizeof(*chan));
-	
+
 	chan->sock = sock;
 	chan->remote_address = adr;
 	chan->qport = qport;
@@ -11852,7 +11796,7 @@ void Netchan_Transmit (netchan_t *chan, int length, byte *data)
 		SZ_Write (&send, chan->reliable_buf, chan->reliable_length);
 		chan->last_reliable_sequence = chan->outgoing_sequence;
 	}
-	
+
 // add the unreliable part if space is available
 	if (send.maxsize - send.cursize >= length)
 		SZ_Write (&send, data, length);
@@ -11893,7 +11837,7 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 	unsigned	sequence, sequence_ack;
 	unsigned	reliable_ack, reliable_message;
 
-// get sequence numbers		
+// get sequence numbers
 	MSG_BeginReading (msg);
 	sequence = MSG_ReadLong (msg);
 	sequence_ack = MSG_ReadLong (msg);
@@ -11906,7 +11850,7 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 	reliable_ack = sequence_ack >> 31;
 
 	sequence &= ~(1<<31);
-	sequence_ack &= ~(1<<31);	
+	sequence_ack &= ~(1<<31);
 
 	if (showpackets->value)
 	{
@@ -11957,9 +11901,9 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 //
 	if (reliable_ack == chan->reliable_sequence)
 		chan->reliable_length = 0;	// it has been received
-	
+
 //
-// if this message contains a reliable message, bump incoming_reliable_sequence 
+// if this message contains a reliable message, bump incoming_reliable_sequence
 //
 	chan->incoming_sequence = sequence;
 	chan->incoming_acknowledged = sequence_ack;
@@ -11989,7 +11933,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -12063,7 +12007,7 @@ void PM_ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 	float	backoff;
 	float	change;
 	int		i;
-	
+
 	backoff = DotProduct (in, normal) * overbounce;
 
 	for (i=0 ; i<3 ; i++)
@@ -12103,12 +12047,12 @@ void PM_StepSlideMove_ (void)
 	trace_t	trace;
 	vec3_t		end;
 	float		time_left;
-	
+
 	numbumps = 4;
-	
+
 	VectorCopy (pml.velocity, primal_velocity);
 	numplanes = 0;
-	
+
 	time_left = pml.frametime;
 
 	for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
@@ -12139,7 +12083,7 @@ void PM_StepSlideMove_ (void)
 			pm->touchents[pm->numtouch] = trace.ent;
 			pm->numtouch++;
 		}
-		
+
 		time_left -= time_left * trace.fraction;
 
 		// slide along this plane
@@ -12209,7 +12153,7 @@ void PM_StepSlideMove_ (void)
 			if (j == numplanes)
 				break;
 		}
-		
+
 		if (i != numplanes)
 		{	// go along this plane
 		}
@@ -12329,9 +12273,9 @@ void PM_Friction (void)
 	float	speed, newspeed, control;
 	float	friction;
 	float	drop;
-	
+
 	vel = pml.velocity;
-	
+
 	speed = sqrt(vel[0]*vel[0] +vel[1]*vel[1] + vel[2]*vel[2]);
 	if (speed < 1)
 	{
@@ -12387,16 +12331,16 @@ void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 	accelspeed = accel*pml.frametime*wishspeed;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
-	
+
 	for (i=0 ; i<3 ; i++)
-		pml.velocity[i] += accelspeed*wishdir[i];	
+		pml.velocity[i] += accelspeed*wishdir[i];
 }
 
 void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 {
 	int			i;
 	float		addspeed, accelspeed, currentspeed, wishspd = wishspeed;
-		
+
 	if (wishspd > 30)
 		wishspd = 30;
 	currentspeed = DotProduct (pml.velocity, wishdir);
@@ -12406,9 +12350,9 @@ void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 	accelspeed = accel * wishspeed * pml.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
-	
+
 	for (i=0 ; i<3 ; i++)
-		pml.velocity[i] += accelspeed*wishdir[i];	
+		pml.velocity[i] += accelspeed*wishdir[i];
 }
 
 /*
@@ -12564,7 +12508,7 @@ void PM_AirMove (void)
 
 	fmove = pm->cmd.forwardmove;
 	smove = pm->cmd.sidemove;
-	
+
 //!!!!! pitch should be 1/3 so this isn't needed??!
 #if 0
 	pml.forward[2] = 0;
@@ -12592,7 +12536,7 @@ void PM_AirMove (void)
 		VectorScale (wishvel, maxspeed/wishspeed, wishvel);
 		wishspeed = maxspeed;
 	}
-	
+
 	if ( pml.ladder )
 	{
 		PM_Accelerate (wishdir, wishspeed, pm_accelerate);
@@ -12660,7 +12604,7 @@ void PM_CatagorizePosition (void)
 // if the player hull point one unit down is solid, the player
 // is on ground
 
-// see if standing on something solid	
+// see if standing on something solid
 	point[0] = pml.origin[0];
 	point[1] = pml.origin[1];
 	point[2] = pml.origin[2] - 0.25;
@@ -12701,7 +12645,7 @@ void PM_CatagorizePosition (void)
 					pm->s.pm_flags |= PMF_TIME_LAND;
 					// don't allow another jump for a little while
 					if (pml.velocity[2] < -400)
-						pm->s.pm_time = 25;	
+						pm->s.pm_time = 25;
 					else
 						pm->s.pm_time = 18;
 				}
@@ -12729,7 +12673,7 @@ void PM_CatagorizePosition (void)
 	sample2 = pm->viewheight - pm->mins[2];
 	sample1 = sample2 / 2;
 
-	point[2] = pml.origin[2] + pm->mins[2] + 1;	
+	point[2] = pml.origin[2] + pm->mins[2] + 1;
 	cont = pm->pointcontents (point);
 
 	if (cont & MASK_WATER)
@@ -12901,7 +12845,7 @@ void PM_FlyMove (qboolean doclip)
 	// accelerate
 	fmove = pm->cmd.forwardmove;
 	smove = pm->cmd.sidemove;
-	
+
 	VectorNormalize (pml.forward);
 	VectorNormalize (pml.right);
 
@@ -12929,9 +12873,9 @@ void PM_FlyMove (qboolean doclip)
 	accelspeed = pm_accelerate*pml.frametime*wishspeed;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
-	
+
 	for (i=0 ; i<3 ; i++)
-		pml.velocity[i] += accelspeed*wishdir[i];	
+		pml.velocity[i] += accelspeed*wishdir[i];
 
 	if (doclip) {
 		for (i=0 ; i<3 ; i++)
@@ -13075,7 +13019,7 @@ void PM_SnapPosition (void)
 	{
 		if (pml.origin[i] >= 0)
 			sign[i] = 1;
-		else 
+		else
 			sign[i] = -1;
 		pm->s.origin[i] = (int)(pml.origin[i]*8);
 		if (pm->s.origin[i]*0.125 == pml.origin[i])
@@ -13288,7 +13232,7 @@ void Pmove (pmove_t *pmove)
 		msec = pm->cmd.msec >> 3;
 		if (!msec)
 			msec = 1;
-		if ( msec >= pm->s.pm_time) 
+		if ( msec >= pm->s.pm_time)
 		{
 			pm->s.pm_flags &= ~(PMF_TIME_WATERJUMP | PMF_TIME_LAND | PMF_TIME_TELEPORT);
 			pm->s.pm_time = 0;
@@ -13353,7 +13297,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -13374,7 +13318,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -13529,7 +13473,7 @@ typedef struct
 	qboolean	initialized;				// sv_init has completed
 	int			realtime;					// always increasing, no clamping, etc
 
-	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base 
+	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base
 
 	int			spawncount;					// incremented each server start
 											// used to check late spawns
@@ -14470,7 +14414,7 @@ void SV_Status_f (void)
 		l = 22 - strlen(s);
 		for (j=0 ; j<l ; j++)
 			Com_Printf (" ");
-		
+
 		Com_Printf ("%5i", cl->netchan.qport);
 
 		Com_Printf ("\n");
@@ -14752,7 +14696,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -15440,12 +15384,12 @@ void SV_RecordDemoMessage (void)
 
 	e = 1;
 	ent = EDICT_NUM(e);
-	while (e < ge->num_edicts) 
+	while (e < ge->num_edicts)
 	{
 		// ignore ents without visible models unless they have an effect
 		if (ent->inuse &&
-			ent->s.number && 
-			(ent->s.modelindex || ent->s.effects || ent->s.sound || ent->s.event) && 
+			ent->s.number &&
+			(ent->s.modelindex || ent->s.effects || ent->s.sound || ent->s.event) &&
 			!(ent->svflags & SVF_NOCLIENT))
 			MSG_WriteDeltaEntity (&nostate, &ent->s, &buf, false, true);
 
@@ -15477,7 +15421,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -15534,7 +15478,7 @@ void PF_dprintf (char *fmt, ...)
 {
 	char		msg[1024];
 	va_list		argptr;
-	
+
 	va_start (argptr,fmt);
 	vsprintf (msg, fmt, argptr);
 	va_end (argptr);
@@ -15586,7 +15530,7 @@ void PF_centerprintf (edict_t *ent, char *fmt, ...)
 	char		msg[1024];
 	va_list		argptr;
 	int			n;
-	
+
 	n = NUM_FOR_EDICT(ent);
 	if (n < 1 || n > maxclients->value)
 		return;	// Com_Error (ERR_DROP, "centerprintf to a non-client");
@@ -15612,7 +15556,7 @@ void PF_error (char *fmt, ...)
 {
 	char		msg[1024];
 	va_list		argptr;
-	
+
 	va_start (argptr,fmt);
 	vsprintf (msg, fmt, argptr);
 	va_end (argptr);
@@ -15637,7 +15581,7 @@ void PF_setmodel (edict_t *ent, char *name)
 		Com_Error (ERR_DROP, "PF_setmodel: NULL");
 
 	i = SV_ModelIndex (name);
-		
+
 //	ent->model = name;
 	ent->s.modelindex = i;
 
@@ -15668,7 +15612,7 @@ void PF_Configstring (int index, char *val)
 
 	// change the string in sv
 	strcpy (sv.configstrings[index], val);
-	
+
 	if (sv.state != ss_loading)
 	{	// send the update to everyone
 		SZ_Clear (&sv.multicast);
@@ -15875,7 +15819,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -15899,7 +15843,7 @@ SV_FindIndex
 int SV_FindIndex (char *name, int start, int max, qboolean create)
 {
 	int		i;
-	
+
 	if (!name || !name[0])
 		return 0;
 
@@ -15956,7 +15900,7 @@ baseline will be transmitted
 void SV_CreateBaseline (void)
 {
 	edict_t			*svent;
-	int				entnum;	
+	int				entnum;
 
 	for (entnum = 1; entnum < ge->num_edicts ; entnum++)
 	{
@@ -16085,7 +16029,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	}
 
 	sv.time = 1000;
-	
+
 	strcpy (sv.name, server);
 	strcpy (sv.configstrings[CS_NAME], server);
 
@@ -16106,7 +16050,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	// clear physics interaction links
 	//
 	SV_ClearWorld ();
-	
+
 	for (i=1 ; i< CM_NumInlineModels() ; i++)
 	{
 		Com_sprintf (sv.configstrings[CS_MODELS+1+i], sizeof(sv.configstrings[CS_MODELS+1+i]),
@@ -16116,7 +16060,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 
 	//
 	// spawn the rest of the entities on the map
-	//	
+	//
 
 	// precache and static commands can be issued during
 	// map initialization
@@ -16133,7 +16077,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	// all precaches are complete
 	sv.state = serverstate;
 	Com_SetServerState (sv.state);
-	
+
 	// create a baseline for more efficient communications
 	SV_CreateBaseline ();
 
@@ -16342,7 +16286,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -16458,7 +16402,7 @@ char	*SV_StatusString (void)
 		cl = &svs.clients[i];
 		if (cl->state == cs_connected || cl->state == cs_spawned )
 		{
-			Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n", 
+			Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n",
 				cl->edict->client->ps.stats[STAT_FRAGS], cl->ping, cl->name);
 			playerLength = strlen(player);
 			if (statusLength + playerLength >= sizeof(status) )
@@ -16673,7 +16617,7 @@ void SVC_DirectConnect (void)
 		if (cl->state == cs_free)
 			continue;
 		if (NET_CompareBaseAdr (adr, cl->netchan.remote_address)
-			&& ( cl->netchan.qport == qport 
+			&& ( cl->netchan.qport == qport
 			|| adr.port == cl->netchan.remote_address.port ) )
 		{
 			if (!NET_IsLocalAddress (adr) && (svs.realtime - cl->lastconnect) < ((int)sv_reconnect_limit->value * 1000))
@@ -16704,7 +16648,7 @@ void SVC_DirectConnect (void)
 		return;
 	}
 
-gotnewcl:	
+gotnewcl:
 	// build a new connection
 	// accept the new client
 	// this is the only place a client_t is ever initialized
@@ -16718,8 +16662,8 @@ gotnewcl:
 	// get the game a chance to reject this connection or modify the userinfo
 	if (!(ge->ClientConnect (ent, userinfo)))
 	{
-		if (*Info_ValueForKey (userinfo, "rejmsg")) 
-			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\n%s\nConnection refused.\n",  
+		if (*Info_ValueForKey (userinfo, "rejmsg"))
+			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\n%s\nConnection refused.\n",
 				Info_ValueForKey (userinfo, "rejmsg"));
 		else
 			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nConnection refused.\n" );
@@ -16737,7 +16681,7 @@ gotnewcl:
 	Netchan_Setup (NS_SERVER, &newcl->netchan , adr, qport);
 
 	newcl->state = cs_connected;
-	
+
 	SZ_Init (&newcl->datagram, newcl->datagram_buf, sizeof(newcl->datagram_buf) );
 	newcl->datagram.allowoverflow = true;
 	newcl->lastmessage = svs.realtime;	// don't timeout
@@ -16917,7 +16861,7 @@ void SV_GiveMsec (void)
 		cl = &svs.clients[i];
 		if (cl->state == cs_free )
 			continue;
-		
+
 		cl->commandMsec = 1800;		// 1600 + some slop
 	}
 }
@@ -16975,7 +16919,7 @@ void SV_ReadPackets (void)
 			}
 			break;
 		}
-		
+
 		if (i != maxclients->value)
 			continue;
 	}
@@ -17016,11 +16960,11 @@ void SV_CheckTimeouts (void)
 			cl->state = cs_free;	// can now be reused
 			continue;
 		}
-		if ( (cl->state == cs_connected || cl->state == cs_spawned) 
+		if ( (cl->state == cs_connected || cl->state == cs_spawned)
 			&& cl->lastmessage < droppoint)
 		{
 			SV_BroadcastPrintf (PRINT_HIGH, "%s timed out\n", cl->name);
-			SV_DropClient (cl); 
+			SV_DropClient (cl);
 			cl->state = cs_free;	// don't bother with zombie state
 		}
 	}
@@ -17163,7 +17107,7 @@ void Master_Heartbeat (void)
 	char		*string;
 	int			i;
 
-	
+
 	if (!dedicated->value)
 		return;		// only dedicated servers send heartbeats
 
@@ -17236,7 +17180,7 @@ void SV_UserinfoChanged (client_t *cl)
 
 	// call prog code to allow overrides
 	ge->ClientUserinfoChanged (cl->edict, cl->userinfo);
-	
+
 	// name for C code
 	strncpy (cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name)-1);
 	// mask off high bit
@@ -17328,7 +17272,7 @@ void SV_FinalMessage (char *message, qboolean reconnect)
 {
 	int			i;
 	client_t	*cl;
-	
+
 	SZ_Clear (&net_message);
 	MSG_WriteByte (&net_message, svc_print);
 	MSG_WriteByte (&net_message, PRINT_HIGH);
@@ -17399,7 +17343,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -17457,14 +17401,14 @@ void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...)
 {
 	va_list		argptr;
 	char		string[1024];
-	
+
 	if (level < cl->messagelevel)
 		return;
-	
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	MSG_WriteByte (&cl->netchan.message, svc_print);
 	MSG_WriteByte (&cl->netchan.message, level);
 	MSG_WriteString (&cl->netchan.message, string);
@@ -17487,13 +17431,13 @@ void SV_BroadcastPrintf (int level, char *fmt, ...)
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	// echo to console
 	if (dedicated->value)
 	{
 		char	copy[1024];
 		int		i;
-		
+
 		// mask off high bits
 		for (i=0 ; i<1023 && string[i] ; i++)
 			copy[i] = string[i]&127;
@@ -17524,7 +17468,7 @@ void SV_BroadcastCommand (char *fmt, ...)
 {
 	va_list		argptr;
 	char		string[1024];
-	
+
 	if (!sv.state)
 		return;
 	va_start (argptr,fmt);
@@ -17574,7 +17518,7 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 	// if doing a serverrecord, store everything
 	if (svs.demofile)
 		SZ_Write (&svs.demo_multicast, sv.multicast.data, sv.multicast.cursize);
-	
+
 	switch (to)
 	{
 	case MULTICAST_ALL_R:
@@ -17634,7 +17578,7 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 }
 
 
-/*  
+/*
 ==================
 SV_StartSound
 
@@ -17659,11 +17603,11 @@ later in the frame than they normally would.
 If origin is NULL, the origin is determined from the entity origin
 or the midpoint of the entity box for bmodels.
 ==================
-*/  
+*/
 void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					int soundindex, float volume,
 					float attenuation, float timeofs)
-{       
+{
 	int			sendchan;
     int			flags;
     int			i;
@@ -17704,7 +17648,7 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 	// the client doesn't know that bmodels have weird origins
 	// the origin can also be explicitly set
 	if ( (entity->svflags & SVF_NOCLIENT)
-		|| (entity->solid == SOLID_BSP) 
+		|| (entity->solid == SOLID_BSP)
 		|| origin )
 		flags |= SND_POS;
 
@@ -17765,7 +17709,7 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 		else
 			SV_Multicast (origin, MULTICAST_ALL);
 	}
-}           
+}
 
 
 /*
@@ -17934,8 +17878,8 @@ void SV_SendClientMessages (void)
 			SV_DropClient (c);
 		}
 
-		if (sv.state == ss_cinematic 
-			|| sv.state == ss_demo 
+		if (sv.state == ss_cinematic
+			|| sv.state == ss_demo
 			|| sv.state == ss_pic
 			)
 			Netchan_Transmit (&c->netchan, msglen, msgbuf);
@@ -17968,7 +17912,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -18060,7 +18004,7 @@ void SV_New_f (void)
 
 	//
 	// game server
-	// 
+	//
 	if (sv.state == ss_game)
 	{
 		// set up the entity for the client
@@ -18100,12 +18044,12 @@ void SV_Configstrings_f (void)
 		SV_New_f ();
 		return;
 	}
-	
+
 	start = atoi(Cmd_Argv(2));
 
 	// write a packet full of data
 
-	while ( sv_client->netchan.message.cursize < MAX_MSGLEN/2 
+	while ( sv_client->netchan.message.cursize < MAX_MSGLEN/2
 		&& start < MAX_CONFIGSTRINGS)
 	{
 		if (sv.configstrings[start][0])
@@ -18149,7 +18093,7 @@ void SV_Baselines_f (void)
 		Com_Printf ("baselines not valid -- already spawned\n");
 		return;
 	}
-	
+
 	// handle the case of a level changing while a client was connecting
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
 	{
@@ -18157,7 +18101,7 @@ void SV_Baselines_f (void)
 		SV_New_f ();
 		return;
 	}
-	
+
 	start = atoi(Cmd_Argv(2));
 
 	memset (&nullstate, 0, sizeof(nullstate));
@@ -18279,7 +18223,7 @@ void SV_BeginDownload_f(void)
 	// first off, no .. or global allow check
 	if (strstr (name, "..") || !allow_download->value
 		// leading dot is no good
-		|| *name == '.' 
+		|| *name == '.'
 		// leading slash bad as well, must be in subdir
 		|| *name == '/'
 		// next up, skin check
@@ -18290,8 +18234,8 @@ void SV_BeginDownload_f(void)
 		|| (strncmp(name, "sound/", 6) == 0 && !allow_download_sounds->value)
 		// now maps (note special case for maps, must not be in pak)
 		|| (strncmp(name, "maps/", 6) == 0 && !allow_download_maps->value)
-		// MUST be in a subdirectory	
-		|| !strstr (name, "/") )	
+		// MUST be in a subdirectory
+		|| !strstr (name, "/") )
 	{	// don't allow anything with .. path
 		MSG_WriteByte (&sv_client->netchan.message, svc_download);
 		MSG_WriteShort (&sv_client->netchan.message, -1);
@@ -18345,7 +18289,7 @@ The client is going to disconnect, so remove the connection immediately
 void SV_Disconnect_f (void)
 {
 //	SV_EndRedirect ();
-	SV_DropClient (sv_client);	
+	SV_DropClient (sv_client);
 }
 
 
@@ -18420,7 +18364,7 @@ ucmd_t ucmds[] =
 
 	{"disconnect", SV_Disconnect_f},
 
-	// issued by hand at client consoles	
+	// issued by hand at client consoles
 	{"info", SV_ShowServerinfo_f},
 
 	{"download", SV_BeginDownload_f},
@@ -18437,7 +18381,7 @@ SV_ExecuteUserCommand
 void SV_ExecuteUserCommand (char *s)
 {
 	ucmd_t	*u;
-	
+
 	Cmd_TokenizeString (s, true);
 	sv_player = sv_client->edict;
 
@@ -18518,19 +18462,19 @@ void SV_ExecuteClientMessage (client_t *cl)
 			Com_Printf ("SV_ReadClientMessage: badread\n");
 			SV_DropClient (cl);
 			return;
-		}	
+		}
 
 		c = MSG_ReadByte (&net_message);
 		if (c == -1)
 			break;
-				
+
 		switch (c)
 		{
 		default:
 			Com_Printf ("SV_ReadClientMessage: unknown command char\n");
 			SV_DropClient (cl);
 			return;
-						
+
 		case clc_nop:
 			break;
 
@@ -18550,7 +18494,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 			if (lastframe != cl->lastframe) {
 				cl->lastframe = lastframe;
 				if (cl->lastframe > 0) {
-					cl->frame_latency[cl->lastframe&(LATENCY_COUNTS-1)] = 
+					cl->frame_latency[cl->lastframe&(LATENCY_COUNTS-1)] =
 						svs.realtime - cl->frames[cl->lastframe & UPDATE_MASK].senttime;
 				}
 			}
@@ -18574,8 +18518,8 @@ void SV_ExecuteClientMessage (client_t *cl)
 
 			if (calculatedChecksum != checksum)
 			{
-				Com_DPrintf ("Failed command checksum for %s (%d != %d)/%d\n", 
-					cl->name, calculatedChecksum, checksum, 
+				Com_DPrintf ("Failed command checksum for %s (%d != %d)/%d\n",
+					cl->name, calculatedChecksum, checksum,
 					cl->netchan.incoming_sequence);
 				return;
 			}
@@ -18608,7 +18552,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 			cl->lastcmd = newcmd;
 			break;
 
-		case clc_stringcmd:	
+		case clc_stringcmd:
 			s = MSG_ReadString (&net_message);
 
 			// malicious users may try using too many string commands
@@ -18634,7 +18578,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -18724,28 +18668,28 @@ areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
 
 	ClearLink (&anode->trigger_edicts);
 	ClearLink (&anode->solid_edicts);
-	
+
 	if (depth == AREA_DEPTH)
 	{
 		anode->axis = -1;
 		anode->children[0] = anode->children[1] = NULL;
 		return anode;
 	}
-	
+
 	VectorSubtract (maxs, mins, size);
 	if (size[0] > size[1])
 		anode->axis = 0;
 	else
 		anode->axis = 1;
-	
+
 	anode->dist = 0.5 * (maxs[anode->axis] + mins[anode->axis]);
-	VectorCopy (mins, mins1);	
-	VectorCopy (mins, mins2);	
-	VectorCopy (maxs, maxs1);	
-	VectorCopy (maxs, maxs2);	
-	
+	VectorCopy (mins, mins1);
+	VectorCopy (mins, mins2);
+	VectorCopy (maxs, maxs1);
+	VectorCopy (maxs, maxs2);
+
 	maxs1[anode->axis] = mins2[anode->axis] = anode->dist;
-	
+
 	anode->children[0] = SV_CreateAreaNode (depth+1, mins2, maxs2);
 	anode->children[1] = SV_CreateAreaNode (depth+1, mins1, maxs1);
 
@@ -18800,7 +18744,7 @@ void SV_LinkEdict (edict_t *ent)
 
 	if (ent->area.prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
-		
+
 	if (ent == ge->edicts)
 		return;		// don't add the world
 
@@ -18809,7 +18753,7 @@ void SV_LinkEdict (edict_t *ent)
 
 	// set the size
 	VectorSubtract (ent->maxs, ent->mins, ent->size);
-	
+
 	// encode the size into the entity_state for client prediction
 	if (ent->solid == SOLID_BBOX && !(ent->svflags & SVF_DEADMONSTER))
 	{	// assume that x/y are equal and symetric
@@ -18843,7 +18787,7 @@ void SV_LinkEdict (edict_t *ent)
 		ent->s.solid = 0;
 
 	// set the abs box
-	if (ent->solid == SOLID_BSP && 
+	if (ent->solid == SOLID_BSP &&
 	(ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2]) )
 	{	// expand for rotation
 		float		max, v;
@@ -18867,7 +18811,7 @@ void SV_LinkEdict (edict_t *ent)
 	}
 	else
 	{	// normal
-		VectorAdd (ent->s.origin, ent->mins, ent->absmin);	
+		VectorAdd (ent->s.origin, ent->mins, ent->absmin);
 		VectorAdd (ent->s.origin, ent->maxs, ent->absmax);
 	}
 
@@ -18961,8 +18905,8 @@ void SV_LinkEdict (edict_t *ent)
 		else
 			break;		// crosses the node
 	}
-	
-	// link it in	
+
+	// link it in
 	if (ent->solid == SOLID_TRIGGER)
 		InsertLinkBefore (&ent->area, &node->trigger_edicts);
 	else
@@ -19012,7 +18956,7 @@ void SV_AreaEdicts_r (areanode_t *node)
 		area_list[area_count] = check;
 		area_count++;
 	}
-	
+
 	if (node->axis == -1)
 		return;		// terminal node
 
@@ -19212,7 +19156,7 @@ boxmins[0] = boxmins[1] = boxmins[2] = -9999;
 boxmaxs[0] = boxmaxs[1] = boxmaxs[2] = 9999;
 #else
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (end[i] > start[i])
@@ -19265,7 +19209,7 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 	VectorCopy (mins, clip.mins2);
 	VectorCopy (maxs, clip.maxs2);
-	
+
 	// create the bounding box of the entire move
 	SV_TraceBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
 
@@ -19289,7 +19233,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19309,7 +19253,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19342,7 +19286,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19574,7 +19518,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19592,7 +19536,7 @@ typedef struct vrect_s
 
 typedef struct
 {
-	int		width;		
+	int		width;
 	int		height;
 } viddef_t;
 
@@ -19618,7 +19562,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19682,7 +19626,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19729,7 +19673,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19765,7 +19709,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19913,7 +19857,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19977,7 +19921,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -20265,7 +20209,7 @@ extern	cdlight_t	cl_dlights[MAX_DLIGHTS];
 
 // the cl_parse_entities must be large enough to hold UPDATE_BACKUP frames of
 // entities, so that when a delta compressed message arives from the server
-// it can be un-deltad from the original 
+// it can be un-deltad from the original
 #define	MAX_PARSE_ENTITIES	1024
 extern	entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
@@ -21185,7 +21129,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -21301,7 +21245,7 @@ void CL_ParseProjectiles (void)
 
 		pr.present = true;
 
-		// find if this projectile already exists from previous frame 
+		// find if this projectile already exists from previous frame
 		for (j = 0; j < MAX_PROJECTILES; j++) {
 			if (cl_projectiles[j].modelindex) {
 				if (cl_projectiles[j].num == pr.num) {
@@ -21353,7 +21297,7 @@ void CL_AddProjectiles (void)
 		// interpolate origin
 		for (j=0 ; j<3 ; j++)
 		{
-			ent.origin[j] = ent.oldorigin[j] = pr->oldorigin[j] + cl.lerpfrac * 
+			ent.origin[j] = ent.oldorigin[j] = pr->oldorigin[j] + cl.lerpfrac *
 				(pr->origin[j] - pr->oldorigin[j]);
 
 		}
@@ -21437,7 +21381,7 @@ void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, int bi
 		to->modelindex3 = MSG_ReadByte (&net_message);
 	if (bits & U_MODEL4)
 		to->modelindex4 = MSG_ReadByte (&net_message);
-		
+
 	if (bits & U_FRAME8)
 		to->frame = MSG_ReadByte (&net_message);
 	if (bits & U_FRAME16)
@@ -21470,7 +21414,7 @@ void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, int bi
 		to->origin[1] = MSG_ReadCoord (&net_message);
 	if (bits & U_ORIGIN3)
 		to->origin[2] = MSG_ReadCoord (&net_message);
-		
+
 	if (bits & U_ANGLE1)
 		to->angles[0] = MSG_ReadAngle(&net_message);
 	if (bits & U_ANGLE2)
@@ -21604,7 +21548,7 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 			if (cl_shownet->value == 3)
 				Com_Printf ("   unchanged: %i\n", oldnum);
 			CL_DeltaEntity (newframe, oldnum, oldstate, 0);
-			
+
 			oldindex++;
 
 			if (oldindex >= oldframe->num_entities)
@@ -21669,7 +21613,7 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 		if (cl_shownet->value == 3)
 			Com_Printf ("   unchanged: %i\n", oldnum);
 		CL_DeltaEntity (newframe, oldnum, oldstate, 0);
-		
+
 		oldindex++;
 
 		if (oldindex >= oldframe->num_entities)
@@ -21864,7 +21808,7 @@ void CL_ParseFrame (void)
 	// If the frame is delta compressed from data that we
 	// no longer have available, we must suck up the rest of
 	// the frame, but not use it, then ask for a non-compressed
-	// message 
+	// message
 	if (cl.frame.deltaframe <= 0)
 	{
 		cl.frame.valid = true;		// uncompressed frame
@@ -21891,7 +21835,7 @@ void CL_ParseFrame (void)
 			cl.frame.valid = true;	// valid delta parse
 	}
 
-	// clamp time 
+	// clamp time
 	if (cl.time > cl.frame.servertime)
 		cl.time = cl.frame.servertime;
 	else if (cl.time < cl.frame.servertime - 100)
@@ -21939,7 +21883,7 @@ void CL_ParseFrame (void)
 				SCR_EndLoadingPlaque ();	// get rid of loading plaque
 		}
 		cl.sound_prepped = true;	// can start mixing ambient sounds
-	
+
 		// fire entity events
 		CL_FireEntityEvents (&cl.frame);
 		CL_CheckPredictionError ();
@@ -21996,7 +21940,7 @@ struct model_s *S_RegisterSexedModel (entity_state_t *ent, char *base)
 				Com_sprintf (buffer, sizeof(buffer), "players/male/weapon.md2");
 				mdl = re.RegisterModel(buffer);
 			}
-		} 
+		}
 	}
 
 	return mdl;
@@ -22093,13 +22037,13 @@ void CL_AddPacketEntities (frame_t *frame)
 		{	// interpolate origin
 			for (i=0 ; i<3 ; i++)
 			{
-				ent.origin[i] = ent.oldorigin[i] = cent->prev.origin[i] + cl.lerpfrac * 
+				ent.origin[i] = ent.oldorigin[i] = cent->prev.origin[i] + cl.lerpfrac *
 					(cent->current.origin[i] - cent->prev.origin[i]);
 			}
 		}
 
 		// create a new entity
-	
+
 		// tweak the color of beams
 		if ( renderfx & RF_BEAM )
 		{	// the four beam colors are encoded in 32 bits of skinnum (hack)
@@ -22322,7 +22266,7 @@ void CL_AddPacketEntities (frame_t *frame)
 				CL_RocketTrail (cent->lerp_origin, ent.origin, cent);
 				V_AddLight (ent.origin, 200, 1, 1, 0);
 			}
-			// PGM - Do not reorder EF_BLASTER and EF_HYPERBLASTER. 
+			// PGM - Do not reorder EF_BLASTER and EF_HYPERBLASTER.
 			// EF_BLASTER | EF_TRACKER is a special case for EF_BLASTER2... Cheese!
 			else if (effects & EF_BLASTER)
 			{
@@ -22331,7 +22275,7 @@ void CL_AddPacketEntities (frame_t *frame)
 				if (effects & EF_TRACKER)	// lame... problematic?
 				{
 					CL_BlasterTrail2 (cent->lerp_origin, ent.origin);
-					V_AddLight (ent.origin, 200, 0, 1, 0);		
+					V_AddLight (ent.origin, 200, 0, 1, 0);
 				}
 				else
 				{
@@ -22432,7 +22376,7 @@ void CL_AddPacketEntities (frame_t *frame)
 			// RAFAEL
 			else if (effects & EF_GREENGIB)
 			{
-				CL_DiminishingTrail (cent->lerp_origin, ent.origin, cent, effects);				
+				CL_DiminishingTrail (cent->lerp_origin, ent.origin, cent, effects);
 			}
 			// RAFAEL
 			else if (effects & EF_IONRIPPER)
@@ -22557,7 +22501,7 @@ void CL_CalcViewValues (void)
 		backlerp = 1.0 - lerp;
 		for (i=0 ; i<3 ; i++)
 		{
-			cl.refdef.vieworg[i] = cl.predicted_origin[i] + ops->viewoffset[i] 
+			cl.refdef.vieworg[i] = cl.predicted_origin[i] + ops->viewoffset[i]
 				+ cl.lerpfrac * (ps->viewoffset[i] - ops->viewoffset[i])
 				- backlerp * cl.prediction_error[i];
 		}
@@ -22570,8 +22514,8 @@ void CL_CalcViewValues (void)
 	else
 	{	// just use interpolated values
 		for (i=0 ; i<3 ; i++)
-			cl.refdef.vieworg[i] = ops->pmove.origin[i]*0.125 + ops->viewoffset[i] 
-				+ lerp * (ps->pmove.origin[i]*0.125 + ps->viewoffset[i] 
+			cl.refdef.vieworg[i] = ops->pmove.origin[i]*0.125 + ops->viewoffset[i]
+				+ lerp * (ps->pmove.origin[i]*0.125 + ps->viewoffset[i]
 				- (ops->pmove.origin[i]*0.125 + ops->viewoffset[i]) );
 	}
 
@@ -22685,7 +22629,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -22895,7 +22839,7 @@ void CL_RunDLights (void)
 	{
 		if (!dl->radius)
 			continue;
-		
+
 		if (dl->die < cl.time)
 		{
 			dl->radius = 0;
@@ -23046,7 +22990,7 @@ void CL_ParseMuzzleFlash (void)
 		S_StartSound (NULL, i, CHAN_WEAPON, S_RegisterSound("weapons/plasshot.wav"), volume, ATTN_NORM, 0);
 		break;
 	// RAFAEL
-	case MZ_IONRIPPER:	
+	case MZ_IONRIPPER:
 		dl->color[0] = 1;dl->color[1] = 0.5; dl->color[2] = 0.5;
 		S_StartSound (NULL, i, CHAN_WEAPON, S_RegisterSound("weapons/rippfire.wav"), volume, ATTN_NORM, 0);
 		break;
@@ -23075,7 +23019,7 @@ void CL_ParseMuzzleFlash (void)
 		// negative flashes handled the same in gl/soft until CL_AddDLights
 		dl->color[0] = -1;dl->color[1] = -1;dl->color[2] = -1;
 		S_StartSound (NULL, i, CHAN_WEAPON, S_RegisterSound("weapons/disint2.wav"), volume, ATTN_NORM, 0);
-		break;		
+		break;
 	case MZ_NUKE1:
 		dl->color[0] = 1;dl->color[1] = 0;dl->color[2] = 0;
 		dl->die = cl.time + 100;
@@ -23103,7 +23047,7 @@ void CL_ParseMuzzleFlash (void)
 CL_ParseMuzzleFlash2
 ==============
 */
-void CL_ParseMuzzleFlash2 (void) 
+void CL_ParseMuzzleFlash2 (void)
 {
 	int			ent;
 	vec3_t		origin;
@@ -23358,7 +23302,7 @@ void CL_ParseMuzzleFlash2 (void)
 		dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 0;
 		S_StartSound (NULL, ent, CHAN_WEAPON, S_RegisterSound("makron/blaster.wav"), 1, ATTN_NORM, 0);
 		break;
-	
+
 	case MZ2_JORG_MACHINEGUN_L1:
 	case MZ2_JORG_MACHINEGUN_L2:
 	case MZ2_JORG_MACHINEGUN_L3:
@@ -23573,7 +23517,7 @@ CL_ClearParticles
 void CL_ClearParticles (void)
 {
 	int		i;
-	
+
 	free_particles = &particles[0];
 	active_particles = NULL;
 
@@ -23986,7 +23930,7 @@ void CL_BlasterTrail (vec3_t start, vec3_t end)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -24036,7 +23980,7 @@ void CL_QuadTrail (vec3_t start, vec3_t end)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -24086,7 +24030,7 @@ void CL_FlagTrail (vec3_t start, vec3_t end, float color)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -24158,7 +24102,7 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags)
 			p->next = active_particles;
 			active_particles = p;
 			VectorClear (p->accel);
-		
+
 			p->time = cl.time;
 
 			if (flags & EF_GIB)
@@ -24263,7 +24207,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old)
 			free_particles = p->next;
 			p->next = active_particles;
 			active_particles = p;
-			
+
 			VectorClear (p->accel);
 			p->time = cl.time;
 
@@ -24316,7 +24260,7 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 		free_particles = p->next;
 		p->next = active_particles;
 		active_particles = p;
-		
+
 		p->time = cl.time;
 		VectorClear (p->accel);
 
@@ -24422,7 +24366,7 @@ void CL_IonripperTrail (vec3_t start, vec3_t ent)
 			left = 0;
 			p->vel[0] = 10;
 		}
-		else 
+		else
 		{
 			left = 1;
 			p->vel[0] = -10;
@@ -24601,7 +24545,7 @@ void CL_BfgParticles (entity_t *ent)
 	float		dist = 64;
 	vec3_t		v;
 	float		ltime;
-	
+
 	if (!avelocities[0][0])
 	{
 		for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
@@ -24690,7 +24634,7 @@ void CL_TrapParticles (entity_t *ent)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -24709,14 +24653,14 @@ void CL_TrapParticles (entity_t *ent)
 
 	{
 
-	
+
 	int			i, j, k;
 	cparticle_t	*p;
 	float		vel;
 	vec3_t		dir;
 	vec3_t		org;
 
-	
+
 	ent->origin[2]+=14;
 	VectorCopy (ent->origin, org);
 
@@ -24737,16 +24681,16 @@ void CL_TrapParticles (entity_t *ent)
 
 				p->alpha = 1.0;
 				p->alphavel = -1.0 / (0.3 + (rand()&7) * 0.02);
-				
+
 				p->org[0] = org[0] + i + ((rand()&23) * crand());
 				p->org[1] = org[1] + j + ((rand()&23) * crand());
 				p->org[2] = org[2] + k + ((rand()&23) * crand());
-	
+
 				dir[0] = j * 8;
 				dir[1] = i * 8;
 				dir[2] = k * 8;
-	
-				VectorNormalize (dir);						
+
+				VectorNormalize (dir);
 				vel = 50 + rand()&63;
 				VectorScale (dir, vel, p->vel);
 
@@ -24824,16 +24768,16 @@ void CL_TeleportParticles (vec3_t org)
 
 				p->alpha = 1.0;
 				p->alphavel = -1.0 / (0.3 + (rand()&7) * 0.02);
-				
+
 				p->org[0] = org[0] + i + (rand()&3);
 				p->org[1] = org[1] + j + (rand()&3);
 				p->org[2] = org[2] + k + (rand()&3);
-	
+
 				dir[0] = j*8;
 				dir[1] = i*8;
 				dir[2] = k*8;
-	
-				VectorNormalize (dir);						
+
+				VectorNormalize (dir);
 				vel = 50 + (rand()&63);
 				VectorScale (dir, vel, p->vel);
 
@@ -24977,7 +24921,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25036,7 +24980,7 @@ void KeyDown (kbutton_t *b)
 {
 	int		k;
 	char	*c;
-	
+
 	c = Cmd_Argv(1);
 	if (c[0])
 		k = atoi(c);
@@ -25045,7 +24989,7 @@ void KeyDown (kbutton_t *b)
 
 	if (k == b->down[0] || k == b->down[1])
 		return;		// repeating key
-	
+
 	if (!b->down[0])
 		b->down[0] = k;
 	else if (!b->down[1])
@@ -25055,7 +24999,7 @@ void KeyDown (kbutton_t *b)
 		Com_Printf ("Three keys down for a button!\n");
 		return;
 	}
-	
+
 	if (b->state & 1)
 		return;		// still down
 
@@ -25211,7 +25155,7 @@ void CL_AdjustAngles (void)
 {
 	float	speed;
 	float	up, down;
-	
+
 	if (in_speed.state & 1)
 		speed = cls.frametime * cl_anglespeedkey->value;
 	else
@@ -25227,10 +25171,10 @@ void CL_AdjustAngles (void)
 		cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_KeyState (&in_forward);
 		cl.viewangles[PITCH] += speed*cl_pitchspeed->value * CL_KeyState (&in_back);
 	}
-	
+
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
-	
+
 	cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
 	cl.viewangles[PITCH] += speed*cl_pitchspeed->value * down;
 }
@@ -25243,11 +25187,11 @@ Send the intended movement message to the server
 ================
 */
 void CL_BaseMove (usercmd_t *cmd)
-{	
+{
 	CL_AdjustAngles ();
-	
+
 	memset (cmd, 0, sizeof(*cmd));
-	
+
 	VectorCopy (cl.viewangles, cmd->angles);
 	if (in_strafe.state & 1)
 	{
@@ -25262,10 +25206,10 @@ void CL_BaseMove (usercmd_t *cmd)
 	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 
 	if (! (in_klook.state & 1) )
-	{	
+	{
 		cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
 		cmd->forwardmove -= cl_forwardspeed->value * CL_KeyState (&in_back);
-	}	
+	}
 
 //
 // adjust for speed key / running
@@ -25275,7 +25219,7 @@ void CL_BaseMove (usercmd_t *cmd)
 		cmd->forwardmove *= 2;
 		cmd->sidemove *= 2;
 		cmd->upmove *= 2;
-	}	
+	}
 }
 
 void CL_ClampPitch (void)
@@ -25303,11 +25247,11 @@ void CL_FinishMove (usercmd_t *cmd)
 
 //
 // figure button bits
-//	
+//
 	if ( in_attack.state & 3 )
 		cmd->buttons |= BUTTON_ATTACK;
 	in_attack.state &= ~2;
-	
+
 	if (in_use.state & 3)
 		cmd->buttons |= BUTTON_USE;
 	in_use.state &= ~2;
@@ -25346,7 +25290,7 @@ usercmd_t CL_CreateCmd (void)
 		frame_msec = 1;
 	if (frame_msec > 200)
 		frame_msec = 200;
-	
+
 	// get basic movement from keyboard
 	CL_BaseMove (&cmd);
 
@@ -25445,7 +25389,7 @@ void CL_SendCmd (void)
 	if ( cls.state == ca_connected)
 	{
 		if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000 )
-			Netchan_Transmit (&cls.netchan, 0, buf.data);	
+			Netchan_Transmit (&cls.netchan, 0, buf.data);
 		return;
 	}
 
@@ -25460,7 +25404,7 @@ void CL_SendCmd (void)
 
 	SZ_Init (&buf, data, sizeof(data));
 
-	if (cmd->buttons && cl.cinematictime > 0 && !cl.attractloop 
+	if (cmd->buttons && cl.cinematictime > 0 && !cl.attractloop
 		&& cls.realtime - cl.cinematictime > 1000)
 	{	// skip the rest of the cinematic
 		SCR_FinishCinematic ();
@@ -25505,7 +25449,7 @@ void CL_SendCmd (void)
 	//
 	// deliver the message
 	//
-	Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);	
+	Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
 }
 
 
@@ -25521,7 +25465,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25665,7 +25609,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25911,7 +25855,7 @@ void CL_Record_f (void)
 			buf.cursize = 0;
 		}
 
-		MSG_WriteByte (&buf, svc_spawnbaseline);		
+		MSG_WriteByte (&buf, svc_spawnbaseline);
 		MSG_WriteDeltaEntity (&nullstate, &cl_entities[i].baseline, &buf, true, true);
 	}
 
@@ -26006,7 +25950,7 @@ void CL_ForwardToServer_f (void)
 		Com_Printf ("Can't \"%s\", not connected\n", Cmd_Argv(0));
 		return;
 	}
-	
+
 	// don't forward the first argument
 	if (Cmd_Argc() > 1)
 	{
@@ -26155,9 +26099,9 @@ void CL_Connect_f (void)
 	if (Cmd_Argc() != 2)
 	{
 		Com_Printf ("usage: connect <server>\n");
-		return;	
+		return;
 	}
-	
+
 	if (Com_ServerState ())
 	{	// if running a local server, kill it and reissue
 		SV_Shutdown (va("Server quit\n", msg), false);
@@ -26235,7 +26179,7 @@ void CL_Rcon_f (void)
 		if (to.port == 0)
 			to.port = BigShort (PORT_SERVER);
 	}
-	
+
 	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
 }
 
@@ -26279,7 +26223,7 @@ void CL_Disconnect (void)
 	if (cl_timedemo && cl_timedemo->value)
 	{
 		int	time;
-		
+
 		time = Sys_Milliseconds () - cl.timedemo_start;
 		if (time > 0)
 			Com_Printf ("%i frames, %3.1f seconds: %3.1f fps\n", cl.timedemo_frames,
@@ -26414,7 +26358,7 @@ void CL_Reconnect_f (void)
 		Com_Printf ("reconnecting...\n");
 		cls.state = ca_connected;
 		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message, "new");		
+		MSG_WriteString (&cls.netchan.message, "new");
 		return;
 	}
 
@@ -26519,7 +26463,7 @@ void CL_Skins_f (void)
 	{
 		if (!cl.configstrings[CS_PLAYERSKINS+i][0])
 			continue;
-		Com_Printf ("client %i: %s\n", i, cl.configstrings[CS_PLAYERSKINS+i]); 
+		Com_Printf ("client %i: %s\n", i, cl.configstrings[CS_PLAYERSKINS+i]);
 		SCR_UpdateScreen ();
 		Sys_SendKeyEvents ();	// pump message loop
 		CL_ParseClientinfo (i);
@@ -26538,7 +26482,7 @@ void CL_ConnectionlessPacket (void)
 {
 	char	*s;
 	char	*c;
-	
+
 	MSG_BeginReading (&net_message);
 	MSG_ReadLong (&net_message);	// skip the -1
 
@@ -26560,7 +26504,7 @@ void CL_ConnectionlessPacket (void)
 		}
 		Netchan_Setup (NS_CLIENT, &cls.netchan, net_from, cls.quakePort);
 		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message, "new");	
+		MSG_WriteString (&cls.netchan.message, "new");
 		cls.state = ca_connected;
 		return;
 	}
@@ -26693,7 +26637,7 @@ void CL_ReadPackets (void)
 	}
 	else
 		cl.timeoutcount = 0;
-	
+
 }
 
 
@@ -26836,14 +26780,14 @@ void CL_RequestNextDownload (void)
 
 				while (precache_model_skin - 1 < LittleLong(pheader->num_skins)) {
 					if (!CL_CheckOrDownloadFile((char *)precache_model +
-						LittleLong(pheader->ofs_skins) + 
+						LittleLong(pheader->ofs_skins) +
 						(precache_model_skin - 1)*MAX_SKINNAME)) {
 						precache_model_skin++;
 						return; // started a download
 					}
 					precache_model_skin++;
 				}
-				if (precache_model) { 
+				if (precache_model) {
 					FS_FreeFile(precache_model);
 					precache_model = 0;
 				}
@@ -26853,7 +26797,7 @@ void CL_RequestNextDownload (void)
 		}
 		precache_check = CS_SOUNDS;
 	}
-	if (precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS) { 
+	if (precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS) {
 		if (allow_download_sounds->value) {
 			if (precache_check == CS_SOUNDS)
 				precache_check++; // zero is blank
@@ -26982,10 +26926,10 @@ void CL_RequestNextDownload (void)
 				int n = precache_check++ - ENV_CNT - 1;
 
 				if (n & 1)
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.pcx", 
+					Com_sprintf(fn, sizeof(fn), "env/%s%s.pcx",
 						cl.configstrings[CS_SKY], env_suf[n/2]);
 				else
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.tga", 
+					Com_sprintf(fn, sizeof(fn), "env/%s%s.tga",
 						cl.configstrings[CS_SKY], env_suf[n/2]);
 				if (!CL_CheckOrDownloadFile(fn))
 					return; // started a download
@@ -27270,7 +27214,7 @@ void CL_FixCvarCheats (void)
 	int			i;
 	cheatvar_t	*var;
 
-	if ( !strcmp(cl.configstrings[CS_MAXCLIENTS], "1") 
+	if ( !strcmp(cl.configstrings[CS_MAXCLIENTS], "1")
 		|| !cl.configstrings[CS_MAXCLIENTS][0] )
 		return;		// single player can cheat
 
@@ -27393,7 +27337,7 @@ void CL_Frame (int msec)
 
 	// update audio
 	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
-	
+
 	CDAudio_Update();
 
 	// advance local effects for next frame
@@ -27441,22 +27385,22 @@ void CL_Init (void)
 
 	// all archived variables will now be loaded
 
-	Con_Init ();	
+	Con_Init ();
 #if defined __linux__ || defined __sgi
-	S_Init ();	
+	S_Init ();
 	VID_Init ();
 #else
 	VID_Init ();
 	S_Init ();	// sound must be initialized after window is created
 #endif
-	
+
 	V_Init ();
-	
+
 	net_message.data = net_message_buffer;
 	net_message.maxsize = sizeof(net_message_buffer);
 
-	M_Init ();	
-	
+	M_Init ();
+
 	SCR_Init ();
 	cls.disable_screen = true;	// don't draw yet
 
@@ -27482,7 +27426,7 @@ to run quit through here before the final handoff to the sys code.
 void CL_Shutdown(void)
 {
 	static qboolean isdown = false;
-	
+
 	if (isdown)
 	{
 		printf ("recursive shutdown\n");
@@ -27490,7 +27434,7 @@ void CL_Shutdown(void)
 	}
 	isdown = true;
 
-	CL_WriteConfiguration (); 
+	CL_WriteConfiguration ();
 
 	CDAudio_Shutdown ();
 	S_Shutdown();
@@ -27511,7 +27455,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27541,7 +27485,7 @@ void vectoangles2 (vec3_t value1, vec3_t angles)
 {
 	float	forward;
 	float	yaw, pitch;
-	
+
 	if (value1[1] == 0 && value1[0] == 0)
 	{
 		yaw = 0;
@@ -27713,7 +27657,7 @@ void CL_SmokeTrail (vec3_t start, vec3_t end, int colorStart, int colorRun, int 
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -27751,7 +27695,7 @@ void CL_ForceWall (vec3_t start, vec3_t end, int color)
 
 		if (!free_particles)
 			return;
-		
+
 		if (frand() > 0.3)
 		{
 			p = free_particles;
@@ -27759,7 +27703,7 @@ void CL_ForceWall (vec3_t start, vec3_t end, int color)
 			p->next = active_particles;
 			active_particles = p;
 			VectorClear (p->accel);
-			
+
 			p->time = cl.time;
 
 			p->alpha = 1.0;
@@ -27791,12 +27735,12 @@ void CL_FlameEffects (centity_t *ent, vec3_t origin)
 	{
 		if (!free_particles)
 			return;
-			
+
 		p = free_particles;
 		free_particles = p->next;
 		p->next = active_particles;
 		active_particles = p;
-		
+
 		VectorClear (p->accel);
 		p->time = cl.time;
 
@@ -27823,7 +27767,7 @@ void CL_FlameEffects (centity_t *ent, vec3_t origin)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -27972,7 +27916,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 		d = i * 0.1 - fmod(ltime,16.0)*M_PI;
 		c = cos(d)/1.75;
 		s = sin(d)/1.75;
-#ifdef DOUBLE_SCREW		
+#ifdef DOUBLE_SCREW
 		for (k=-1; k<2; k+=2)
 		{
 #else
@@ -27985,7 +27929,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 			free_particles = p->next;
 			p->next = active_particles;
 			active_particles = p;
-			
+
 			p->time = cl.time;
 			VectorClear (p->accel);
 
@@ -28009,7 +27953,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 				VectorScale (right, c*k, dir);
 				VectorMA (dir, s*k, up, dir);
 			}
-			
+
 			for (j=0 ; j<3 ; j++)
 			{
 				p->org[j] = move[j] + dir[j]*3;
@@ -28083,7 +28027,7 @@ void CL_Heatbeam (vec3_t start, vec3_t forward)
 			free_particles = p->next;
 			p->next = active_particles;
 			active_particles = p;
-			
+
 			p->time = cl.time;
 			VectorClear (p->accel);
 //			rot+= fmod(ltime, 12.0)*M_PI;
@@ -28093,7 +28037,7 @@ void CL_Heatbeam (vec3_t start, vec3_t forward)
 			variance = 0.5;
 			c = cos(rot)*variance;
 			s = sin(rot)*variance;
-			
+
 			// trim it so it looks like it's starting at the origin
 			if (i < 10)
 			{
@@ -28105,7 +28049,7 @@ void CL_Heatbeam (vec3_t start, vec3_t forward)
 				VectorScale (right, c, dir);
 				VectorMA (dir, s, up, dir);
 			}
-		
+
 			p->alpha = 0.5;
 	//		p->alphavel = -1.0 / (1+frand()*0.2);
 			p->alphavel = -1000.0;
@@ -28159,10 +28103,10 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 		free_particles = p->next;
 		p->next = active_particles;
 		active_particles = p;
-		
+
 		p->time = cl.time;
 		VectorClear (p->accel);
-		
+
 		d = crand()*M_PI;
 		c = cos(d)*30;
 		s = sin(d)*30;
@@ -28203,7 +28147,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 			free_particles = p->next;
 			p->next = active_particles;
 			active_particles = p;
-			
+
 			p->time = cl.time;
 			VectorClear (p->accel);
 //			rot+= fmod(ltime, 12.0)*M_PI;
@@ -28211,7 +28155,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 //			s = sin(rot)/2.0;
 			c = cos(rot)/1.5;
 			s = sin(rot)/1.5;
-			
+
 			// trim it so it looks like it's starting at the origin
 			if (i < 10)
 			{
@@ -28223,7 +28167,7 @@ void CL_Heatbeam (vec3_t start, vec3_t end)
 				VectorScale (right, c, dir);
 				VectorMA (dir, s, up, dir);
 			}
-		
+
 			p->alpha = 0.5;
 	//		p->alphavel = -1.0 / (1+frand()*0.2);
 			p->alphavel = -1000.0;
@@ -28378,7 +28322,7 @@ void CL_TrackerTrail (vec3_t start, vec3_t end, int particleColor)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28413,7 +28357,7 @@ void CL_Tracker_Shell(vec3_t origin)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28424,7 +28368,7 @@ void CL_Tracker_Shell(vec3_t origin)
 		dir[1] = crand();
 		dir[2] = crand();
 		VectorNormalize(dir);
-	
+
 		VectorMA(origin, 40, dir, p->org);
 	}
 }
@@ -28444,7 +28388,7 @@ void CL_MonsterPlasma_Shell(vec3_t origin)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28455,7 +28399,7 @@ void CL_MonsterPlasma_Shell(vec3_t origin)
 		dir[1] = crand();
 		dir[2] = crand();
 		VectorNormalize(dir);
-	
+
 		VectorMA(origin, 10, dir, p->org);
 //		VectorMA(origin, 10*(((rand () & 0x7fff) / ((float)0x7fff))), dir, p->org);
 	}
@@ -28480,7 +28424,7 @@ void CL_Widowbeamout (cl_sustain_t *self)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28491,7 +28435,7 @@ void CL_Widowbeamout (cl_sustain_t *self)
 		dir[1] = crand();
 		dir[2] = crand();
 		VectorNormalize(dir);
-	
+
 		VectorMA(self->org, (45.0 * ratio), dir, p->org);
 //		VectorMA(origin, 10*(((rand () & 0x7fff) / ((float)0x7fff))), dir, p->org);
 	}
@@ -28516,7 +28460,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28527,7 +28471,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 		dir[1] = crand();
 		dir[2] = crand();
 		VectorNormalize(dir);
-	
+
 		VectorMA(self->org, (200.0 * ratio), dir, p->org);
 //		VectorMA(origin, 10*(((rand () & 0x7fff) / ((float)0x7fff))), dir, p->org);
 	}
@@ -28582,7 +28526,7 @@ void CL_Tracker_Explode(vec3_t	origin)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28594,11 +28538,11 @@ void CL_Tracker_Explode(vec3_t	origin)
 		dir[2] = crand();
 		VectorNormalize(dir);
 		VectorScale(dir, -1, backdir);
-	
+
 		VectorMA(origin, 64, dir, p->org);
 		VectorScale(backdir, 64, p->vel);
 	}
-	
+
 }
 
 /*
@@ -28634,7 +28578,7 @@ void CL_TagTrail (vec3_t start, vec3_t end, float color)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28808,7 +28752,7 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
 		p->next = active_particles;
 		active_particles = p;
 		VectorClear (p->accel);
-		
+
 		p->time = cl.time;
 
 		p->alpha = 1.0;
@@ -28836,7 +28780,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -28867,7 +28811,7 @@ char *svc_strings[256] =
 	"svc_stufftext",
 	"svc_serverdata",
 	"svc_configstring",
-	"svc_spawnbaseline",	
+	"svc_spawnbaseline",
 	"svc_centerprint",
 	"svc_download",
 	"svc_playerinfo",
@@ -29128,7 +29072,7 @@ void CL_ParseServerData (void)
 	extern cvar_t	*fs_gamedirvar;
 	char	*str;
 	int		i;
-	
+
 	Com_DPrintf ("Serverdata packet received.\n");
 //
 // wipe the client_state_t struct
@@ -29355,7 +29299,7 @@ void CL_ParseConfigString (void)
 	s = MSG_ReadString(&net_message);
 	strcpy (cl.configstrings[i], s);
 
-	// do something apropriate 
+	// do something apropriate
 
 	if (i >= CS_LIGHTS && i < CS_LIGHTS+MAX_LIGHTSTYLES)
 		CL_SetLightstyle (i - CS_LIGHTS);
@@ -29413,7 +29357,7 @@ void CL_ParseStartSoundPacket(void)
     int 	channel, ent;
     int 	sound_num;
     float 	volume;
-    float 	attenuation;  
+    float 	attenuation;
 	int		flags;
 	float	ofs;
 
@@ -29424,11 +29368,11 @@ void CL_ParseStartSoundPacket(void)
 		volume = MSG_ReadByte (&net_message) / 255.0;
 	else
 		volume = DEFAULT_SOUND_PACKET_VOLUME;
-	
+
     if (flags & SND_ATTENUATION)
 		attenuation = MSG_ReadByte (&net_message) / 64.0;
 	else
-		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;	
+		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 
     if (flags & SND_OFFSET)
 		ofs = MSG_ReadByte (&net_message) / 1000.0;
@@ -29437,7 +29381,7 @@ void CL_ParseStartSoundPacket(void)
 
 	if (flags & SND_ENT)
 	{	// entity reletive
-		channel = MSG_ReadShort(&net_message); 
+		channel = MSG_ReadShort(&net_message);
 		ent = channel>>3;
 		if (ent > MAX_EDICTS)
 			Com_Error (ERR_DROP,"CL_ParseStartSoundPacket: ent = %i", ent);
@@ -29453,7 +29397,7 @@ void CL_ParseStartSoundPacket(void)
 	if (flags & SND_POS)
 	{	// positioned in space
 		MSG_ReadPos (&net_message, pos_v);
- 
+
 		pos = pos_v;
 	}
 	else	// use entity number
@@ -29463,7 +29407,7 @@ void CL_ParseStartSoundPacket(void)
 		return;
 
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
-}       
+}
 
 
 void SHOWNET(char *s)
@@ -29518,18 +29462,18 @@ void CL_ParseServerMessage (void)
 			else
 				SHOWNET(svc_strings[cmd]);
 		}
-	
+
 	// other commands
 		switch (cmd)
 		{
 		default:
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: Illegible server message\n");
 			break;
-			
+
 		case svc_nop:
 //			Com_Printf ("svc_nop\n");
 			break;
-			
+
 		case svc_disconnect:
 			Com_Error (ERR_DISCONNECT,"Server disconnected\n");
 			break;
@@ -29555,30 +29499,30 @@ void CL_ParseServerMessage (void)
 			Com_Printf ("%s", MSG_ReadString (&net_message));
 			con.ormask = 0;
 			break;
-			
+
 		case svc_centerprint:
 			SCR_CenterPrint (MSG_ReadString (&net_message));
 			break;
-			
+
 		case svc_stufftext:
 			s = MSG_ReadString (&net_message);
 			Com_DPrintf ("stufftext: %s\n", s);
 			Cbuf_AddText (s);
 			break;
-			
+
 		case svc_serverdata:
 			Cbuf_Execute ();		// make sure any stuffed commands are done
 			CL_ParseServerData ();
 			break;
-			
+
 		case svc_configstring:
 			CL_ParseConfigString ();
 			break;
-			
+
 		case svc_sound:
 			CL_ParseStartSoundPacket();
 			break;
-			
+
 		case svc_spawnbaseline:
 			CL_ParseBaseline ();
 			break;
@@ -29644,7 +29588,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -29688,7 +29632,7 @@ void CL_CheckPredictionError (void)
 	else
 	{
 		if (cl_showmiss->value && (delta[0] || delta[1] || delta[2]) )
-			Com_Printf ("prediction miss on %i: %i\n", cl.frame.serverframe, 
+			Com_Printf ("prediction miss on %i: %i\n", cl.frame.serverframe,
 			delta[0] + delta[1] + delta[2]);
 
 		VectorCopy (cl.frame.playerstate.pmove.origin, cl.predicted_origins[frame]);
@@ -29866,7 +29810,7 @@ void CL_PredictMovement (void)
 	{
 		if (cl_showmiss->value)
 			Com_Printf ("exceeded CMD_BACKUP\n");
-		return;	
+		return;
 	}
 
 	// copy current state to pmove
@@ -29924,7 +29868,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -30079,7 +30023,7 @@ void SCR_DrawDebugGraph (void)
 		v = values[i].value;
 		color = values[i].color;
 		v = v*scr_graphscale->value + scr_graphshift->value;
-		
+
 		if (v < 0)
 			v += scr_graphheight->value * (1+(int)(-v/scr_graphheight->value));
 		h = (int)v % (int)scr_graphheight->value;
@@ -30133,7 +30077,7 @@ void SCR_CenterPrint (char *str)
 	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
 
 	s = str;
-	do	
+	do
 	{
 	// scan the width of the line
 		for (l=0 ; l<40 ; l++)
@@ -30183,7 +30127,7 @@ void SCR_DrawCenterString (void)
 	else
 		y = 48;
 
-	do	
+	do
 	{
 	// scan the width of the line
 		for (l=0 ; l<40 ; l++)
@@ -30193,12 +30137,12 @@ void SCR_DrawCenterString (void)
 		SCR_AddDirtyPoint (x, y);
 		for (j=0 ; j<l ; j++, x+=8)
 		{
-			re.DrawChar (x, y, start[j]);	
+			re.DrawChar (x, y, start[j]);
 			if (!remaining--)
 				return;
 		}
 		SCR_AddDirtyPoint (x, y+8);
-			
+
 		y += 8;
 
 		while (*start && *start != '\n')
@@ -30213,7 +30157,7 @@ void SCR_DrawCenterString (void)
 void SCR_CheckDrawCenterString (void)
 {
 	scr_centertime_off -= cls.frametime;
-	
+
 	if (scr_centertime_off <= 0)
 		return;
 
@@ -30357,7 +30301,7 @@ SCR_DrawNet
 */
 void SCR_DrawNet (void)
 {
-	if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged 
+	if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged
 		< CMD_BACKUP-1)
 		return;
 
@@ -30391,7 +30335,7 @@ SCR_DrawLoading
 void SCR_DrawLoading (void)
 {
 	int		w, h;
-		
+
 	if (!scr_draw_loading)
 		return;
 
@@ -30416,7 +30360,7 @@ void SCR_RunConsole (void)
 		scr_conlines = 0.5;		// half screen
 	else
 		scr_conlines = 0;				// none visible
-	
+
 	if (scr_conlines < scr_con_current)
 	{
 		scr_con_current -= scr_conspeed->value*cls.frametime;
@@ -30441,7 +30385,7 @@ SCR_DrawConsole
 void SCR_DrawConsole (void)
 {
 	Con_CheckResize ();
-	
+
 	if (cls.state == ca_disconnected || cls.state == ca_connecting)
 	{	// forced full screen console
 		Con_DrawConsole (1.0);
@@ -30692,7 +30636,7 @@ void SCR_TileClear (void)
 
 
 #define STAT_MINUS		10	// num frame for '-' stats digit
-char		*sb_nums[2][11] = 
+char		*sb_nums[2][11] =
 {
 	{"num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
 	"num_6", "num_7", "num_8", "num_9", "num_minus"},
@@ -30850,7 +30794,7 @@ void SCR_TouchPics (void)
 
 /*
 ================
-SCR_ExecuteLayoutString 
+SCR_ExecuteLayoutString
 
 ================
 */
@@ -31215,7 +31159,7 @@ void SCR_UpdateScreen (void)
 		numframes = 2;
 		separation[0] = -cl_stereo_separation->value / 2;
 		separation[1] =  cl_stereo_separation->value / 2;
-	}		
+	}
 	else
 	{
 		separation[0] = 0;
@@ -31237,7 +31181,7 @@ void SCR_UpdateScreen (void)
 			re.DrawPic ((viddef.width-w)/2, (viddef.height-h)/2, "loading");
 //			re.EndFrame();
 //			return;
-		} 
+		}
 		// if a cinematic is supposed to be running, handle menus
 		// and console specially
 		else if (cl.cinematictime > 0)
@@ -31271,7 +31215,7 @@ void SCR_UpdateScreen (void)
 //				return;
 			}
 		}
-		else 
+		else
 		{
 
 			// make sure the game palette is active
@@ -31327,7 +31271,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -31481,7 +31425,7 @@ void CL_RegisterTEntSounds (void)
 	if (name[0] == 'w')
 		name[0] = 'W';
 //PGM
-}	
+}
 
 /*
 =================
@@ -31522,7 +31466,7 @@ re.RegisterPic ("a_grenades");
 	cl_mod_heatbeam = re.RegisterModel ("models/proj/beam/tris.md2");
 	cl_mod_monster_heatbeam = re.RegisterModel ("models/proj/widowbeam/tris.md2");
 //ROGUE
-}	
+}
 
 /*
 =================
@@ -31551,7 +31495,7 @@ explosion_t *CL_AllocExplosion (void)
 	int		i;
 	int		time;
 	int		index;
-	
+
 	for (i=0 ; i<MAX_EXPLOSIONS ; i++)
 	{
 		if (cl_explosions[i].type == ex_free)
@@ -31631,9 +31575,9 @@ int CL_ParseBeam (struct model_s *model)
 	vec3_t	start, end;
 	beam_t	*b;
 	int		i;
-	
+
 	ent = MSG_ReadShort (&net_message);
-	
+
 	MSG_ReadPos (&net_message, start);
 	MSG_ReadPos (&net_message, end);
 
@@ -31664,7 +31608,7 @@ int CL_ParseBeam (struct model_s *model)
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");	
+	Com_Printf ("beam list overflow!\n");
 	return ent;
 }
 
@@ -31679,9 +31623,9 @@ int CL_ParseBeam2 (struct model_s *model)
 	vec3_t	start, end, offset;
 	beam_t	*b;
 	int		i;
-	
+
 	ent = MSG_ReadShort (&net_message);
-	
+
 	MSG_ReadPos (&net_message, start);
 	MSG_ReadPos (&net_message, end);
 	MSG_ReadPos (&net_message, offset);
@@ -31709,14 +31653,14 @@ int CL_ParseBeam2 (struct model_s *model)
 		{
 			b->entity = ent;
 			b->model = model;
-			b->endtime = cl.time + 200;	
+			b->endtime = cl.time + 200;
 			VectorCopy (start, b->start);
 			VectorCopy (end, b->end);
 			VectorCopy (offset, b->offset);
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");	
+	Com_Printf ("beam list overflow!\n");
 	return ent;
 }
 
@@ -31733,9 +31677,9 @@ int CL_ParsePlayerBeam (struct model_s *model)
 	vec3_t	start, end, offset;
 	beam_t	*b;
 	int		i;
-	
+
 	ent = MSG_ReadShort (&net_message);
-	
+
 	MSG_ReadPos (&net_message, start);
 	MSG_ReadPos (&net_message, end);
 	// PMM - network optimization
@@ -31781,7 +31725,7 @@ int CL_ParsePlayerBeam (struct model_s *model)
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");	
+	Com_Printf ("beam list overflow!\n");
 	return ent;
 }
 //rogue
@@ -31797,7 +31741,7 @@ int CL_ParseLightning (struct model_s *model)
 	vec3_t	start, end;
 	beam_t	*b;
 	int		i;
-	
+
 	srcEnt = MSG_ReadShort (&net_message);
 	destEnt = MSG_ReadShort (&net_message);
 
@@ -31835,7 +31779,7 @@ int CL_ParseLightning (struct model_s *model)
 			return srcEnt;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");	
+	Com_Printf ("beam list overflow!\n");
 	return srcEnt;
 }
 
@@ -32044,7 +31988,7 @@ void CL_ParseTEnt (void)
 		if (type != TE_SPARKS)
 		{
 			CL_SmokeAndFlash(pos);
-			
+
 			// impact sound
 			cnt = rand()&15;
 			if (cnt == 1)
@@ -32056,7 +32000,7 @@ void CL_ParseTEnt (void)
 		}
 
 		break;
-		
+
 	case TE_SCREEN_SPARKS:
 	case TE_SHIELD_SPARKS:
 		MSG_ReadPos (&net_message, pos);
@@ -32068,7 +32012,7 @@ void CL_ParseTEnt (void)
 		//FIXME : replace or remove this sound
 		S_StartSound (pos, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
 		break;
-		
+
 	case TE_SHOTGUN:			// bullet hitting wall
 		MSG_ReadPos (&net_message, pos);
 		MSG_ReadDir (&net_message, dir);
@@ -32142,7 +32086,7 @@ void CL_ParseTEnt (void)
 		ex->frames = 4;
 		S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
 		break;
-		
+
 	case TE_RAILTRAIL:			// railgun effect
 		MSG_ReadPos (&net_message, pos);
 		MSG_ReadPos (&net_message, pos2);
@@ -32184,7 +32128,7 @@ void CL_ParseTEnt (void)
 		ex->ent.flags = RF_FULLBRIGHT;
 		ex->start = cl.frame.servertime - 100;
 		ex->light = 350;
-		ex->lightcolor[0] = 1.0; 
+		ex->lightcolor[0] = 1.0;
 		ex->lightcolor[1] = 0.5;
 		ex->lightcolor[2] = 0.5;
 		ex->ent.angles[1] = rand() % 360;
@@ -32195,7 +32139,7 @@ void CL_ParseTEnt (void)
 		CL_ExplosionParticles (pos);
 		S_StartSound (pos, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
 		break;
-	
+
 	case TE_EXPLOSION1:
 	case TE_EXPLOSION1_BIG:						// PMM
 	case TE_ROCKET_EXPLOSION:
@@ -32320,7 +32264,7 @@ void CL_ParseTEnt (void)
 	case TE_FLECHETTE:			// flechette
 		MSG_ReadPos (&net_message, pos);
 		MSG_ReadDir (&net_message, dir);
-		
+
 		// PMM
 		if (type == TE_BLASTER2)
 			CL_BlasterParticles2 (pos, dir, 0xd0);
@@ -32434,7 +32378,7 @@ void CL_ParseTEnt (void)
 		CL_ParticleSteamEffect (pos, dir, color, cnt, magnitude);
 		S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
 		break;
-	
+
 	case TE_HEATBEAM_STEAM:
 //		cnt = MSG_ReadByte (&net_message);
 		cnt = 20;
@@ -32533,7 +32477,7 @@ void CL_AddBeams (void)
 	float		forward;
 	float		len, steps;
 	float		model_length;
-	
+
 // update beams
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
 	{
@@ -32570,7 +32514,7 @@ void CL_AddBeams (void)
 				yaw = 270;
 			if (yaw < 0)
 				yaw += 360;
-	
+
 			forward = sqrt (dist[0]*dist[0] + dist[1]*dist[1]);
 			pitch = (atan2(dist[2], forward) * -180.0 / M_PI);
 			if (pitch < 0)
@@ -32609,7 +32553,7 @@ void CL_AddBeams (void)
 			ent.angles[0] = pitch;
 			ent.angles[1] = yaw;
 			ent.angles[2] = rand()%360;
-			V_AddEntity (&ent);			
+			V_AddEntity (&ent);
 			return;
 		}
 		while (d > 0)
@@ -32629,7 +32573,7 @@ void CL_AddBeams (void)
 				ent.angles[1] = yaw;
 				ent.angles[2] = rand()%360;
 			}
-			
+
 //			Com_Printf("B: %d -> %d\n", b->entity, b->dest_entity);
 			V_AddEntity (&ent);
 
@@ -32674,7 +32618,7 @@ void CL_AddPlayerBeams (void)
 	float		len, steps;
 	int			framenum;
 	float		model_length;
-	
+
 	float		hand_multiplier;
 	frame_t		*oldframe;
 	player_state_t	*ps, *ops;
@@ -32689,7 +32633,7 @@ void CL_AddPlayerBeams (void)
 		else
 			hand_multiplier = 1;
 	}
-	else 
+	else
 	{
 		hand_multiplier = 1;
 	}
@@ -32707,7 +32651,7 @@ void CL_AddPlayerBeams (void)
 
 			// if coming from the player, update the start position
 			if (b->entity == cl.playernum+1)	// entity 0 is the world
-			{	
+			{
 				// set up gun position
 				// code straight out of CL_AddViewWeapon
 				ps = &cl.frame.playerstate;
@@ -32785,13 +32729,13 @@ void CL_AddPlayerBeams (void)
 				yaw = 270;
 			if (yaw < 0)
 				yaw += 360;
-	
+
 			forward = sqrt (dist[0]*dist[0] + dist[1]*dist[1]);
 			pitch = (atan2(dist[2], forward) * -180.0 / M_PI);
 			if (pitch < 0)
 				pitch += 360.0;
 		}
-		
+
 		if (cl_mod_heatbeam && (b->model == cl_mod_heatbeam))
 		{
 			if (b->entity != cl.playernum+1)
@@ -32803,7 +32747,7 @@ void CL_AddPlayerBeams (void)
 				ent.angles[2] = 0;
 //				Com_Printf ("%f %f - %f %f %f\n", -pitch, yaw+180.0, b->offset[0], b->offset[1], b->offset[2]);
 				AngleVectors(ent.angles, f, r, u);
-					
+
 				// if it's a non-origin offset, it's a player, so use the hardcoded player offset
 				if (!VectorCompare (b->offset, vec3_origin))
 				{
@@ -32865,7 +32809,7 @@ void CL_AddPlayerBeams (void)
 			ent.angles[0] = pitch;
 			ent.angles[1] = yaw;
 			ent.angles[2] = rand()%360;
-			V_AddEntity (&ent);			
+			V_AddEntity (&ent);
 			return;
 		}
 		while (d > 0)
@@ -32896,7 +32840,7 @@ void CL_AddPlayerBeams (void)
 				ent.angles[1] = yaw;
 				ent.angles[2] = rand()%360;
 			}
-			
+
 //			Com_Printf("B: %d -> %d\n", b->entity, b->dest_entity);
 			V_AddEntity (&ent);
 
@@ -33078,7 +33022,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -33334,13 +33278,13 @@ void CL_PrepRefresh (void)
 	mapname[strlen(mapname)-4] = 0;		// cut off ".bsp"
 
 	// register models, pics, and skins
-	Com_Printf ("Map: %s\r", mapname); 
+	Com_Printf ("Map: %s\r", mapname);
 	SCR_UpdateScreen ();
 	re.BeginRegistration (mapname);
 	Com_Printf ("                                     \r");
 
 	// precache status bar pics
-	Com_Printf ("pics\r"); 
+	Com_Printf ("pics\r");
 	SCR_UpdateScreen ();
 	SCR_TouchPics ();
 	Com_Printf ("                                     \r");
@@ -33355,7 +33299,7 @@ void CL_PrepRefresh (void)
 		strcpy (name, cl.configstrings[CS_MODELS+i]);
 		name[37] = 0;	// never go beyond one line
 		if (name[0] != '*')
-			Com_Printf ("%s\r", name); 
+			Com_Printf ("%s\r", name);
 		SCR_UpdateScreen ();
 		Sys_SendKeyEvents ();	// pump message loop
 		if (name[0] == '#')
@@ -33367,7 +33311,7 @@ void CL_PrepRefresh (void)
 					sizeof(cl_weaponmodels[num_cl_weaponmodels]) - 1);
 				num_cl_weaponmodels++;
 			}
-		} 
+		}
 		else
 		{
 			cl.model_draw[i] = re.RegisterModel (cl.configstrings[CS_MODELS+i]);
@@ -33380,20 +33324,20 @@ void CL_PrepRefresh (void)
 			Com_Printf ("                                     \r");
 	}
 
-	Com_Printf ("images\r", i); 
+	Com_Printf ("images\r", i);
 	SCR_UpdateScreen ();
 	for (i=1 ; i<MAX_IMAGES && cl.configstrings[CS_IMAGES+i][0] ; i++)
 	{
 		cl.image_precache[i] = re.RegisterPic (cl.configstrings[CS_IMAGES+i]);
 		Sys_SendKeyEvents ();	// pump message loop
 	}
-	
+
 	Com_Printf ("                                     \r");
 	for (i=0 ; i<MAX_CLIENTS ; i++)
 	{
 		if (!cl.configstrings[CS_PLAYERSKINS+i][0])
 			continue;
-		Com_Printf ("client %i\r", i); 
+		Com_Printf ("client %i\r", i);
 		SCR_UpdateScreen ();
 		Sys_SendKeyEvents ();	// pump message loop
 		CL_ParseClientinfo (i);
@@ -33403,10 +33347,10 @@ void CL_PrepRefresh (void)
 	CL_LoadClientinfo (&cl.baseclientinfo, "unnamed\\male/grunt");
 
 	// set sky textures and speed
-	Com_Printf ("sky\r", i); 
+	Com_Printf ("sky\r", i);
 	SCR_UpdateScreen ();
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
-	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f", 
+	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f",
 		&axis[0], &axis[1], &axis[2]);
 	re.SetSky (cl.configstrings[CS_SKY], rotate, axis);
 	Com_Printf ("                                     \r");
@@ -33626,7 +33570,7 @@ V_Viewpos_f
 void V_Viewpos_f (void)
 {
 	Com_Printf ("(%i %i %i) : %i\n", (int)cl.refdef.vieworg[0],
-		(int)cl.refdef.vieworg[1], (int)cl.refdef.vieworg[2], 
+		(int)cl.refdef.vieworg[1], (int)cl.refdef.vieworg[2],
 		(int)cl.refdef.viewangles[YAW]);
 }
 
@@ -33664,7 +33608,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -33686,7 +33630,7 @@ cvar_t		*con_notifytime;
 extern	char	key_lines[32][MAXCMDLINE];
 extern	int		edit_line;
 extern	int		key_linepos;
-		
+
 
 void DrawString (int x, int y, char *s)
 {
@@ -33747,9 +33691,9 @@ void Con_ToggleConsole_f (void)
 	else
 	{
 		M_ForceMenuOff ();
-		cls.key_dest = key_console;	
+		cls.key_dest = key_console;
 
-		if (Cvar_VariableValue ("maxclients") == 1 
+		if (Cvar_VariableValue ("maxclients") == 1
 			&& Com_ServerState ())
 			Cvar_Set ("paused", "1");
 	}
@@ -33774,7 +33718,7 @@ void Con_ToggleChat_f (void)
 	}
 	else
 		cls.key_dest = key_console;
-	
+
 	Con_ClearNotify ();
 }
 
@@ -33788,7 +33732,7 @@ void Con_Clear_f (void)
 	memset (con.text, ' ', CON_TEXTSIZE);
 }
 
-						
+
 /*
 ================
 Con_Dump_f
@@ -33854,7 +33798,7 @@ void Con_Dump_f (void)
 	fclose (f);
 }
 
-						
+
 /*
 ================
 Con_ClearNotify
@@ -33863,12 +33807,12 @@ Con_ClearNotify
 void Con_ClearNotify (void)
 {
 	int		i;
-	
+
 	for (i=0 ; i<NUM_CON_TIMES ; i++)
 		con.times[i] = 0;
 }
 
-						
+
 /*
 ================
 Con_MessageMode_f
@@ -33927,7 +33871,7 @@ void Con_CheckResize (void)
 			numlines = con.totallines;
 
 		numchars = oldwidth;
-	
+
 		if (con.linewidth < numchars)
 			numchars = con.linewidth;
 
@@ -33962,7 +33906,7 @@ void Con_Init (void)
 	con.linewidth = -1;
 
 	Con_CheckResize ();
-	
+
 	Com_Printf ("Console initialized.\n");
 
 //
@@ -34042,7 +33986,7 @@ void Con_Print (char *txt)
 			cr = false;
 		}
 
-		
+
 		if (!con.x)
 		{
 			Con_Linefeed ();
@@ -34070,7 +34014,7 @@ void Con_Print (char *txt)
 				con.x = 0;
 			break;
 		}
-		
+
 	}
 }
 
@@ -34122,18 +34066,18 @@ void Con_DrawInput (void)
 		return;		// don't draw anything (always draw if not active)
 
 	text = key_lines[edit_line];
-	
+
 // add the cursor frame
 	text[key_linepos] = 10+((int)(cls.realtime>>8)&1);
-	
+
 // fill out remainder with spaces
 	for (i=key_linepos+1 ; i< con.linewidth ; i++)
 		text[i] = ' ';
-		
+
 //	prestep if horizontally scrolling
 	if (key_linepos >= con.linewidth)
 		text += 1 + key_linepos - con.linewidth;
-		
+
 // draw it
 	for (i=0 ; i<con.linewidth ; i++)
 		re.DrawChar ( (i+1)<<3, con.vislines - 22, text[i]);
@@ -34171,7 +34115,7 @@ void Con_DrawNotify (void)
 		if (time > con_notifytime->value*1000)
 			continue;
 		text = con.text + (i % con.totallines)*con.linewidth;
-		
+
 		for (x = 0 ; x < con.linewidth ; x++)
 			re.DrawChar ( (x+1)<<3, v, text[x]);
 
@@ -34204,7 +34148,7 @@ void Con_DrawNotify (void)
 		re.DrawChar ( (x+skip)<<3, v, 10+((cls.realtime>>8)&1));
 		v += 8;
 	}
-	
+
 	if (v)
 	{
 		SCR_AddDirtyPoint (0,0);
@@ -34247,7 +34191,7 @@ void Con_DrawConsole (float frac)
 
 // draw the text
 	con.vislines = lines;
-	
+
 #if 0
 	rows = (lines-8)>>3;		// rows of text to draw
 
@@ -34264,11 +34208,11 @@ void Con_DrawConsole (float frac)
 	// draw arrows to show the buffer is backscrolled
 		for (x=0 ; x<con.linewidth ; x+=4)
 			re.DrawChar ( (x+1)<<3, y, '^');
-	
+
 		y -= 8;
 		rows--;
 	}
-	
+
 	row = con.display;
 	for (i=0 ; i<rows ; i++, y-=8, row--)
 	{
@@ -34276,7 +34220,7 @@ void Con_DrawConsole (float frac)
 			break;
 		if (con.current - row >= con.totallines)
 			break;		// past scrollback wrap point
-			
+
 		text = con.text + (row % con.totallines)*con.linewidth;
 
 		for (x=0 ; x<con.linewidth ; x++)
@@ -34310,7 +34254,7 @@ void Con_DrawConsole (float frac)
 			n = 0;
 		else
 			n = y * cls.downloadpercent / 100;
-			
+
 		for (j = 0; j < y; j++)
 			if (j == n)
 				dlbar[i++] = '\x83';
@@ -34345,7 +34289,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -34401,7 +34345,7 @@ keyname_t keynames[] =
 	{"ALT", K_ALT},
 	{"CTRL", K_CTRL},
 	{"SHIFT", K_SHIFT},
-	
+
 	{"F1", K_F1},
 	{"F2", K_F2},
 	{"F3", K_F3},
@@ -34581,7 +34525,7 @@ void Key_Console (int key)
 		 ( ( ( key == K_INS ) || ( key == K_KP_INS ) ) && keydown[K_SHIFT] ) )
 	{
 		char *cbd;
-		
+
 		if ( ( cbd = Sys_GetClipboardData() ) != 0 )
 		{
 			int i;
@@ -34604,7 +34548,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if ( key == 'l' ) 
+	if ( key == 'l' )
 	{
 		if ( keydown[K_CTRL] )
 		{
@@ -34637,7 +34581,7 @@ void Key_Console (int key)
 		CompleteCommand ();
 		return;
 	}
-	
+
 	if ( ( key == K_BACKSPACE ) || ( key == K_LEFTARROW ) || ( key == K_KP_LEFTARROW ) || ( ( key == 'h' ) && ( keydown[K_CTRL] ) ) )
 	{
 		if (key_linepos > 1)
@@ -34689,7 +34633,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_PGDN || key == K_KP_PGDN ) 
+	if (key == K_PGDN || key == K_KP_PGDN )
 	{
 		con.display += 2;
 		if (con.display > con.current)
@@ -34708,10 +34652,10 @@ void Key_Console (int key)
 		con.display = con.current;
 		return;
 	}
-	
+
 	if (key < 32 || key > 127)
 		return;	// non printable
-		
+
 	if (key_linepos < MAXCMDLINE-1)
 	{
 		key_lines[edit_line][key_linepos] = key;
@@ -34788,7 +34732,7 @@ the K_* names are matched up.
 int Key_StringToKeynum (char *str)
 {
 	keyname_t	*kn;
-	
+
 	if (!str || !str[0])
 		return -1;
 	if (!str[1])
@@ -34813,9 +34757,9 @@ FIXME: handle quote special (general escape sequence?)
 */
 char *Key_KeynumToString (int keynum)
 {
-	keyname_t	*kn;	
+	keyname_t	*kn;
 	static	char	tinystr[2];
-	
+
 	if (keynum == -1)
 		return "<KEY NOT FOUND>";
 	if (keynum > 32 && keynum < 127)
@@ -34824,7 +34768,7 @@ char *Key_KeynumToString (int keynum)
 		tinystr[1] = 0;
 		return tinystr;
 	}
-	
+
 	for (kn=keynames ; kn->name ; kn++)
 		if (keynum == kn->keynum)
 			return kn->name;
@@ -34842,7 +34786,7 @@ void Key_SetBinding (int keynum, char *binding)
 {
 	char	*new;
 	int		l;
-			
+
 	if (keynum == -1)
 		return;
 
@@ -34852,13 +34796,13 @@ void Key_SetBinding (int keynum, char *binding)
 		Z_Free (keybindings[keynum]);
 		keybindings[keynum] = NULL;
 	}
-			
+
 // allocate memory for new binding
-	l = strlen (binding);	
+	l = strlen (binding);
 	new = Z_Malloc (l+1);
 	strcpy (new, binding);
 	new[l] = 0;
-	keybindings[keynum] = new;	
+	keybindings[keynum] = new;
 }
 
 /*
@@ -34875,7 +34819,7 @@ void Key_Unbind_f (void)
 		Com_Printf ("unbind <key> : remove commands from a key\n");
 		return;
 	}
-	
+
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
@@ -34889,7 +34833,7 @@ void Key_Unbind_f (void)
 void Key_Unbindall_f (void)
 {
 	int		i;
-	
+
 	for (i=0 ; i<256 ; i++)
 		if (keybindings[i])
 			Key_SetBinding (i, "");
@@ -34905,7 +34849,7 @@ void Key_Bind_f (void)
 {
 	int			i, c, b;
 	char		cmd[1024];
-	
+
 	c = Cmd_Argc();
 
 	if (c < 2)
@@ -34928,7 +34872,7 @@ void Key_Bind_f (void)
 			Com_Printf ("\"%s\" is not bound\n", Cmd_Argv(1) );
 		return;
 	}
-	
+
 // copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
 	for (i=2 ; i< c ; i++)
@@ -34989,7 +34933,7 @@ void Key_Init (void)
 		key_lines[i][1] = 0;
 	}
 	key_linepos = 1;
-	
+
 //
 // init ascii characters in console mode
 //
@@ -35091,15 +35035,15 @@ void Key_Event (int key, qboolean down, unsigned time)
 	if (down)
 	{
 		key_repeats[key]++;
-		if (key != K_BACKSPACE 
-			&& key != K_PAUSE 
-			&& key != K_PGUP 
-			&& key != K_KP_PGUP 
+		if (key != K_BACKSPACE
+			&& key != K_PAUSE
+			&& key != K_PGUP
+			&& key != K_KP_PGUP
 			&& key != K_PGDN
 			&& key != K_KP_PGDN
 			&& key_repeats[key] > 1)
 			return;	// ignore most autorepeats
-			
+
 		if (key >= 200 && !keybindings[key])
 			Com_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key) );
 	}
@@ -35290,7 +35234,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -35315,7 +35259,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -35365,7 +35309,7 @@ typedef struct _tag_menuframework
 	const char *statusbar;
 
 	void (*cursordraw)( struct _tag_menuframework *m );
-	
+
 } menuframework_s;
 
 typedef struct
@@ -35397,7 +35341,7 @@ typedef struct
 	int			visible_offset;
 } menufield_s;
 
-typedef struct 
+typedef struct
 {
 	menucommon_s generic;
 
@@ -35507,7 +35451,7 @@ void M_PushMenu ( void (*draw) (void), const char *(*key) (int k) )
 {
 	int		i;
 
-	if (Cvar_VariableValue ("maxclients") == 1 
+	if (Cvar_VariableValue ("maxclients") == 1
 		&& Com_ServerState ())
 		Cvar_Set ("paused", "1");
 
@@ -35666,7 +35610,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_AUX30:
 	case K_AUX31:
 	case K_AUX32:
-		
+
 	case K_KP_ENTER:
 	case K_ENTER:
 		if ( m )
@@ -35794,7 +35738,7 @@ void M_DrawTextBox (int x, int y, int width, int lines)
 	M_DrawCharacter (cx, cy+8, 9);
 }
 
-		
+
 /*
 =======================================================================
 
@@ -36025,7 +35969,7 @@ char *bindnames[][2] =
 {"invprev",			"prev item"},
 {"invnext",			"next item"},
 
-{"cmd help", 		"help computer" }, 
+{"cmd help", 		"help computer" },
 { 0, 0 }
 };
 
@@ -36116,7 +36060,7 @@ static void DrawKeyBindingFunc( void *self )
 	menuaction_s *a = ( menuaction_s * ) self;
 
 	M_FindKeysForCommand( bindnames[a->generic.localdata[0]][0], keys);
-		
+
 	if (keys[0] == -1)
 	{
 		Menu_DrawString( a->generic.x + a->generic.parent->x + 16, a->generic.y + a->generic.parent->y, "???" );
@@ -36373,7 +36317,7 @@ static void Keys_MenuInit( void )
 	Menu_AddItem( &s_keys_menu, ( void * ) &s_keys_inv_next_action );
 
 	Menu_AddItem( &s_keys_menu, ( void * ) &s_keys_help_computer_action );
-	
+
 	Menu_SetStatusBar( &s_keys_menu, "enter to change, backspace to clear" );
 	Menu_Center( &s_keys_menu );
 }
@@ -36389,7 +36333,7 @@ static const char *Keys_MenuKey( int key )
 	menuaction_s *item = ( menuaction_s * ) Menu_ItemAtCursor( &s_keys_menu );
 
 	if ( bind_grab )
-	{	
+	{
 		if ( key != K_ESCAPE && key != '`' )
 		{
 			char cmd[1024];
@@ -36397,7 +36341,7 @@ static const char *Keys_MenuKey( int key )
 			Com_sprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString(key), bindnames[item->generic.localdata[0]][0]);
 			Cbuf_InsertText (cmd);
 		}
-		
+
 		Menu_SetStatusBar( &s_keys_menu, "enter to change, backspace to clear" );
 		bind_grab = false;
 		return menu_out_sound;
@@ -36593,7 +36537,7 @@ static void UpdateSoundQualityFunc( void *unused )
 		Cvar_SetValue( "s_khz", 11 );
 		Cvar_SetValue( "s_loadas8bit", true );
 	}
-	
+
 	Cvar_SetValue( "s_primary", s_options_compatibility_list.curvalue );
 
 	M_DrawTextBox( 8, 120 - 48, 36, 3 );
@@ -37271,14 +37215,14 @@ void M_Menu_Credits_f( void )
 	else
 	{
 		isdeveloper = Developer_searchpath (1);
-		
+
 		if (isdeveloper == 1)			// xatrix
 			credits = xatcredits;
 		else if (isdeveloper == 2)		// ROGUE
 			credits = roguecredits;
 		else
 		{
-			credits = idcredits;	
+			credits = idcredits;
 		}
 
 	}
@@ -37824,7 +37768,7 @@ void RulesChangeFunc ( void *self )
 	// ROGUE GAMES
 	else if(Developer_searchpath(2) == 2)
 	{
-		if (s_rules_box.curvalue == 2)			// tag	
+		if (s_rules_box.curvalue == 2)			// tag
 		{
 			s_maxclients_field.generic.statusbar = NULL;
 			s_startserver_dmoptions_action.generic.statusbar = NULL;
@@ -38024,7 +37968,7 @@ void StartServer_MenuInit( void )
 	s_rules_box.generic.x	= 0;
 	s_rules_box.generic.y	= 20;
 	s_rules_box.generic.name	= "rules";
-	
+
 //PGM - rogue games only available with rogue DLL.
 	if(Developer_searchpath(2) == 2)
 		s_rules_box.itemnames = dm_coop_names_rogue;
@@ -38061,7 +38005,7 @@ void StartServer_MenuInit( void )
 	/*
 	** maxclients determines the maximum number of players that can join
 	** the game.  If maxclients is only "1" then we should default the menu
-	** option to 8 players, otherwise use whatever its current value is. 
+	** option to 8 players, otherwise use whatever its current value is.
 	** Clamping will be done when the server is actually started.
 	*/
 	s_maxclients_field.generic.type = MTYPE_FIELD;
@@ -38074,7 +38018,7 @@ void StartServer_MenuInit( void )
 	s_maxclients_field.visible_length = 3;
 	if ( Cvar_VariableValue( "maxclients" ) == 1 )
 		strcpy( s_maxclients_field.buffer, "8" );
-	else 
+	else
 		strcpy( s_maxclients_field.buffer, Cvar_VariableString("maxclients") );
 
 	s_hostname_field.generic.type = MTYPE_FIELD;
@@ -38205,7 +38149,7 @@ static void DMFlagCallback( void *self )
 			flags |= DF_NO_FALLING;
 		goto setvalue;
 	}
-	else if ( f == &s_weapons_stay_box ) 
+	else if ( f == &s_weapons_stay_box )
 	{
 		bit = DF_WEAPONS_STAY;
 	}
@@ -38330,7 +38274,7 @@ void DMOptions_MenuInit( void )
 	{
 		"no", "yes", 0
 	};
-	static const char *teamplay_names[] = 
+	static const char *teamplay_names[] =
 	{
 		"disabled", "by skin", "by model", 0
 	};
@@ -38863,7 +38807,7 @@ static qboolean PlayerConfig_ScanDirectories( void )
 	/*
 	** get a list of directories
 	*/
-	do 
+	do
 	{
 		path = FS_NextPath( path );
 		Com_sprintf( findname, sizeof(findname), "%s/players/*.*", path );
@@ -39076,7 +39020,7 @@ qboolean PlayerConfig_MenuInit( void )
 		}
 	}
 
-	s_player_config_menu.x = viddef.width / 2 - 95; 
+	s_player_config_menu.x = viddef.width / 2 - 95;
 	s_player_config_menu.y = viddef.height / 2 - 97;
 	s_player_config_menu.nitems = 0;
 
@@ -39226,7 +39170,7 @@ void PlayerConfig_MenuDraw( void )
 
 		re.RenderFrame( &refdef );
 
-		Com_sprintf( scratch, sizeof( scratch ), "/players/%s/%s_i.pcx", 
+		Com_sprintf( scratch, sizeof( scratch ), "/players/%s/%s_i.pcx",
 			s_pmi[s_player_model_box.curvalue].directory,
 			s_pmi[s_player_model_box.curvalue].skindisplaynames[s_player_skin_box.curvalue] );
 		re.DrawPic( s_player_config_menu.x - 40, refdef.y, scratch );
@@ -39243,8 +39187,8 @@ const char *PlayerConfig_MenuKey (int key)
 
 		Cvar_Set( "name", s_player_name_field.buffer );
 
-		Com_sprintf( scratch, sizeof( scratch ), "%s/%s", 
-			s_pmi[s_player_model_box.curvalue].directory, 
+		Com_sprintf( scratch, sizeof( scratch ), "%s/%s",
+			s_pmi[s_player_model_box.curvalue].directory,
 			s_pmi[s_player_model_box.curvalue].skindisplaynames[s_player_skin_box.curvalue] );
 
 		Cvar_Set( "skin", scratch );
@@ -39435,7 +39379,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -39623,7 +39567,7 @@ qboolean Field_Key( menufield_s *f, int key )
 		 ( ( ( key == K_INS ) || ( key == K_KP_INS ) ) && keydown[K_SHIFT] ) )
 	{
 		char *cbd;
-		
+
 		if ( ( cbd = Sys_GetClipboardData() ) != 0 )
 		{
 			strtok( cbd, "\n\r\b" );
@@ -40021,7 +39965,7 @@ void Slider_Draw( menuslider_s *s )
 	int	i;
 
 	Menu_DrawStringR2LDark( s->generic.x + s->generic.parent->x + LCOLUMN_OFFSET,
-		                s->generic.y + s->generic.parent->y, 
+		                s->generic.y + s->generic.parent->y,
 						s->generic.name );
 
 	s->range = ( s->curvalue - s->minvalue ) / ( float ) ( s->maxvalue - s->minvalue );
@@ -40056,8 +40000,8 @@ void SpinControl_Draw( menulist_s *s )
 
 	if ( s->generic.name )
 	{
-		Menu_DrawStringR2LDark( s->generic.x + s->generic.parent->x + LCOLUMN_OFFSET, 
-							s->generic.y + s->generic.parent->y, 
+		Menu_DrawStringR2LDark( s->generic.x + s->generic.parent->x + LCOLUMN_OFFSET,
+							s->generic.y + s->generic.parent->y,
 							s->generic.name );
 	}
 	if ( !strchr( s->itemnames[s->curvalue], '\n' ) )
@@ -40091,7 +40035,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -40114,7 +40058,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -40349,7 +40293,7 @@ void S_SoundInfo_f(void)
 		Com_Printf ("sound system not started\n");
 		return;
 	}
-	
+
     Com_Printf("%5d stereo\n", dma.channels - 1);
     Com_Printf("%5d samples\n", dma.samples);
     Com_Printf("%5d samplepos\n", dma.samplepos);
@@ -40490,12 +40434,12 @@ sfx_t *S_FindName (char *name, qboolean create)
 			Com_Error (ERR_FATAL, "S_FindName: out of sfx_t");
 		num_sfx++;
 	}
-	
+
 	sfx = &known_sfx[i];
 	memset (sfx, 0, sizeof(*sfx));
 	strcpy (sfx->name, name);
 	sfx->registration_sequence = s_registration_sequence;
-	
+
 	return sfx;
 }
 
@@ -40526,7 +40470,7 @@ sfx_t *S_AliasName (char *aliasname, char *truename)
 			Com_Error (ERR_FATAL, "S_FindName: out of sfx_t");
 		num_sfx++;
 	}
-	
+
 	sfx = &known_sfx[i];
 	memset (sfx, 0, sizeof(*sfx));
 	strcpy (sfx->name, aliasname);
@@ -40666,7 +40610,7 @@ channel_t *S_PickChannel(int entnum, int entchannel)
 	memset (ch, 0, sizeof(*ch));
 
     return ch;
-}       
+}
 
 /*
 =================
@@ -40696,7 +40640,7 @@ void S_SpatializeOrigin (vec3_t origin, float master_vol, float dist_mult, int *
 	if (dist < 0)
 		dist = 0;			// close enough to be at full volume
 	dist *= dist_mult;		// different attenuation levels
-	
+
 	dot = DotProduct(listener_right, source_vec);
 
 	if (dma.channels == 1 || !dist_mult)
@@ -40747,7 +40691,7 @@ void S_Spatialize(channel_t *ch)
 		CL_GetEntitySoundOrigin (ch->entnum, origin);
 
 	S_SpatializeOrigin (origin, ch->master_vol, ch->dist_mult, &ch->leftvol, &ch->rightvol);
-}           
+}
 
 
 /*
@@ -40766,7 +40710,7 @@ playsound_t *S_AllocPlaysound (void)
 	// unlink from freelist
 	ps->prev->next = ps->next;
 	ps->next->prev = ps->prev;
-	
+
 	return ps;
 }
 
@@ -40970,7 +40914,7 @@ void S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx, float f
 		ps->begin = start + timeofs * dma.speed;
 
 	// sort into the pending sound list
-	for (sort = s_pendingplays.next ; 
+	for (sort = s_pendingplays.next ;
 		sort != &s_pendingplays && sort->begin < ps->begin ;
 		sort = sort->next)
 			;
@@ -40994,7 +40938,7 @@ void S_StartLocalSound (char *sound)
 
 	if (!sound_started)
 		return;
-		
+
 	sfx = S_RegisterSound (sound);
 	if (!sfx)
 	{
@@ -41013,7 +40957,7 @@ S_ClearBuffer
 void S_ClearBuffer (void)
 {
 	int		clear;
-		
+
 	if (!sound_started)
 		return;
 
@@ -41124,7 +41068,7 @@ void S_AddLoopSounds (void)
 			num = (cl.frame.parse_entities + j)&(MAX_PARSE_ENTITIES-1);
 			ent = &cl_parse_entities[num];
 
-			S_SpatializeOrigin (ent->origin, 255.0, SOUND_LOOPATTENUATE, 
+			S_SpatializeOrigin (ent->origin, 255.0, SOUND_LOOPATTENUATE,
 				&left, &right);
 			left_total += left;
 			right_total += right;
@@ -41285,7 +41229,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	VectorCopy(right, listener_right);
 	VectorCopy(up, listener_up);
 
-	// update spatialization for dynamic sounds	
+	// update spatialization for dynamic sounds
 	ch = channels;
 	for (i=0 ; i<MAX_CHANNELS; i++, ch++)
 	{
@@ -41320,7 +41264,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 				Com_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
 				total++;
 			}
-		
+
 		Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
 	}
 
@@ -41334,7 +41278,7 @@ void GetSoundtime(void)
 	static	int		buffers;
 	static	int		oldsamplepos;
 	int		fullsamples;
-	
+
 	fullsamples = dma.samples / dma.channels;
 
 // it is possible to miscount buffers if it has wrapped twice between
@@ -41344,7 +41288,7 @@ void GetSoundtime(void)
 	if (samplepos < oldsamplepos)
 	{
 		buffers++;					// buffer wrapped
-		
+
 		if (paintedtime > 0x40000000)
 		{	// time to chop things off to avoid 32 bit limits
 			buffers = 0;
@@ -41410,7 +41354,7 @@ void S_Play(void)
 	int 	i;
 	char name[256];
 	sfx_t	*sfx;
-	
+
 	i = 1;
 	while (i<Cmd_Argc())
 	{
@@ -41473,7 +41417,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -41504,7 +41448,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, byte *data)
 	int		i;
 	int		sample, samplefrac, fracstep;
 	sfxcache_t	*sc;
-	
+
 	sc = sfx->cache;
 	if (!sc)
 		return;
@@ -41609,7 +41553,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		return NULL;
 	}
 
-	stepscale = (float)info.rate / dma.speed;	
+	stepscale = (float)info.rate / dma.speed;
 	len = info.samples / stepscale;
 
 	len = len * info.width * info.channels;
@@ -41620,7 +41564,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		FS_FreeFile (data);
 		return NULL;
 	}
-	
+
 	sc->length = info.samples;
 	sc->loopstart = info.loopstart;
 	sc->speed = info.rate;
@@ -41683,7 +41627,7 @@ void FindNextChunk(char *name)
 			data_p = NULL;
 			return;
 		}
-		
+
 		data_p += 4;
 		iff_chunk_len = GetLittleLong();
 		if (iff_chunk_len < 0)
@@ -41710,7 +41654,7 @@ void FindChunk(char *name)
 void DumpChunks(void)
 {
 	char	str[5];
-	
+
 	str[4] = 0;
 	data_p=iff_data;
 	do
@@ -41739,7 +41683,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 
 	if (!wav)
 		return info;
-		
+
 	iff_data = wav;
 	iff_end = wav + wavlength;
 
@@ -41818,7 +41762,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 		info.samples = samples;
 
 	info.dataofs = data_p - wav;
-	
+
 	return info;
 }
 
@@ -41834,7 +41778,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -41935,7 +41879,7 @@ void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 {
 	int		lpos;
 	int		lpaintedtime;
-	
+
 	snd_p = (int *) paintbuffer;
 	lpaintedtime = paintedtime;
 
@@ -41998,7 +41942,7 @@ void S_TransferPaintBuffer(int endtime)
 	{	// general case
 		p = (int *) paintbuffer;
 		count = (endtime - paintedtime) * dma.channels;
-		out_mask = dma.samples - 1; 
+		out_mask = dma.samples - 1;
 		out_idx = paintedtime * dma.channels & out_mask;
 		step = 3 - dma.channels;
 
@@ -42118,7 +42062,7 @@ void S_PaintChannels(int endtime)
 		for (i=0; i<MAX_CHANNELS ; i++, ch++)
 		{
 			ltime = paintedtime;
-		
+
 			while (ltime < end)
 			{
 				if (!ch->sfx || (!ch->leftvol && !ch->rightvol) )
@@ -42130,18 +42074,18 @@ void S_PaintChannels(int endtime)
 				// might be stopped by running out of data
 				if (ch->end - ltime < count)
 					count = ch->end - ltime;
-		
+
 				sc = S_LoadSound (ch->sfx);
 				if (!sc)
 					break;
 
 				if (count > 0 && ch->sfx)
-				{	
+				{
 					if (sc->width == 1)// FIXME; 8 bit asm is wrong now
 						S_PaintChannelFrom8(ch, sc, count,  ltime - paintedtime);
 					else
 						S_PaintChannelFrom16(ch, sc, count, ltime - paintedtime);
-	
+
 					ltime += count;
 				}
 
@@ -42158,13 +42102,13 @@ void S_PaintChannels(int endtime)
 						ch->pos = sc->loopstart;
 						ch->end = ltime + sc->length - ch->pos;
 					}
-					else				
+					else
 					{	// channel just stopped
 						ch->sfx = NULL;
 					}
 				}
 			}
-															  
+
 		}
 
 	// transfer out according to DMA format
@@ -42203,7 +42147,7 @@ void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 		ch->leftvol = 255;
 	if (ch->rightvol > 255)
 		ch->rightvol = 255;
-		
+
 	lscale = snd_scaletable[ ch->leftvol >> 11];
 	rscale = snd_scaletable[ ch->rightvol >> 11];
 	sfx = (signed char *)sc->data + ch->pos;
@@ -42216,7 +42160,7 @@ void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 		samp->left += lscale[data];
 		samp->right += rscale[data];
 	}
-	
+
 	ch->pos += count;
 }
 
@@ -42333,7 +42277,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -42432,7 +42376,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -42680,13 +42624,13 @@ vec3_t monster_flash_offset [] =
 // MZ2_MAKRON_BLASTER_2				103
 	-1.6,	-19.3,	59.5,
 // MZ2_MAKRON_BLASTER_3				104
-	-0.1,	-14.4,	59.5,		
+	-0.1,	-14.4,	59.5,
 // MZ2_MAKRON_BLASTER_4				105
-	2.0,	-7.6,	59.5,	
+	2.0,	-7.6,	59.5,
 // MZ2_MAKRON_BLASTER_5				106
 	3.4,	1.3,	59.5,
 // MZ2_MAKRON_BLASTER_6				107
-	3.7,	11.1,	59.5,	
+	3.7,	11.1,	59.5,
 // MZ2_MAKRON_BLASTER_7				108
 	-0.3,	22.3,	59.5,
 // MZ2_MAKRON_BLASTER_8				109
@@ -42704,7 +42648,7 @@ vec3_t monster_flash_offset [] =
 // MZ2_MAKRON_BLASTER_14			115
 	5.9,	-4.4,	59.5,
 // MZ2_MAKRON_BLASTER_15			116
-	4.2,	-14.1,	59.5,		
+	4.2,	-14.1,	59.5,
 // MZ2_MAKRON_BLASTER_16			117
 	2.4,	-18.8,	59.5,
 // MZ2_MAKRON_BLASTER_17			118
@@ -42713,29 +42657,29 @@ vec3_t monster_flash_offset [] =
 	-17.3,	7.8,	72.4,
 
 // MZ2_JORG_MACHINEGUN_L1			120
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_L2			121
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_L3			122
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_L4			123
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_L5			124
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_L6			125
-	78.5,	-47.1,	96,			
+	78.5,	-47.1,	96,
 // MZ2_JORG_MACHINEGUN_R1			126
-	78.5,	46.7,  96,			
+	78.5,	46.7,  96,
 // MZ2_JORG_MACHINEGUN_R2			127
-	78.5,	46.7,	96,			
+	78.5,	46.7,	96,
 // MZ2_JORG_MACHINEGUN_R3			128
-	78.5,	46.7,	96,			
+	78.5,	46.7,	96,
 // MZ2_JORG_MACHINEGUN_R4			129
-	78.5,	46.7,	96,			
+	78.5,	46.7,	96,
 // MZ2_JORG_MACHINEGUN_R5			130
-	78.5,	46.7,	96,			
+	78.5,	46.7,	96,
 // MZ2_JORG_MACHINEGUN_R6			131
-	78.5,	46.7,	96,			
+	78.5,	46.7,	96,
 // MZ2_JORG_BFG_1					132
 	6.3,	-9,		111.2,
 
@@ -42774,23 +42718,23 @@ vec3_t monster_flash_offset [] =
 // MZ2_MEDIC_BLASTER_2				146
 	12.1, 5.4, 16.5,
 // MZ2_CARRIER_RAILGUN				147
-	32, 0, 6, 
+	32, 0, 6,
 // MZ2_WIDOW_DISRUPTOR				148
 	57.72, 14.50, 88.81,
 // MZ2_WIDOW_BLASTER				149
 	56,	32, 32,
 // MZ2_WIDOW_RAIL					150
-	62, -20, 84, 
+	62, -20, 84,
 // MZ2_WIDOW_PLASMABEAM				151		// PMM - not used!
-	32, 0, 6, 
+	32, 0, 6,
 // MZ2_CARRIER_MACHINEGUN_L2		152
 	61,	-32, 12,
 // MZ2_CARRIER_MACHINEGUN_R2		153
 	61,	32, 12,
 // MZ2_WIDOW_RAIL_LEFT				154
-	17, -62, 91, 
+	17, -62, 91,
 // MZ2_WIDOW_RAIL_RIGHT				155
-	68, 12, 86, 
+	68, 12, 86,
 // MZ2_WIDOW_BLASTER_SWEEP1			156			pmm - the sweeps need to be in sequential order
 	47.5, 56, 89,
 // MZ2_WIDOW_BLASTER_SWEEP2			157
@@ -42924,7 +42868,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -43047,7 +42991,7 @@ void ai_stand (edict_t *self, float dist)
 
 	if (FindTarget (self))
 		return;
-	
+
 	if (level.time > self->monsterinfo.pausetime)
 	{
 		self->monsterinfo.walk (self);
@@ -43135,7 +43079,7 @@ void ai_turn (edict_t *self, float dist)
 
 	if (FindTarget (self))
 		return;
-	
+
 	M_ChangeYaw (self);
 }
 
@@ -43211,7 +43155,7 @@ qboolean visible (edict_t *self, edict_t *other)
 	VectorCopy (other->s.origin, spot2);
 	spot2[2] += other->viewheight;
 	trace = gi.trace (spot1, vec3_origin, vec3_origin, spot2, self, MASK_OPAQUE);
-	
+
 	if (trace.fraction == 1.0)
 		return true;
 	return false;
@@ -43230,12 +43174,12 @@ qboolean infront (edict_t *self, edict_t *other)
 	vec3_t	vec;
 	float	dot;
 	vec3_t	forward;
-	
+
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	VectorNormalize (vec);
 	dot = DotProduct (vec, forward);
-	
+
 	if (dot > 0.3)
 		return true;
 	return false;
@@ -43540,7 +43484,7 @@ qboolean M_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	// melee attack
 	if (enemy_range == RANGE_MELEE)
 	{
@@ -43553,14 +43497,14 @@ qboolean M_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 // missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -43659,7 +43603,7 @@ Strafe sideways, but stay at aproximately the same range
 void ai_run_slide(edict_t *self, float distance)
 {
 	float	ofs;
-	
+
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
 
@@ -43667,10 +43611,10 @@ void ai_run_slide(edict_t *self, float distance)
 		ofs = 90;
 	else
 		ofs = -90;
-	
+
 	if (M_walkmove (self, self->ideal_yaw + ofs, distance))
 		return;
-		
+
 	self->monsterinfo.lefty = 1 - self->monsterinfo.lefty;
 	M_walkmove (self, self->ideal_yaw - ofs, distance);
 }
@@ -44045,7 +43989,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -44222,7 +44166,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -44243,7 +44187,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -45277,7 +45221,7 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
         i = cl->flood_whenhead - flood_msgs->value + 1;
         if (i < 0)
             i = (sizeof(cl->flood_when)/sizeof(cl->flood_when[0])) + i;
-		if (cl->flood_when[i] && 
+		if (cl->flood_when[i] &&
 			level.time - cl->flood_when[i] < flood_persecond->value) {
 			cl->flood_locktill = level.time + flood_waitdelay->value;
 			gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
@@ -45441,7 +45385,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -45479,7 +45423,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 			return true;
 		return false;
 	}
-	
+
 	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
@@ -45926,7 +45870,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 
 
 		targ->health = targ->health - take;
-			
+
 		if (targ->health <= 0)
 		{
 			if ((targ->svflags & SVF_MONSTER) || (client))
@@ -46019,7 +45963,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -46194,10 +46138,10 @@ void AngleMove_Begin (edict_t *ent)
 		VectorSubtract (ent->moveinfo.end_angles, ent->s.angles, destdelta);
 	else
 		VectorSubtract (ent->moveinfo.start_angles, ent->s.angles, destdelta);
-	
+
 	// calculate length of vector
 	len = VectorLength (destdelta);
-	
+
 	// divide by speed to get time to reach dest
 	traveltime = len / ent->moveinfo.speed;
 
@@ -46437,7 +46381,7 @@ void plat_blocked (edict_t *self, edict_t *other)
 
 
 void Use_Plat (edict_t *ent, edict_t *other, edict_t *activator)
-{ 
+{
 	if (ent->think)
 		return;		// already down
 	plat_go_down (ent);
@@ -46448,7 +46392,7 @@ void Touch_Plat_Center (edict_t *ent, edict_t *other, cplane_t *plane, csurface_
 {
 	if (!other->client)
 		return;
-		
+
 	if (other->health <= 0)
 		return;
 
@@ -46466,13 +46410,13 @@ void plat_spawn_inside_trigger (edict_t *ent)
 
 //
 // middle trigger
-//	
+//
 	trigger = G_Spawn();
 	trigger->touch = Touch_Plat_Center;
 	trigger->movetype = MOVETYPE_NONE;
 	trigger->solid = SOLID_TRIGGER;
 	trigger->enemy = ent;
-	
+
 	tmin[0] = ent->mins[0] + 25;
 	tmin[1] = ent->mins[1] + 25;
 	tmin[2] = ent->mins[2];
@@ -46485,7 +46429,7 @@ void plat_spawn_inside_trigger (edict_t *ent)
 
 	if (ent->spawnflags & PLAT_LOW_TRIGGER)
 		tmax[2] = tmin[2] + 8;
-	
+
 	if (tmax[0] - tmin[0] <= 0)
 	{
 		tmin[0] = (ent->mins[0] + ent->maxs[0]) *0.5;
@@ -46496,7 +46440,7 @@ void plat_spawn_inside_trigger (edict_t *ent)
 		tmin[1] = (ent->mins[1] + ent->maxs[1]) *0.5;
 		tmax[1] = tmin[1] + 1;
 	}
-	
+
 	VectorCopy (tmin, trigger->mins);
 	VectorCopy (tmax, trigger->maxs);
 
@@ -46562,7 +46506,7 @@ void SP_func_plat (edict_t *ent)
 
 	ent->use = Use_Plat;
 
-	plat_spawn_inside_trigger (ent);	// the "start moving" trigger	
+	plat_spawn_inside_trigger (ent);	// the "start moving" trigger
 
 	if (ent->targetname)
 	{
@@ -46783,7 +46727,7 @@ void SP_func_button (edict_t *ent)
 
 	if (ent->sounds != 1)
 		ent->moveinfo.sound_start = gi.soundindex ("switches/butn2.wav");
-	
+
 	if (!ent->speed)
 		ent->speed = 40;
 	if (!ent->accel)
@@ -46921,7 +46865,7 @@ void door_go_down (edict_t *self)
 		self->takedamage = DAMAGE_YES;
 		self->health = self->max_health;
 	}
-	
+
 	self->moveinfo.state = STATE_DOWN;
 	if (strcmp(self->classname, "func_door") == 0)
 		Move_Calc (self, self->moveinfo.start_origin, door_hit_bottom);
@@ -46940,7 +46884,7 @@ void door_go_up (edict_t *self, edict_t *activator)
 			self->nextthink = level.time + self->moveinfo.wait;
 		return;
 	}
-	
+
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_start)
@@ -46978,7 +46922,7 @@ void door_use (edict_t *self, edict_t *other, edict_t *activator)
 			return;
 		}
 	}
-	
+
 	// trigger all paired doors
 	for (ent = self ; ent ; ent = ent->teamchain)
 	{
@@ -47063,7 +47007,7 @@ void Think_SpawnDoorTrigger (edict_t *ent)
 		AddPointToBounds (other->absmax, mins, maxs);
 	}
 
-	// expand 
+	// expand
 	mins[0] -= 60;
 	mins[1] -= 60;
 	maxs[0] += 60;
@@ -47164,7 +47108,7 @@ void SP_func_door (edict_t *ent)
 
 	ent->blocked = door_blocked;
 	ent->use = door_use;
-	
+
 	if (!ent->speed)
 		ent->speed = 100;
 	if (deathmatch->value)
@@ -47211,7 +47155,7 @@ void SP_func_door (edict_t *ent)
 		gi.soundindex ("misc/talk.wav");
 		ent->touch = door_touch;
 	}
-	
+
 	ent->moveinfo.speed = ent->speed;
 	ent->moveinfo.accel = ent->accel;
 	ent->moveinfo.decel = ent->decel;
@@ -47337,7 +47281,7 @@ void SP_func_door_rotating (edict_t *ent)
 		ent->die = door_killed;
 		ent->max_health = ent->health;
 	}
-	
+
 	if (ent->targetname && ent->message)
 	{
 		gi.soundindex ("misc/talk.wav");
@@ -47534,7 +47478,7 @@ void train_wait (edict_t *self)
 	{
 		train_next (self);
 	}
-	
+
 }
 
 void train_next (edict_t *self)
@@ -48035,7 +47979,7 @@ void SP_func_door_secret (edict_t *ent)
 		gi.soundindex ("misc/talk.wav");
 		ent->touch = door_touch;
 	}
-	
+
 	ent->classname = "func_door";
 
 	gi.linkentity (ent);
@@ -48069,7 +48013,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -48583,7 +48527,7 @@ void Drop_Ammo (edict_t *ent, gitem_t *item)
 	else
 		dropped->count = ent->client->pers.inventory[index];
 
-	if (ent->client->pers.weapon && 
+	if (ent->client->pers.weapon &&
 		ent->client->pers.weapon->tag == AMMO_GRENADES &&
 		item->tag == AMMO_GRENADES &&
 		ent->client->pers.inventory[index] - dropped->count <= 0) {
@@ -48835,7 +48779,7 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 	if (taken)
 	{
 		// flash the screen
-		other->client->bonus_alpha = 0.25;	
+		other->client->bonus_alpha = 0.25;
 
 		// show icon and name on status bar
 		other->client->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(ent->item->icon);
@@ -48918,7 +48862,7 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 	VectorSet (dropped->maxs, 15, 15, 15);
 	gi.setmodel (dropped, dropped->item->world_model);
 	dropped->solid = SOLID_TRIGGER;
-	dropped->movetype = MOVETYPE_TOSS;  
+	dropped->movetype = MOVETYPE_TOSS;
 	dropped->touch = drop_temp_touch;
 	dropped->owner = ent;
 
@@ -48992,7 +48936,7 @@ void droptofloor (edict_t *ent)
 	else
 		gi.setmodel (ent, ent->item->world_model);
 	ent->solid = SOLID_TRIGGER;
-	ent->movetype = MOVETYPE_TOSS;  
+	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 
 	v = tv(0,0,-128);
@@ -49192,7 +49136,7 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-gitem_t	itemlist[] = 
+gitem_t	itemlist[] =
 {
 	{
 		NULL
@@ -49205,7 +49149,7 @@ gitem_t	itemlist[] =
 /*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_armor_body", 
+		"item_armor_body",
 		Pickup_Armor,
 		NULL,
 		NULL,
@@ -49228,7 +49172,7 @@ gitem_t	itemlist[] =
 /*QUAKED item_armor_combat (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_armor_combat", 
+		"item_armor_combat",
 		Pickup_Armor,
 		NULL,
 		NULL,
@@ -49251,7 +49195,7 @@ gitem_t	itemlist[] =
 /*QUAKED item_armor_jacket (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_armor_jacket", 
+		"item_armor_jacket",
 		Pickup_Armor,
 		NULL,
 		NULL,
@@ -49274,7 +49218,7 @@ gitem_t	itemlist[] =
 /*QUAKED item_armor_shard (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_armor_shard", 
+		"item_armor_shard",
 		Pickup_Armor,
 		NULL,
 		NULL,
@@ -49298,7 +49242,7 @@ gitem_t	itemlist[] =
 /*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_power_screen", 
+		"item_power_screen",
 		Pickup_PowerArmor,
 		Use_PowerArmor,
 		Drop_PowerArmor,
@@ -49343,14 +49287,14 @@ gitem_t	itemlist[] =
 
 
 	//
-	// WEAPONS 
+	// WEAPONS
 	//
 
 /* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 always owned, never in the world
 */
 	{
-		"weapon_blaster", 
+		"weapon_blaster",
 		NULL,
 		Use_Weapon,
 		NULL,
@@ -49373,7 +49317,7 @@ always owned, never in the world
 /*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_shotgun", 
+		"weapon_shotgun",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49396,7 +49340,7 @@ always owned, never in the world
 /*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_supershotgun", 
+		"weapon_supershotgun",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49419,7 +49363,7 @@ always owned, never in the world
 /*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_machinegun", 
+		"weapon_machinegun",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49442,7 +49386,7 @@ always owned, never in the world
 /*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_chaingun", 
+		"weapon_chaingun",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49534,7 +49478,7 @@ always owned, never in the world
 /*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_hyperblaster", 
+		"weapon_hyperblaster",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49557,7 +49501,7 @@ always owned, never in the world
 /*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"weapon_railgun", 
+		"weapon_railgun",
 		Pickup_Weapon,
 		Use_Weapon,
 		Drop_Weapon,
@@ -49726,7 +49670,7 @@ always owned, never in the world
 /*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
-		"item_quad", 
+		"item_quad",
 		Pickup_Powerup,
 		Use_Quad,
 		Drop_General,
@@ -50287,7 +50231,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -50700,7 +50644,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -50755,7 +50699,7 @@ void VelocityForDamage (int damage, vec3_t v)
 
 	if (damage < 50)
 		VectorScale (v, 0.7, v);
-	else 
+	else
 		VectorScale (v, 1.2, v);
 }
 
@@ -51038,7 +50982,7 @@ void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 
 	if (other->movetarget != self)
 		return;
-	
+
 	if (other->enemy)
 		return;
 
@@ -51726,7 +51670,7 @@ void misc_blackhole_think (edict_t *self)
 	if (++self->s.frame < 19)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 0;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -51754,7 +51698,7 @@ void misc_eastertank_think (edict_t *self)
 	if (++self->s.frame < 293)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 254;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -51782,7 +51726,7 @@ void misc_easterchick_think (edict_t *self)
 	if (++self->s.frame < 247)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 208;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -51810,7 +51754,7 @@ void misc_easterchick2_think (edict_t *self)
 	if (++self->s.frame < 287)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 248;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -52002,7 +51946,7 @@ void SP_misc_viper (edict_t *ent)
 }
 
 
-/*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72) 
+/*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72)
 This is a large stationary viper as seen in Paul's intro
 */
 void SP_misc_bigviper (edict_t *ent)
@@ -52549,7 +52493,7 @@ void SP_misc_teleporter (edict_t *ent)
 	VectorSet (trig->mins, -8, -8, 8);
 	VectorSet (trig->maxs, 8, 8, 24);
 	gi.linkentity (trig);
-	
+
 }
 
 /*QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16)
@@ -52578,7 +52522,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -52626,7 +52570,7 @@ void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, 
 	gi.WriteShort (self - g_edicts);
 	gi.WriteByte (flashtype);
 	gi.multicast (start, MULTICAST_PVS);
-}	
+}
 
 void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
@@ -52646,7 +52590,7 @@ void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 	gi.WriteShort (self - g_edicts);
 	gi.WriteByte (flashtype);
 	gi.multicast (start, MULTICAST_PVS);
-}	
+}
 
 void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
 {
@@ -52760,7 +52704,7 @@ void M_CatagorizePosition (edict_t *ent)
 //
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
-	point[2] = ent->s.origin[2] + ent->mins[2] + 1;	
+	point[2] = ent->s.origin[2] + ent->mins[2] + 1;
 	cont = gi.pointcontents (point);
 
 	if (!(cont & MASK_WATER))
@@ -52828,11 +52772,11 @@ void M_WorldEffects (edict_t *ent)
 			}
 		}
 	}
-	
+
 	if (ent->waterlevel == 0)
 	{
 		if (ent->flags & FL_INWATER)
-		{	
+		{
 			gi.sound (ent, CHAN_BODY, gi.soundindex("player/watr_out.wav"), 1, ATTN_NORM, 0);
 			ent->flags &= ~FL_INWATER;
 		}
@@ -52855,9 +52799,9 @@ void M_WorldEffects (edict_t *ent)
 			T_Damage (ent, world, world, vec3_origin, ent->s.origin, vec3_origin, 4*ent->waterlevel, 0, 0, MOD_SLIME);
 		}
 	}
-	
+
 	if ( !(ent->flags & FL_INWATER) )
-	{	
+	{
 		if (!(ent->svflags & SVF_DEADMONSTER))
 		{
 			if (ent->watertype & CONTENTS_LAVA)
@@ -52885,7 +52829,7 @@ void M_droptofloor (edict_t *ent)
 	ent->s.origin[2] += 1;
 	VectorCopy (ent->s.origin, end);
 	end[2] -= 256;
-	
+
 	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1 || trace.allsolid)
@@ -53019,7 +52963,7 @@ void monster_use (edict_t *self, edict_t *other, edict_t *activator)
 		return;
 	if (!(activator->client) && !(activator->monsterinfo.aiflags & AI_GOOD_GUY))
 		return;
-	
+
 // delay reaction so if the monster is teleported, its sound is still heard
 	self->enemy = activator;
 	FoundTarget (self);
@@ -53250,7 +53194,7 @@ void walkmonster_start_go (edict_t *self)
 			if (!M_walkmove (self, 0, 0))
 				gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 	}
-	
+
 	if (!self->yaw_speed)
 		self->yaw_speed = 20;
 	self->viewheight = 25;
@@ -53322,7 +53266,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -53340,7 +53284,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 pushmove objects do not obey gravity, and do not interact with each other or trigger fields, but block normal movement and push normal objects when they move.
 
-onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects 
+onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects
 
 doors, plats, etc are SOLID_BSP, and MOVETYPE_PUSH
 bonus items are SOLID_TRIGGER touch, and MOVETYPE_TOSS
@@ -53370,10 +53314,10 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 	else
 		mask = MASK_SOLID;
 	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask);
-	
+
 	if (trace.startsolid)
 		return g_edicts;
-		
+
 	return NULL;
 }
 
@@ -53415,7 +53359,7 @@ qboolean SV_RunThink (edict_t *ent)
 		return true;
 	if (thinktime > level.time+0.001)
 		return true;
-	
+
 	ent->nextthink = 0;
 	if (!ent->think)
 		gi.error ("NULL ent->think");
@@ -53440,7 +53384,7 @@ void SV_Impact (edict_t *e1, trace_t *trace)
 
 	if (e1->touch && e1->solid != SOLID_NOT)
 		e1->touch (e1, e2, &trace->plane, trace->surface);
-	
+
 	if (e2->touch && e2->solid != SOLID_NOT)
 		e2->touch (e2, e1, NULL, NULL);
 }
@@ -53461,13 +53405,13 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 	float	backoff;
 	float	change;
 	int		i, blocked;
-	
+
 	blocked = 0;
 	if (normal[2] > 0)
 		blocked |= 1;		// floor
 	if (!normal[2])
 		blocked |= 2;		// step
-	
+
 	backoff = DotProduct (in, normal) * overbounce;
 
 	for (i=0 ; i<3 ; i++)
@@ -53508,14 +53452,14 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 	vec3_t		end;
 	float		time_left;
 	int			blocked;
-	
+
 	numbumps = 4;
-	
+
 	blocked = 0;
 	VectorCopy (ent->velocity, original_velocity);
 	VectorCopy (ent->velocity, primal_velocity);
 	numplanes = 0;
-	
+
 	time_left = time;
 
 	ent->groundentity = NULL;
@@ -53565,9 +53509,9 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 		if (!ent->inuse)
 			break;		// removed by the impact function
 
-		
+
 		time_left -= time_left * trace.fraction;
-		
+
 	// cliped to another plane
 		if (numplanes >= MAX_CLIP_PLANES)
 		{	// this shouldn't really happen
@@ -53594,7 +53538,7 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 			if (j == numplanes)
 				break;
 		}
-		
+
 		if (i != numplanes)
 		{	// go along this plane
 			VectorCopy (new_velocity, ent->velocity);
@@ -53670,7 +53614,7 @@ retry:
 		mask = MASK_SOLID;
 
 	trace = gi.trace (start, ent->mins, ent->maxs, end, ent, mask);
-	
+
 	VectorCopy (trace.endpos, ent->s.origin);
 	gi.linkentity (ent);
 
@@ -53692,7 +53636,7 @@ retry:
 		G_TouchTriggers (ent);
 
 	return trace;
-}					
+}
 
 
 typedef struct
@@ -53799,7 +53743,7 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 			VectorCopy (check->s.angles, pushed_p->angles);
 			pushed_p++;
 
-			// try moving the contacted entity 
+			// try moving the contacted entity
 			VectorAdd (check->s.origin, move, check->s.origin);
 			if (check->client)
 			{	// FIXME: doesn't rotate monsters?
@@ -53837,7 +53781,7 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 				continue;
 			}
 		}
-		
+
 		// save off the obstacle so we can call the block function
 		obstacle = check;
 
@@ -53959,7 +53903,7 @@ void SV_Physics_Noclip (edict_t *ent)
 // regular thinking
 	if (!SV_RunThink (ent))
 		return;
-	
+
 	VectorMA (ent->s.angles, FRAMETIME, ent->avelocity, ent->s.angles);
 	VectorMA (ent->s.origin, FRAMETIME, ent->velocity, ent->s.origin);
 
@@ -54039,7 +53983,7 @@ void SV_Physics_Toss (edict_t *ent)
 
 	// stop if on ground
 		if (trace.plane.normal[2] > 0.7)
-		{		
+		{
 			if (ent->velocity[2] < 60 || ent->movetype != MOVETYPE_BOUNCE )
 			{
 				ent->groundentity = trace.ent;
@@ -54052,7 +53996,7 @@ void SV_Physics_Toss (edict_t *ent)
 //		if (ent->touch)
 //			ent->touch (ent, trace.ent, &trace.plane, trace.surface);
 	}
-	
+
 // check for water transition
 	wasinwater = (ent->watertype & MASK_WATER);
 	ent->watertype = gi.pointcontents (ent->s.origin);
@@ -54148,7 +54092,7 @@ void SV_Physics_Step (edict_t *ent)
 		wasonground = true;
 	else
 		wasonground = false;
-		
+
 	if (ent->avelocity[0] || ent->avelocity[1] || ent->avelocity[2])
 		SV_AddRotationalFriction (ent);
 
@@ -54270,7 +54214,7 @@ void G_RunEntity (edict_t *ent)
 		SV_Physics_Toss (ent);
 		break;
 	default:
-		gi.error ("SV_Physics: bad movetype %i", (int)ent->movetype);			
+		gi.error ("SV_Physics: bad movetype %i", (int)ent->movetype);
 	}
 }
 /* ============ end source: game/g_phys.c ============ */
@@ -54285,7 +54229,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -54399,7 +54343,7 @@ field_t fields[] = {
 field_t		levelfields[] =
 {
 	{"changemap", LLOFS(changemap), F_LSTRING},
-                   
+
 	{"sight_client", LLOFS(sight_client), F_EDICT},
 	{"sight_entity", LLOFS(sight_entity), F_EDICT},
 	{"sound_entity", LLOFS(sound_entity), F_EDICT},
@@ -54683,7 +54627,7 @@ void WriteClient (FILE *f, gclient_t *client)
 {
 	field_t		*field;
 	gclient_t	temp;
-	
+
 	// all of the ints, floats, and vectors stay as they are
 	temp = *client;
 
@@ -55058,7 +55002,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -55370,7 +55314,7 @@ char *ED_NewString (char *string)
 {
 	char	*newb, *new_p;
 	int		i,l;
-	
+
 	l = strlen(string) + 1;
 
 	newb = gi.TagMalloc (l, TAG_LEVEL);
@@ -55390,7 +55334,7 @@ char *ED_NewString (char *string)
 		else
 			*new_p++ = string[i];
 	}
-	
+
 	return newb;
 }
 
@@ -55474,7 +55418,7 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 
 // go through all the dictionary pairs
 	while (1)
-	{	
+	{
 	// parse key
 		com_token = COM_Parse (&data);
 		if (com_token[0] == '}')
@@ -55483,8 +55427,8 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 			gi.error ("ED_ParseEntity: EOF without closing brace");
 
 		strncpy (keyname, com_token, sizeof(keyname)-1);
-		
-	// parse value	
+
+	// parse value
 		com_token = COM_Parse (&data);
 		if (!data)
 			gi.error ("ED_ParseEntity: EOF without closing brace");
@@ -55492,7 +55436,7 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 		if (com_token[0] == '}')
 			gi.error ("ED_ParseEntity: closing brace without data");
 
-		init = true;	
+		init = true;
 
 	// keynames with a leading underscore are used for utility comments,
 	// and are immediately discarded by quake
@@ -55605,7 +55549,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 // parse ents
 	while (1)
 	{
-		// parse the opening brace	
+		// parse the opening brace
 		com_token = COM_Parse (&entities);
 		if (!entities)
 			break;
@@ -55629,7 +55573,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 			{
 				if ( ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH )
 				{
-					G_FreeEdict (ent);	
+					G_FreeEdict (ent);
 					inhibit++;
 					continue;
 				}
@@ -55642,7 +55586,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 					(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
 					)
 					{
-						G_FreeEdict (ent);	
+						G_FreeEdict (ent);
 						inhibit++;
 						continue;
 					}
@@ -55652,7 +55596,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		}
 
 		ED_CallSpawn (ent);
-	}	
+	}
 
 	gi.dprintf ("%i entities inhibited\n", inhibit);
 
@@ -55697,7 +55641,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 #endif
 
-char *single_statusbar = 
+char *single_statusbar =
 "yb	-24 "
 
 // health
@@ -55748,7 +55692,7 @@ char *single_statusbar =
 "	pic	9 "
 "endif "
 
-//  help / weapon icon 
+//  help / weapon icon
 "if 11 "
 "	xv	148 "
 "	pic	11 "
@@ -55806,7 +55750,7 @@ char *dm_statusbar =
 "	pic	9 "
 "endif "
 
-//  help / weapon icon 
+//  help / weapon icon
 "if 11 "
 "	xv	148 "
 "	pic	11 "
@@ -55928,9 +55872,9 @@ void SP_worldspawn (edict_t *ent)
 	gi.soundindex ("*death3.wav");
 	gi.soundindex ("*death4.wav");
 	gi.soundindex ("*fall1.wav");
-	gi.soundindex ("*fall2.wav");	
+	gi.soundindex ("*fall2.wav");
 	gi.soundindex ("*gurp1.wav");		// drowning damage
-	gi.soundindex ("*gurp2.wav");	
+	gi.soundindex ("*gurp2.wav");
 	gi.soundindex ("*jump1.wav");		// player jump
 	gi.soundindex ("*pain25_1.wav");
 	gi.soundindex ("*pain25_2.wav");
@@ -55965,7 +55909,7 @@ void SP_worldspawn (edict_t *ent)
 	gi.soundindex ("player/watr_out.wav");	// feet leaving water
 
 	gi.soundindex ("player/watr_un.wav");	// head going underwater
-	
+
 	gi.soundindex ("player/u_breath1.wav");
 	gi.soundindex ("player/u_breath2.wav");
 
@@ -55994,40 +55938,40 @@ void SP_worldspawn (edict_t *ent)
 
 	// 0 normal
 	gi.configstring(CS_LIGHTS+0, "m");
-	
+
 	// 1 FLICKER (first variety)
 	gi.configstring(CS_LIGHTS+1, "mmnmmommommnonmmonqnmmo");
-	
+
 	// 2 SLOW STRONG PULSE
 	gi.configstring(CS_LIGHTS+2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
-	
+
 	// 3 CANDLE (first variety)
 	gi.configstring(CS_LIGHTS+3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
-	
+
 	// 4 FAST STROBE
 	gi.configstring(CS_LIGHTS+4, "mamamamamama");
-	
+
 	// 5 GENTLE PULSE 1
 	gi.configstring(CS_LIGHTS+5,"jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-	
+
 	// 6 FLICKER (second variety)
 	gi.configstring(CS_LIGHTS+6, "nmonqnmomnmomomno");
-	
+
 	// 7 CANDLE (second variety)
 	gi.configstring(CS_LIGHTS+7, "mmmaaaabcdefgmmmmaaaammmaamm");
-	
+
 	// 8 CANDLE (third variety)
 	gi.configstring(CS_LIGHTS+8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-	
+
 	// 9 SLOW STROBE (fourth variety)
 	gi.configstring(CS_LIGHTS+9, "aaaaaaaazzzzzzzz");
-	
+
 	// 10 FLUORESCENT FLICKER
 	gi.configstring(CS_LIGHTS+10, "mmamammmmammamamaaamammma");
 
 	// 11 SLOW PULSE NOT FADE TO BLACK
 	gi.configstring(CS_LIGHTS+11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
-	
+
 	// styles 32-62 are assigned by the light program for switchable lights
 
 	// 63 testing
@@ -56046,7 +55990,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -56068,7 +56012,7 @@ void	Svcmd_Test_f (void)
 ==============================================================================
 
 PACKET FILTERING
- 
+
 
 You can add or remove addresses from the filter list with:
 
@@ -56117,13 +56061,13 @@ static qboolean StringToFilter (char *s, ipfilter_t *f)
 	int		i, j;
 	byte	b[4];
 	byte	m[4];
-	
+
 	for (i=0 ; i<4 ; i++)
 	{
 		b[i] = 0;
 		m[i] = 0;
 	}
-	
+
 	for (i=0 ; i<4 ; i++)
 	{
 		if (*s < '0' || *s > '9')
@@ -56131,7 +56075,7 @@ static qboolean StringToFilter (char *s, ipfilter_t *f)
 			gi.cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
 			return false;
 		}
-		
+
 		j = 0;
 		while (*s >= '0' && *s <= '9')
 		{
@@ -56146,10 +56090,10 @@ static qboolean StringToFilter (char *s, ipfilter_t *f)
 			break;
 		s++;
 	}
-	
+
 	f->mask = *(unsigned *)m;
 	f->compare = *(unsigned *)b;
-	
+
 	return true;
 }
 
@@ -56177,7 +56121,7 @@ qboolean SV_FilterPacket (char *from)
 			break;
 		i++, p++;
 	}
-	
+
 	in = *(unsigned *)m;
 
 	for (i=0 ; i<numipfilters ; i++)
@@ -56196,7 +56140,7 @@ SV_AddIP_f
 void SVCmd_AddIP_f (void)
 {
 	int		i;
-	
+
 	if (gi.argc() < 3) {
 		gi.cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
 		return;
@@ -56214,7 +56158,7 @@ void SVCmd_AddIP_f (void)
 		}
 		numipfilters++;
 	}
-	
+
 	if (!StringToFilter (gi.argv(2), &ipfilters[i]))
 		ipfilters[i].compare = 0xffffffff;
 }
@@ -56296,7 +56240,7 @@ void SVCmd_WriteIP_f (void)
 		gi.cprintf (NULL, PRINT_HIGH, "Couldn't open %s\n", name);
 		return;
 	}
-	
+
 	fprintf(f, "set filterban %d\n", (int)filterban->value);
 
 	for (i=0 ; i<numipfilters ; i++)
@@ -56304,7 +56248,7 @@ void SVCmd_WriteIP_f (void)
 		*(unsigned *)b = ipfilters[i].compare;
 		fprintf (f, "sv addip %i.%i.%i.%i\n", b[0], b[1], b[2], b[3]);
 	}
-	
+
 	fclose (f);
 }
 
@@ -56348,7 +56292,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -56633,7 +56577,7 @@ void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
 	}
 
 	// if going to a new unit, clear cross triggers
-	if (strstr(self->map, "*"))	
+	if (strstr(self->map, "*"))
 		game.serverflags &= ~(SFL_CROSS_TRIGGER_MASK);
 
 	BeginIntermission (self);
@@ -57150,7 +57094,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -57191,7 +57135,7 @@ void multi_trigger (edict_t *ent)
 
 	G_UseTargets (ent, ent->activator);
 
-	if (ent->wait > 0)	
+	if (ent->wait > 0)
 	{
 		ent->think = multi_wait;
 		ent->nextthink = level.time + ent->wait;
@@ -57265,7 +57209,7 @@ void SP_trigger_multiple (edict_t *ent)
 		ent->noise_index = gi.soundindex ("misc/talk.wav");
 	else if (ent->sounds == 3)
 		ent->noise_index = gi.soundindex ("misc/trigger1.wav");
-	
+
 	if (!ent->wait)
 		ent->wait = 0.2;
 	ent->touch = Touch_Multi;
@@ -57469,7 +57413,7 @@ void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
 {
 	if (self->count == 0)
 		return;
-	
+
 	self->count--;
 
 	if (self->count)
@@ -57481,7 +57425,7 @@ void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
 		}
 		return;
 	}
-	
+
 	if (! (self->spawnflags & 1))
 	{
 		gi.centerprintf(activator, "Sequence completed!");
@@ -57717,10 +57661,10 @@ void trigger_monsterjump_touch (edict_t *self, edict_t *other, cplane_t *plane, 
 // set XY even if not on ground, so the jump will clear lips
 	other->velocity[0] = self->movedir[0] * self->speed;
 	other->velocity[1] = self->movedir[1] * self->speed;
-	
+
 	if (!other->groundentity)
 		return;
-	
+
 	other->groundentity = NULL;
 	other->velocity[2] = self->movedir[2];
 }
@@ -57750,7 +57694,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -58184,7 +58128,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -58368,8 +58312,8 @@ void G_UseTargets (edict_t *ent, edict_t *activator)
 		t->killtarget = ent->killtarget;
 		return;
 	}
-	
-	
+
+
 //
 // print the message
 //
@@ -58509,15 +58453,15 @@ void G_SetMovedir (vec3_t angles, vec3_t movedir)
 float vectoyaw (vec3_t vec)
 {
 	float	yaw;
-	
-	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0) 
+
+	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0)
 	{
 		yaw = 0;
 		if (vec[YAW] > 0)
 			yaw = 90;
 		else if (vec[YAW] < 0)
 			yaw = -90;
-	} 
+	}
 	else
 	{
 		yaw = (int) (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
@@ -58533,7 +58477,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 {
 	float	forward;
 	float	yaw, pitch;
-	
+
 	if (value1[1] == 0 && value1[0] == 0)
 	{
 		yaw = 0;
@@ -58567,7 +58511,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 char *G_CopyString (char *in)
 {
 	char	*out;
-	
+
 	out = gi.TagMalloc (strlen(in)+1, TAG_LEVEL);
 	strcpy (out, in);
 	return out;
@@ -58609,10 +58553,10 @@ edict_t *G_Spawn (void)
 			return e;
 		}
 	}
-	
+
 	if (i == game.maxentities)
 		gi.error ("ED_Alloc: no free edicts");
-		
+
 	globals.num_edicts++;
 	G_InitEdict (e);
 	return e;
@@ -58754,7 +58698,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -59133,7 +59077,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
 		VectorMA (bolt->s.origin, -10, dir, bolt->s.origin);
 		bolt->touch (bolt, tr.ent, NULL, NULL);
 	}
-}	
+}
 
 
 /*
@@ -59672,7 +59616,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -59695,7 +59639,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -60732,7 +60676,7 @@ void SP_misc_actor (edict_t *self)
 /*QUAKED target_actor (.5 .3 0) (-8 -8 -8) (8 8 8) JUMP SHOOT ATTACK x HOLD BRUTAL
 JUMP			jump in set direction upon reaching this target
 SHOOT			take a single shot at the pathtarget
-ATTACK			attack pathtarget until it or actor is dead 
+ATTACK			attack pathtarget until it or actor is dead
 
 "target"		next target_actor
 "pathtarget"	target of any action to be taken at this point
@@ -60750,7 +60694,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 
 	if (other->movetarget != self)
 		return;
-	
+
 	if (other->enemy)
 		return;
 
@@ -60774,7 +60718,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 	{
 		other->velocity[0] = self->movedir[0] * self->speed;
 		other->velocity[1] = self->movedir[1] * self->speed;
-		
+
 		if (other->groundentity)
 		{
 			other->groundentity = NULL;
@@ -60870,7 +60814,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -60899,7 +60843,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -61340,7 +61284,7 @@ void berserk_attack_club (edict_t *self)
 }
 
 mframe_t berserk_frames_attack_club [] =
-{	
+{
 	ai_charge, 0, NULL,
 	ai_charge, 0, NULL,
 	ai_charge, 0, NULL,
@@ -61380,7 +61324,7 @@ mframe_t berserk_frames_attack_strike [] =
 	ai_move, 9.7, NULL,
 	ai_move, 13.6, NULL
 };
-	
+
 mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
 
 
@@ -61497,7 +61441,7 @@ mframe_t berserk_frames_death1 [] =
 	ai_move, 0, NULL,
 	ai_move, 0, NULL,
 	ai_move, 0, NULL
-	
+
 };
 mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
 
@@ -61605,7 +61549,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -61634,7 +61578,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -61954,7 +61898,7 @@ void Boss2Rocket (edict_t *self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	monster_fire_rocket (self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
-}	
+}
 
 void boss2_firebullet_right (edict_t *self)
 {
@@ -61970,13 +61914,13 @@ void boss2_firebullet_right (edict_t *self)
 	VectorNormalize (forward);
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_R1);
-}	
+}
 
 void boss2_firebullet_left (edict_t *self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
-	
+
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_L1], forward, right, start);
 
@@ -61987,7 +61931,7 @@ void boss2_firebullet_left (edict_t *self)
 	VectorNormalize (forward);
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_L1);
-}	
+}
 
 void Boss2MachineGun (edict_t *self)
 {
@@ -62010,7 +61954,7 @@ void Boss2MachineGun (edict_t *self)
 */
 	boss2_firebullet_left(self);
 	boss2_firebullet_right(self);
-}	
+}
 
 
 mframe_t boss2_frames_stand [] =
@@ -62298,12 +62242,12 @@ void boss2_attack (edict_t *self)
 
 	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
 	range = VectorLength (vec);
-	
+
 	if (range <= 125)
 	{
 		self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
 	}
-	else 
+	else
 	{
 		if (random() <= 0.6)
 			self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
@@ -62349,7 +62293,7 @@ void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
 		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
-	else 
+	else
 	{
 		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_heavy;
@@ -62422,7 +62366,7 @@ qboolean Boss2_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -62439,14 +62383,14 @@ qboolean Boss2_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 // missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -62532,7 +62476,7 @@ void SP_monster_boss2 (edict_t *self)
 	self->monsterinfo.checkattack = Boss2_CheckAttack;
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &boss2_move_stand;	
+	self->monsterinfo.currentmove = &boss2_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start (self);
@@ -62549,7 +62493,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -62578,7 +62522,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -63322,7 +63266,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -63351,7 +63295,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -63838,10 +63782,10 @@ mframe_t jorg_frames_death1 [] =
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,		// 30
@@ -63858,10 +63802,10 @@ mframe_t jorg_frames_death1 [] =
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	MakronToss,
 	ai_move,	0,	BossExplode		// 50
@@ -63876,7 +63820,7 @@ mframe_t jorg_frames_attack2 []=
 	ai_charge,	0,	NULL,
 	ai_charge,	0,	NULL,
 	ai_charge,	0,	NULL,
-	ai_charge,	0,	jorgBFG,		
+	ai_charge,	0,	jorgBFG,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
@@ -63927,12 +63871,12 @@ void jorg_reattack1(edict_t *self)
 		else
 		{
 			self->s.sound = 0;
-			self->monsterinfo.currentmove = &jorg_move_end_attack1;	
+			self->monsterinfo.currentmove = &jorg_move_end_attack1;
 		}
 	else
 	{
 		self->s.sound = 0;
-		self->monsterinfo.currentmove = &jorg_move_end_attack1;	
+		self->monsterinfo.currentmove = &jorg_move_end_attack1;
 	}
 }
 
@@ -63946,7 +63890,7 @@ void jorg_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum = 1;
-	
+
 	self->s.sound = 0;
 
 	if (level.time < self->pain_debounce_time)
@@ -63957,11 +63901,11 @@ void jorg_pain (edict_t *self, edict_t *other, float kick, int damage)
 		if (random()<=0.6)
 			return;
 
-	/* 
+	/*
 	If he's entering his attack1 or using attack1, lessen the chance of him
 	going into pain
 	*/
-	
+
 	if ( (self->s.frame >= FRAME_attak101) && (self->s.frame <= FRAME_attak108) )
 		if (random() <= 0.005)
 			return;
@@ -64015,16 +63959,16 @@ void jorgBFG (edict_t *self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
-	/*void monster_fire_bfg (edict_t *self, 
-							 vec3_t start, 
-							 vec3_t aimdir, 
-							 int damage, 
-							 int speed, 
-							 int kick, 
-							 float damage_radius, 
+	/*void monster_fire_bfg (edict_t *self,
+							 vec3_t start,
+							 vec3_t aimdir,
+							 int damage,
+							 int speed,
+							 int kick,
+							 float damage_radius,
 							 int flashtype)*/
 	monster_fire_bfg (self, start, dir, 50, 300, 100, 200, MZ2_JORG_BFG_1);
-}	
+}
 
 void jorg_firebullet_right (edict_t *self)
 {
@@ -64040,7 +63984,7 @@ void jorg_firebullet_right (edict_t *self)
 	VectorNormalize (forward);
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1);
-}	
+}
 
 void jorg_firebullet_left (edict_t *self)
 {
@@ -64056,7 +64000,7 @@ void jorg_firebullet_left (edict_t *self)
 	VectorNormalize (forward);
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1);
-}	
+}
 
 void jorg_firebullet (edict_t *self)
 {
@@ -64087,7 +64031,7 @@ void jorg_dead (edict_t *self)
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	*/
-	
+
 	// Jorg is on modelindex2. Do not clear him.
 	VectorSet (self->mins, -60, -60, 0);
 	VectorSet (self->maxs, 60, 60, 72);
@@ -64141,7 +64085,7 @@ qboolean Jorg_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -64158,14 +64102,14 @@ qboolean Jorg_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 // missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -64261,7 +64205,7 @@ void SP_monster_jorg (edict_t *self)
 	self->monsterinfo.sight = NULL;
 	self->monsterinfo.checkattack = Jorg_CheckAttack;
 	gi.linkentity (self);
-	
+
 	self->monsterinfo.currentmove = &jorg_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
@@ -64279,7 +64223,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -64405,7 +64349,7 @@ mframe_t makron_frames_stand []=
 	ai_stand, 0, NULL		// 60
 };
 mmove_t	makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
-	
+
 void makron_stand (edict_t *self)
 {
 	self->monsterinfo.currentmove = &makron_move_stand;
@@ -64563,7 +64507,7 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,			// 30
@@ -64577,7 +64521,6 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	0,	NULL,
 	ai_move,	-1,	NULL,
 	ai_move,	2,	NULL,			// 40
-	ai_move,	0,	NULL,			
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
@@ -64585,9 +64528,10 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,			// 50
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	-6,	NULL,
@@ -64597,7 +64541,7 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	-4,	makron_step_left,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,			// 60
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	-2,	NULL,
 	ai_move,	-5,	NULL,
@@ -64607,7 +64551,7 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	-7,	NULL,
 	ai_move,	-4,	NULL,
 	ai_move,	-4,	makron_step_right,			// 70
-	ai_move,	-6,	NULL,			
+	ai_move,	-6,	NULL,
 	ai_move,	-7,	NULL,
 	ai_move,	0,	makron_step_left,
 	ai_move,	0,	NULL,
@@ -64617,7 +64561,7 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,			// 80
-	ai_move,	0,	NULL,			
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
 	ai_move,	0,	NULL,
@@ -64627,7 +64571,7 @@ mframe_t makron_frames_death2 [] =
 	ai_move,	0,	NULL,
 	ai_move,	2,	NULL,
 	ai_move,	0,	NULL,			// 90
-	ai_move,	27,	makron_hit,			
+	ai_move,	27,	makron_hit,
 	ai_move,	26,	NULL,
 	ai_move,	0,	makron_brainsplorch,
 	ai_move,	0,	NULL,
@@ -64694,7 +64638,7 @@ void makronBFG (edict_t *self)
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
 	monster_fire_bfg (self, start, dir, 50, 300, 100, 300, MZ2_MAKRON_BFG);
-}	
+}
 
 
 mframe_t makron_frames_attack3 []=
@@ -64777,7 +64721,7 @@ void MakronRailgun (edict_t *self)
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_MAKRON_RAILGUN_1], forward, right, start);
-	
+
 	// calc direction to where we targted
 	VectorSubtract (self->pos1, start, dir);
 	VectorNormalize (dir);
@@ -64820,7 +64764,7 @@ void MakronHyperblaster (edict_t *self)
 	AngleVectors (dir, forward, NULL, NULL);
 
 	monster_fire_blaster (self, start, forward, 15, 1000, MZ2_MAKRON_BLASTER_1, EF_BLASTER);
-}	
+}
 
 
 void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
@@ -64901,7 +64845,7 @@ void makron_torso_think (edict_t *self)
 	if (++self->s.frame < 365)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 346;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -64972,7 +64916,7 @@ void makron_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	makron_torso (tempent);
 
 	self->monsterinfo.currentmove = &makron_move_death2;
-	
+
 }
 
 qboolean Makron_CheckAttack (edict_t *self)
@@ -64998,7 +64942,7 @@ qboolean Makron_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -65015,14 +64959,14 @@ qboolean Makron_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 // missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -65124,7 +65068,7 @@ void SP_monster_makron (edict_t *self)
 	self->monsterinfo.checkattack = Makron_CheckAttack;
 
 	gi.linkentity (self);
-	
+
 //	self->monsterinfo.currentmove = &makron_move_stand;
 	self->monsterinfo.currentmove = &makron_move_sight;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -65188,7 +65132,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -65217,7 +65161,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -65773,7 +65717,7 @@ mframe_t brain_frames_walk2 [] =
 	ai_walk,	4,	brain_walk2_cycle,
 	ai_walk,	-1,	NULL,
 	ai_walk,	-1,	NULL,
-	ai_walk,	-8,	NULL,		
+	ai_walk,	-8,	NULL,
 	ai_walk,	0,	NULL,
 	ai_walk,	1,	NULL,
 	ai_walk,	5,	NULL,
@@ -66222,7 +66166,7 @@ void SP_monster_brain (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &brain_move_stand;	
+	self->monsterinfo.currentmove = &brain_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start (self);
@@ -66239,7 +66183,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -66268,7 +66212,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -66887,8 +66831,8 @@ mframe_t chick_frames_start_run [] =
 	ai_run, 1,  NULL,
 	ai_run, 0,  NULL,
 	ai_run, 0,	 NULL,
-	ai_run, -1, NULL, 
-	ai_run, -1, NULL, 
+	ai_run, -1, NULL,
+	ai_run, -1, NULL,
 	ai_run, 0,  NULL,
 	ai_run, 1,  NULL,
 	ai_run, 3,  NULL,
@@ -67083,7 +67027,7 @@ mframe_t chick_frames_death1 [] =
 	ai_move, 0,  NULL,
 	ai_move, 0,  NULL,
 	ai_move, 0,  NULL
-	
+
 };
 mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
 
@@ -67201,7 +67145,7 @@ void ChickRocket (edict_t *self)
 	VectorNormalize (dir);
 
 	monster_fire_rocket (self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
-}	
+}
 
 void Chick_PreAttack1 (edict_t *self)
 {
@@ -67274,7 +67218,7 @@ void chick_rerocket(edict_t *self)
 					self->monsterinfo.currentmove = &chick_move_attack1;
 					return;
 				}
-	}	
+	}
 	self->monsterinfo.currentmove = &chick_move_end_attack1;
 }
 
@@ -67335,7 +67279,7 @@ void chick_slash(edict_t *self)
 
 
 mframe_t chick_frames_start_slash [] =
-{	
+{
 	ai_charge, 1,	NULL,
 	ai_charge, 8,	NULL,
 	ai_charge, 3,	NULL
@@ -67370,21 +67314,21 @@ void SP_monster_chick (edict_t *self)
 		return;
 	}
 
-	sound_missile_prelaunch	= gi.soundindex ("chick/chkatck1.wav");	
-	sound_missile_launch	= gi.soundindex ("chick/chkatck2.wav");	
-	sound_melee_swing		= gi.soundindex ("chick/chkatck3.wav");	
-	sound_melee_hit			= gi.soundindex ("chick/chkatck4.wav");	
-	sound_missile_reload	= gi.soundindex ("chick/chkatck5.wav");	
-	sound_death1			= gi.soundindex ("chick/chkdeth1.wav");	
-	sound_death2			= gi.soundindex ("chick/chkdeth2.wav");	
-	sound_fall_down			= gi.soundindex ("chick/chkfall1.wav");	
-	sound_idle1				= gi.soundindex ("chick/chkidle1.wav");	
-	sound_idle2				= gi.soundindex ("chick/chkidle2.wav");	
-	sound_pain1				= gi.soundindex ("chick/chkpain1.wav");	
-	sound_pain2				= gi.soundindex ("chick/chkpain2.wav");	
-	sound_pain3				= gi.soundindex ("chick/chkpain3.wav");	
-	sound_sight				= gi.soundindex ("chick/chksght1.wav");	
-	sound_search			= gi.soundindex ("chick/chksrch1.wav");	
+	sound_missile_prelaunch	= gi.soundindex ("chick/chkatck1.wav");
+	sound_missile_launch	= gi.soundindex ("chick/chkatck2.wav");
+	sound_melee_swing		= gi.soundindex ("chick/chkatck3.wav");
+	sound_melee_hit			= gi.soundindex ("chick/chkatck4.wav");
+	sound_missile_reload	= gi.soundindex ("chick/chkatck5.wav");
+	sound_death1			= gi.soundindex ("chick/chkdeth1.wav");
+	sound_death2			= gi.soundindex ("chick/chkdeth2.wav");
+	sound_fall_down			= gi.soundindex ("chick/chkfall1.wav");
+	sound_idle1				= gi.soundindex ("chick/chkidle1.wav");
+	sound_idle2				= gi.soundindex ("chick/chkidle2.wav");
+	sound_pain1				= gi.soundindex ("chick/chkpain1.wav");
+	sound_pain2				= gi.soundindex ("chick/chkpain2.wav");
+	sound_pain3				= gi.soundindex ("chick/chkpain3.wav");
+	sound_sight				= gi.soundindex ("chick/chksght1.wav");
+	sound_search			= gi.soundindex ("chick/chksrch1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -67426,7 +67370,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -67455,7 +67399,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -67649,7 +67593,7 @@ mframe_t flipper_frames_stand [] =
 {
 	ai_stand, 0, NULL
 };
-	
+
 mmove_t	flipper_move_stand = {FRAME_flphor01, FRAME_flphor01, flipper_frames_stand, NULL};
 
 void flipper_stand (edict_t *self)
@@ -67711,7 +67655,7 @@ void flipper_run (edict_t *self)
 	self->monsterinfo.currentmove = &flipper_move_run_start;
 }
 
-/* Standard Swimming */ 
+/* Standard Swimming */
 mframe_t flipper_frames_walk [] =
 {
 	ai_walk, 4, NULL,
@@ -67835,7 +67779,7 @@ void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	
+
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
 
@@ -67970,9 +67914,9 @@ void SP_monster_flipper (edict_t *self)
 		return;
 	}
 
-	sound_pain1		= gi.soundindex ("flipper/flppain1.wav");	
-	sound_pain2		= gi.soundindex ("flipper/flppain2.wav");	
-	sound_death		= gi.soundindex ("flipper/flpdeth1.wav");	
+	sound_pain1		= gi.soundindex ("flipper/flppain1.wav");
+	sound_pain2		= gi.soundindex ("flipper/flppain2.wav");
+	sound_death		= gi.soundindex ("flipper/flpdeth1.wav");
 	sound_chomp		= gi.soundindex ("flipper/flpatck1.wav");
 	sound_attack	= gi.soundindex ("flipper/flpatck2.wav");
 	sound_idle		= gi.soundindex ("flipper/flpidle1.wav");
@@ -68000,7 +67944,7 @@ void SP_monster_flipper (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &flipper_move_stand;	
+	self->monsterinfo.currentmove = &flipper_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	swimmonster_start (self);
@@ -68017,7 +67961,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -68046,7 +67990,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -68650,7 +68594,7 @@ mmove_t	floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_st
 
 void floater_stand (edict_t *self)
 {
-	if (random() <= 0.5)		
+	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &floater_move_stand1;
 	else
 		self->monsterinfo.currentmove = &floater_move_stand2;
@@ -68658,35 +68602,35 @@ void floater_stand (edict_t *self)
 
 mframe_t floater_frames_activate [] =
 {
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
-	ai_move,	0,	NULL,	
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
+	ai_move,	0,	NULL,
 	ai_move,	0,	NULL
 };
 mmove_t floater_move_activate = {FRAME_actvat01, FRAME_actvat31, floater_frames_activate, NULL};
@@ -69010,7 +68954,7 @@ void floater_attack(edict_t *self)
 
 void floater_melee(edict_t *self)
 {
-	if (random() < 0.5)		
+	if (random() < 0.5)
 		self->monsterinfo.currentmove = &floater_move_attack3;
 	else
 		self->monsterinfo.currentmove = &floater_move_attack2;
@@ -69106,11 +69050,11 @@ void SP_monster_floater (edict_t *self)
 
 	gi.linkentity (self);
 
-	if (random() <= 0.5)		
-		self->monsterinfo.currentmove = &floater_move_stand1;	
+	if (random() <= 0.5)
+		self->monsterinfo.currentmove = &floater_move_stand1;
 	else
-		self->monsterinfo.currentmove = &floater_move_stand2;	
-	
+		self->monsterinfo.currentmove = &floater_move_stand2;
+
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start (self);
@@ -69127,7 +69071,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -69156,7 +69100,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -69705,7 +69649,7 @@ mframe_t flyer_frames_rollleft [] =
 mmove_t flyer_move_rollleft = {FRAME_rollf01, FRAME_rollf09, flyer_frames_rollleft, NULL};
 
 mframe_t flyer_frames_pain3 [] =
-{	
+{
 		ai_move, 0, NULL,
 		ai_move, 0, NULL,
 		ai_move, 0, NULL,
@@ -69736,7 +69680,7 @@ mframe_t flyer_frames_pain1 [] =
 };
 mmove_t flyer_move_pain1 = {FRAME_pain101, FRAME_pain109, flyer_frames_pain1, flyer_run};
 
-mframe_t flyer_frames_defense [] = 
+mframe_t flyer_frames_defense [] =
 {
 		ai_move, 0, NULL,
 		ai_move, 0, NULL,
@@ -69769,7 +69713,7 @@ mframe_t flyer_frames_bankleft [] =
 		ai_move, 0, NULL,
 		ai_move, 0, NULL
 };
-mmove_t flyer_move_bankleft = {FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, NULL};		
+mmove_t flyer_move_bankleft = {FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, NULL};
 
 
 void flyer_fire (edict_t *self, int flash_number)
@@ -69786,7 +69730,7 @@ void flyer_fire (edict_t *self, int flash_number)
 		effect = 0;
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
-	
+
 	VectorCopy (self->enemy->s.origin, end);
 	end[2] += self->enemy->viewheight;
 	VectorSubtract (end, start, dir);
@@ -69880,13 +69824,13 @@ mframe_t flyer_frames_loop_melee [] =
 		ai_charge, 0, NULL,
 		ai_charge, 0, NULL,
 		ai_charge, 0, NULL		// Loop Ends
-		
+
 };
 mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_loop_melee, flyer_check_melee};
 
 void flyer_loop_melee (edict_t *self)
 {
-/*	if (random() <= 0.5)	
+/*	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &flyer_move_attack1;
 	else */
 	self->monsterinfo.currentmove = &flyer_move_loop_melee;
@@ -69896,7 +69840,7 @@ void flyer_loop_melee (edict_t *self)
 
 void flyer_attack (edict_t *self)
 {
-/*	if (random() <= 0.5)	
+/*	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &flyer_move_attack1;
 	else */
 	self->monsterinfo.currentmove = &flyer_move_attack2;
@@ -69974,7 +69918,7 @@ void flyer_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
-	
+
 
 /*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
@@ -70027,7 +69971,7 @@ void SP_monster_flyer (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &flyer_move_stand;	
+	self->monsterinfo.currentmove = &flyer_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start (self);
@@ -70044,7 +69988,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -70073,7 +70017,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -70481,7 +70425,7 @@ void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
 		self->monsterinfo.currentmove = &gladiator_move_pain_air;
 	else
 		self->monsterinfo.currentmove = &gladiator_move_pain;
-	
+
 }
 
 
@@ -70562,9 +70506,9 @@ void SP_monster_gladiator (edict_t *self)
 	}
 
 
-	sound_pain1 = gi.soundindex ("gladiator/pain.wav");	
-	sound_pain2 = gi.soundindex ("gladiator/gldpain2.wav");	
-	sound_die = gi.soundindex ("gladiator/glddeth2.wav");	
+	sound_pain1 = gi.soundindex ("gladiator/pain.wav");
+	sound_pain2 = gi.soundindex ("gladiator/gldpain2.wav");
+	sound_die = gi.soundindex ("gladiator/glddeth2.wav");
 	sound_gun = gi.soundindex ("gladiator/railgun.wav");
 	sound_cleaver_swing = gi.soundindex ("gladiator/melee1.wav");
 	sound_cleaver_hit = gi.soundindex ("gladiator/melee2.wav");
@@ -70614,7 +70558,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -70643,7 +70587,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -71622,13 +71566,13 @@ void SP_monster_gunner (edict_t *self)
 		return;
 	}
 
-	sound_death = gi.soundindex ("gunner/death1.wav");	
-	sound_pain = gi.soundindex ("gunner/gunpain2.wav");	
-	sound_pain2 = gi.soundindex ("gunner/gunpain1.wav");	
-	sound_idle = gi.soundindex ("gunner/gunidle1.wav");	
-	sound_open = gi.soundindex ("gunner/gunatck1.wav");	
-	sound_search = gi.soundindex ("gunner/gunsrch1.wav");	
-	sound_sight = gi.soundindex ("gunner/sight1.wav");	
+	sound_death = gi.soundindex ("gunner/death1.wav");
+	sound_pain = gi.soundindex ("gunner/gunpain2.wav");
+	sound_pain2 = gi.soundindex ("gunner/gunpain1.wav");
+	sound_idle = gi.soundindex ("gunner/gunidle1.wav");
+	sound_open = gi.soundindex ("gunner/gunatck1.wav");
+	sound_search = gi.soundindex ("gunner/gunsrch1.wav");
+	sound_sight = gi.soundindex ("gunner/sight1.wav");
 
 	gi.soundindex ("gunner/gunatck2.wav");
 	gi.soundindex ("gunner/gunatck3.wav");
@@ -71657,7 +71601,7 @@ void SP_monster_gunner (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &gunner_move_stand;	
+	self->monsterinfo.currentmove = &gunner_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start (self);
@@ -71674,7 +71618,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -71703,7 +71647,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -72377,7 +72321,7 @@ void hover_reattack (edict_t *self)
 {
 	if (self->enemy->health > 0 )
 		if (visible (self, self->enemy) )
-			if (random() <= 0.6)		
+			if (random() <= 0.6)
 			{
 				self->monsterinfo.currentmove = &hover_move_attack1;
 				return;
@@ -72533,15 +72477,15 @@ void SP_monster_hover (edict_t *self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("hover/hovpain1.wav");	
-	sound_pain2 = gi.soundindex ("hover/hovpain2.wav");	
-	sound_death1 = gi.soundindex ("hover/hovdeth1.wav");	
-	sound_death2 = gi.soundindex ("hover/hovdeth2.wav");	
-	sound_sight = gi.soundindex ("hover/hovsght1.wav");	
-	sound_search1 = gi.soundindex ("hover/hovsrch1.wav");	
-	sound_search2 = gi.soundindex ("hover/hovsrch2.wav");	
+	sound_pain1 = gi.soundindex ("hover/hovpain1.wav");
+	sound_pain2 = gi.soundindex ("hover/hovpain2.wav");
+	sound_death1 = gi.soundindex ("hover/hovdeth1.wav");
+	sound_death2 = gi.soundindex ("hover/hovdeth2.wav");
+	sound_sight = gi.soundindex ("hover/hovsght1.wav");
+	sound_search1 = gi.soundindex ("hover/hovsrch1.wav");
+	sound_search2 = gi.soundindex ("hover/hovsrch2.wav");
 
-	gi.soundindex ("hover/hovatck1.wav");	
+	gi.soundindex ("hover/hovatck1.wav");
 
 	self->s.sound = gi.soundindex ("hover/hovidle1.wav");
 
@@ -72568,7 +72512,7 @@ void SP_monster_hover (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &hover_move_stand;	
+	self->monsterinfo.currentmove = &hover_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start (self);
@@ -72585,7 +72529,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -72614,7 +72558,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -73231,7 +73175,7 @@ void infantry_pain (edict_t *self, edict_t *other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	
+
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
 
@@ -73578,11 +73522,11 @@ void SP_monster_infantry (edict_t *self)
 	sound_weapon_cock = gi.soundindex ("infantry/infatck3.wav");
 	sound_punch_swing = gi.soundindex ("infantry/infatck2.wav");
 	sound_punch_hit = gi.soundindex ("infantry/melee2.wav");
-	
+
 	sound_sight = gi.soundindex ("infantry/infsght1.wav");
 	sound_search = gi.soundindex ("infantry/infsrch1.wav");
 	sound_idle = gi.soundindex ("infantry/infidle1.wav");
-	
+
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -73625,7 +73569,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -73654,7 +73598,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -74501,7 +74445,7 @@ mmove_t insane_move_struggle_cross = {FRAME_cross16, FRAME_cross30, insane_frame
 
 void insane_cross (edict_t *self)
 {
-	if (random() < 0.8)		
+	if (random() < 0.8)
 		self->monsterinfo.currentmove = &insane_move_cross;
 	else
 		self->monsterinfo.currentmove = &insane_move_struggle_cross;
@@ -74571,10 +74515,10 @@ void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
 	// Don't go into pain frames if crucified.
 	if (self->spawnflags & 8)
 	{
-		self->monsterinfo.currentmove = &insane_move_struggle_cross;			
+		self->monsterinfo.currentmove = &insane_move_struggle_cross;
 		return;
 	}
-	
+
 	if  ( ((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) )
 	{
 		self->monsterinfo.currentmove = &insane_move_crawl_pain;
@@ -74600,7 +74544,7 @@ void insane_checkdown (edict_t *self)
 			self->monsterinfo.currentmove = &insane_move_uptodown;
 		else
 			self->monsterinfo.currentmove = &insane_move_jumpdown;
-	} 
+	}
 }
 
 void insane_checkup (edict_t *self)
@@ -74609,7 +74553,7 @@ void insane_checkup (edict_t *self)
 	if ( (self->spawnflags & 4) && (self->spawnflags & 16) )
 		return;
 	if (random() < 0.5)
-		self->monsterinfo.currentmove = &insane_move_downtoup;				
+		self->monsterinfo.currentmove = &insane_move_downtoup;
 
 }
 
@@ -74678,7 +74622,7 @@ void insane_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	}
 	else
 	{
-		if ( ((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) )		
+		if ( ((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) )
 			self->monsterinfo.currentmove = &insane_move_crawl_death;
 		else
 			self->monsterinfo.currentmove = &insane_move_stand_death;
@@ -74745,7 +74689,7 @@ void SP_misc_insane (edict_t *self)
 		self->monsterinfo.aiflags |= AI_STAND_GROUND;
 
 	self->monsterinfo.currentmove = &insane_move_stand_normal;
-	
+
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	if (self->spawnflags & 8)					// Crucified ?
@@ -74773,7 +74717,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -74802,7 +74746,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -75393,7 +75337,7 @@ mframe_t medic_frames_run [] =
 	ai_run, 23.4,	NULL,
 	ai_run, 24,		NULL,
 	ai_run, 35.6,	NULL
-	
+
 };
 mmove_t medic_move_run = {FRAME_run1, FRAME_run6, medic_frames_run, NULL};
 
@@ -75686,7 +75630,7 @@ mframe_t medic_frames_attackBlaster [] =
 	ai_charge, 0,	medic_fire_blaster,
 	ai_charge, 0,	NULL,
 	ai_charge, 0,	NULL,
-	ai_charge, 0,	medic_fire_blaster,	
+	ai_charge, 0,	medic_fire_blaster,
 	ai_charge, 0,	NULL,
 	ai_charge, 0,	medic_continue	// Change to medic_continue... Else, go to frame 32
 };
@@ -75920,7 +75864,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -75952,7 +75896,7 @@ qboolean M_CheckBottom (edict_t *ent)
 	trace_t	trace;
 	int		x, y;
 	float	mid, bottom;
-	
+
 	VectorAdd (ent->s.origin, ent->mins, mins);
 	VectorAdd (ent->s.origin, ent->maxs, maxs);
 
@@ -75978,7 +75922,7 @@ realcheck:
 // check it for real...
 //
 	start[2] = mins[2];
-	
+
 // the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
@@ -75988,16 +75932,16 @@ realcheck:
 	if (trace.fraction == 1.0)
 		return false;
 	mid = bottom = trace.endpos[2];
-	
-// the corners must be within 16 of the midpoint	
+
+// the corners must be within 16 of the midpoint
 	for	(x=0 ; x<=1 ; x++)
 		for	(y=0 ; y<=1 ; y++)
 		{
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
-			
+
 			trace = gi.trace (start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
-			
+
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
 			if (trace.fraction == 1.0 || mid - trace.endpos[2] > STEPSIZE)
@@ -76031,7 +75975,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 	vec3_t		test;
 	int			contents;
 
-// try the move	
+// try the move
 	VectorCopy (ent->s.origin, oldorg);
 	VectorAdd (ent->s.origin, move, neworg);
 
@@ -76068,7 +76012,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 				}
 			}
 			trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, neworg, ent, MASK_MONSTERSOLID);
-	
+
 			// fly monsters don't enter water voluntarily
 			if (ent->flags & FL_FLY)
 			{
@@ -76107,11 +76051,11 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 				}
 				return true;
 			}
-			
+
 			if (!ent->enemy)
 				break;
 		}
-		
+
 		return false;
 	}
 
@@ -76144,7 +76088,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 	{
 		test[0] = trace.endpos[0];
 		test[1] = trace.endpos[1];
-		test[2] = trace.endpos[2] + ent->mins[2] + 1;	
+		test[2] = trace.endpos[2] + ent->mins[2] + 1;
 		contents = gi.pointcontents(test);
 
 		if (contents & MASK_WATER)
@@ -76165,13 +76109,13 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 			ent->groundentity = NULL;
 			return true;
 		}
-	
+
 		return false;		// walked off an edge
 	}
 
 // check point traces down for dangling corners
 	VectorCopy (trace.endpos, ent->s.origin);
-	
+
 	if (!M_CheckBottom (ent))
 	{
 		if ( ent->flags & FL_PARTIALGROUND )
@@ -76219,7 +76163,7 @@ void M_ChangeYaw (edict_t *ent)
 	float	current;
 	float	move;
 	float	speed;
-	
+
 	current = anglemod(ent->s.angles[YAW]);
 	ideal = ent->ideal_yaw;
 
@@ -76248,7 +76192,7 @@ void M_ChangeYaw (edict_t *ent)
 		if (move < -speed)
 			move = -speed;
 	}
-	
+
 	ent->s.angles[YAW] = anglemod (current + move);
 }
 
@@ -76266,10 +76210,10 @@ qboolean SV_StepDirection (edict_t *ent, float yaw, float dist)
 {
 	vec3_t		move, oldorigin;
 	float		delta;
-	
+
 	ent->ideal_yaw = yaw;
 	M_ChangeYaw (ent);
-	
+
 	yaw = yaw*M_PI*2 / 360;
 	move[0] = cos(yaw)*dist;
 	move[1] = sin(yaw)*dist;
@@ -76347,7 +76291,7 @@ void SV_NewChaseDir (edict_t *actor, edict_t *enemy, float dist)
 			tdir = d[2] == 90 ? 45 : 315;
 		else
 			tdir = d[2] == 90 ? 135 : 215;
-			
+
 		if (tdir != turnaround && SV_StepDirection(actor, tdir, dist))
 			return;
 	}
@@ -76360,7 +76304,7 @@ void SV_NewChaseDir (edict_t *actor, edict_t *enemy, float dist)
 		d[2]=tdir;
 	}
 
-	if (d[1]!=DI_NODIR && d[1]!=turnaround 
+	if (d[1]!=DI_NODIR && d[1]!=turnaround
 	&& SV_StepDirection(actor, d[1], dist))
 			return;
 
@@ -76407,7 +76351,7 @@ SV_CloseEnough
 qboolean SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 {
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (goal->absmin[i] > ent->absmax[i] + dist)
@@ -76427,7 +76371,7 @@ M_MoveToGoal
 void M_MoveToGoal (edict_t *ent, float dist)
 {
 	edict_t		*goal;
-	
+
 	goal = ent->goalentity;
 
 	if (!ent->groundentity && !(ent->flags & (FL_FLY|FL_SWIM)))
@@ -76454,12 +76398,12 @@ M_walkmove
 qboolean M_walkmove (edict_t *ent, float yaw, float dist)
 {
 	vec3_t	move;
-	
+
 	if (!ent->groundentity && !(ent->flags & (FL_FLY|FL_SWIM)))
 		return false;
 
 	yaw = yaw*M_PI*2 / 360;
-	
+
 	move[0] = cos(yaw)*dist;
 	move[1] = sin(yaw)*dist;
 	move[2] = 0;
@@ -76478,7 +76422,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -76507,7 +76451,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -76833,7 +76777,7 @@ void mutant_step (edict_t *self)
 	int		n;
 	n = (rand() + 1) % 3;
 	if (n == 0)
-		gi.sound (self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);		
+		gi.sound (self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
 	else if (n == 1)
 		gi.sound (self, CHAN_VOICE, sound_step2, 1, ATTN_NORM, 0);
 	else
@@ -77410,7 +77354,7 @@ void SP_monster_mutant (edict_t *self)
 	sound_step2 = gi.soundindex ("mutant/step2.wav");
 	sound_step3 = gi.soundindex ("mutant/step3.wav");
 	sound_thud = gi.soundindex ("mutant/thud1.wav");
-	
+
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex ("models/monsters/mutant/tris.md2");
@@ -77436,7 +77380,7 @@ void SP_monster_mutant (edict_t *self)
 	self->monsterinfo.checkattack = mutant_checkattack;
 
 	gi.linkentity (self);
-	
+
 	self->monsterinfo.currentmove = &mutant_move_stand;
 
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -77454,7 +77398,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -77483,7 +77427,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -77748,7 +77692,7 @@ mframe_t parasite_frames_start_fidget [] =
 mmove_t parasite_move_start_fidget = {FRAME_stand18, FRAME_stand21, parasite_frames_start_fidget, parasite_do_fidget};
 
 mframe_t parasite_frames_fidget [] =
-{	
+{
 	ai_stand, 0, parasite_scratch,
 	ai_stand, 0, NULL,
 	ai_stand, 0, NULL,
@@ -77782,7 +77726,7 @@ void parasite_do_fidget (edict_t *self)
 }
 
 void parasite_refidget (edict_t *self)
-{ 
+{
 	if (random() <= 0.8)
 		self->monsterinfo.currentmove = &parasite_move_fidget;
 	else
@@ -77790,7 +77734,7 @@ void parasite_refidget (edict_t *self)
 }
 
 void parasite_idle (edict_t *self)
-{ 
+{
 	self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
 
@@ -77843,7 +77787,7 @@ mframe_t parasite_frames_start_run [] =
 mmove_t parasite_move_start_run = {FRAME_run01, FRAME_run02, parasite_frames_start_run, parasite_run};
 
 mframe_t parasite_frames_stop_run [] =
-{	
+{
 	ai_run, 20, NULL,
 	ai_run, 20,	NULL,
 	ai_run, 12, NULL,
@@ -77854,7 +77798,7 @@ mframe_t parasite_frames_stop_run [] =
 mmove_t parasite_move_stop_run = {FRAME_run10, FRAME_run15, parasite_frames_stop_run, NULL};
 
 void parasite_start_run (edict_t *self)
-{	
+{
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &parasite_move_stand;
 	else
@@ -77890,7 +77834,7 @@ mframe_t parasite_frames_start_walk [] =
 mmove_t parasite_move_start_walk = {FRAME_run01, FRAME_run02, parasite_frames_start_walk, NULL};
 
 mframe_t parasite_frames_stop_walk [] =
-{	
+{
 	ai_walk, 20, NULL,
 	ai_walk, 20,	NULL,
 	ai_walk, 12, NULL,
@@ -77901,7 +77845,7 @@ mframe_t parasite_frames_stop_walk [] =
 mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_stop_walk, NULL};
 
 void parasite_start_walk (edict_t *self)
-{	
+{
 	self->monsterinfo.currentmove = &parasite_move_start_walk;
 }
 
@@ -78072,7 +78016,7 @@ mframe_t parasite_frames_break [] =
 	ai_charge, 0,	NULL,		// slides
 	ai_charge, 0,	NULL,		// slides
 	ai_charge, 4,	NULL,
-	ai_charge, 11,	NULL,		
+	ai_charge, 11,	NULL,
 	ai_charge, -2,	NULL,
 	ai_charge, -5,	NULL,
 	ai_charge, 1,	NULL
@@ -78080,7 +78024,7 @@ mframe_t parasite_frames_break [] =
 mmove_t parasite_move_break = {FRAME_break01, FRAME_break32, parasite_frames_break, parasite_start_run};
 
 /*
-=== 
+===
 Break Stuff Ends
 ===
 */
@@ -78166,9 +78110,9 @@ void SP_monster_parasite (edict_t *self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("parasite/parpain1.wav");	
-	sound_pain2 = gi.soundindex ("parasite/parpain2.wav");	
-	sound_die = gi.soundindex ("parasite/pardeth1.wav");	
+	sound_pain1 = gi.soundindex ("parasite/parpain1.wav");
+	sound_pain2 = gi.soundindex ("parasite/parpain2.wav");
+	sound_die = gi.soundindex ("parasite/pardeth1.wav");
 	sound_launch = gi.soundindex("parasite/paratck1.wav");
 	sound_impact = gi.soundindex("parasite/paratck2.wav");
 	sound_suck = gi.soundindex("parasite/paratck3.wav");
@@ -78200,7 +78144,7 @@ void SP_monster_parasite (edict_t *self)
 
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &parasite_move_stand;	
+	self->monsterinfo.currentmove = &parasite_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start (self);
@@ -78217,7 +78161,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -78246,7 +78190,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -80270,7 +80214,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -80299,7 +80243,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -80672,7 +80616,7 @@ mframe_t supertank_frames_stand []=
 	ai_stand, 0, NULL
 };
 mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_stand, NULL};
-	
+
 void supertank_stand (edict_t *self)
 {
 	self->monsterinfo.currentmove = &supertank_move_stand;
@@ -80987,7 +80931,7 @@ void supertank_reattack1(edict_t *self)
 		if (random() < 0.9)
 			self->monsterinfo.currentmove = &supertank_move_attack1;
 		else
-			self->monsterinfo.currentmove = &supertank_move_end_attack1;	
+			self->monsterinfo.currentmove = &supertank_move_end_attack1;
 	else
 		self->monsterinfo.currentmove = &supertank_move_end_attack1;
 }
@@ -81058,7 +81002,7 @@ void supertankRocket (edict_t *self)
 	VectorNormalize (dir);
 
 	monster_fire_rocket (self, start, dir, 50, 500, flash_number);
-}	
+}
 
 void supertankMachineGun (edict_t *self)
 {
@@ -81088,7 +81032,7 @@ void supertankMachineGun (edict_t *self)
   }
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
-}	
+}
 
 
 void supertank_attack(edict_t *self)
@@ -81252,7 +81196,7 @@ void SP_monster_supertank (edict_t *self)
 	self->monsterinfo.sight = NULL;
 
 	gi.linkentity (self);
-	
+
 	self->monsterinfo.currentmove = &supertank_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
@@ -81270,7 +81214,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -81299,7 +81243,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -81957,7 +81901,7 @@ mframe_t tank_frames_stand []=
 	ai_stand, 0, NULL
 };
 mmove_t	tank_move_stand = {FRAME_stand01, FRAME_stand30, tank_frames_stand, NULL};
-	
+
 void tank_stand (edict_t *self)
 {
 	self->monsterinfo.currentmove = &tank_move_stand;
@@ -82145,7 +82089,7 @@ void tank_pain (edict_t *self, edict_t *other, float kick, int damage)
 	if (damage <= 30)
 		if (random() > 0.2)
 			return;
-	
+
 	// If hard or nightmare, don't go into pain while attacking
 	if ( skill->value >= 2)
 	{
@@ -82197,12 +82141,12 @@ void TankBlaster (edict_t *self)
 	VectorSubtract (end, start, dir);
 
 	monster_fire_blaster (self, start, dir, 30, 800, flash_number, EF_BLASTER);
-}	
+}
 
 void TankStrike (edict_t *self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
-}	
+}
 
 void TankRocket (edict_t *self)
 {
@@ -82228,7 +82172,7 @@ void TankRocket (edict_t *self)
 	VectorNormalize (dir);
 
 	monster_fire_rocket (self, start, dir, 50, 550, flash_number);
-}	
+}
 
 void TankMachineGun (edict_t *self)
 {
@@ -82264,7 +82208,7 @@ void TankMachineGun (edict_t *self)
 	AngleVectors (dir, forward, NULL, NULL);
 
 	monster_fire_bullet (self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
-}	
+}
 
 
 mframe_t tank_frames_attack_blast [] =
@@ -82299,7 +82243,7 @@ mframe_t tank_frames_reattack_blast [] =
 };
 mmove_t tank_move_reattack_blast = {FRAME_attak111, FRAME_attak116, tank_frames_reattack_blast, tank_reattack_blaster};
 
-mframe_t tank_frames_attack_post_blast [] =	
+mframe_t tank_frames_attack_post_blast [] =
 {
 	ai_move, 0,		NULL,				// 17
 	ai_move, 0,		NULL,
@@ -82403,7 +82347,7 @@ mmove_t tank_move_attack_pre_rocket = {FRAME_attak301, FRAME_attak321, tank_fram
 
 mframe_t tank_frames_attack_fire_rocket [] =
 {
-	ai_charge, -3, NULL,			// Loop Start	22 
+	ai_charge, -3, NULL,			// Loop Start	22
 	ai_charge, 0,  NULL,
 	ai_charge, 0,  TankRocket,		// 24
 	ai_charge, 0,  NULL,
@@ -82416,7 +82360,7 @@ mframe_t tank_frames_attack_fire_rocket [] =
 mmove_t tank_move_attack_fire_rocket = {FRAME_attak322, FRAME_attak330, tank_frames_attack_fire_rocket, tank_refire_rocket};
 
 mframe_t tank_frames_attack_post_rocket [] =
-{	
+{
 	ai_charge, 0,  NULL,			// 31
 	ai_charge, -1, NULL,
 	ai_charge, -1, NULL,
@@ -82520,7 +82464,7 @@ void tank_attack(edict_t *self)
 	{
 		if (r < 0.4)
 			self->monsterinfo.currentmove = &tank_move_attack_chain;
-		else 
+		else
 			self->monsterinfo.currentmove = &tank_move_attack_blast;
 	}
 	else if (range <= 250)
@@ -82623,7 +82567,7 @@ void tank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	self->takedamage = DAMAGE_YES;
 
 	self->monsterinfo.currentmove = &tank_move_death;
-	
+
 }
 
 
@@ -82691,7 +82635,7 @@ void SP_monster_tank (edict_t *self)
 	self->monsterinfo.idle = tank_idle;
 
 	gi.linkentity (self);
-	
+
 	self->monsterinfo.currentmove = &tank_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
@@ -82712,7 +82656,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -83193,7 +83137,7 @@ void LookAtKiller (edict_t *self, edict_t *inflictor, edict_t *attacker)
 	}
 	if (self->client->killer_yaw < 0)
 		self->client->killer_yaw += 360;
-	
+
 
 }
 
@@ -83345,7 +83289,7 @@ void InitClientResp (gclient_t *client)
 ==================
 SaveClientData
 
-Some information that should be persistant, like health, 
+Some information that should be persistant, like health,
 is still stored in the edict structure, so it needs to
 be mirrored out to the client structure before all the
 edicts are wiped.
@@ -83707,7 +83651,7 @@ void respawn (edict_t *self)
 	gi.AddCommandString ("menu_loadgame\n");
 }
 
-/* 
+/*
  * only called when pers.spectator changes
  * note that resp.spectator should be the opposite of pers.spectator here
  */
@@ -83720,8 +83664,8 @@ void spectator_respawn (edict_t *ent)
 
 	if (ent->client->pers.spectator) {
 		char *value = Info_ValueForKey (ent->client->pers.userinfo, "spectator");
-		if (*spectator_password->string && 
-			strcmp(spectator_password->string, "none") && 
+		if (*spectator_password->string &&
+			strcmp(spectator_password->string, "none") &&
 			strcmp(spectator_password->string, value)) {
 			gi.cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
 			ent->client->pers.spectator = false;
@@ -83749,7 +83693,7 @@ void spectator_respawn (edict_t *ent)
 		// he was a spectator and wants to join the game
 		// he must have the right password
 		char *value = Info_ValueForKey (ent->client->pers.userinfo, "password");
-		if (*password->string && strcmp(password->string, "none") && 
+		if (*password->string && strcmp(password->string, "none") &&
 			strcmp(password->string, value)) {
 			gi.cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
 			ent->client->pers.spectator = true;
@@ -83781,7 +83725,7 @@ void spectator_respawn (edict_t *ent)
 
 	ent->client->respawn_time = level.time;
 
-	if (ent->client->pers.spectator) 
+	if (ent->client->pers.spectator)
 		gi.bprintf (PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
 	else
 		gi.bprintf (PRINT_HIGH, "%s joined the game\n", ent->client->pers.netname);
@@ -83963,7 +83907,7 @@ void PutClientInServer (edict_t *ent)
 =====================
 ClientBeginDeathmatch
 
-A client has just connected to the server in 
+A client has just connected to the server in
 deathmatch mode, so clear everything out before starting them.
 =====================
 */
@@ -84148,8 +84092,8 @@ qboolean ClientConnect (edict_t *ent, char *userinfo)
 	if (deathmatch->value && *value && strcmp(value, "0")) {
 		int i, numspec;
 
-		if (*spectator_password->string && 
-			strcmp(spectator_password->string, "none") && 
+		if (*spectator_password->string &&
+			strcmp(spectator_password->string, "none") &&
 			strcmp(spectator_password->string, value)) {
 			Info_SetValueForKey(userinfo, "rejmsg", "Spectator password required or incorrect.");
 			return false;
@@ -84167,7 +84111,7 @@ qboolean ClientConnect (edict_t *ent, char *userinfo)
 	} else {
 		// check for a password
 		value = Info_ValueForKey (userinfo, "password");
-		if (*password->string && strcmp(password->string, "none") && 
+		if (*password->string && strcmp(password->string, "none") &&
 			strcmp(password->string, value)) {
 			Info_SetValueForKey(userinfo, "rejmsg", "Password required or incorrect.");
 			return false;
@@ -84285,7 +84229,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	{
 		client->ps.pmove.pm_type = PM_FREEZE;
 		// can exit intermission after five seconds
-		if (level.time > level.intermissiontime + 5.0 
+		if (level.time > level.intermissiontime + 5.0
 			&& (ucmd->buttons & BUTTON_ANY) )
 			level.exitintermission = true;
 		return;
@@ -84519,7 +84463,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -84831,12 +84775,12 @@ void HelpComputer (edict_t *ent)
 		"xv 0 yv 54 cstring2 \"%s\" "		// help 1
 		"xv 0 yv 110 cstring2 \"%s\" "		// help 2
 		"xv 50 yv 164 string2 \" kills     goals    secrets\" "
-		"xv 50 yv 172 string2 \"%3i/%3i     %i/%i       %i/%i\" ", 
+		"xv 50 yv 172 string2 \"%3i/%3i     %i/%i       %i/%i\" ",
 		sk,
 		level.level_name,
 		game.helpmessage1,
 		game.helpmessage2,
-		level.killed_monsters, level.total_monsters, 
+		level.killed_monsters, level.total_monsters,
 		level.found_goals, level.total_goals,
 		level.found_secrets, level.total_secrets);
 
@@ -84910,7 +84854,7 @@ void G_SetStats (edict_t *ent)
 		ent->client->ps.stats[STAT_AMMO_ICON] = gi.imageindex (item->icon);
 		ent->client->ps.stats[STAT_AMMO] = ent->client->pers.inventory[ent->client->ammo_index];
 	}
-	
+
 	//
 	// armor
 	//
@@ -85073,7 +85017,7 @@ void G_SetSpectatorStats (edict_t *ent)
 		cl->ps.stats[STAT_LAYOUTS] |= 2;
 
 	if (cl->chase_target && cl->chase_target->inuse)
-		cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + 
+		cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS +
 			(cl->chase_target - g_edicts) - 1;
 	else
 		cl->ps.stats[STAT_CHASE] = 0;
@@ -85091,7 +85035,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -85239,7 +85183,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -85275,20 +85219,20 @@ float SV_CalcRoll (vec3_t angles, vec3_t velocity)
 	float	sign;
 	float	side;
 	float	value;
-	
+
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
 	side = fabs(side);
-	
+
 	value = sv_rollangle->value;
 
 	if (side < sv_rollspeed->value)
 		side = side * value / sv_rollspeed->value;
 	else
 		side = value;
-	
+
 	return side*sign;
-	
+
 }
 
 
@@ -85412,10 +85356,10 @@ void P_DamageFeedback (edict_t *player)
 
 		VectorSubtract (client->damage_from, player->s.origin, v);
 		VectorNormalize (v);
-		
+
 		side = DotProduct (v, right);
 		client->v_dmg_roll = kick*side*0.3;
-		
+
 		side = -DotProduct (v, forward);
 		client->v_dmg_pitch = kick*side*0.3;
 
@@ -85444,7 +85388,7 @@ Auto pitching on slopes?
   fall from 256: 580 = 336400
   fall from 384: 720 = 518400
   fall from 512: 800 = 640000
-  fall from 640: 960 = 
+  fall from 640: 960 =
 
   damage = deltavelocity*deltavelocity  * 0.0001
 
@@ -85502,7 +85446,7 @@ void SV_CalcViewOffset (edict_t *ent)
 
 		delta = DotProduct (ent->velocity, forward);
 		angles[PITCH] += delta*run_pitch->value;
-		
+
 		delta = DotProduct (ent->velocity, right);
 		angles[ROLL] += delta*run_roll->value;
 
@@ -85652,7 +85596,7 @@ void SV_CalcBlend (edict_t *ent)
 	vec3_t	vieworg;
 	int		remaining;
 
-	ent->client->ps.blend[0] = ent->client->ps.blend[1] = 
+	ent->client->ps.blend[0] = ent->client->ps.blend[1] =
 		ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
 
 	// add for contents
@@ -85903,7 +85847,7 @@ void P_WorldEffects (void)
 		// if out of air, start drowning
 		if (current_player->air_finished < level.time)
 		{	// drown!
-			if (current_player->client->next_drown_time < level.time 
+			if (current_player->client->next_drown_time < level.time
 				&& current_player->health > 0)
 			{
 				current_player->client->next_drown_time = level.time + 1;
@@ -86198,7 +86142,7 @@ void ClientEndServerFrame (edict_t *ent)
 	// If the origin or velocity have changed since ClientThink(),
 	// update the pmove values.  This will happen when the client
 	// is pushed by a bmodel or kicked by an explosion.
-	// 
+	//
 	// If it wasn't updated here, the view position would lag a frame
 	// behind the body position when pushed -- "sinking into plats"
 	//
@@ -86258,7 +86202,7 @@ void ClientEndServerFrame (edict_t *ent)
 		else
 			bobmove = 0.0625;
 	}
-	
+
 	bobtime = (current_client->bobtime += bobmove);
 
 	if (current_client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -86328,7 +86272,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -86442,7 +86386,7 @@ qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
 
 	index = ITEM_INDEX(ent->item);
 
-	if ( ( ((int)(dmflags->value) & DF_WEAPONS_STAY) || coop->value) 
+	if ( ( ((int)(dmflags->value) & DF_WEAPONS_STAY) || coop->value)
 		&& other->client->pers.inventory[index])
 	{
 		if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM) ) )
@@ -86474,7 +86418,7 @@ qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
 		}
 	}
 
-	if (other->client->pers.weapon != ent->item && 
+	if (other->client->pers.weapon != ent->item &&
 		(other->client->pers.inventory[index] == 1) &&
 		( !deathmatch->value || other->client->pers.weapon == FindItem("blaster") ) )
 		other->client->newweapon = ent->item;
@@ -86542,7 +86486,7 @@ void ChangeWeapon (edict_t *ent)
 	{
 			ent->s.frame = FRAME_pain301;
 			ent->client->anim_end = FRAME_pain304;
-			
+
 	}
 }
 
@@ -86725,7 +86669,7 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			{
 				ent->s.frame = FRAME_pain304+1;
 				ent->client->anim_end = FRAME_pain301;
-				
+
 			}
 		}
 
@@ -86763,7 +86707,7 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			{
 				ent->s.frame = FRAME_pain304+1;
 				ent->client->anim_end = FRAME_pain301;
-				
+
 			}
 		}
 		return;
@@ -86774,7 +86718,7 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 		if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTON_ATTACK) )
 		{
 			ent->client->latched_buttons &= ~BUTTON_ATTACK;
-			if ((!ent->client->ammo_index) || 
+			if ((!ent->client->ammo_index) ||
 				( ent->client->pers.inventory[ent->client->ammo_index] >= ent->client->pers.weapon->quantity))
 			{
 				ent->client->ps.gunframe = FRAME_FIRE_FIRST;
@@ -87766,7 +87710,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -87789,7 +87733,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -87836,7 +87780,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -88303,7 +88247,7 @@ extern	rviddef_t	vid;
 
 */
 
-typedef enum 
+typedef enum
 {
 	it_skin,
 	it_sprite,
@@ -88357,7 +88301,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -88450,7 +88394,7 @@ typedef struct msurface_s
 
 	int			firstedge;	// look up in model->surfedges[], negative numbers
 	int			numedges;	// are backwards edges
-	
+
 	short		texturemins[2];
 	short		extents[2];
 
@@ -88462,7 +88406,7 @@ typedef struct msurface_s
 	struct  msurface_s	*lightmapchain;
 
 	mtexinfo_t	*texinfo;
-	
+
 // lighting info
 	int			dlightframe;
 	int			dlightbits;
@@ -88478,14 +88422,14 @@ typedef struct mnode_s
 // common with leaf
 	int			contents;		// -1, to differentiate from leafs
 	int			visframe;		// node needs to be traversed if current
-	
+
 	float		minmaxs[6];		// for bounding box culling
 
 	struct mnode_s	*parent;
 
 // node specific
 	cplane_t	*plane;
-	struct mnode_s	*children[2];	
+	struct mnode_s	*children[2];
 
 	unsigned short		firstsurface;
 	unsigned short		numsurfaces;
@@ -88528,17 +88472,17 @@ typedef struct model_s
 
 	modtype_t	type;
 	int			numframes;
-	
+
 	int			flags;
 
 //
 // volume occupied by the model graphics
-//		
+//
 	vec3_t		mins, maxs;
 	float		radius;
 
 //
-// solid volume for clipping 
+// solid volume for clipping
 //
 	qboolean	clipbox;
 	vec3_t		clipmins, clipmaxs;
@@ -88988,7 +88932,7 @@ void Draw_Char (int x, int y, int num)
 	float			frow, fcol, size;
 
 	num &= 255;
-	
+
 	if ( (num&127) == 32 )
 		return;		// space
 
@@ -89312,19 +89256,19 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data
 			}
 		}
 
-		qglTexImage2D( GL_TEXTURE_2D, 
-			           0, 
-					   GL_COLOR_INDEX8_EXT, 
-					   256, 256, 
-					   0, 
-					   GL_COLOR_INDEX, 
-					   GL_UNSIGNED_BYTE, 
+		qglTexImage2D( GL_TEXTURE_2D,
+			           0,
+					   GL_COLOR_INDEX8_EXT,
+					   256, 256,
+					   0,
+					   GL_COLOR_INDEX,
+					   GL_UNSIGNED_BYTE,
 					   image8 );
 	}
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) ) 
+	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )
 		qglDisable (GL_ALPHA_TEST);
 
 	qglBegin (GL_QUADS);
@@ -89338,7 +89282,7 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data
 	qglVertex2f (x, y+h);
 	qglEnd ();
 
-	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) ) 
+	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )
 		qglEnable (GL_ALPHA_TEST);
 }
 
@@ -89354,7 +89298,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -89910,7 +89854,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	targa_header.id_length = *buf_p++;
 	targa_header.colormap_type = *buf_p++;
 	targa_header.image_type = *buf_p++;
-	
+
 	tmp[0] = buf_p[0];
 	tmp[1] = buf_p[1];
 	targa_header.colormap_index = LittleShort ( *((short *)tmp) );
@@ -89931,11 +89875,11 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	targa_header.pixel_size = *buf_p++;
 	targa_header.attributes = *buf_p++;
 
-	if (targa_header.image_type!=2 
-		&& targa_header.image_type!=10) 
+	if (targa_header.image_type!=2
+		&& targa_header.image_type!=10)
 		ri.Sys_Error (ERR_DROP, "LoadTGA: Only type 2 and 10 targa RGB images supported\n");
 
-	if (targa_header.colormap_type !=0 
+	if (targa_header.colormap_type !=0
 		|| (targa_header.pixel_size!=32 && targa_header.pixel_size!=24))
 		ri.Sys_Error (ERR_DROP, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
 
@@ -89953,7 +89897,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 
 	if (targa_header.id_length != 0)
 		buf_p += targa_header.id_length;  // skip TARGA image comment
-	
+
 	if (targa_header.image_type==2) {  // Uncompressed, RGB images
 		for(row=rows-1; row>=0; row--) {
 			pixbuf = targa_rgba + row*columns*4;
@@ -89961,7 +89905,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 				unsigned char red,green,blue,alphabyte;
 				switch (targa_header.pixel_size) {
 					case 24:
-							
+
 							blue = *buf_p++;
 							green = *buf_p++;
 							red = *buf_p++;
@@ -90006,7 +89950,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 								alphabyte = *buf_p++;
 								break;
 					}
-	
+
 					for(j=0;j<packetSize;j++) {
 						*pixbuf++=red;
 						*pixbuf++=green;
@@ -90054,7 +89998,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 							else
 								goto breakOut;
 							pixbuf = targa_rgba + row*columns*4;
-						}						
+						}
 					}
 				}
 			}
@@ -90518,8 +90462,8 @@ qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboole
 	if (s > sizeof(trans)/4)
 		ri.Sys_Error (ERR_DROP, "GL_Upload8: too large");
 
-	if ( qglColorTableEXT && 
-		 gl_ext_palettedtexture->value && 
+	if ( qglColorTableEXT &&
+		 gl_ext_palettedtexture->value &&
 		 is_sky )
 	{
 		qglTexImage2D( GL_TEXTURE_2D,
@@ -90820,7 +90764,7 @@ int Draw_GetPalette (void)
 		r = pal[i*3+0];
 		g = pal[i*3+1];
 		b = pal[i*3+2];
-		
+
 		v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
 		d_8to24table[i] = LittleLong(v);
 	}
@@ -90928,7 +90872,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -91041,13 +90985,13 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 	float		dist;
 	msurface_t	*surf;
 	int			i;
-	
+
 	if (node->contents != -1)
 		return;
 
 	splitplane = node->plane;
 	dist = DotProduct (light->origin, splitplane->normal) - splitplane->dist;
-	
+
 	if (dist > light->intensity-DLIGHT_CUTOFF)
 	{
 		R_MarkLights (light, bit, node->children[0]);
@@ -91058,7 +91002,7 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 		R_MarkLights (light, bit, node->children[1]);
 		return;
 	}
-		
+
 // mark the polygons
 	surf = r_worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
@@ -91125,7 +91069,7 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 
 	if (node->contents != -1)
 		return -1;		// didn't hit anything
-	
+
 // calculate mid point
 
 // FIXME: optimize for axial
@@ -91133,23 +91077,23 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 	front = DotProduct (start, plane->normal) - plane->dist;
 	back = DotProduct (end, plane->normal) - plane->dist;
 	side = front < 0;
-	
+
 	if ( (back < 0) == side)
 		return RecursiveLightPoint (node->children[side], start, end);
-	
+
 	frac = front / (front-back);
 	mid[0] = start[0] + (end[0] - start[0])*frac;
 	mid[1] = start[1] + (end[1] - start[1])*frac;
 	mid[2] = start[2] + (end[2] - start[2])*frac;
-	
-// go down front side	
+
+// go down front side
 	r = RecursiveLightPoint (node->children[side], start, mid);
 	if (r >= 0)
 		return r;		// hit something
-		
+
 	if ( (back < 0) == side )
 		return -1;		// didn't hit anuthing
-		
+
 // check for impact on this node
 	VectorCopy (mid, lightspot);
 	lightplane = plane;
@@ -91157,21 +91101,21 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 	surf = r_worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
-		if (surf->flags&(SURF_DRAWTURB|SURF_DRAWSKY)) 
+		if (surf->flags&(SURF_DRAWTURB|SURF_DRAWSKY))
 			continue;	// no lightmaps
 
 		tex = surf->texinfo;
-		
+
 		s = DotProduct (mid, tex->vecs[0]) + tex->vecs[0][3];
 		t = DotProduct (mid, tex->vecs[1]) + tex->vecs[1][3];;
 
 		if (s < surf->texturemins[0] ||
 		t < surf->texturemins[1])
 			continue;
-		
+
 		ds = s - surf->texturemins[0];
 		dt = t - surf->texturemins[1];
-		
+
 		if ( ds > surf->extents[0] || dt > surf->extents[1] )
 			continue;
 
@@ -91202,7 +91146,7 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 						((surf->extents[1]>>4)+1);
 			}
 		}
-		
+
 		return 1;
 	}
 
@@ -91223,19 +91167,19 @@ void R_LightPoint (vec3_t p, vec3_t color)
 	dlight_t	*dl;
 	vec3_t		dist;
 	float		add;
-	
+
 	if (!r_worldmodel->lightdata)
 	{
 		color[0] = color[1] = color[2] = 1.0;
 		return;
 	}
-	
+
 	end[0] = p[0];
 	end[1] = p[1];
 	end[2] = p[2] - 2048;
-	
+
 	r = RecursiveLightPoint (r_worldmodel->nodes, p, end);
-	
+
 	if (r == -1)
 	{
 		VectorCopy (vec3_origin, color);
@@ -91496,7 +91440,7 @@ store:
 		{
 			for (j=0 ; j<smax ; j++)
 			{
-				
+
 				r = Q_ftol( bl[0] );
 				g = Q_ftol( bl[1] );
 				b = Q_ftol( bl[2] );
@@ -91521,7 +91465,7 @@ store:
 
 				/*
 				** alpha is ONLY used for the mono lightmap case.  For this reason
-				** we set it to the brightest of the color components so that 
+				** we set it to the brightest of the color components so that
 				** things don't get too dim.
 				*/
 				a = max;
@@ -91556,7 +91500,7 @@ store:
 		{
 			for (j=0 ; j<smax ; j++)
 			{
-				
+
 				r = Q_ftol( bl[0] );
 				g = Q_ftol( bl[1] );
 				b = Q_ftol( bl[2] );
@@ -91581,7 +91525,7 @@ store:
 
 				/*
 				** alpha is ONLY used for the mono lightmap case.  For this reason
-				** we set it to the brightest of the color components so that 
+				** we set it to the brightest of the color components so that
 				** things don't get too dim.
 				*/
 				a = max;
@@ -91649,7 +91593,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -91684,7 +91628,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -91693,168 +91637,168 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-{-0.525731, 0.000000, 0.850651}, 
-{-0.442863, 0.238856, 0.864188}, 
-{-0.295242, 0.000000, 0.955423}, 
-{-0.309017, 0.500000, 0.809017}, 
-{-0.162460, 0.262866, 0.951056}, 
-{0.000000, 0.000000, 1.000000}, 
-{0.000000, 0.850651, 0.525731}, 
-{-0.147621, 0.716567, 0.681718}, 
-{0.147621, 0.716567, 0.681718}, 
-{0.000000, 0.525731, 0.850651}, 
-{0.309017, 0.500000, 0.809017}, 
-{0.525731, 0.000000, 0.850651}, 
-{0.295242, 0.000000, 0.955423}, 
-{0.442863, 0.238856, 0.864188}, 
-{0.162460, 0.262866, 0.951056}, 
-{-0.681718, 0.147621, 0.716567}, 
-{-0.809017, 0.309017, 0.500000}, 
-{-0.587785, 0.425325, 0.688191}, 
-{-0.850651, 0.525731, 0.000000}, 
-{-0.864188, 0.442863, 0.238856}, 
-{-0.716567, 0.681718, 0.147621}, 
-{-0.688191, 0.587785, 0.425325}, 
-{-0.500000, 0.809017, 0.309017}, 
-{-0.238856, 0.864188, 0.442863}, 
-{-0.425325, 0.688191, 0.587785}, 
-{-0.716567, 0.681718, -0.147621}, 
-{-0.500000, 0.809017, -0.309017}, 
-{-0.525731, 0.850651, 0.000000}, 
-{0.000000, 0.850651, -0.525731}, 
-{-0.238856, 0.864188, -0.442863}, 
-{0.000000, 0.955423, -0.295242}, 
-{-0.262866, 0.951056, -0.162460}, 
-{0.000000, 1.000000, 0.000000}, 
-{0.000000, 0.955423, 0.295242}, 
-{-0.262866, 0.951056, 0.162460}, 
-{0.238856, 0.864188, 0.442863}, 
-{0.262866, 0.951056, 0.162460}, 
-{0.500000, 0.809017, 0.309017}, 
-{0.238856, 0.864188, -0.442863}, 
-{0.262866, 0.951056, -0.162460}, 
-{0.500000, 0.809017, -0.309017}, 
-{0.850651, 0.525731, 0.000000}, 
-{0.716567, 0.681718, 0.147621}, 
-{0.716567, 0.681718, -0.147621}, 
-{0.525731, 0.850651, 0.000000}, 
-{0.425325, 0.688191, 0.587785}, 
-{0.864188, 0.442863, 0.238856}, 
-{0.688191, 0.587785, 0.425325}, 
-{0.809017, 0.309017, 0.500000}, 
-{0.681718, 0.147621, 0.716567}, 
-{0.587785, 0.425325, 0.688191}, 
-{0.955423, 0.295242, 0.000000}, 
-{1.000000, 0.000000, 0.000000}, 
-{0.951056, 0.162460, 0.262866}, 
-{0.850651, -0.525731, 0.000000}, 
-{0.955423, -0.295242, 0.000000}, 
-{0.864188, -0.442863, 0.238856}, 
-{0.951056, -0.162460, 0.262866}, 
-{0.809017, -0.309017, 0.500000}, 
-{0.681718, -0.147621, 0.716567}, 
-{0.850651, 0.000000, 0.525731}, 
-{0.864188, 0.442863, -0.238856}, 
-{0.809017, 0.309017, -0.500000}, 
-{0.951056, 0.162460, -0.262866}, 
-{0.525731, 0.000000, -0.850651}, 
-{0.681718, 0.147621, -0.716567}, 
-{0.681718, -0.147621, -0.716567}, 
-{0.850651, 0.000000, -0.525731}, 
-{0.809017, -0.309017, -0.500000}, 
-{0.864188, -0.442863, -0.238856}, 
-{0.951056, -0.162460, -0.262866}, 
-{0.147621, 0.716567, -0.681718}, 
-{0.309017, 0.500000, -0.809017}, 
-{0.425325, 0.688191, -0.587785}, 
-{0.442863, 0.238856, -0.864188}, 
-{0.587785, 0.425325, -0.688191}, 
-{0.688191, 0.587785, -0.425325}, 
-{-0.147621, 0.716567, -0.681718}, 
-{-0.309017, 0.500000, -0.809017}, 
-{0.000000, 0.525731, -0.850651}, 
-{-0.525731, 0.000000, -0.850651}, 
-{-0.442863, 0.238856, -0.864188}, 
-{-0.295242, 0.000000, -0.955423}, 
-{-0.162460, 0.262866, -0.951056}, 
-{0.000000, 0.000000, -1.000000}, 
-{0.295242, 0.000000, -0.955423}, 
-{0.162460, 0.262866, -0.951056}, 
-{-0.442863, -0.238856, -0.864188}, 
-{-0.309017, -0.500000, -0.809017}, 
-{-0.162460, -0.262866, -0.951056}, 
-{0.000000, -0.850651, -0.525731}, 
-{-0.147621, -0.716567, -0.681718}, 
-{0.147621, -0.716567, -0.681718}, 
-{0.000000, -0.525731, -0.850651}, 
-{0.309017, -0.500000, -0.809017}, 
-{0.442863, -0.238856, -0.864188}, 
-{0.162460, -0.262866, -0.951056}, 
-{0.238856, -0.864188, -0.442863}, 
-{0.500000, -0.809017, -0.309017}, 
-{0.425325, -0.688191, -0.587785}, 
-{0.716567, -0.681718, -0.147621}, 
-{0.688191, -0.587785, -0.425325}, 
-{0.587785, -0.425325, -0.688191}, 
-{0.000000, -0.955423, -0.295242}, 
-{0.000000, -1.000000, 0.000000}, 
-{0.262866, -0.951056, -0.162460}, 
-{0.000000, -0.850651, 0.525731}, 
-{0.000000, -0.955423, 0.295242}, 
-{0.238856, -0.864188, 0.442863}, 
-{0.262866, -0.951056, 0.162460}, 
-{0.500000, -0.809017, 0.309017}, 
-{0.716567, -0.681718, 0.147621}, 
-{0.525731, -0.850651, 0.000000}, 
-{-0.238856, -0.864188, -0.442863}, 
-{-0.500000, -0.809017, -0.309017}, 
-{-0.262866, -0.951056, -0.162460}, 
-{-0.850651, -0.525731, 0.000000}, 
-{-0.716567, -0.681718, -0.147621}, 
-{-0.716567, -0.681718, 0.147621}, 
-{-0.525731, -0.850651, 0.000000}, 
-{-0.500000, -0.809017, 0.309017}, 
-{-0.238856, -0.864188, 0.442863}, 
-{-0.262866, -0.951056, 0.162460}, 
-{-0.864188, -0.442863, 0.238856}, 
-{-0.809017, -0.309017, 0.500000}, 
-{-0.688191, -0.587785, 0.425325}, 
-{-0.681718, -0.147621, 0.716567}, 
-{-0.442863, -0.238856, 0.864188}, 
-{-0.587785, -0.425325, 0.688191}, 
-{-0.309017, -0.500000, 0.809017}, 
-{-0.147621, -0.716567, 0.681718}, 
-{-0.425325, -0.688191, 0.587785}, 
-{-0.162460, -0.262866, 0.951056}, 
-{0.442863, -0.238856, 0.864188}, 
-{0.162460, -0.262866, 0.951056}, 
-{0.309017, -0.500000, 0.809017}, 
-{0.147621, -0.716567, 0.681718}, 
-{0.000000, -0.525731, 0.850651}, 
-{0.425325, -0.688191, 0.587785}, 
-{0.587785, -0.425325, 0.688191}, 
-{0.688191, -0.587785, 0.425325}, 
-{-0.955423, 0.295242, 0.000000}, 
-{-0.951056, 0.162460, 0.262866}, 
-{-1.000000, 0.000000, 0.000000}, 
-{-0.850651, 0.000000, 0.525731}, 
-{-0.955423, -0.295242, 0.000000}, 
-{-0.951056, -0.162460, 0.262866}, 
-{-0.864188, 0.442863, -0.238856}, 
-{-0.951056, 0.162460, -0.262866}, 
-{-0.809017, 0.309017, -0.500000}, 
-{-0.864188, -0.442863, -0.238856}, 
-{-0.951056, -0.162460, -0.262866}, 
-{-0.809017, -0.309017, -0.500000}, 
-{-0.681718, 0.147621, -0.716567}, 
-{-0.681718, -0.147621, -0.716567}, 
-{-0.850651, 0.000000, -0.525731}, 
-{-0.688191, 0.587785, -0.425325}, 
-{-0.587785, 0.425325, -0.688191}, 
-{-0.425325, 0.688191, -0.587785}, 
-{-0.425325, -0.688191, -0.587785}, 
-{-0.587785, -0.425325, -0.688191}, 
-{-0.688191, -0.587785, -0.425325}, 
+{-0.525731, 0.000000, 0.850651},
+{-0.442863, 0.238856, 0.864188},
+{-0.295242, 0.000000, 0.955423},
+{-0.309017, 0.500000, 0.809017},
+{-0.162460, 0.262866, 0.951056},
+{0.000000, 0.000000, 1.000000},
+{0.000000, 0.850651, 0.525731},
+{-0.147621, 0.716567, 0.681718},
+{0.147621, 0.716567, 0.681718},
+{0.000000, 0.525731, 0.850651},
+{0.309017, 0.500000, 0.809017},
+{0.525731, 0.000000, 0.850651},
+{0.295242, 0.000000, 0.955423},
+{0.442863, 0.238856, 0.864188},
+{0.162460, 0.262866, 0.951056},
+{-0.681718, 0.147621, 0.716567},
+{-0.809017, 0.309017, 0.500000},
+{-0.587785, 0.425325, 0.688191},
+{-0.850651, 0.525731, 0.000000},
+{-0.864188, 0.442863, 0.238856},
+{-0.716567, 0.681718, 0.147621},
+{-0.688191, 0.587785, 0.425325},
+{-0.500000, 0.809017, 0.309017},
+{-0.238856, 0.864188, 0.442863},
+{-0.425325, 0.688191, 0.587785},
+{-0.716567, 0.681718, -0.147621},
+{-0.500000, 0.809017, -0.309017},
+{-0.525731, 0.850651, 0.000000},
+{0.000000, 0.850651, -0.525731},
+{-0.238856, 0.864188, -0.442863},
+{0.000000, 0.955423, -0.295242},
+{-0.262866, 0.951056, -0.162460},
+{0.000000, 1.000000, 0.000000},
+{0.000000, 0.955423, 0.295242},
+{-0.262866, 0.951056, 0.162460},
+{0.238856, 0.864188, 0.442863},
+{0.262866, 0.951056, 0.162460},
+{0.500000, 0.809017, 0.309017},
+{0.238856, 0.864188, -0.442863},
+{0.262866, 0.951056, -0.162460},
+{0.500000, 0.809017, -0.309017},
+{0.850651, 0.525731, 0.000000},
+{0.716567, 0.681718, 0.147621},
+{0.716567, 0.681718, -0.147621},
+{0.525731, 0.850651, 0.000000},
+{0.425325, 0.688191, 0.587785},
+{0.864188, 0.442863, 0.238856},
+{0.688191, 0.587785, 0.425325},
+{0.809017, 0.309017, 0.500000},
+{0.681718, 0.147621, 0.716567},
+{0.587785, 0.425325, 0.688191},
+{0.955423, 0.295242, 0.000000},
+{1.000000, 0.000000, 0.000000},
+{0.951056, 0.162460, 0.262866},
+{0.850651, -0.525731, 0.000000},
+{0.955423, -0.295242, 0.000000},
+{0.864188, -0.442863, 0.238856},
+{0.951056, -0.162460, 0.262866},
+{0.809017, -0.309017, 0.500000},
+{0.681718, -0.147621, 0.716567},
+{0.850651, 0.000000, 0.525731},
+{0.864188, 0.442863, -0.238856},
+{0.809017, 0.309017, -0.500000},
+{0.951056, 0.162460, -0.262866},
+{0.525731, 0.000000, -0.850651},
+{0.681718, 0.147621, -0.716567},
+{0.681718, -0.147621, -0.716567},
+{0.850651, 0.000000, -0.525731},
+{0.809017, -0.309017, -0.500000},
+{0.864188, -0.442863, -0.238856},
+{0.951056, -0.162460, -0.262866},
+{0.147621, 0.716567, -0.681718},
+{0.309017, 0.500000, -0.809017},
+{0.425325, 0.688191, -0.587785},
+{0.442863, 0.238856, -0.864188},
+{0.587785, 0.425325, -0.688191},
+{0.688191, 0.587785, -0.425325},
+{-0.147621, 0.716567, -0.681718},
+{-0.309017, 0.500000, -0.809017},
+{0.000000, 0.525731, -0.850651},
+{-0.525731, 0.000000, -0.850651},
+{-0.442863, 0.238856, -0.864188},
+{-0.295242, 0.000000, -0.955423},
+{-0.162460, 0.262866, -0.951056},
+{0.000000, 0.000000, -1.000000},
+{0.295242, 0.000000, -0.955423},
+{0.162460, 0.262866, -0.951056},
+{-0.442863, -0.238856, -0.864188},
+{-0.309017, -0.500000, -0.809017},
+{-0.162460, -0.262866, -0.951056},
+{0.000000, -0.850651, -0.525731},
+{-0.147621, -0.716567, -0.681718},
+{0.147621, -0.716567, -0.681718},
+{0.000000, -0.525731, -0.850651},
+{0.309017, -0.500000, -0.809017},
+{0.442863, -0.238856, -0.864188},
+{0.162460, -0.262866, -0.951056},
+{0.238856, -0.864188, -0.442863},
+{0.500000, -0.809017, -0.309017},
+{0.425325, -0.688191, -0.587785},
+{0.716567, -0.681718, -0.147621},
+{0.688191, -0.587785, -0.425325},
+{0.587785, -0.425325, -0.688191},
+{0.000000, -0.955423, -0.295242},
+{0.000000, -1.000000, 0.000000},
+{0.262866, -0.951056, -0.162460},
+{0.000000, -0.850651, 0.525731},
+{0.000000, -0.955423, 0.295242},
+{0.238856, -0.864188, 0.442863},
+{0.262866, -0.951056, 0.162460},
+{0.500000, -0.809017, 0.309017},
+{0.716567, -0.681718, 0.147621},
+{0.525731, -0.850651, 0.000000},
+{-0.238856, -0.864188, -0.442863},
+{-0.500000, -0.809017, -0.309017},
+{-0.262866, -0.951056, -0.162460},
+{-0.850651, -0.525731, 0.000000},
+{-0.716567, -0.681718, -0.147621},
+{-0.716567, -0.681718, 0.147621},
+{-0.525731, -0.850651, 0.000000},
+{-0.500000, -0.809017, 0.309017},
+{-0.238856, -0.864188, 0.442863},
+{-0.262866, -0.951056, 0.162460},
+{-0.864188, -0.442863, 0.238856},
+{-0.809017, -0.309017, 0.500000},
+{-0.688191, -0.587785, 0.425325},
+{-0.681718, -0.147621, 0.716567},
+{-0.442863, -0.238856, 0.864188},
+{-0.587785, -0.425325, 0.688191},
+{-0.309017, -0.500000, 0.809017},
+{-0.147621, -0.716567, 0.681718},
+{-0.425325, -0.688191, 0.587785},
+{-0.162460, -0.262866, 0.951056},
+{0.442863, -0.238856, 0.864188},
+{0.162460, -0.262866, 0.951056},
+{0.309017, -0.500000, 0.809017},
+{0.147621, -0.716567, 0.681718},
+{0.000000, -0.525731, 0.850651},
+{0.425325, -0.688191, 0.587785},
+{0.587785, -0.425325, 0.688191},
+{0.688191, -0.587785, 0.425325},
+{-0.955423, 0.295242, 0.000000},
+{-0.951056, 0.162460, 0.262866},
+{-1.000000, 0.000000, 0.000000},
+{-0.850651, 0.000000, 0.525731},
+{-0.955423, -0.295242, 0.000000},
+{-0.951056, -0.162460, 0.262866},
+{-0.864188, 0.442863, -0.238856},
+{-0.951056, 0.162460, -0.262866},
+{-0.809017, 0.309017, -0.500000},
+{-0.864188, -0.442863, -0.238856},
+{-0.951056, -0.162460, -0.262866},
+{-0.809017, -0.309017, -0.500000},
+{-0.681718, 0.147621, -0.716567},
+{-0.681718, -0.147621, -0.716567},
+{-0.850651, 0.000000, -0.525731},
+{-0.688191, 0.587785, -0.425325},
+{-0.587785, 0.425325, -0.688191},
+{-0.425325, 0.688191, -0.587785},
+{-0.425325, -0.688191, -0.587785},
+{-0.587785, -0.425325, -0.688191},
+{-0.688191, -0.587785, -0.425325},
 /* ============ end inlined header: ref_gl/anorms.h ============ */
 };
 
@@ -91880,7 +91824,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -91925,7 +91869,7 @@ void GL_LerpVerts( int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *ver
 
 			lerp[0] = move[0] + ov->v[0]*backv[0] + v->v[0]*frontv[0] + normal[0] * POWERSUIT_SCALE;
 			lerp[1] = move[1] + ov->v[1]*backv[1] + v->v[1]*frontv[1] + normal[1] * POWERSUIT_SCALE;
-			lerp[2] = move[2] + ov->v[2]*backv[2] + v->v[2]*frontv[2] + normal[2] * POWERSUIT_SCALE; 
+			lerp[2] = move[2] + ov->v[2]*backv[2] + v->v[2]*frontv[2] + normal[2] * POWERSUIT_SCALE;
 		}
 	}
 	else
@@ -91963,11 +91907,11 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 	int		index_xyz;
 	float	*lerp;
 
-	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
+	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames
 		+ currententity->frame * paliashdr->framesize);
 	verts = v = frame->verts;
 
-	oldframe = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
+	oldframe = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames
 		+ currententity->oldframe * paliashdr->framesize);
 	ov = oldframe->verts;
 
@@ -92086,7 +92030,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 
 					// normals and vertexes come from the frame list
 //					l = shadedots[verts[index_xyz].lightnormalindex];
-					
+
 //					qglColor4f (l* shadelight[0], l*shadelight[1], l*shadelight[2], alpha);
 					qglArrayElement( index_xyz );
 
@@ -92139,7 +92083,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 
 					// normals and vertexes come from the frame list
 					l = shadedots[verts[index_xyz].lightnormalindex];
-					
+
 					qglColor4f (l* shadelight[0], l*shadelight[1], l*shadelight[2], alpha);
 					qglVertex3fv (s_lerped[index_xyz]);
 				} while (--count);
@@ -92217,7 +92161,7 @@ void GL_DrawAliasShadow (dmdl_t *paliashdr, int posenum)
 		} while (--count);
 
 		qglEnd ();
-	}	
+	}
 }
 
 #endif
@@ -92239,22 +92183,22 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], entity_t *e )
 
 	if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
 	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n", 
+		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n",
 			currentmodel->name, e->frame);
 		e->frame = 0;
 	}
 	if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
 	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n", 
+		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n",
 			currentmodel->name, e->oldframe);
 		e->oldframe = 0;
 	}
 
-	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
+	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
 		                              paliashdr->ofs_frames +
 									  e->frame * paliashdr->framesize);
 
-	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
+	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
 		                              paliashdr->ofs_frames +
 									  e->oldframe * paliashdr->framesize);
 
@@ -92493,7 +92437,7 @@ void R_DrawAliasModel (entity_t *e)
 			}
 
 		}
-		
+
 		if ( gl_monolightmap->string[0] != '0' )
 		{
 			float s = shadelight[0];
@@ -92545,11 +92489,11 @@ void R_DrawAliasModel (entity_t *e)
 		shadelight[1] = 0.0;
 		shadelight[2] = 0.0;
 	}
-// PGM	
+// PGM
 // =================
 
 	shadedots = r_avertexnormal_dots[((int)(currententity->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
-	
+
 	an = currententity->angles[1]/180*M_PI;
 	shadevector[0] = cos(-an);
 	shadevector[1] = sin(-an);
@@ -92616,7 +92560,7 @@ void R_DrawAliasModel (entity_t *e)
 	}
 
 
-	if ( (currententity->frame >= paliashdr->num_frames) 
+	if ( (currententity->frame >= paliashdr->num_frames)
 		|| (currententity->frame < 0) )
 	{
 		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such frame %d\n",
@@ -92704,7 +92648,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -92746,7 +92690,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 	mnode_t		*node;
 	float		d;
 	cplane_t	*plane;
-	
+
 	if (!model || !model->nodes)
 		ri.Sys_Error (ERR_DROP, "Mod_PointInLeaf: bad model");
 
@@ -92762,7 +92706,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 		else
 			node = node->children[1];
 	}
-	
+
 	return NULL;	// never reached
 }
 
@@ -92779,7 +92723,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 	byte	*out;
 	int		row;
 
-	row = (model->vis->numclusters+7)>>3;	
+	row = (model->vis->numclusters+7)>>3;
 	out = decompressed;
 
 	if (!in)
@@ -92789,7 +92733,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			*out++ = 0xff;
 			row--;
 		}
-		return decompressed;		
+		return decompressed;
 	}
 
 	do
@@ -92799,7 +92743,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			*out++ = *in++;
 			continue;
 		}
-	
+
 		c = in[1];
 		in += 2;
 		while (c)
@@ -92808,7 +92752,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			c--;
 		}
 	} while (out - decompressed < row);
-	
+
 	return decompressed;
 }
 
@@ -92875,10 +92819,10 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	model_t	*mod;
 	unsigned *buf;
 	int		i;
-	
+
 	if (!name[0])
 		ri.Sys_Error (ERR_DROP, "Mod_ForName: NULL name");
-		
+
 	//
 	// inline models are grabbed only from worldmodel
 	//
@@ -92900,7 +92844,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 		if (!strcmp (mod->name, name) )
 			return mod;
 	}
-	
+
 	//
 	// find a free model slot spot
 	//
@@ -92916,7 +92860,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 		mod_numknown++;
 	}
 	strcpy (mod->name, name);
-	
+
 	//
 	// load the file
 	//
@@ -92928,7 +92872,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 		memset (mod->name, 0, sizeof(mod->name));
 		return NULL;
 	}
-	
+
 	loadmodel = mod;
 
 	//
@@ -92937,19 +92881,19 @@ model_t *Mod_ForName (char *name, qboolean crash)
 
 
 	// call the apropriate loader
-	
+
 	switch (LittleLong(*(unsigned *)buf))
 	{
 	case IDALIASHEADER:
 		loadmodel->extradata = Hunk_Begin (0x200000);
 		Mod_LoadAliasModel (mod, buf);
 		break;
-		
+
 	case IDSPRITEHEADER:
 		loadmodel->extradata = Hunk_Begin (0x10000);
 		Mod_LoadSpriteModel (mod, buf);
 		break;
-	
+
 	case IDBSPHEADER:
 		loadmodel->extradata = Hunk_Begin (0x1000000);
 		Mod_LoadBrushModel (mod, buf);
@@ -92990,7 +92934,7 @@ void Mod_LoadLighting (lump_t *l)
 		loadmodel->lightdata = NULL;
 		return;
 	}
-	loadmodel->lightdata = Hunk_Alloc ( l->filelen);	
+	loadmodel->lightdata = Hunk_Alloc ( l->filelen);
 	memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 }
 
@@ -93009,7 +92953,7 @@ void Mod_LoadVisibility (lump_t *l)
 		loadmodel->vis = NULL;
 		return;
 	}
-	loadmodel->vis = Hunk_Alloc ( l->filelen);	
+	loadmodel->vis = Hunk_Alloc ( l->filelen);
 	memcpy (loadmodel->vis, mod_base + l->fileofs, l->filelen);
 
 	loadmodel->vis->numclusters = LittleLong (loadmodel->vis->numclusters);
@@ -93036,7 +92980,7 @@ void Mod_LoadVertexes (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->vertexes = out;
 	loadmodel->numvertexes = count;
@@ -93083,7 +93027,7 @@ void Mod_LoadSubmodels (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->submodels = out;
 	loadmodel->numsubmodels = count;
@@ -93118,7 +93062,7 @@ void Mod_LoadEdges (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( (count + 1) * sizeof(*out));	
+	out = Hunk_Alloc ( (count + 1) * sizeof(*out));
 
 	loadmodel->edges = out;
 	loadmodel->numedges = count;
@@ -93147,7 +93091,7 @@ void Mod_LoadTexinfo (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->texinfo = out;
 	loadmodel->numtexinfo = count;
@@ -93202,7 +93146,7 @@ void CalcSurfaceExtents (msurface_t *s)
 	maxs[0] = maxs[1] = -99999;
 
 	tex = s->texinfo;
-	
+
 	for (i=0 ; i<s->numedges ; i++)
 	{
 		e = loadmodel->surfedges[s->firstedge+i];
@@ -93210,10 +93154,10 @@ void CalcSurfaceExtents (msurface_t *s)
 			v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else
 			v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-		
+
 		for (j=0 ; j<2 ; j++)
 		{
-			val = v->position[0] * tex->vecs[j][0] + 
+			val = v->position[0] * tex->vecs[j][0] +
 				v->position[1] * tex->vecs[j][1] +
 				v->position[2] * tex->vecs[j][2] +
 				tex->vecs[j][3];
@@ -93225,7 +93169,7 @@ void CalcSurfaceExtents (msurface_t *s)
 	}
 
 	for (i=0 ; i<2 ; i++)
-	{	
+	{
 		bmins[i] = floor(mins[i]/16);
 		bmaxs[i] = ceil(maxs[i]/16);
 
@@ -93260,7 +93204,7 @@ void Mod_LoadFaces (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->surfaces = out;
 	loadmodel->numsurfaces = count;
@@ -93272,14 +93216,14 @@ void Mod_LoadFaces (lump_t *l)
 	for ( surfnum=0 ; surfnum<count ; surfnum++, in++, out++)
 	{
 		out->firstedge = LittleLong(in->firstedge);
-		out->numedges = LittleShort(in->numedges);		
+		out->numedges = LittleShort(in->numedges);
 		out->flags = 0;
 		out->polys = NULL;
 
 		planenum = LittleShort(in->planenum);
 		side = LittleShort(in->side);
 		if (side)
-			out->flags |= SURF_PLANEBACK;			
+			out->flags |= SURF_PLANEBACK;
 
 		out->plane = loadmodel->planes + planenum;
 
@@ -93289,7 +93233,7 @@ void Mod_LoadFaces (lump_t *l)
 		out->texinfo = loadmodel->texinfo + ti;
 
 		CalcSurfaceExtents (out);
-				
+
 	// lighting info
 
 		for (i=0 ; i<MAXLIGHTMAPS ; i++)
@@ -93299,9 +93243,9 @@ void Mod_LoadFaces (lump_t *l)
 			out->samples = NULL;
 		else
 			out->samples = loadmodel->lightdata + i;
-		
+
 	// set the drawing flags
-		
+
 		if (out->texinfo->flags & SURF_WARP)
 		{
 			out->flags |= SURF_DRAWTURB;
@@ -93317,7 +93261,7 @@ void Mod_LoadFaces (lump_t *l)
 		if ( !(out->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP) ) )
 			GL_CreateSurfaceLightmap (out);
 
-		if (! (out->texinfo->flags & SURF_WARP) ) 
+		if (! (out->texinfo->flags & SURF_WARP) )
 			GL_BuildPolygonFromSurface(out);
 
 	}
@@ -93355,7 +93299,7 @@ void Mod_LoadNodes (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->nodes = out;
 	loadmodel->numnodes = count;
@@ -93367,7 +93311,7 @@ void Mod_LoadNodes (lump_t *l)
 			out->minmaxs[j] = LittleShort (in->mins[j]);
 			out->minmaxs[3+j] = LittleShort (in->maxs[j]);
 		}
-	
+
 		p = LittleLong(in->planenum);
 		out->plane = loadmodel->planes + p;
 
@@ -93384,7 +93328,7 @@ void Mod_LoadNodes (lump_t *l)
 				out->children[j] = (mnode_t *)(loadmodel->leafs + (-1 - p));
 		}
 	}
-	
+
 	Mod_SetParent (loadmodel->nodes, NULL);	// sets nodes and leafs
 }
 
@@ -93404,7 +93348,7 @@ void Mod_LoadLeafs (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->leafs = out;
 	loadmodel->numleafs = count;
@@ -93426,7 +93370,7 @@ void Mod_LoadLeafs (lump_t *l)
 		out->firstmarksurface = loadmodel->marksurfaces +
 			LittleShort(in->firstleafface);
 		out->nummarksurfaces = LittleShort(in->numleaffaces);
-		
+
 		// gl underwater warp
 #if 0
 		if (out->contents & (CONTENTS_WATER|CONTENTS_SLIME|CONTENTS_LAVA|CONTENTS_THINWATER) )
@@ -93439,7 +93383,7 @@ void Mod_LoadLeafs (lump_t *l)
 			}
 		}
 #endif
-	}	
+	}
 }
 
 /*
@@ -93448,16 +93392,16 @@ Mod_LoadMarksurfaces
 =================
 */
 void Mod_LoadMarksurfaces (lump_t *l)
-{	
+{
 	int		i, j, count;
 	short		*in;
 	msurface_t **out;
-	
+
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->marksurfaces = out;
 	loadmodel->nummarksurfaces = count;
@@ -93477,10 +93421,10 @@ Mod_LoadSurfedges
 =================
 */
 void Mod_LoadSurfedges (lump_t *l)
-{	
+{
 	int		i, count;
 	int		*in, *out;
-	
+
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
@@ -93489,7 +93433,7 @@ void Mod_LoadSurfedges (lump_t *l)
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: bad surfedges count in %s: %i",
 		loadmodel->name, count);
 
-	out = Hunk_Alloc ( count*sizeof(*out));	
+	out = Hunk_Alloc ( count*sizeof(*out));
 
 	loadmodel->surfedges = out;
 	loadmodel->numsurfedges = count;
@@ -93511,13 +93455,13 @@ void Mod_LoadPlanes (lump_t *l)
 	dplane_t 	*in;
 	int			count;
 	int			bits;
-	
+
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*2*sizeof(*out));	
-	
+	out = Hunk_Alloc ( count*2*sizeof(*out));
+
 	loadmodel->planes = out;
 	loadmodel->numplanes = count;
 
@@ -93547,7 +93491,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	int			i;
 	dheader_t	*header;
 	mmodel_t 	*bm;
-	
+
 	loadmodel->type = mod_brush;
 	if (loadmodel != mod_known)
 		ri.Sys_Error (ERR_DROP, "Loaded a brush model after the world");
@@ -93565,7 +93509,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 
 // load into heap
-	
+
 	Mod_LoadVertexes (&header->lumps[LUMP_VERTEXES]);
 	Mod_LoadEdges (&header->lumps[LUMP_EDGES]);
 	Mod_LoadSurfedges (&header->lumps[LUMP_SURFEDGES]);
@@ -93579,7 +93523,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	Mod_LoadNodes (&header->lumps[LUMP_NODES]);
 	Mod_LoadSubmodels (&header->lumps[LUMP_MODELS]);
 	mod->numframes = 2;		// regular and alternate animation
-	
+
 //
 // set up the submodels
 //
@@ -93591,7 +93535,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		starmod = &mod_inline[i];
 
 		*starmod = *loadmodel;
-		
+
 		starmod->firstmodelsurface = bm->firstface;
 		starmod->nummodelsurfaces = bm->numfaces;
 		starmod->firstnode = bm->headnode;
@@ -93601,7 +93545,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		VectorCopy (bm->maxs, starmod->maxs);
 		VectorCopy (bm->mins, starmod->mins);
 		starmod->radius = bm->radius;
-	
+
 		if (i == 0)
 			*loadmodel = *starmod;
 
@@ -93640,7 +93584,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 				 mod->name, version, ALIAS_VERSION);
 
 	pheader = Hunk_Alloc (LittleLong(pinmodel->ofs_end));
-	
+
 	// byte swap the header fields and sanity check
 	for (i=0 ; i<sizeof(dmdl_t)/4 ; i++)
 		((int *)pheader)[i] = LittleLong (((int *)buffer)[i]);
@@ -93696,9 +93640,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 //
 	for (i=0 ; i<pheader->num_frames ; i++)
 	{
-		pinframe = (daliasframe_t *) ((byte *)pinmodel 
+		pinframe = (daliasframe_t *) ((byte *)pinmodel
 			+ pheader->ofs_frames + i * pheader->framesize);
-		poutframe = (daliasframe_t *) ((byte *)pheader 
+		poutframe = (daliasframe_t *) ((byte *)pheader
 			+ pheader->ofs_frames + i * pheader->framesize);
 
 		memcpy (poutframe->name, pinframe->name, sizeof(poutframe->name));
@@ -93708,7 +93652,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 			poutframe->translate[j] = LittleFloat (pinframe->translate[j]);
 		}
 		// verts are all 8 bit, so no swapping needed
-		memcpy (poutframe->verts, pinframe->verts, 
+		memcpy (poutframe->verts, pinframe->verts,
 			pheader->num_xyz*sizeof(dtrivertx_t));
 
 	}
@@ -93929,7 +93873,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -94177,7 +94121,7 @@ void R_DrawSpriteModel (entity_t *e)
 	VectorMA (e->origin, -frame->origin_y, up, point);
 	VectorMA (point, frame->width - frame->origin_x, right, point);
 	qglVertex3fv (point);
-	
+
 	qglEnd ();
 
 	qglDisable (GL_ALPHA_TEST);
@@ -94345,7 +94289,7 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	for ( p = particles, i=0 ; i < num_particles ; i++,p++)
 	{
 		// hack a scale up to keep particles from disapearing
-		scale = ( p->origin[0] - r_origin[0] ) * vpn[0] + 
+		scale = ( p->origin[0] - r_origin[0] ) * vpn[0] +
 			    ( p->origin[1] - r_origin[1] ) * vpn[1] +
 			    ( p->origin[2] - r_origin[2] ) * vpn[2];
 
@@ -94363,13 +94307,13 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 		qglVertex3fv( p->origin );
 
 		qglTexCoord2f( 1.0625, 0.0625 );
-		qglVertex3f( p->origin[0] + up[0]*scale, 
-			         p->origin[1] + up[1]*scale, 
+		qglVertex3f( p->origin[0] + up[0]*scale,
+			         p->origin[1] + up[1]*scale,
 					 p->origin[2] + up[2]*scale);
 
 		qglTexCoord2f( 0.0625, 1.0625 );
-		qglVertex3f( p->origin[0] + right[0]*scale, 
-			         p->origin[1] + right[1]*scale, 
+		qglVertex3f( p->origin[0] + right[0]*scale,
+			         p->origin[1] + right[1]*scale,
 					 p->origin[2] + right[2]*scale);
 	}
 
@@ -94772,10 +94716,10 @@ void R_RenderView (refdef_t *fd)
 	if (r_speeds->value)
 	{
 		ri.Con_Printf (PRINT_ALL, "%4i wpoly %4i epoly %i tex %i lmaps\n",
-			c_brush_polys, 
-			c_alias_polys, 
-			c_visible_textures, 
-			c_visible_lightmaps); 
+			c_brush_polys,
+			c_alias_polys,
+			c_visible_textures,
+			c_visible_lightmaps);
 	}
 }
 
@@ -94980,7 +94924,7 @@ R_Init
 ===============
 */
 int R_Init( void *hinstance, void *hWnd )
-{	
+{
 	char renderer_buffer[1000];
 	char vendor_buffer[1000];
 	int		err;
@@ -95075,7 +95019,7 @@ int R_Init( void *hinstance, void *hWnd )
 			ri.Cvar_Set( "gl_monolightmap", "A" );
 			ri.Con_Printf( PRINT_ALL, "...using gl_monolightmap 'a'\n" );
 		}
-		else if ( gl_config.renderer & GL_RENDERER_POWERVR ) 
+		else if ( gl_config.renderer & GL_RENDERER_POWERVR )
 		{
 			ri.Cvar_Set( "gl_monolightmap", "0" );
 		}
@@ -95087,7 +95031,7 @@ int R_Init( void *hinstance, void *hWnd )
 
 	// power vr can't have anything stay in the framebuffer, so
 	// the screen needs to redraw the tiled background every frame
-	if ( gl_config.renderer & GL_RENDERER_POWERVR ) 
+	if ( gl_config.renderer & GL_RENDERER_POWERVR )
 	{
 		ri.Cvar_Set( "scr_drawall", "1" );
 	}
@@ -95123,7 +95067,7 @@ int R_Init( void *hinstance, void *hWnd )
 	** grab extensions
 	*/
 #ifdef WIN32
-	if ( strstr( gl_config.extensions_string, "GL_EXT_compiled_vertex_array" ) || 
+	if ( strstr( gl_config.extensions_string, "GL_EXT_compiled_vertex_array" ) ||
 		 strstr( gl_config.extensions_string, "GL_SGI_compiled_vertex_array" ) )
 	{
 		ri.Con_Printf( PRINT_ALL, "...enabling GL_EXT_compiled_vertex_array\n" );
@@ -95163,7 +95107,7 @@ int R_Init( void *hinstance, void *hWnd )
 		ri.Con_Printf( PRINT_ALL, "...GL_EXT_point_parameters not found\n" );
 	}
 
-	if ( strstr( gl_config.extensions_string, "GL_EXT_paletted_texture" ) && 
+	if ( strstr( gl_config.extensions_string, "GL_EXT_paletted_texture" ) &&
 		 strstr( gl_config.extensions_string, "GL_EXT_shared_texture_palette" ) )
 	{
 		if ( gl_ext_palettedtexture->value )
@@ -95227,7 +95171,7 @@ R_Shutdown
 ===============
 */
 void R_Shutdown (void)
-{	
+{
 	ri.Cmd_RemoveCommand ("modellist");
 	ri.Cmd_RemoveCommand ("screenshot");
 	ri.Cmd_RemoveCommand ("imagelist");
@@ -95583,7 +95527,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -95650,23 +95594,23 @@ void R_InitParticleTexture (void)
 }
 
 
-/* 
-============================================================================== 
- 
-						SCREEN SHOTS 
- 
-============================================================================== 
-*/ 
+/*
+==============================================================================
+
+						SCREEN SHOTS
+
+==============================================================================
+*/
 
 /*
 ==================
 GL_ScreenShot_f
 ==================
 */
-void GL_ScreenShot_f (void) 
+void GL_ScreenShot_f (void)
 {
 	byte		*buffer;
-	char		picname[80]; 
+	char		picname[80];
 	char		checkname[MAX_OSPATH];
 	int			i, c, temp;
 	FILE		*f;
@@ -95675,24 +95619,24 @@ void GL_ScreenShot_f (void)
 	Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot", ri.FS_Gamedir());
 	Sys_Mkdir (checkname);
 
-// 
-// find a file name to save it to 
-// 
+//
+// find a file name to save it to
+//
 	strcpy(picname,"quake00.tga");
 
-	for (i=0 ; i<=99 ; i++) 
-	{ 
-		picname[5] = i/10 + '0'; 
-		picname[6] = i%10 + '0'; 
+	for (i=0 ; i<=99 ; i++)
+	{
+		picname[5] = i/10 + '0';
+		picname[6] = i%10 + '0';
 		Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot/%s", ri.FS_Gamedir(), picname);
 		f = fopen (checkname, "rb");
 		if (!f)
 			break;	// file doesn't exist
 		fclose (f);
-	} 
-	if (i==100) 
+	}
+	if (i==100)
 	{
-		ri.Con_Printf (PRINT_ALL, "SCR_ScreenShot_f: Couldn't create a file\n"); 
+		ri.Con_Printf (PRINT_ALL, "SCR_ScreenShot_f: Couldn't create a file\n");
 		return;
  	}
 
@@ -95706,7 +95650,7 @@ void GL_ScreenShot_f (void)
 	buffer[15] = vid.height>>8;
 	buffer[16] = 24;	// pixel size
 
-	qglReadPixels (0, 0, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
+	qglReadPixels (0, 0, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 );
 
 	// swap rgb to bgr
 	c = 18+vid.width*vid.height*3;
@@ -95723,7 +95667,7 @@ void GL_ScreenShot_f (void)
 
 	free (buffer);
 	ri.Con_Printf (PRINT_ALL, "Wrote %s\n", picname);
-} 
+}
 
 /*
 ** GL_Strings_f
@@ -95801,7 +95745,7 @@ void GL_UpdateSwapInterval( void )
 	{
 		gl_swapinterval->modified = false;
 
-		if ( !gl_state.stereo_enabled ) 
+		if ( !gl_state.stereo_enabled )
 		{
 #ifdef _WIN32
 			if ( qwglSwapIntervalEXT )
@@ -95822,7 +95766,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -96241,8 +96185,8 @@ void R_BlendLightmaps (void)
 				for ( drawsurf = newdrawsurf; drawsurf != surf; drawsurf = drawsurf->lightmapchain )
 				{
 					if ( drawsurf->polys )
-						DrawGLPolyChain( drawsurf->polys, 
-							              ( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ), 
+						DrawGLPolyChain( drawsurf->polys,
+							              ( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ),
 										( drawsurf->light_t - drawsurf->dlight_t ) * ( 1.0 / 128.0 ) );
 				}
 
@@ -96301,12 +96245,12 @@ void R_RenderBrushPoly (msurface_t *fa)
 	image = R_TextureAnimation (fa->texinfo);
 
 	if (fa->flags & SURF_DRAWTURB)
-	{	
+	{
 		GL_Bind( image->texnum );
 
 		// warp texture, no lightmaps
 		GL_TexEnv( GL_MODULATE );
-		qglColor4f( gl_state.inverse_intensity, 
+		qglColor4f( gl_state.inverse_intensity,
 			        gl_state.inverse_intensity,
 					gl_state.inverse_intensity,
 					1.0F );
@@ -96369,9 +96313,9 @@ dynamic:
 			GL_Bind( gl_state.lightmap_textures + fa->lightmaptexturenum );
 
 			qglTexSubImage2D( GL_TEXTURE_2D, 0,
-							  fa->light_s, fa->light_t, 
-							  smax, tmax, 
-							  GL_LIGHTMAP_FORMAT, 
+							  fa->light_s, fa->light_t,
+							  smax, tmax,
+							  GL_LIGHTMAP_FORMAT,
 							  GL_UNSIGNED_BYTE, temp );
 
 			fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
@@ -96560,9 +96504,9 @@ dynamic:
 			lmtex = surf->lightmaptexturenum;
 
 			qglTexSubImage2D( GL_TEXTURE_2D, 0,
-							  surf->light_s, surf->light_t, 
-							  smax, tmax, 
-							  GL_LIGHTMAP_FORMAT, 
+							  surf->light_s, surf->light_t,
+							  smax, tmax,
+							  GL_LIGHTMAP_FORMAT,
 							  GL_UNSIGNED_BYTE, temp );
 
 		}
@@ -96578,9 +96522,9 @@ dynamic:
 			lmtex = 0;
 
 			qglTexSubImage2D( GL_TEXTURE_2D, 0,
-							  surf->light_s, surf->light_t, 
-							  smax, tmax, 
-							  GL_LIGHTMAP_FORMAT, 
+							  surf->light_s, surf->light_t,
+							  smax, tmax,
+							  GL_LIGHTMAP_FORMAT,
 							  GL_UNSIGNED_BYTE, temp );
 
 		}
@@ -96595,7 +96539,7 @@ dynamic:
 		if (surf->texinfo->flags & SURF_FLOWING)
 		{
 			float scroll;
-		
+
 			scroll = -64 * ( (r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0) );
 			if(scroll == 0.0)
 				scroll = -64.0;
@@ -96643,7 +96587,7 @@ dynamic:
 		if (surf->texinfo->flags & SURF_FLOWING)
 		{
 			float scroll;
-		
+
 			scroll = -64 * ( (r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0) );
 			if(scroll == 0.0)
 				scroll = -64.0;
@@ -96862,7 +96806,7 @@ void R_RecursiveWorldNode (mnode_t *node)
 		return;
 	if (R_CullBox (node->minmaxs, node->minmaxs+3))
 		return;
-	
+
 // if a leaf node, draw stuff
 	if (node->contents != -1)
 	{
@@ -97042,7 +96986,7 @@ void R_DrawWorld (void)
 
 		if ( gl_lightmap->value )
 			GL_TexEnv( GL_REPLACE );
-		else 
+		else
 			GL_TexEnv( GL_MODULATE );
 
 		R_RecursiveWorldNode (r_worldmodel->nodes);
@@ -97060,7 +97004,7 @@ void R_DrawWorld (void)
 	*/
 	DrawTextureChains ();
 	R_BlendLightmaps ();
-	
+
 	R_DrawSkyBox ();
 
 	R_DrawTriangleOutlines ();
@@ -97117,7 +97061,7 @@ void R_MarkLeaves (void)
 			((int *)fatvis)[i] |= ((int *)vis)[i];
 		vis = fatvis;
 	}
-	
+
 	for (i=0,leaf=r_worldmodel->leafs ; i<r_worldmodel->numleafs ; i++, leaf++)
 	{
 		cluster = leaf->cluster;
@@ -97197,7 +97141,7 @@ static void LM_UploadBlock( qboolean dynamic )
 				height = gl_lms.allocated[i];
 		}
 
-		qglTexSubImage2D( GL_TEXTURE_2D, 
+		qglTexSubImage2D( GL_TEXTURE_2D,
 						  0,
 						  0, 0,
 						  BLOCK_WIDTH, height,
@@ -97207,13 +97151,13 @@ static void LM_UploadBlock( qboolean dynamic )
 	}
 	else
 	{
-		qglTexImage2D( GL_TEXTURE_2D, 
-					   0, 
+		qglTexImage2D( GL_TEXTURE_2D,
+					   0,
 					   gl_lms.internal_format,
-					   BLOCK_WIDTH, BLOCK_HEIGHT, 
-					   0, 
-					   GL_LIGHTMAP_FORMAT, 
-					   GL_UNSIGNED_BYTE, 
+					   BLOCK_WIDTH, BLOCK_HEIGHT,
+					   0,
+					   GL_LIGHTMAP_FORMAT,
+					   GL_UNSIGNED_BYTE,
 					   gl_lms.lightmap_buffer );
 		if ( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
 			ri.Sys_Error( ERR_DROP, "LM_UploadBlock() - MAX_LIGHTMAPS exceeded\n" );
@@ -97411,7 +97355,7 @@ void GL_BeginBuildingLightmaps (model_t *m)
 	** if mono lightmaps are enabled and we want to use alpha
 	** blending (a,1-a) then we're likely running on a 3DLabs
 	** Permedia2.  In a perfect world we'd use a GL_ALPHA lightmap
-	** in order to conserve space and maximize bandwidth, however 
+	** in order to conserve space and maximize bandwidth, however
 	** this isn't a perfect world.
 	**
 	** So we have to use alpha lightmaps, but stored in GL_RGBA format,
@@ -97435,7 +97379,7 @@ void GL_BeginBuildingLightmaps (model_t *m)
 	{
 		gl_lms.internal_format = GL_INTENSITY8;
 	}
-	else if ( toupper( gl_monolightmap->string[0] ) == 'L' ) 
+	else if ( toupper( gl_monolightmap->string[0] ) == 'L' )
 	{
 		gl_lms.internal_format = GL_LUMINANCE8;
 	}
@@ -97450,13 +97394,13 @@ void GL_BeginBuildingLightmaps (model_t *m)
 	GL_Bind( gl_state.lightmap_textures + 0 );
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	qglTexImage2D( GL_TEXTURE_2D, 
-				   0, 
+	qglTexImage2D( GL_TEXTURE_2D,
+				   0,
 				   gl_lms.internal_format,
-				   BLOCK_WIDTH, BLOCK_HEIGHT, 
-				   0, 
-				   GL_LIGHTMAP_FORMAT, 
-				   GL_UNSIGNED_BYTE, 
+				   BLOCK_WIDTH, BLOCK_HEIGHT,
+				   0,
+				   GL_LIGHTMAP_FORMAT,
+				   GL_UNSIGNED_BYTE,
 				   dummy );
 }
 
@@ -97483,7 +97427,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -97683,7 +97627,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -97790,7 +97734,7 @@ vec3_t	skyclip[6] = {
 	{0,-1,1},
 	{0,1,1},
 	{1,0,1},
-	{-1,0,1} 
+	{-1,0,1}
 };
 int	c_sky;
 
@@ -98180,7 +98124,7 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 			sky_min = 1.0/256;
 			sky_max = 255.0/256;
 		}
-		else	
+		else
 		{
 			sky_min = 1.0/512;
 			sky_max = 511.0/512;
@@ -98201,7 +98145,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -98306,7 +98250,7 @@ void CDAudio_Play2(int track, qboolean looping)
 
 	if (!enabled)
 		return;
-	
+
 	if (!cdValid)
 	{
 		CDAudio_GetAudioDiskInfo();
@@ -98387,7 +98331,7 @@ void CDAudio_Stop(void)
 
 	if (!enabled)
 		return;
-	
+
 	if (!playing)
 		return;
 
@@ -98426,13 +98370,13 @@ void CDAudio_Resume(void)
 
 	if (!enabled)
 		return;
-	
+
 	if (!cdValid)
 		return;
 
 	if (!wasPlaying)
 		return;
-	
+
     mciPlayParms.dwFrom = MCI_MAKE_TMSF(playTrack, 0, 0, 0);
     mciPlayParms.dwTo = MCI_MAKE_TMSF(playTrack + 1, 0, 0, 0);
     mciPlayParms.dwCallback = (DWORD)cl_hwnd;
@@ -98712,7 +98656,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -98736,7 +98680,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -98802,7 +98746,7 @@ where the given parameter apears, or 0 if not present
 int CCheckParm (char *parm)
 {
 	int             i;
-	
+
 	for (i=1 ; i<ccom_argc ; i++)
 	{
 		if (!ccom_argv[i])
@@ -98810,7 +98754,7 @@ int CCheckParm (char *parm)
 		if (!strcmp (parm,ccom_argv[i]))
 			return i;
 	}
-		
+
 	return 0;
 }
 
@@ -98832,13 +98776,13 @@ void InitConProc (int argc, char **argv)
 		if (t < argc)
 			hFile = (HANDLE)atoi (ccom_argv[t+1]);
 	}
-		
+
 	if ((t = CCheckParm ("-HPARENT")) > 0)
 	{
 		if (t < argc)
 			heventParent = (HANDLE)atoi (ccom_argv[t+1]);
 	}
-		
+
 	if ((t = CCheckParm ("-HCHILD")) > 0)
 	{
 		if (t < argc)
@@ -98897,7 +98841,7 @@ unsigned _stdcall RequestProc (void *arg)
 	DWORD	dwRet;
 	HANDLE	heventWait[2];
 	int		iBeginLine, iEndLine;
-	
+
 	heventWait[0] = heventParentSend;
 	heventWait[1] = heventDone;
 
@@ -98906,11 +98850,11 @@ unsigned _stdcall RequestProc (void *arg)
 		dwRet = WaitForMultipleObjects (2, heventWait, FALSE, INFINITE);
 
 	// heventDone fired, so we're exiting.
-		if (dwRet == WAIT_OBJECT_0 + 1)	
+		if (dwRet == WAIT_OBJECT_0 + 1)
 			break;
 
 		pBuffer = (int *) GetMappedBuffer (hfileBuffer);
-		
+
 	// hfileBuffer is invalid.  Just leave.
 		if (!pBuffer)
 		{
@@ -98930,7 +98874,7 @@ unsigned _stdcall RequestProc (void *arg)
 			// Param2 : End line
 				iBeginLine = pBuffer[1];
 				iEndLine = pBuffer[2];
-				pBuffer[0] = ReadText ((LPTSTR) (pBuffer + 1), iBeginLine, 
+				pBuffer[0] = ReadText ((LPTSTR) (pBuffer + 1), iBeginLine,
 									   iEndLine);
 				break;
 
@@ -98973,11 +98917,11 @@ void ReleaseMappedBuffer (LPVOID pBuffer)
 
 BOOL GetScreenBufferLines (int *piLines)
 {
-	CONSOLE_SCREEN_BUFFER_INFO	info;							  
+	CONSOLE_SCREEN_BUFFER_INFO	info;
 	BOOL						bRet;
 
 	bRet = GetConsoleScreenBufferInfo (hStdout, &info);
-		
+
 	if (bRet)
 		*piLines = info.dwSize.Y;
 
@@ -99039,7 +98983,7 @@ BOOL WriteText (LPCTSTR szText)
 		rec.Event.KeyEvent.wVirtualScanCode = CharToCode (*sz);
 		rec.Event.KeyEvent.uChar.AsciiChar = *sz;
 		rec.Event.KeyEvent.uChar.UnicodeChar = *sz;
-		rec.Event.KeyEvent.dwControlKeyState = isupper(*sz) ? 0x80 : 0x0; 
+		rec.Event.KeyEvent.dwControlKeyState = isupper(*sz) ? 0x80 : 0x0;
 
 		WriteConsoleInput(
 			hStdin,
@@ -99065,7 +99009,7 @@ BOOL WriteText (LPCTSTR szText)
 int CharToCode (char c)
 {
 	char upper;
-		
+
 	upper = toupper(c);
 
 	switch (c)
@@ -99078,7 +99022,7 @@ int CharToCode (char c)
 	}
 
 	if (isalpha(c))
-		return (30 + upper - 65); 
+		return (30 + upper - 65);
 
 	if (isdigit(c))
 		return (1 + upper - 47);
@@ -99091,7 +99035,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 {
 	CONSOLE_SCREEN_BUFFER_INFO	info;
 	COORD						coordMax;
- 
+
 	coordMax = GetLargestConsoleWindowSize(hStdout);
 
 	if (cy > coordMax.Y)
@@ -99099,70 +99043,70 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 
 	if (cx > coordMax.X)
 		cx = coordMax.X;
- 
+
 	if (!GetConsoleScreenBufferInfo(hStdout, &info))
 		return FALSE;
- 
+
 // height
-    info.srWindow.Left = 0;         
-    info.srWindow.Right = info.dwSize.X - 1;                
+    info.srWindow.Left = 0;
+    info.srWindow.Right = info.dwSize.X - 1;
     info.srWindow.Top = 0;
-    info.srWindow.Bottom = cy - 1;          
- 
+    info.srWindow.Bottom = cy - 1;
+
 	if (cy < info.dwSize.Y)
 	{
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
- 
+
 		info.dwSize.Y = cy;
- 
+
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
     }
     else if (cy > info.dwSize.Y)
     {
 		info.dwSize.Y = cy;
- 
+
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
- 
+
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
     }
- 
+
 	if (!GetConsoleScreenBufferInfo(hStdout, &info))
 		return FALSE;
- 
+
 // width
-	info.srWindow.Left = 0;         
+	info.srWindow.Left = 0;
 	info.srWindow.Right = cx - 1;
 	info.srWindow.Top = 0;
-	info.srWindow.Bottom = info.dwSize.Y - 1;               
- 
+	info.srWindow.Bottom = info.dwSize.Y - 1;
+
 	if (cx < info.dwSize.X)
 	{
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
- 
+
 		info.dwSize.X = cx;
-    
+
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
 	}
 	else if (cx > info.dwSize.X)
 	{
 		info.dwSize.X = cx;
- 
+
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
- 
+
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
 	}
- 
+
 	return TRUE;
 }
-     
+
 /* ============ end source: win32/conproc.c ============ */
 /* ============ begin source: win32/in_win.c ============ */
 /*
@@ -99175,7 +99119,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -99199,7 +99143,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -99441,8 +99385,8 @@ void IN_StartupMouse (void)
 	cvar_t		*cv;
 
 	cv = Cvar_Get ("in_initmouse", "1", CVAR_NOSET);
-	if ( !cv->value ) 
-		return; 
+	if ( !cv->value )
+		return;
 
 	mouseinitialized = true;
 	mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
@@ -99475,8 +99419,8 @@ void IN_MouseEvent (int mstate)
 		{
 				Key_Event (K_MOUSE1 + i, false, sys_msg_time);
 		}
-	}	
-		
+	}
+
 	mouse_oldbuttonstate = mstate;
 }
 
@@ -99695,26 +99639,26 @@ JOYSTICK
 =========================================================================
 */
 
-/* 
-=============== 
-IN_StartupJoystick 
-=============== 
-*/  
-void IN_StartupJoystick (void) 
-{ 
+/*
+===============
+IN_StartupJoystick
+===============
+*/
+void IN_StartupJoystick (void)
+{
 	int			numdevs;
 	JOYCAPS		jc;
 	MMRESULT	mmr;
 	cvar_t		*cv;
 
  	// assume no joystick
-	joy_avail = false; 
+	joy_avail = false;
 
 	// abort startup if user requests no joystick
 	cv = Cvar_Get ("in_initjoy", "1", CVAR_NOSET);
-	if ( !cv->value ) 
-		return; 
- 
+	if ( !cv->value )
+		return;
+
 	// verify joystick driver is present
 	if ((numdevs = joyGetNumDevs ()) == 0)
 	{
@@ -99731,7 +99675,7 @@ void IN_StartupJoystick (void)
 
 		if ((mmr = joyGetPosEx (joy_id, &ji)) == JOYERR_NOERROR)
 			break;
-	} 
+	}
 
 	// abort startup if we didn't find a valid joystick
 	if (mmr != JOYERR_NOERROR)
@@ -99745,7 +99689,7 @@ void IN_StartupJoystick (void)
 	memset (&jc, 0, sizeof(jc));
 	if ((mmr = joyGetDevCaps (joy_id, &jc, sizeof(jc))) != JOYERR_NOERROR)
 	{
-		Com_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr); 
+		Com_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr);
 		return;
 	}
 
@@ -99759,10 +99703,10 @@ void IN_StartupJoystick (void)
 	// mark the joystick as available and advanced initialization not completed
 	// this is needed as cvars are not available during initialization
 
-	joy_avail = true; 
+	joy_avail = true;
 	joy_advancedinit = false;
 
-	Com_Printf ("\njoystick detected\n\n"); 
+	Com_Printf ("\njoystick detected\n\n");
 }
 
 
@@ -99880,7 +99824,7 @@ void IN_Commands (void)
 		return;
 	}
 
-	
+
 	// loop through the joystick buttons
 	// key a joystick event or auxillary event for higher number buttons for each state change
 	buttonstate = ji.dwButtons;
@@ -99935,11 +99879,11 @@ void IN_Commands (void)
 }
 
 
-/* 
-=============== 
+/*
+===============
 IN_ReadJoystick
-=============== 
-*/  
+===============
+*/
 qboolean IN_ReadJoystick (void)
 {
 
@@ -99985,9 +99929,9 @@ void IN_JoyMove (usercmd_t *cmd)
 	// verify joystick is available and that the user wants to use it
 	if (!joy_avail || !in_joystick->value)
 	{
-		return; 
+		return;
 	}
- 
+
 	// collect the joystick data, if possible
 	if (IN_ReadJoystick () != true)
 	{
@@ -100008,7 +99952,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		// move centerpoint to zero
 		fAxisValue -= 32768.0;
 
-		// convert range from -32768..32767 to -1..1 
+		// convert range from -32768..32767 to -1..1
 		fAxisValue /= 32768.0;
 
 		switch (dwAxisMap[i])
@@ -100018,7 +99962,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			{
 				// user wants forward control to become look control
 				if (fabs(fAxisValue) > joy_pitchthreshold->value)
-				{		
+				{
 					// if mouse invert is on, invert the joystick pitch value
 					// only absolute control support here (joy_advanced is false)
 					if (m_pitch->value < 0.0)
@@ -100118,7 +100062,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -100305,7 +100249,7 @@ qboolean	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
 	char	*colon;
 	int		val;
 	char	copy[128];
-	
+
 	memset (sadr, 0, sizeof(*sadr));
 
 	if ((strlen(s) >= 23) && (s[8] == ':') && (s[21] == ':'))	// check for an IPX address
@@ -100328,7 +100272,7 @@ qboolean	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
 	else
 	{
 		((struct sockaddr_in *)sadr)->sin_family = AF_INET;
-		
+
 		((struct sockaddr_in *)sadr)->sin_port = 0;
 
 		strcpy (copy, s);
@@ -100337,9 +100281,9 @@ qboolean	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
 			if (*colon == ':')
 			{
 				*colon = 0;
-				((struct sockaddr_in *)sadr)->sin_port = htons((short)atoi(colon+1));	
+				((struct sockaddr_in *)sadr)->sin_port = htons((short)atoi(colon+1));
 			}
-		
+
 		if (copy[0] >= '0' && copy[0] <= '9')
 		{
 			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = inet_addr(copy);
@@ -100351,7 +100295,7 @@ qboolean	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
 			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
 		}
 	}
-	
+
 	return true;
 }
 
@@ -100371,7 +100315,7 @@ idnewt:28000
 qboolean	NET_StringToAdr (char *s, netadr_t *a)
 {
 	struct sockaddr sadr;
-	
+
 	if (!strcmp (s, "localhost"))
 	{
 		memset (a, 0, sizeof(*a));
@@ -100381,7 +100325,7 @@ qboolean	NET_StringToAdr (char *s, netadr_t *a)
 
 	if (!NET_StringToSockaddr (s, &sadr))
 		return false;
-	
+
 	SockadrToNetadr (&sadr, a);
 
 	return true;
@@ -100963,7 +100907,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -101180,7 +101124,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -101219,10 +101163,10 @@ static int	snd_buffer_count = 0;
 static int	sample16;
 static int	snd_sent, snd_completed;
 
-/* 
- * Global variables. Must be visible to window-procedure function 
- *  so it can unlock and free the data block after it has been played. 
- */ 
+/*
+ * Global variables. Must be visible to window-procedure function
+ *  so it can unlock and free the data block after it has been played.
+ */
 
 
 HANDLE		hData;
@@ -101231,7 +101175,7 @@ HPSTR		lpData, lpData2;
 HGLOBAL		hWaveHdr;
 LPWAVEHDR	lpWaveHdr;
 
-HWAVEOUT    hWaveOut; 
+HWAVEOUT    hWaveOut;
 
 WAVEOUTCAPS	wavecaps;
 
@@ -101283,7 +101227,7 @@ static qboolean DS_CreateBuffers( void )
     format.nSamplesPerSec = dma.speed;
     format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
     format.cbSize = 0;
-    format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign; 
+    format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
 
 	Com_Printf( "Creating DS buffers\n" );
 
@@ -101394,11 +101338,11 @@ static qboolean DS_CreateBuffers( void )
 		               "   %d bits/sample\n"
 					   "   %d bytes/sec\n",
 					   dma.channels, dma.samplebits, dma.speed);
-	
+
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
 	/* we don't want anyone to access the buffer directly w/o locking it first. */
-	lpData = NULL; 
+	lpData = NULL;
 
 	pDSBuf->lpVtbl->Stop(pDSBuf);
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
@@ -101543,7 +101487,7 @@ sndinitstat SNDDMA_InitDirect (void)
 		Com_DPrintf( "...loading dsound.dll: " );
 
 		hInstDS = LoadLibrary("dsound.dll");
-		
+
 		if (hInstDS == NULL)
 		{
 			Com_Printf ("failed\n");
@@ -101615,12 +101559,12 @@ Crappy windows multimedia base
 */
 qboolean SNDDMA_InitWav (void)
 {
-	WAVEFORMATEX  format; 
+	WAVEFORMATEX  format;
 	int				i;
 	HRESULT			hr;
 
 	Com_Printf( "Initializing wave sound\n" );
-	
+
 	snd_sent = 0;
 	snd_completed = 0;
 
@@ -101643,12 +101587,12 @@ qboolean SNDDMA_InitWav (void)
 		*format.wBitsPerSample / 8;
 	format.cbSize = 0;
 	format.nAvgBytesPerSec = format.nSamplesPerSec
-		*format.nBlockAlign; 
-	
-	/* Open a waveform device for output using window callback. */ 
+		*format.nBlockAlign;
+
+	/* Open a waveform device for output using window callback. */
 	Com_DPrintf ("...opening waveform device: ");
-	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER, 
-					&format, 
+	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER,
+					&format,
 					0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR)
 	{
 		if (hr != MMSYSERR_ALLOCATED)
@@ -101666,71 +101610,71 @@ qboolean SNDDMA_InitWav (void)
 			Com_Printf ("hw in use\n" );
 			return false;
 		}
-	} 
+	}
 	Com_DPrintf( "ok\n" );
 
-	/* 
-	 * Allocate and lock memory for the waveform data. The memory 
-	 * for waveform data must be globally allocated with 
-	 * GMEM_MOVEABLE and GMEM_SHARE flags. 
+	/*
+	 * Allocate and lock memory for the waveform data. The memory
+	 * for waveform data must be globally allocated with
+	 * GMEM_MOVEABLE and GMEM_SHARE flags.
 
-	*/ 
+	*/
 	Com_DPrintf ("...allocating waveform buffer: ");
 	gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
-	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize); 
-	if (!hData) 
-	{ 
+	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize);
+	if (!hData)
+	{
 		Com_Printf( " failed\n" );
 		FreeSound ();
-		return false; 
+		return false;
 	}
 	Com_DPrintf( "ok\n" );
 
 	Com_DPrintf ("...locking waveform buffer: ");
 	lpData = GlobalLock(hData);
 	if (!lpData)
-	{ 
+	{
 		Com_Printf( " failed\n" );
 		FreeSound ();
-		return false; 
-	} 
+		return false;
+	}
 	memset (lpData, 0, gSndBufSize);
 	Com_DPrintf( "ok\n" );
 
-	/* 
-	 * Allocate and lock memory for the header. This memory must 
-	 * also be globally allocated with GMEM_MOVEABLE and 
-	 * GMEM_SHARE flags. 
-	 */ 
+	/*
+	 * Allocate and lock memory for the header. This memory must
+	 * also be globally allocated with GMEM_MOVEABLE and
+	 * GMEM_SHARE flags.
+	 */
 	Com_DPrintf ("...allocating waveform header: ");
-	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, 
-		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS); 
+	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE,
+		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
 
 	if (hWaveHdr == NULL)
-	{ 
+	{
 		Com_Printf( "failed\n" );
 		FreeSound ();
-		return false; 
-	} 
+		return false;
+	}
 	Com_DPrintf( "ok\n" );
 
 	Com_DPrintf ("...locking waveform header: ");
-	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr); 
+	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr);
 
 	if (lpWaveHdr == NULL)
-	{ 
+	{
 		Com_Printf( "failed\n" );
 		FreeSound ();
-		return false; 
+		return false;
 	}
 	memset (lpWaveHdr, 0, sizeof(WAVEHDR) * WAV_BUFFERS);
 	Com_DPrintf( "ok\n" );
 
-	/* After allocation, set up and prepare headers. */ 
+	/* After allocation, set up and prepare headers. */
 	Com_DPrintf ("...preparing headers: ");
 	for (i=0 ; i<WAV_BUFFERS ; i++)
 	{
-		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE; 
+		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE;
 		lpWaveHdr[i].lpData = lpData + i*WAV_BUFFER_SIZE;
 
 		if (waveOutPrepareHeader(hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR)) !=
@@ -101849,7 +101793,7 @@ int SNDDMA_GetDMAPos(void)
 	int		s = 0;
 	DWORD	dwWrite;
 
-	if (dsound_init) 
+	if (dsound_init)
 	{
 		mmtime.wType = TIME_SAMPLES;
 		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
@@ -101890,10 +101834,10 @@ void SNDDMA_BeginPainting (void)
 	// if the buffer was lost or stopped, restore it and/or restart it
 	if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
 		Com_Printf ("Couldn't get sound buffer status\n");
-	
+
 	if (dwStatus & DSBSTATUS_BUFFERLOST)
 		pDSBuf->lpVtbl->Restore (pDSBuf);
-	
+
 	if (!(dwStatus & DSBSTATUS_PLAYING))
 		pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
@@ -101902,7 +101846,7 @@ void SNDDMA_BeginPainting (void)
 	reps = 0;
 	dma.buffer = NULL;
 
-	while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &locksize, 
+	while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &locksize,
 								   &pbuf2, &dwSize2, 0)) != DS_OK)
 	{
 		if (hresult != DSERR_BUFFERLOST)
@@ -101975,19 +101919,19 @@ void SNDDMA_Submit(void)
 			break;	//	Com_Printf ("submit overrun\n");
 //Com_Printf ("send %i\n", snd_sent);
 		snd_sent++;
-		/* 
-		 * Now the data block can be sent to the output device. The 
-		 * waveOutWrite function returns immediately and waveform 
-		 * data is sent to the output device in the background. 
-		 */ 
-		wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR)); 
+		/*
+		 * Now the data block can be sent to the output device. The
+		 * waveOutWrite function returns immediately and waveform
+		 * data is sent to the output device in the background.
+		 */
+		wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR));
 
 		if (wResult != MMSYSERR_NOERROR)
-		{ 
+		{
 			Com_Printf ("Failed to write block to device\n");
 			FreeSound ();
-			return; 
-		} 
+			return;
+		}
 	}
 }
 
@@ -102043,7 +101987,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -102065,7 +102009,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define IDI_ICON1                       101
 
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        103
@@ -102162,14 +102106,14 @@ void WinError (void)
 {
 	LPVOID lpMsgBuf;
 
-	FormatMessage( 
+	FormatMessage(
 		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,
 		GetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
 		(LPTSTR) &lpMsgBuf,
 		0,
-		NULL 
+		NULL
 	);
 
 	// Display the string.
@@ -102227,7 +102171,7 @@ char *Sys_ScanForCD (void)
 #endif
 
 	cddir[0] = 0;
-	
+
 	return NULL;
 }
 
@@ -102301,7 +102245,7 @@ void Sys_Init (void)
 			Sys_Error ("Couldn't create dedicated server console");
 		hinput = GetStdHandle (STD_INPUT_HANDLE);
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-	
+
 		// let QHOST hook in
 		InitConProc (argc, argv);
 	}
@@ -102349,7 +102293,7 @@ char *Sys_ConsoleInput (void)
 				switch (ch)
 				{
 					case '\r':
-						WriteFile(houtput, "\r\n", 2, &dummy, NULL);	
+						WriteFile(houtput, "\r\n", 2, &dummy, NULL);
 
 						if (console_textlen)
 						{
@@ -102363,7 +102307,7 @@ char *Sys_ConsoleInput (void)
 						if (console_textlen)
 						{
 							console_textlen--;
-							WriteFile(houtput, "\b \b", 3, &dummy, NULL);	
+							WriteFile(houtput, "\b \b", 3, &dummy, NULL);
 						}
 						break;
 
@@ -102372,7 +102316,7 @@ char *Sys_ConsoleInput (void)
 						{
 							if (console_textlen < sizeof(console_text)-2)
 							{
-								WriteFile(houtput, &ch, 1, &dummy, NULL);	
+								WriteFile(houtput, &ch, 1, &dummy, NULL);
 								console_text[console_textlen] = ch;
 								console_textlen++;
 							}
@@ -102440,7 +102384,7 @@ void Sys_SendKeyEvents (void)
       	DispatchMessage (&msg);
 	}
 
-	// grab frame time 
+	// grab frame time
 	sys_frame_time = timeGetTime();	// FIXME: should this be at start?
 }
 
@@ -102463,7 +102407,7 @@ char *Sys_GetClipboardData( void )
 
 		if ( ( hClipboardData = GetClipboardData( CF_TEXT ) ) != 0 )
 		{
-			if ( ( cliptext = GlobalLock( hClipboardData ) ) != 0 ) 
+			if ( ( cliptext = GlobalLock( hClipboardData ) ) != 0 )
 			{
 				data = malloc( GlobalSize( hClipboardData ) + 1 );
 				strcpy( data, cliptext );
@@ -102604,7 +102548,7 @@ void *Sys_GetGameAPI_old (void *parms)
 	GetGameAPI = (void *)GetProcAddress (game_library, "GetGameAPI");
 	if (!GetGameAPI)
 	{
-		Sys_UnloadGame ();		
+		Sys_UnloadGame ();
 		return NULL;
 	}
 
@@ -102644,7 +102588,7 @@ void ParseCommandLine (LPSTR lpCmdLine)
 				*lpCmdLine = 0;
 				lpCmdLine++;
 			}
-			
+
 		}
 	}
 
@@ -102740,7 +102684,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -102768,7 +102712,7 @@ extern refexport_t GetRefAPI( refimport_t rimp );
 cvar_t *win_noalttab;
 
 #ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL (WM_MOUSELAST+1)  // message that will be supported by the OS 
+#define WM_MOUSEWHEEL (WM_MOUSELAST+1)  // message that will be supported by the OS
 #endif
 
 static UINT MSH_MOUSEWHEEL;
@@ -102782,7 +102726,7 @@ cvar_t		*vid_fullscreen;
 
 // Global variables used internally by this module
 viddef_t	viddef;				// global video state; used by other modules
-HINSTANCE	reflib_library;		// Handle to refresh DLL 
+HINSTANCE	reflib_library;		// Handle to refresh DLL
 qboolean	reflib_active = 0;
 
 HWND        cl_hwnd;            // Main window handle for life of program
@@ -102884,27 +102828,27 @@ void VID_Error (int err_level, char *fmt, ...)
 
 //==========================================================================
 
-byte        scantokey[128] = 
-					{ 
-//  0           1       2       3       4       5       6       7 
-//  8           9       A       B       C       D       E       F 
-	0  ,    27,     '1',    '2',    '3',    '4',    '5',    '6', 
-	'7',    '8',    '9',    '0',    '-',    '=',    K_BACKSPACE, 9, // 0 
-	'q',    'w',    'e',    'r',    't',    'y',    'u',    'i', 
-	'o',    'p',    '[',    ']',    13 ,    K_CTRL,'a',  's',      // 1 
-	'd',    'f',    'g',    'h',    'j',    'k',    'l',    ';', 
-	'\'' ,    '`',    K_SHIFT,'\\',  'z',    'x',    'c',    'v',      // 2 
-	'b',    'n',    'm',    ',',    '.',    '/',    K_SHIFT,'*', 
-	K_ALT,' ',   0  ,    K_F1, K_F2, K_F3, K_F4, K_F5,   // 3 
-	K_F6, K_F7, K_F8, K_F9, K_F10,  K_PAUSE,    0  , K_HOME, 
-	K_UPARROW,K_PGUP,K_KP_MINUS,K_LEFTARROW,K_KP_5,K_RIGHTARROW, K_KP_PLUS,K_END, //4 
-	K_DOWNARROW,K_PGDN,K_INS,K_DEL,0,0,             0,              K_F11, 
+byte        scantokey[128] =
+					{
+//  0           1       2       3       4       5       6       7
+//  8           9       A       B       C       D       E       F
+	0  ,    27,     '1',    '2',    '3',    '4',    '5',    '6',
+	'7',    '8',    '9',    '0',    '-',    '=',    K_BACKSPACE, 9, // 0
+	'q',    'w',    'e',    'r',    't',    'y',    'u',    'i',
+	'o',    'p',    '[',    ']',    13 ,    K_CTRL,'a',  's',      // 1
+	'd',    'f',    'g',    'h',    'j',    'k',    'l',    ';',
+	'\'' ,    '`',    K_SHIFT,'\\',  'z',    'x',    'c',    'v',      // 2
+	'b',    'n',    'm',    ',',    '.',    '/',    K_SHIFT,'*',
+	K_ALT,' ',   0  ,    K_F1, K_F2, K_F3, K_F4, K_F5,   // 3
+	K_F6, K_F7, K_F8, K_F9, K_F10,  K_PAUSE,    0  , K_HOME,
+	K_UPARROW,K_PGUP,K_KP_MINUS,K_LEFTARROW,K_KP_5,K_RIGHTARROW, K_KP_PLUS,K_END, //4
+	K_DOWNARROW,K_PGDN,K_INS,K_DEL,0,0,             0,              K_F11,
 	K_F12,0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 5
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0, 
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 6 
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0, 
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0         // 7 
-}; 
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 6
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0         // 7
+};
 
 /*
 =======
@@ -103059,7 +103003,7 @@ LONG WINAPI MainWndProc (
 	case WM_CREATE:
 		cl_hwnd = hWnd;
 
-		MSH_MOUSEWHEEL = RegisterWindowMessage("MSWHEEL_ROLLMSG"); 
+		MSH_MOUSEWHEEL = RegisterWindowMessage("MSWHEEL_ROLLMSG");
         return DefWindowProc (hWnd, uMsg, wParam, lParam);
 
 	case WM_PAINT:
@@ -103094,8 +103038,8 @@ LONG WINAPI MainWndProc (
 
 			if (!vid_fullscreen->value)
 			{
-				xPos = (short) LOWORD(lParam);    // horizontal position 
-				yPos = (short) HIWORD(lParam);    // vertical position 
+				xPos = (short) LOWORD(lParam);    // horizontal position
+				yPos = (short) HIWORD(lParam);    // vertical position
 
 				r.left   = 0;
 				r.top    = 0;
@@ -103349,7 +103293,7 @@ qboolean VID_LoadRefresh( char *name )
 VID_CheckChanges
 
 This function gets called once just before drawing each frame, and it's sole purpose in life
-is to check to see if any of the video mode parameters have changed, and if they have to 
+is to check to see if any of the video mode parameters have changed, and if they have to
 update the rendering DLL and/or video mode to match.
 ============
 */
@@ -103454,7 +103398,7 @@ void VID_Init (void)
 
 	/* Disable the 3Dfx splash screen */
 	putenv("FX_GLIDE_NO_SPLASH=0");
-		
+
 	/* Start the graphics mode and load refresh DLL */
 	VID_CheckChanges();
 }
@@ -103486,7 +103430,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -103686,7 +103630,7 @@ static void CancelChanges( void *unused )
 */
 void VID_MenuInit( void )
 {
-	static const char *resolutions[] = 
+	static const char *resolutions[] =
 	{
 		"[320 240  ]",
 		"[400 300  ]",
@@ -103961,7 +103905,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -103997,7 +103941,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -104120,7 +104064,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	}
 
 	glw_state.hWnd = CreateWindowEx (
-		 exstyle, 
+		 exstyle,
 		 WINDOW_CLASS_NAME,
 		 "Quake 2",
 		 stylebits,
@@ -104132,7 +104076,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if (!glw_state.hWnd)
 		ri.Sys_Error (ERR_FATAL, "Couldn't create window");
-	
+
 	ShowWindow( glw_state.hWnd, SW_SHOW );
 	UpdateWindow( glw_state.hWnd );
 
@@ -104246,7 +104190,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 
 			/*
 			** our first CDS failed, so maybe we're running on some weird dual monitor
-			** system 
+			** system
 			*/
 			if ( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
 			{
@@ -104389,7 +104333,7 @@ qboolean GLimp_Init( void *hinstance, void *wndproc )
 
 qboolean GLimp_InitGL (void)
 {
-    PIXELFORMATDESCRIPTOR pfd = 
+    PIXELFORMATDESCRIPTOR pfd =
 	{
 		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
 		1,								// version number
@@ -104403,7 +104347,7 @@ qboolean GLimp_InitGL (void)
 		0,								// shift bit ignored
 		0,								// no accumulation buffer
 		0, 0, 0, 0, 					// accum bits ignored
-		32,								// 32-bit z-buffer	
+		32,								// 32-bit z-buffer
 		0,								// no stencil buffer
 		0,								// no auxiliary buffer
 		PFD_MAIN_PLANE,					// main layer
@@ -104412,7 +104356,7 @@ qboolean GLimp_InitGL (void)
     };
     int  pixelformat;
 	cvar_t *stereo;
-	
+
 	stereo = ri.Cvar_Get( "cl_stereo", "0", 0 );
 
 	/*
@@ -104495,7 +104439,7 @@ qboolean GLimp_InitGL (void)
 	/*
 	** report if stereo is desired but unavailable
 	*/
-	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) ) 
+	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
 	{
 		ri.Con_Printf( PRINT_ALL, "...failed to select stereo pixel format\n" );
 		ri.Cvar_SetValue( "cl_stereo", 0 );
@@ -104527,7 +104471,7 @@ qboolean GLimp_InitGL (void)
 	}
 
 	/*
-	** print out PFD specifics 
+	** print out PFD specifics
 	*/
 	ri.Con_Printf( PRINT_ALL, "GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits );
 
@@ -104579,7 +104523,7 @@ void GLimp_BeginFrame( float camera_separation )
 
 /*
 ** GLimp_EndFrame
-** 
+**
 ** Responsible for doing a swapbuffers and possibly for other stuff
 ** as yet to be determined.  Probably better not to make this a GLimp
 ** function and instead do a call to GLimp_SwapBuffers.
@@ -104626,7 +104570,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -107638,12 +107582,12 @@ void QGL_Shutdown( void )
 /*
 ** QGL_Init
 **
-** This is responsible for binding our qgl function pointers to 
-** the appropriate GL stuff.  In Windows this means doing a 
+** This is responsible for binding our qgl function pointers to
+** the appropriate GL stuff.  In Windows this means doing a
 ** LoadLibrary and a bunch of calls to GetProcAddress.  On other
 ** operating systems we need to do the right thing, whatever that
 ** might be.
-** 
+**
 */
 qboolean QGL_Init( const char *dllname )
 {
@@ -108055,7 +107999,7 @@ void GLimp_EnableLogging( qboolean enable )
 
 			asctime( newtime );
 
-			Com_sprintf( buffer, sizeof(buffer), "%s/gl.log", ri.FS_Gamedir() ); 
+			Com_sprintf( buffer, sizeof(buffer), "%s/gl.log", ri.FS_Gamedir() );
 			glw_state.log_fp = fopen( buffer, "wt" );
 
 			fprintf( glw_state.log_fp, "%s\n", asctime( newtime ) );
