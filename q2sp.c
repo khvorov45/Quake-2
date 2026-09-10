@@ -90,6 +90,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -10596,16 +10597,10 @@ void FS_FCloseFile (FILE *f)
 */
 int	Developer_searchpath (int who)
 {
-	
-	int		ch;
+
 	// PMM - warning removal
 //	char	*start;
 	searchpath_t	*search;
-	
-	if (who == 1) // xatrix
-		ch = 'x';
-	else if (who == 2)
-		ch = 'r';
 
 	for (search = fs_searchpaths ; search ; search = search->next)
 	{
@@ -10892,7 +10887,9 @@ pack_t *FS_LoadPackFile (char *packfile)
 	pack_t			*pack;
 	FILE			*packhandle;
 	dpackfile_t		info[MAX_FILES_IN_PACK];
+#ifdef NO_ADDONS
 	unsigned		checksum;
+#endif
 
 	packhandle = fopen(packfile, "rb");
 	if (!packhandle)
@@ -10915,9 +10912,8 @@ pack_t *FS_LoadPackFile (char *packfile)
 	fread (info, 1, header.dirlen, packhandle);
 
 // crc the directory to check for modifications
-	checksum = Com_BlockChecksum ((void *)info, header.dirlen);
-
 #ifdef NO_ADDONS
+	checksum = Com_BlockChecksum ((void *)info, header.dirlen);
 	if (checksum != PAK0_CHECKSUM)
 		return NULL;
 #endif
@@ -11896,7 +11892,6 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 {
 	unsigned	sequence, sequence_ack;
 	unsigned	reliable_ack, reliable_message;
-	int			qport;
 
 // get sequence numbers		
 	MSG_BeginReading (msg);
@@ -11905,7 +11900,7 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 
 	// read the qport if we are a server
 	if (chan->sock == NS_SERVER)
-		qport = MSG_ReadShort (msg);
+		MSG_ReadShort (msg);
 
 	reliable_message = sequence >> 31;
 	reliable_ack = sequence_ack >> 31;
@@ -15279,7 +15274,6 @@ void SV_BuildClientFrame (client_t *client)
 	int		l;
 	int		clientarea, clientcluster;
 	int		leafnum;
-	int		c_fullsend;
 	byte	*clientphs;
 	byte	*bitvector;
 
@@ -15317,8 +15311,6 @@ void SV_BuildClientFrame (client_t *client)
 	// build up the list of visible entities
 	frame->num_entities = 0;
 	frame->first_entity = svs.next_client_entities;
-
-	c_fullsend = 0;
 
 	for (e=1 ; e<ge->num_edicts ; e++)
 	{
@@ -15367,7 +15359,6 @@ void SV_BuildClientFrame (client_t *client)
 				{	// too many leafs for individual check, go by headnode
 					if (!CM_HeadnodeVisible (ent->headnode, bitvector))
 						continue;
-					c_fullsend++;
 				}
 				else
 				{	// check individual leafs
@@ -18990,9 +18981,6 @@ void SV_AreaEdicts_r (areanode_t *node)
 {
 	link_t		*l, *next, *start;
 	edict_t		*check;
-	int			count;
-
-	count = 0;
 
 	// touch linked edicts
 	if (area_type == AREA_SOLID)
@@ -19069,7 +19057,6 @@ int SV_PointContents (vec3_t p)
 	int			i, num;
 	int			contents, c2;
 	int			headnode;
-	float		*angles;
 
 	// get base contents from world
 	contents = CM_PointContents (p, sv.models[1]->headnode);
@@ -19083,10 +19070,6 @@ int SV_PointContents (vec3_t p)
 
 		// might intersect, so do an exact clip
 		headnode = SV_HullForEntity (hit);
-		angles = hit->s.angles;
-		if (hit->solid != SOLID_BSP)
-			angles = vec3_origin;	// boxes don't rotate
-
 		c2 = CM_TransformedPointContents (p, headnode, hit->s.origin, hit->s.angles);
 
 		contents |= c2;
@@ -21536,9 +21519,9 @@ void CL_DeltaEntity (frame_t *frame, int newnum, entity_state_t *old, int bits)
 		|| state->modelindex2 != ent->current.modelindex2
 		|| state->modelindex3 != ent->current.modelindex3
 		|| state->modelindex4 != ent->current.modelindex4
-		|| abs(state->origin[0] - ent->current.origin[0]) > 512
-		|| abs(state->origin[1] - ent->current.origin[1]) > 512
-		|| abs(state->origin[2] - ent->current.origin[2]) > 512
+		|| fabs(state->origin[0] - ent->current.origin[0]) > 512
+		|| fabs(state->origin[1] - ent->current.origin[1]) > 512
+		|| fabs(state->origin[2] - ent->current.origin[2]) > 512
 		|| state->event == EV_PLAYER_TELEPORT
 		|| state->event == EV_OTHER_TELEPORT
 		)
@@ -22547,7 +22530,6 @@ void CL_CalcViewValues (void)
 {
 	int			i;
 	float		lerp, backlerp;
-	centity_t	*ent;
 	frame_t		*oldframe;
 	player_state_t	*ps, *ops;
 
@@ -22560,12 +22542,11 @@ void CL_CalcViewValues (void)
 	ops = &oldframe->playerstate;
 
 	// see if the player entity was teleported this frame
-	if ( fabs(ops->pmove.origin[0] - ps->pmove.origin[0]) > 256*8
+	if ( abs(ops->pmove.origin[0] - ps->pmove.origin[0]) > 256*8
 		|| abs(ops->pmove.origin[1] - ps->pmove.origin[1]) > 256*8
 		|| abs(ops->pmove.origin[2] - ps->pmove.origin[2]) > 256*8)
 		ops = ps;		// don't interpolate
 
-	ent = &cl_entities[cl.playernum+1];
 	lerp = cl.lerpfrac;
 
 	// calculate the origin
@@ -24517,7 +24498,7 @@ void CL_FlyParticles (vec3_t origin, int count)
 	int			i;
 	cparticle_t	*p;
 	float		angle;
-	float		sr, sp, sy, cr, cp, cy;
+	float		sp, sy, cp, cy;
 	vec3_t		forward;
 	float		dist = 64;
 	float		ltime;
@@ -24542,10 +24523,6 @@ void CL_FlyParticles (vec3_t origin, int count)
 		angle = ltime * avelocities[i][1];
 		sp = sin(angle);
 		cp = cos(angle);
-		angle = ltime * avelocities[i][2];
-		sr = sin(angle);
-		cr = cos(angle);
-	
 		forward[0] = cp*cy;
 		forward[1] = cp*sy;
 		forward[2] = -sp;
@@ -24619,7 +24596,7 @@ void CL_BfgParticles (entity_t *ent)
 	int			i;
 	cparticle_t	*p;
 	float		angle;
-	float		sr, sp, sy, cr, cp, cy;
+	float		sp, sy, cp, cy;
 	vec3_t		forward;
 	float		dist = 64;
 	vec3_t		v;
@@ -24641,10 +24618,6 @@ void CL_BfgParticles (entity_t *ent)
 		angle = ltime * avelocities[i][1];
 		sp = sin(angle);
 		cp = cos(angle);
-		angle = ltime * avelocities[i][2];
-		sr = sin(angle);
-		cr = cos(angle);
-	
 		forward[0] = cp*cy;
 		forward[1] = cp*sy;
 		forward[2] = -sp;
@@ -33015,6 +32988,8 @@ void CL_AddExplosions (void)
 			ent->skinnum = 0;
 			ent->flags |= RF_TRANSLUCENT;
 			break;
+		default:
+			break;
 		}
 
 		if (ex->type == ex_free)
@@ -33064,6 +33039,7 @@ void CL_ProcessSustain ()
 	for (i=0, s=cl_sustains; i< MAX_SUSTAINS; i++, s++)
 	{
 		if (s->id)
+		{
 			if ((s->endtime >= cl.time) && (cl.time >= s->nextthink))
 			{
 //				Com_Printf ("think %d %d %d\n", cl.time, s->nextthink, s->thinkinterval);
@@ -33071,6 +33047,7 @@ void CL_ProcessSustain ()
 			}
 			else if (s->endtime < cl.time)
 				s->id = 0;
+		}
 	}
 }
 
@@ -34136,7 +34113,6 @@ The input line scrolls horizontally if typing goes beyond the right edge
 */
 void Con_DrawInput (void)
 {
-	int		y;
 	int		i;
 	char	*text;
 
@@ -34159,8 +34135,6 @@ void Con_DrawInput (void)
 		text += 1 + key_linepos - con.linewidth;
 		
 // draw it
-	y = con.vislines-16;
-
 	for (i=0 ; i<con.linewidth ; i++)
 		re.DrawChar ( (i+1)<<3, con.vislines - 22, text[i]);
 
@@ -35838,7 +35812,6 @@ void M_Main_Draw (void)
 	int ystart;
 	int	xoffset;
 	int widest = -1;
-	int totalheight = 0;
 	char litname[80];
 	char *names[] =
 	{
@@ -35856,7 +35829,6 @@ void M_Main_Draw (void)
 
 		if ( w > widest )
 			widest = w;
-		totalheight += ( h + 12 );
 	}
 
 	ystart = ( viddef.height / 2 - 110 );
@@ -36510,11 +36482,6 @@ static void FreeLookFunc( void *unused )
 static void MouseSpeedFunc( void *unused )
 {
 	Cvar_SetValue( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
-}
-
-static void NoAltTabFunc( void *unused )
-{
-	Cvar_SetValue( "win_noalttab", s_options_noalttab_box.curvalue );
 }
 
 static float ClampCvar( float min, float max, float value )
@@ -37388,14 +37355,6 @@ static void CreditsFunc( void *unused )
 
 void Game_MenuInit( void )
 {
-	static const char *difficulty_names[] =
-	{
-		"easy",
-		"medium",
-		"hard",
-		0
-	};
-
 	s_game_menu.x = viddef.width * 0.50;
 	s_game_menu.nitems = 0;
 
@@ -39026,6 +38985,8 @@ static qboolean PlayerConfig_ScanDirectories( void )
 	}
 	if ( dirnames )
 		FreeFileList( dirnames, ndirs );
+
+	return true;
 }
 
 static int pmicmpfnc( const void *_a, const void *_b )
@@ -39232,7 +39193,6 @@ void PlayerConfig_MenuDraw( void )
 	if ( s_pmi[s_player_model_box.curvalue].skindisplaynames )
 	{
 		static int yaw;
-		int maxframe = 29;
 		entity_t entity;
 
 		memset( &entity, 0, sizeof( entity ) );
@@ -39493,12 +39453,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static void	 Action_DoEnter( menuaction_s *a );
 static void	 Action_Draw( menuaction_s *a );
 static void  Menu_DrawStatusBar( const char *string );
-static void	 Menulist_DoEnter( menulist_s *l );
 static void	 MenuList_Draw( menulist_s *l );
 static void	 Separator_Draw( menuseparator_s *s );
 static void	 Slider_DoSlide( menuslider_s *s, int dir );
 static void	 Slider_Draw( menuslider_s *s );
-static void	 SpinControl_DoEnter( menulist_s *s );
 static void	 SpinControl_Draw( menulist_s *s );
 static void	 SpinControl_DoSlide( menulist_s *s, int dir );
 
@@ -39885,7 +39843,6 @@ void Menu_DrawStatusBar( const char *string )
 	if ( string )
 	{
 		int l = strlen( string );
-		int maxrow = VID_HEIGHT / 8;
 		int maxcol = VID_WIDTH / 8;
 		int col = maxcol / 2 - l / 2;
 
@@ -40019,18 +39976,6 @@ int Menu_TallySlots( menuframework_s *menu )
 	return total;
 }
 
-void Menulist_DoEnter( menulist_s *l )
-{
-	int start;
-
-	start = l->generic.y / 10 + 1;
-
-	l->curvalue = l->generic.parent->cursor - start;
-
-	if ( l->generic.callback )
-		l->generic.callback( l );
-}
-
 void MenuList_Draw( menulist_s *l )
 {
 	const char **n;
@@ -40090,16 +40035,6 @@ void Slider_Draw( menuslider_s *s )
 		Draw_Char( RCOLUMN_OFFSET + s->generic.x + i*8 + s->generic.parent->x + 8, s->generic.y + s->generic.parent->y, 129);
 	Draw_Char( RCOLUMN_OFFSET + s->generic.x + i*8 + s->generic.parent->x + 8, s->generic.y + s->generic.parent->y, 130);
 	Draw_Char( ( int ) ( 8 + RCOLUMN_OFFSET + s->generic.parent->x + s->generic.x + (SLIDER_RANGE-1)*8 * s->range ), s->generic.y + s->generic.parent->y, 131);
-}
-
-void SpinControl_DoEnter( menulist_s *s )
-{
-	s->curvalue++;
-	if ( s->itemnames[s->curvalue] == 0 )
-		s->curvalue = 0;
-
-	if ( s->generic.callback )
-		s->generic.callback( s );
 }
 
 void SpinControl_DoSlide( menulist_s *s, int dir )
@@ -41329,8 +41264,6 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	int			i;
 	int			total;
 	channel_t	*ch;
-	channel_t	*combine;
-
 	if (!sound_started)
 		return;
 
@@ -41351,8 +41284,6 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	VectorCopy(forward, listener_forward);
 	VectorCopy(right, listener_right);
 	VectorCopy(up, listener_up);
-
-	combine = NULL;
 
 	// update spatialization for dynamic sounds	
 	ch = channels;
@@ -43769,10 +43700,12 @@ qboolean ai_checkattack (edict_t *self, float dist)
 			if ((level.time - self->enemy->teleport_time) > 5.0)
 			{
 				if (self->goalentity == self->enemy)
+				{
 					if (self->movetarget)
 						self->goalentity = self->movetarget;
 					else
 						self->goalentity = NULL;
+				}
 				self->monsterinfo.aiflags &= ~AI_SOUND_TARGET;
 				if (self->monsterinfo.aiflags & AI_TEMP_STAND_GROUND)
 					self->monsterinfo.aiflags &= ~(AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
@@ -53043,10 +52976,12 @@ void M_MoveFrame (edict_t *self)
 
 	index = self->s.frame - move->firstframe;
 	if (move->frame[index].aifunc)
+	{
 		if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
 			move->frame[index].aifunc (self, move->frame[index].dist * self->monsterinfo.scale);
 		else
 			move->frame[index].aifunc (self, 0);
+	}
 
 	if (move->frame[index].thinkfunc)
 		move->frame[index].thinkfunc (self);
@@ -54656,6 +54591,8 @@ void WriteField2 (FILE *f, field_t *field, byte *base)
 			fwrite (*(char **)p, len, 1, f);
 		}
 		break;
+	default:
+		break;
 	}
 }
 
@@ -55508,6 +55445,8 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 				((float *)(b+f->ofs))[2] = 0;
 				break;
 			case F_IGNORE:
+				break;
+			default:
 				break;
 			}
 			return;
@@ -56816,15 +56755,6 @@ speed	default is 1000
 
 void use_target_blaster (edict_t *self, edict_t *other, edict_t *activator)
 {
-	int effect;
-
-	if (self->spawnflags & 2)
-		effect = 0;
-	else if (self->spawnflags & 1)
-		effect = EF_HYPERBLASTER;
-	else
-		effect = EF_BLASTER;
-
 	fire_blaster (self, self->s.origin, self->movedir, self->dmg, self->speed, EF_BLASTER, MOD_TARGET_BLASTER);
 	gi.sound (self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
@@ -59782,18 +59712,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak02         	1
 #define FRAME_attak03         	2
 #define FRAME_attak04         	3
+#undef FRAME_death101
 #define FRAME_death101        	4
+#undef FRAME_death102
 #define FRAME_death102        	5
+#undef FRAME_death103
 #define FRAME_death103        	6
+#undef FRAME_death104
 #define FRAME_death104        	7
+#undef FRAME_death105
 #define FRAME_death105        	8
+#undef FRAME_death106
 #define FRAME_death106        	9
 #define FRAME_death107        	10
+#undef FRAME_death201
 #define FRAME_death201        	11
+#undef FRAME_death202
 #define FRAME_death202        	12
+#undef FRAME_death203
 #define FRAME_death203        	13
+#undef FRAME_death204
 #define FRAME_death204        	14
+#undef FRAME_death205
 #define FRAME_death205        	15
+#undef FRAME_death206
 #define FRAME_death206        	16
 #define FRAME_death207        	17
 #define FRAME_death208        	18
@@ -59802,13 +59744,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death211        	21
 #define FRAME_death212        	22
 #define FRAME_death213        	23
+#undef FRAME_death301
 #define FRAME_death301        	24
+#undef FRAME_death302
 #define FRAME_death302        	25
+#undef FRAME_death303
 #define FRAME_death303        	26
+#undef FRAME_death304
 #define FRAME_death304        	27
+#undef FRAME_death305
 #define FRAME_death305        	28
+#undef FRAME_death306
 #define FRAME_death306        	29
+#undef FRAME_death307
 #define FRAME_death307        	30
+#undef FRAME_death308
 #define FRAME_death308        	31
 #define FRAME_death309        	32
 #define FRAME_death310        	33
@@ -59817,17 +59767,29 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death313        	36
 #define FRAME_death314        	37
 #define FRAME_death315        	38
+#undef FRAME_flip01
 #define FRAME_flip01          	39
+#undef FRAME_flip02
 #define FRAME_flip02          	40
+#undef FRAME_flip03
 #define FRAME_flip03          	41
+#undef FRAME_flip04
 #define FRAME_flip04          	42
+#undef FRAME_flip05
 #define FRAME_flip05          	43
+#undef FRAME_flip06
 #define FRAME_flip06          	44
+#undef FRAME_flip07
 #define FRAME_flip07          	45
+#undef FRAME_flip08
 #define FRAME_flip08          	46
+#undef FRAME_flip09
 #define FRAME_flip09          	47
+#undef FRAME_flip10
 #define FRAME_flip10          	48
+#undef FRAME_flip11
 #define FRAME_flip11          	49
+#undef FRAME_flip12
 #define FRAME_flip12          	50
 #define FRAME_flip13          	51
 #define FRAME_flip14          	52
@@ -59852,14 +59814,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_jump04          	71
 #define FRAME_jump05          	72
 #define FRAME_jump06          	73
+#undef FRAME_pain101
 #define FRAME_pain101         	74
+#undef FRAME_pain102
 #define FRAME_pain102         	75
+#undef FRAME_pain103
 #define FRAME_pain103         	76
+#undef FRAME_pain201
 #define FRAME_pain201         	77
+#undef FRAME_pain202
 #define FRAME_pain202         	78
+#undef FRAME_pain203
 #define FRAME_pain203         	79
+#undef FRAME_pain301
 #define FRAME_pain301         	80
+#undef FRAME_pain302
 #define FRAME_pain302         	81
+#undef FRAME_pain303
 #define FRAME_pain303         	82
 #define FRAME_push01          	83
 #define FRAME_push02          	84
@@ -59894,16 +59865,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_runs10          	113
 #define FRAME_runs11          	114
 #define FRAME_runs12          	115
+#undef FRAME_salute01
 #define FRAME_salute01        	116
+#undef FRAME_salute02
 #define FRAME_salute02        	117
+#undef FRAME_salute03
 #define FRAME_salute03        	118
+#undef FRAME_salute04
 #define FRAME_salute04        	119
+#undef FRAME_salute05
 #define FRAME_salute05        	120
+#undef FRAME_salute06
 #define FRAME_salute06        	121
+#undef FRAME_salute07
 #define FRAME_salute07        	122
+#undef FRAME_salute08
 #define FRAME_salute08        	123
+#undef FRAME_salute09
 #define FRAME_salute09        	124
+#undef FRAME_salute10
 #define FRAME_salute10        	125
+#undef FRAME_salute11
 #define FRAME_salute11        	126
 #define FRAME_salute12        	127
 #define FRAME_stand101        	128
@@ -60012,22 +59994,39 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_sw_std18        	231
 #define FRAME_sw_std19        	232
 #define FRAME_sw_std20        	233
+#undef FRAME_taunt01
 #define FRAME_taunt01         	234
+#undef FRAME_taunt02
 #define FRAME_taunt02         	235
+#undef FRAME_taunt03
 #define FRAME_taunt03         	236
+#undef FRAME_taunt04
 #define FRAME_taunt04         	237
+#undef FRAME_taunt05
 #define FRAME_taunt05         	238
+#undef FRAME_taunt06
 #define FRAME_taunt06         	239
+#undef FRAME_taunt07
 #define FRAME_taunt07         	240
+#undef FRAME_taunt08
 #define FRAME_taunt08         	241
+#undef FRAME_taunt09
 #define FRAME_taunt09         	242
+#undef FRAME_taunt10
 #define FRAME_taunt10         	243
+#undef FRAME_taunt11
 #define FRAME_taunt11         	244
+#undef FRAME_taunt12
 #define FRAME_taunt12         	245
+#undef FRAME_taunt13
 #define FRAME_taunt13         	246
+#undef FRAME_taunt14
 #define FRAME_taunt14         	247
+#undef FRAME_taunt15
 #define FRAME_taunt15         	248
+#undef FRAME_taunt16
 #define FRAME_taunt16         	249
+#undef FRAME_taunt17
 #define FRAME_taunt17         	250
 #define FRAME_walk01          	251
 #define FRAME_walk02          	252
@@ -60040,16 +60039,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk09          	259
 #define FRAME_walk10          	260
 #define FRAME_walk11          	261
+#undef FRAME_wave01
 #define FRAME_wave01          	262
+#undef FRAME_wave02
 #define FRAME_wave02          	263
+#undef FRAME_wave03
 #define FRAME_wave03          	264
+#undef FRAME_wave04
 #define FRAME_wave04          	265
+#undef FRAME_wave05
 #define FRAME_wave05          	266
+#undef FRAME_wave06
 #define FRAME_wave06          	267
+#undef FRAME_wave07
 #define FRAME_wave07          	268
+#undef FRAME_wave08
 #define FRAME_wave08          	269
+#undef FRAME_wave09
 #define FRAME_wave09          	270
+#undef FRAME_wave10
 #define FRAME_wave10          	271
+#undef FRAME_wave11
 #define FRAME_wave11          	272
 #define FRAME_wave12          	273
 #define FRAME_wave13          	274
@@ -60938,11 +60948,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walkc9          	33
 #define FRAME_walkc10         	34
 #define FRAME_walkc11         	35
+#undef FRAME_run1
 #define FRAME_run1            	36
+#undef FRAME_run2
 #define FRAME_run2            	37
+#undef FRAME_run3
 #define FRAME_run3            	38
+#undef FRAME_run4
 #define FRAME_run4            	39
+#undef FRAME_run5
 #define FRAME_run5            	40
+#undef FRAME_run6
 #define FRAME_run6            	41
 #define FRAME_att_a1          	42
 #define FRAME_att_a2          	43
@@ -61631,16 +61647,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by ModelGen - Do NOT Modify
 
+#undef FRAME_stand30
 #define FRAME_stand30         	0
+#undef FRAME_stand31
 #define FRAME_stand31         	1
+#undef FRAME_stand32
 #define FRAME_stand32         	2
+#undef FRAME_stand33
 #define FRAME_stand33         	3
+#undef FRAME_stand34
 #define FRAME_stand34         	4
+#undef FRAME_stand35
 #define FRAME_stand35         	5
+#undef FRAME_stand36
 #define FRAME_stand36         	6
+#undef FRAME_stand37
 #define FRAME_stand37         	7
+#undef FRAME_stand38
 #define FRAME_stand38         	8
+#undef FRAME_stand39
 #define FRAME_stand39         	9
+#undef FRAME_stand40
 #define FRAME_stand40         	10
 #define FRAME_stand41         	11
 #define FRAME_stand42         	12
@@ -61652,34 +61679,59 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand48         	18
 #define FRAME_stand49         	19
 #define FRAME_stand50         	20
+#undef FRAME_stand1
 #define FRAME_stand1          	21
+#undef FRAME_stand2
 #define FRAME_stand2          	22
+#undef FRAME_stand3
 #define FRAME_stand3          	23
+#undef FRAME_stand4
 #define FRAME_stand4          	24
+#undef FRAME_stand5
 #define FRAME_stand5          	25
 #define FRAME_stand6          	26
 #define FRAME_stand7          	27
 #define FRAME_stand8          	28
 #define FRAME_stand9          	29
+#undef FRAME_stand10
 #define FRAME_stand10         	30
+#undef FRAME_stand11
 #define FRAME_stand11         	31
+#undef FRAME_stand12
 #define FRAME_stand12         	32
+#undef FRAME_stand13
 #define FRAME_stand13         	33
+#undef FRAME_stand14
 #define FRAME_stand14         	34
+#undef FRAME_stand15
 #define FRAME_stand15         	35
+#undef FRAME_stand16
 #define FRAME_stand16         	36
+#undef FRAME_stand17
 #define FRAME_stand17         	37
+#undef FRAME_stand18
 #define FRAME_stand18         	38
+#undef FRAME_stand19
 #define FRAME_stand19         	39
+#undef FRAME_stand20
 #define FRAME_stand20         	40
+#undef FRAME_stand21
 #define FRAME_stand21         	41
+#undef FRAME_stand22
 #define FRAME_stand22         	42
+#undef FRAME_stand23
 #define FRAME_stand23         	43
+#undef FRAME_stand24
 #define FRAME_stand24         	44
+#undef FRAME_stand25
 #define FRAME_stand25         	45
+#undef FRAME_stand26
 #define FRAME_stand26         	46
+#undef FRAME_stand27
 #define FRAME_stand27         	47
+#undef FRAME_stand28
 #define FRAME_stand28         	48
+#undef FRAME_stand29
 #define FRAME_stand29         	49
 #define FRAME_walk1           	50
 #define FRAME_walk2           	51
@@ -61690,7 +61742,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk7           	56
 #define FRAME_walk8           	57
 #define FRAME_walk9           	58
+#undef FRAME_walk10
 #define FRAME_walk10          	59
+#undef FRAME_walk11
 #define FRAME_walk11          	60
 #define FRAME_walk12          	61
 #define FRAME_walk13          	62
@@ -61701,13 +61755,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk18          	67
 #define FRAME_walk19          	68
 #define FRAME_walk20          	69
+#undef FRAME_attack1
 #define FRAME_attack1         	70
+#undef FRAME_attack2
 #define FRAME_attack2         	71
+#undef FRAME_attack3
 #define FRAME_attack3         	72
+#undef FRAME_attack4
 #define FRAME_attack4         	73
+#undef FRAME_attack5
 #define FRAME_attack5         	74
+#undef FRAME_attack6
 #define FRAME_attack6         	75
+#undef FRAME_attack7
 #define FRAME_attack7         	76
+#undef FRAME_attack8
 #define FRAME_attack8         	77
 #define FRAME_attack9         	78
 #define FRAME_attack10        	79
@@ -61763,17 +61825,29 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain21          	129
 #define FRAME_pain22          	130
 #define FRAME_pain23          	131
+#undef FRAME_death2
 #define FRAME_death2          	132
+#undef FRAME_death3
 #define FRAME_death3          	133
+#undef FRAME_death4
 #define FRAME_death4          	134
+#undef FRAME_death5
 #define FRAME_death5          	135
+#undef FRAME_death6
 #define FRAME_death6          	136
+#undef FRAME_death7
 #define FRAME_death7          	137
+#undef FRAME_death8
 #define FRAME_death8          	138
+#undef FRAME_death9
 #define FRAME_death9          	139
+#undef FRAME_death10
 #define FRAME_death10         	140
+#undef FRAME_death11
 #define FRAME_death11         	141
+#undef FRAME_death12
 #define FRAME_death12         	142
+#undef FRAME_death13
 #define FRAME_death13         	143
 #define FRAME_death14         	144
 #define FRAME_death15         	145
@@ -62331,7 +62405,6 @@ qboolean Boss2_CheckAttack (edict_t *self)
 	vec3_t	temp;
 	float	chance;
 	trace_t	tr;
-	qboolean	enemy_infront;
 	int			enemy_range;
 	float		enemy_yaw;
 
@@ -62350,7 +62423,6 @@ qboolean Boss2_CheckAttack (edict_t *self)
 			return false;
 	}
 	
-	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -62559,56 +62631,107 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death07         	37
 #define FRAME_death08         	38
 #define FRAME_death09         	39
+#undef FRAME_death10
 #define FRAME_death10         	40
+#undef FRAME_death11
 #define FRAME_death11         	41
+#undef FRAME_death12
 #define FRAME_death12         	42
+#undef FRAME_death13
 #define FRAME_death13         	43
+#undef FRAME_death14
 #define FRAME_death14         	44
+#undef FRAME_death15
 #define FRAME_death15         	45
+#undef FRAME_death16
 #define FRAME_death16         	46
+#undef FRAME_death17
 #define FRAME_death17         	47
+#undef FRAME_death18
 #define FRAME_death18         	48
+#undef FRAME_death19
 #define FRAME_death19         	49
+#undef FRAME_death20
 #define FRAME_death20         	50
+#undef FRAME_death21
 #define FRAME_death21         	51
+#undef FRAME_death22
 #define FRAME_death22         	52
+#undef FRAME_death23
 #define FRAME_death23         	53
+#undef FRAME_death24
 #define FRAME_death24         	54
+#undef FRAME_death25
 #define FRAME_death25         	55
+#undef FRAME_death26
 #define FRAME_death26         	56
+#undef FRAME_death27
 #define FRAME_death27         	57
+#undef FRAME_death28
 #define FRAME_death28         	58
+#undef FRAME_death29
 #define FRAME_death29         	59
+#undef FRAME_death30
 #define FRAME_death30         	60
+#undef FRAME_death31
 #define FRAME_death31         	61
+#undef FRAME_death32
 #define FRAME_death32         	62
+#undef FRAME_death33
 #define FRAME_death33         	63
+#undef FRAME_death34
 #define FRAME_death34         	64
+#undef FRAME_death35
 #define FRAME_death35         	65
+#undef FRAME_death36
 #define FRAME_death36         	66
+#undef FRAME_death37
 #define FRAME_death37         	67
+#undef FRAME_death38
 #define FRAME_death38         	68
+#undef FRAME_death39
 #define FRAME_death39         	69
+#undef FRAME_death40
 #define FRAME_death40         	70
+#undef FRAME_death41
 #define FRAME_death41         	71
+#undef FRAME_death42
 #define FRAME_death42         	72
+#undef FRAME_death43
 #define FRAME_death43         	73
+#undef FRAME_death44
 #define FRAME_death44         	74
+#undef FRAME_death45
 #define FRAME_death45         	75
+#undef FRAME_death46
 #define FRAME_death46         	76
+#undef FRAME_death47
 #define FRAME_death47         	77
+#undef FRAME_death48
 #define FRAME_death48         	78
+#undef FRAME_death49
 #define FRAME_death49         	79
+#undef FRAME_death50
 #define FRAME_death50         	80
+#undef FRAME_pain101
 #define FRAME_pain101         	81
+#undef FRAME_pain102
 #define FRAME_pain102         	82
+#undef FRAME_pain103
 #define FRAME_pain103         	83
+#undef FRAME_pain201
 #define FRAME_pain201         	84
+#undef FRAME_pain202
 #define FRAME_pain202         	85
+#undef FRAME_pain203
 #define FRAME_pain203         	86
+#undef FRAME_pain301
 #define FRAME_pain301         	87
+#undef FRAME_pain302
 #define FRAME_pain302         	88
+#undef FRAME_pain303
 #define FRAME_pain303         	89
+#undef FRAME_pain304
 #define FRAME_pain304         	90
 #define FRAME_pain305         	91
 #define FRAME_pain306         	92
@@ -62631,76 +62754,146 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain323         	109
 #define FRAME_pain324         	110
 #define FRAME_pain325         	111
+#undef FRAME_stand01
 #define FRAME_stand01         	112
+#undef FRAME_stand02
 #define FRAME_stand02         	113
+#undef FRAME_stand03
 #define FRAME_stand03         	114
+#undef FRAME_stand04
 #define FRAME_stand04         	115
+#undef FRAME_stand05
 #define FRAME_stand05         	116
+#undef FRAME_stand06
 #define FRAME_stand06         	117
+#undef FRAME_stand07
 #define FRAME_stand07         	118
+#undef FRAME_stand08
 #define FRAME_stand08         	119
+#undef FRAME_stand09
 #define FRAME_stand09         	120
+#undef FRAME_stand10
 #define FRAME_stand10         	121
+#undef FRAME_stand11
 #define FRAME_stand11         	122
+#undef FRAME_stand12
 #define FRAME_stand12         	123
+#undef FRAME_stand13
 #define FRAME_stand13         	124
+#undef FRAME_stand14
 #define FRAME_stand14         	125
+#undef FRAME_stand15
 #define FRAME_stand15         	126
+#undef FRAME_stand16
 #define FRAME_stand16         	127
+#undef FRAME_stand17
 #define FRAME_stand17         	128
+#undef FRAME_stand18
 #define FRAME_stand18         	129
+#undef FRAME_stand19
 #define FRAME_stand19         	130
+#undef FRAME_stand20
 #define FRAME_stand20         	131
+#undef FRAME_stand21
 #define FRAME_stand21         	132
+#undef FRAME_stand22
 #define FRAME_stand22         	133
+#undef FRAME_stand23
 #define FRAME_stand23         	134
+#undef FRAME_stand24
 #define FRAME_stand24         	135
+#undef FRAME_stand25
 #define FRAME_stand25         	136
+#undef FRAME_stand26
 #define FRAME_stand26         	137
+#undef FRAME_stand27
 #define FRAME_stand27         	138
+#undef FRAME_stand28
 #define FRAME_stand28         	139
+#undef FRAME_stand29
 #define FRAME_stand29         	140
+#undef FRAME_stand30
 #define FRAME_stand30         	141
+#undef FRAME_stand31
 #define FRAME_stand31         	142
+#undef FRAME_stand32
 #define FRAME_stand32         	143
+#undef FRAME_stand33
 #define FRAME_stand33         	144
+#undef FRAME_stand34
 #define FRAME_stand34         	145
+#undef FRAME_stand35
 #define FRAME_stand35         	146
+#undef FRAME_stand36
 #define FRAME_stand36         	147
+#undef FRAME_stand37
 #define FRAME_stand37         	148
+#undef FRAME_stand38
 #define FRAME_stand38         	149
+#undef FRAME_stand39
 #define FRAME_stand39         	150
+#undef FRAME_stand40
 #define FRAME_stand40         	151
+#undef FRAME_stand41
 #define FRAME_stand41         	152
+#undef FRAME_stand42
 #define FRAME_stand42         	153
+#undef FRAME_stand43
 #define FRAME_stand43         	154
+#undef FRAME_stand44
 #define FRAME_stand44         	155
+#undef FRAME_stand45
 #define FRAME_stand45         	156
+#undef FRAME_stand46
 #define FRAME_stand46         	157
+#undef FRAME_stand47
 #define FRAME_stand47         	158
+#undef FRAME_stand48
 #define FRAME_stand48         	159
+#undef FRAME_stand49
 #define FRAME_stand49         	160
+#undef FRAME_stand50
 #define FRAME_stand50         	161
 #define FRAME_stand51         	162
+#undef FRAME_walk01
 #define FRAME_walk01          	163
+#undef FRAME_walk02
 #define FRAME_walk02          	164
+#undef FRAME_walk03
 #define FRAME_walk03          	165
+#undef FRAME_walk04
 #define FRAME_walk04          	166
+#undef FRAME_walk05
 #define FRAME_walk05          	167
+#undef FRAME_walk06
 #define FRAME_walk06          	168
+#undef FRAME_walk07
 #define FRAME_walk07          	169
+#undef FRAME_walk08
 #define FRAME_walk08          	170
+#undef FRAME_walk09
 #define FRAME_walk09          	171
+#undef FRAME_walk10
 #define FRAME_walk10          	172
+#undef FRAME_walk11
 #define FRAME_walk11          	173
+#undef FRAME_walk12
 #define FRAME_walk12          	174
+#undef FRAME_walk13
 #define FRAME_walk13          	175
+#undef FRAME_walk14
 #define FRAME_walk14          	176
+#undef FRAME_walk15
 #define FRAME_walk15          	177
+#undef FRAME_walk16
 #define FRAME_walk16          	178
+#undef FRAME_walk17
 #define FRAME_walk17          	179
+#undef FRAME_walk18
 #define FRAME_walk18          	180
+#undef FRAME_walk19
 #define FRAME_walk19          	181
+#undef FRAME_walk20
 #define FRAME_walk20          	182
 #define FRAME_walk21          	183
 #define FRAME_walk22          	184
@@ -62770,18 +62963,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak514        	248
 #define FRAME_attak515        	249
 #define FRAME_attak516        	250
+#undef FRAME_death201
 #define FRAME_death201        	251
+#undef FRAME_death202
 #define FRAME_death202        	252
+#undef FRAME_death203
 #define FRAME_death203        	253
+#undef FRAME_death204
 #define FRAME_death204        	254
+#undef FRAME_death205
 #define FRAME_death205        	255
+#undef FRAME_death206
 #define FRAME_death206        	256
+#undef FRAME_death207
 #define FRAME_death207        	257
+#undef FRAME_death208
 #define FRAME_death208        	258
+#undef FRAME_death209
 #define FRAME_death209        	259
+#undef FRAME_death210
 #define FRAME_death210        	260
+#undef FRAME_death211
 #define FRAME_death211        	261
+#undef FRAME_death212
 #define FRAME_death212        	262
+#undef FRAME_death213
 #define FRAME_death213        	263
 #define FRAME_death214        	264
 #define FRAME_death215        	265
@@ -62865,31 +63071,52 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death293        	343
 #define FRAME_death294        	344
 #define FRAME_death295        	345
+#undef FRAME_death301
 #define FRAME_death301        	346
+#undef FRAME_death302
 #define FRAME_death302        	347
+#undef FRAME_death303
 #define FRAME_death303        	348
+#undef FRAME_death304
 #define FRAME_death304        	349
+#undef FRAME_death305
 #define FRAME_death305        	350
+#undef FRAME_death306
 #define FRAME_death306        	351
+#undef FRAME_death307
 #define FRAME_death307        	352
+#undef FRAME_death308
 #define FRAME_death308        	353
+#undef FRAME_death309
 #define FRAME_death309        	354
+#undef FRAME_death310
 #define FRAME_death310        	355
+#undef FRAME_death311
 #define FRAME_death311        	356
+#undef FRAME_death312
 #define FRAME_death312        	357
+#undef FRAME_death313
 #define FRAME_death313        	358
+#undef FRAME_death314
 #define FRAME_death314        	359
+#undef FRAME_death315
 #define FRAME_death315        	360
 #define FRAME_death316        	361
 #define FRAME_death317        	362
 #define FRAME_death318        	363
 #define FRAME_death319        	364
 #define FRAME_death320        	365
+#undef FRAME_jump01
 #define FRAME_jump01          	366
+#undef FRAME_jump02
 #define FRAME_jump02          	367
+#undef FRAME_jump03
 #define FRAME_jump03          	368
+#undef FRAME_jump04
 #define FRAME_jump04          	369
+#undef FRAME_jump05
 #define FRAME_jump05          	370
+#undef FRAME_jump06
 #define FRAME_jump06          	371
 #define FRAME_jump07          	372
 #define FRAME_jump08          	373
@@ -62933,28 +63160,51 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain625         	411
 #define FRAME_pain626         	412
 #define FRAME_pain627         	413
+#undef FRAME_stand201
 #define FRAME_stand201        	414
+#undef FRAME_stand202
 #define FRAME_stand202        	415
+#undef FRAME_stand203
 #define FRAME_stand203        	416
+#undef FRAME_stand204
 #define FRAME_stand204        	417
+#undef FRAME_stand205
 #define FRAME_stand205        	418
+#undef FRAME_stand206
 #define FRAME_stand206        	419
+#undef FRAME_stand207
 #define FRAME_stand207        	420
+#undef FRAME_stand208
 #define FRAME_stand208        	421
+#undef FRAME_stand209
 #define FRAME_stand209        	422
+#undef FRAME_stand210
 #define FRAME_stand210        	423
+#undef FRAME_stand211
 #define FRAME_stand211        	424
+#undef FRAME_stand212
 #define FRAME_stand212        	425
+#undef FRAME_stand213
 #define FRAME_stand213        	426
+#undef FRAME_stand214
 #define FRAME_stand214        	427
+#undef FRAME_stand215
 #define FRAME_stand215        	428
+#undef FRAME_stand216
 #define FRAME_stand216        	429
+#undef FRAME_stand217
 #define FRAME_stand217        	430
+#undef FRAME_stand218
 #define FRAME_stand218        	431
+#undef FRAME_stand219
 #define FRAME_stand219        	432
+#undef FRAME_stand220
 #define FRAME_stand220        	433
+#undef FRAME_stand221
 #define FRAME_stand221        	434
+#undef FRAME_stand222
 #define FRAME_stand222        	435
+#undef FRAME_stand223
 #define FRAME_stand223        	436
 #define FRAME_stand224        	437
 #define FRAME_stand225        	438
@@ -63816,12 +64066,6 @@ void jorg_firebullet (edict_t *self)
 
 void jorg_attack(edict_t *self)
 {
-	vec3_t	vec;
-	float	range;
-	
-	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
-	range = VectorLength (vec);
-
 	if (random() <= 0.75)
 	{
 		gi.sound (self, CHAN_VOICE, sound_attack1, 1, ATTN_NORM,0);
@@ -63880,7 +64124,6 @@ qboolean Jorg_CheckAttack (edict_t *self)
 	vec3_t	temp;
 	float	chance;
 	trace_t	tr;
-	qboolean	enemy_infront;
 	int			enemy_range;
 	float		enemy_yaw;
 
@@ -63899,7 +64142,6 @@ qboolean Jorg_CheckAttack (edict_t *self)
 			return false;
 	}
 	
-	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -64613,6 +64855,7 @@ void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
 	else
 	{
 		if (damage <= 150)
+		{
 			if (random() <= 0.45)
 			{
 				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
@@ -64624,6 +64867,7 @@ void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
 				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			}
+		}
 	}
 };
 
@@ -64634,15 +64878,9 @@ void makron_sight(edict_t *self, edict_t *other)
 
 void makron_attack(edict_t *self)
 {
-	vec3_t	vec;
-	float	range;
 	float	r;
 
 	r = random();
-
-	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
-	range = VectorLength (vec);
-
 
 	if (r <= 0.3)
 		self->monsterinfo.currentmove = &makron_move_attack3;
@@ -64743,7 +64981,6 @@ qboolean Makron_CheckAttack (edict_t *self)
 	vec3_t	temp;
 	float	chance;
 	trace_t	tr;
-	qboolean	enemy_infront;
 	int			enemy_range;
 	float		enemy_yaw;
 
@@ -64762,7 +64999,6 @@ qboolean Makron_CheckAttack (edict_t *self)
 			return false;
 	}
 	
-	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -65007,22 +65243,39 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk111         	10
 #define FRAME_walk112         	11
 #define FRAME_walk113         	12
+#undef FRAME_walk201
 #define FRAME_walk201         	13
+#undef FRAME_walk202
 #define FRAME_walk202         	14
+#undef FRAME_walk203
 #define FRAME_walk203         	15
+#undef FRAME_walk204
 #define FRAME_walk204         	16
+#undef FRAME_walk205
 #define FRAME_walk205         	17
+#undef FRAME_walk206
 #define FRAME_walk206         	18
+#undef FRAME_walk207
 #define FRAME_walk207         	19
+#undef FRAME_walk208
 #define FRAME_walk208         	20
+#undef FRAME_walk209
 #define FRAME_walk209         	21
+#undef FRAME_walk210
 #define FRAME_walk210         	22
+#undef FRAME_walk211
 #define FRAME_walk211         	23
+#undef FRAME_walk212
 #define FRAME_walk212         	24
+#undef FRAME_walk213
 #define FRAME_walk213         	25
+#undef FRAME_walk214
 #define FRAME_walk214         	26
+#undef FRAME_walk215
 #define FRAME_walk215         	27
+#undef FRAME_walk216
 #define FRAME_walk216         	28
+#undef FRAME_walk217
 #define FRAME_walk217         	29
 #define FRAME_walk218         	30
 #define FRAME_walk219         	31
@@ -65047,44 +65300,79 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk238         	50
 #define FRAME_walk239         	51
 #define FRAME_walk240         	52
+#undef FRAME_attak101
 #define FRAME_attak101        	53
+#undef FRAME_attak102
 #define FRAME_attak102        	54
+#undef FRAME_attak103
 #define FRAME_attak103        	55
+#undef FRAME_attak104
 #define FRAME_attak104        	56
+#undef FRAME_attak105
 #define FRAME_attak105        	57
+#undef FRAME_attak106
 #define FRAME_attak106        	58
+#undef FRAME_attak107
 #define FRAME_attak107        	59
+#undef FRAME_attak108
 #define FRAME_attak108        	60
+#undef FRAME_attak109
 #define FRAME_attak109        	61
+#undef FRAME_attak110
 #define FRAME_attak110        	62
+#undef FRAME_attak111
 #define FRAME_attak111        	63
+#undef FRAME_attak112
 #define FRAME_attak112        	64
+#undef FRAME_attak113
 #define FRAME_attak113        	65
+#undef FRAME_attak114
 #define FRAME_attak114        	66
+#undef FRAME_attak115
 #define FRAME_attak115        	67
+#undef FRAME_attak116
 #define FRAME_attak116        	68
+#undef FRAME_attak117
 #define FRAME_attak117        	69
+#undef FRAME_attak118
 #define FRAME_attak118        	70
+#undef FRAME_attak201
 #define FRAME_attak201        	71
+#undef FRAME_attak202
 #define FRAME_attak202        	72
+#undef FRAME_attak203
 #define FRAME_attak203        	73
+#undef FRAME_attak204
 #define FRAME_attak204        	74
+#undef FRAME_attak205
 #define FRAME_attak205        	75
+#undef FRAME_attak206
 #define FRAME_attak206        	76
+#undef FRAME_attak207
 #define FRAME_attak207        	77
+#undef FRAME_attak208
 #define FRAME_attak208        	78
+#undef FRAME_attak209
 #define FRAME_attak209        	79
+#undef FRAME_attak210
 #define FRAME_attak210        	80
+#undef FRAME_attak211
 #define FRAME_attak211        	81
+#undef FRAME_attak212
 #define FRAME_attak212        	82
+#undef FRAME_attak213
 #define FRAME_attak213        	83
 #define FRAME_attak214        	84
 #define FRAME_attak215        	85
 #define FRAME_attak216        	86
 #define FRAME_attak217        	87
+#undef FRAME_pain101
 #define FRAME_pain101         	88
+#undef FRAME_pain102
 #define FRAME_pain102         	89
+#undef FRAME_pain103
 #define FRAME_pain103         	90
+#undef FRAME_pain104
 #define FRAME_pain104         	91
 #define FRAME_pain105         	92
 #define FRAME_pain106         	93
@@ -65103,26 +65391,43 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain119         	106
 #define FRAME_pain120         	107
 #define FRAME_pain121         	108
+#undef FRAME_pain201
 #define FRAME_pain201         	109
+#undef FRAME_pain202
 #define FRAME_pain202         	110
+#undef FRAME_pain203
 #define FRAME_pain203         	111
+#undef FRAME_pain204
 #define FRAME_pain204         	112
 #define FRAME_pain205         	113
 #define FRAME_pain206         	114
 #define FRAME_pain207         	115
 #define FRAME_pain208         	116
+#undef FRAME_pain301
 #define FRAME_pain301         	117
+#undef FRAME_pain302
 #define FRAME_pain302         	118
+#undef FRAME_pain303
 #define FRAME_pain303         	119
+#undef FRAME_pain304
 #define FRAME_pain304         	120
+#undef FRAME_pain305
 #define FRAME_pain305         	121
+#undef FRAME_pain306
 #define FRAME_pain306         	122
+#undef FRAME_death101
 #define FRAME_death101        	123
+#undef FRAME_death102
 #define FRAME_death102        	124
+#undef FRAME_death103
 #define FRAME_death103        	125
+#undef FRAME_death104
 #define FRAME_death104        	126
+#undef FRAME_death105
 #define FRAME_death105        	127
+#undef FRAME_death106
 #define FRAME_death106        	128
+#undef FRAME_death107
 #define FRAME_death107        	129
 #define FRAME_death108        	130
 #define FRAME_death109        	131
@@ -65135,10 +65440,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death116        	138
 #define FRAME_death117        	139
 #define FRAME_death118        	140
+#undef FRAME_death201
 #define FRAME_death201        	141
+#undef FRAME_death202
 #define FRAME_death202        	142
+#undef FRAME_death203
 #define FRAME_death203        	143
+#undef FRAME_death204
 #define FRAME_death204        	144
+#undef FRAME_death205
 #define FRAME_death205        	145
 #define FRAME_duck01          	146
 #define FRAME_duck02          	147
@@ -65156,56 +65466,107 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_defens06        	159
 #define FRAME_defens07        	160
 #define FRAME_defens08        	161
+#undef FRAME_stand01
 #define FRAME_stand01         	162
+#undef FRAME_stand02
 #define FRAME_stand02         	163
+#undef FRAME_stand03
 #define FRAME_stand03         	164
+#undef FRAME_stand04
 #define FRAME_stand04         	165
+#undef FRAME_stand05
 #define FRAME_stand05         	166
+#undef FRAME_stand06
 #define FRAME_stand06         	167
+#undef FRAME_stand07
 #define FRAME_stand07         	168
+#undef FRAME_stand08
 #define FRAME_stand08         	169
+#undef FRAME_stand09
 #define FRAME_stand09         	170
+#undef FRAME_stand10
 #define FRAME_stand10         	171
+#undef FRAME_stand11
 #define FRAME_stand11         	172
+#undef FRAME_stand12
 #define FRAME_stand12         	173
+#undef FRAME_stand13
 #define FRAME_stand13         	174
+#undef FRAME_stand14
 #define FRAME_stand14         	175
+#undef FRAME_stand15
 #define FRAME_stand15         	176
+#undef FRAME_stand16
 #define FRAME_stand16         	177
+#undef FRAME_stand17
 #define FRAME_stand17         	178
+#undef FRAME_stand18
 #define FRAME_stand18         	179
+#undef FRAME_stand19
 #define FRAME_stand19         	180
+#undef FRAME_stand20
 #define FRAME_stand20         	181
+#undef FRAME_stand21
 #define FRAME_stand21         	182
+#undef FRAME_stand22
 #define FRAME_stand22         	183
+#undef FRAME_stand23
 #define FRAME_stand23         	184
+#undef FRAME_stand24
 #define FRAME_stand24         	185
+#undef FRAME_stand25
 #define FRAME_stand25         	186
+#undef FRAME_stand26
 #define FRAME_stand26         	187
+#undef FRAME_stand27
 #define FRAME_stand27         	188
+#undef FRAME_stand28
 #define FRAME_stand28         	189
+#undef FRAME_stand29
 #define FRAME_stand29         	190
+#undef FRAME_stand30
 #define FRAME_stand30         	191
+#undef FRAME_stand31
 #define FRAME_stand31         	192
+#undef FRAME_stand32
 #define FRAME_stand32         	193
+#undef FRAME_stand33
 #define FRAME_stand33         	194
+#undef FRAME_stand34
 #define FRAME_stand34         	195
+#undef FRAME_stand35
 #define FRAME_stand35         	196
+#undef FRAME_stand36
 #define FRAME_stand36         	197
+#undef FRAME_stand37
 #define FRAME_stand37         	198
+#undef FRAME_stand38
 #define FRAME_stand38         	199
+#undef FRAME_stand39
 #define FRAME_stand39         	200
+#undef FRAME_stand40
 #define FRAME_stand40         	201
+#undef FRAME_stand41
 #define FRAME_stand41         	202
+#undef FRAME_stand42
 #define FRAME_stand42         	203
+#undef FRAME_stand43
 #define FRAME_stand43         	204
+#undef FRAME_stand44
 #define FRAME_stand44         	205
+#undef FRAME_stand45
 #define FRAME_stand45         	206
+#undef FRAME_stand46
 #define FRAME_stand46         	207
+#undef FRAME_stand47
 #define FRAME_stand47         	208
+#undef FRAME_stand48
 #define FRAME_stand48         	209
+#undef FRAME_stand49
 #define FRAME_stand49         	210
+#undef FRAME_stand50
 #define FRAME_stand50         	211
+#undef FRAME_stand51
 #define FRAME_stand51         	212
 #define FRAME_stand52         	213
 #define FRAME_stand53         	214
@@ -65920,23 +66281,41 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by qdata - Do NOT Modify
 
+#undef FRAME_attak101
 #define FRAME_attak101        	0
+#undef FRAME_attak102
 #define FRAME_attak102        	1
+#undef FRAME_attak103
 #define FRAME_attak103        	2
+#undef FRAME_attak104
 #define FRAME_attak104        	3
+#undef FRAME_attak105
 #define FRAME_attak105        	4
+#undef FRAME_attak106
 #define FRAME_attak106        	5
+#undef FRAME_attak107
 #define FRAME_attak107        	6
+#undef FRAME_attak108
 #define FRAME_attak108        	7
+#undef FRAME_attak109
 #define FRAME_attak109        	8
+#undef FRAME_attak110
 #define FRAME_attak110        	9
+#undef FRAME_attak111
 #define FRAME_attak111        	10
+#undef FRAME_attak112
 #define FRAME_attak112        	11
+#undef FRAME_attak113
 #define FRAME_attak113        	12
+#undef FRAME_attak114
 #define FRAME_attak114        	13
+#undef FRAME_attak115
 #define FRAME_attak115        	14
+#undef FRAME_attak116
 #define FRAME_attak116        	15
+#undef FRAME_attak117
 #define FRAME_attak117        	16
+#undef FRAME_attak118
 #define FRAME_attak118        	17
 #define FRAME_attak119        	18
 #define FRAME_attak120        	19
@@ -65952,179 +66331,353 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak130        	29
 #define FRAME_attak131        	30
 #define FRAME_attak132        	31
+#undef FRAME_attak201
 #define FRAME_attak201        	32
+#undef FRAME_attak202
 #define FRAME_attak202        	33
+#undef FRAME_attak203
 #define FRAME_attak203        	34
+#undef FRAME_attak204
 #define FRAME_attak204        	35
+#undef FRAME_attak205
 #define FRAME_attak205        	36
+#undef FRAME_attak206
 #define FRAME_attak206        	37
+#undef FRAME_attak207
 #define FRAME_attak207        	38
+#undef FRAME_attak208
 #define FRAME_attak208        	39
+#undef FRAME_attak209
 #define FRAME_attak209        	40
+#undef FRAME_attak210
 #define FRAME_attak210        	41
+#undef FRAME_attak211
 #define FRAME_attak211        	42
+#undef FRAME_attak212
 #define FRAME_attak212        	43
+#undef FRAME_attak213
 #define FRAME_attak213        	44
+#undef FRAME_attak214
 #define FRAME_attak214        	45
+#undef FRAME_attak215
 #define FRAME_attak215        	46
+#undef FRAME_attak216
 #define FRAME_attak216        	47
+#undef FRAME_death101
 #define FRAME_death101        	48
+#undef FRAME_death102
 #define FRAME_death102        	49
+#undef FRAME_death103
 #define FRAME_death103        	50
+#undef FRAME_death104
 #define FRAME_death104        	51
+#undef FRAME_death105
 #define FRAME_death105        	52
+#undef FRAME_death106
 #define FRAME_death106        	53
+#undef FRAME_death107
 #define FRAME_death107        	54
+#undef FRAME_death108
 #define FRAME_death108        	55
+#undef FRAME_death109
 #define FRAME_death109        	56
+#undef FRAME_death110
 #define FRAME_death110        	57
+#undef FRAME_death111
 #define FRAME_death111        	58
+#undef FRAME_death112
 #define FRAME_death112        	59
+#undef FRAME_death201
 #define FRAME_death201        	60
+#undef FRAME_death202
 #define FRAME_death202        	61
+#undef FRAME_death203
 #define FRAME_death203        	62
+#undef FRAME_death204
 #define FRAME_death204        	63
+#undef FRAME_death205
 #define FRAME_death205        	64
+#undef FRAME_death206
 #define FRAME_death206        	65
+#undef FRAME_death207
 #define FRAME_death207        	66
+#undef FRAME_death208
 #define FRAME_death208        	67
+#undef FRAME_death209
 #define FRAME_death209        	68
+#undef FRAME_death210
 #define FRAME_death210        	69
+#undef FRAME_death211
 #define FRAME_death211        	70
+#undef FRAME_death212
 #define FRAME_death212        	71
+#undef FRAME_death213
 #define FRAME_death213        	72
+#undef FRAME_death214
 #define FRAME_death214        	73
+#undef FRAME_death215
 #define FRAME_death215        	74
+#undef FRAME_death216
 #define FRAME_death216        	75
+#undef FRAME_death217
 #define FRAME_death217        	76
+#undef FRAME_death218
 #define FRAME_death218        	77
+#undef FRAME_death219
 #define FRAME_death219        	78
+#undef FRAME_death220
 #define FRAME_death220        	79
+#undef FRAME_death221
 #define FRAME_death221        	80
+#undef FRAME_death222
 #define FRAME_death222        	81
+#undef FRAME_death223
 #define FRAME_death223        	82
+#undef FRAME_duck01
 #define FRAME_duck01          	83
+#undef FRAME_duck02
 #define FRAME_duck02          	84
+#undef FRAME_duck03
 #define FRAME_duck03          	85
+#undef FRAME_duck04
 #define FRAME_duck04          	86
+#undef FRAME_duck05
 #define FRAME_duck05          	87
+#undef FRAME_duck06
 #define FRAME_duck06          	88
+#undef FRAME_duck07
 #define FRAME_duck07          	89
+#undef FRAME_pain101
 #define FRAME_pain101         	90
+#undef FRAME_pain102
 #define FRAME_pain102         	91
+#undef FRAME_pain103
 #define FRAME_pain103         	92
+#undef FRAME_pain104
 #define FRAME_pain104         	93
+#undef FRAME_pain105
 #define FRAME_pain105         	94
+#undef FRAME_pain201
 #define FRAME_pain201         	95
+#undef FRAME_pain202
 #define FRAME_pain202         	96
+#undef FRAME_pain203
 #define FRAME_pain203         	97
+#undef FRAME_pain204
 #define FRAME_pain204         	98
+#undef FRAME_pain205
 #define FRAME_pain205         	99
+#undef FRAME_pain301
 #define FRAME_pain301         	100
+#undef FRAME_pain302
 #define FRAME_pain302         	101
+#undef FRAME_pain303
 #define FRAME_pain303         	102
+#undef FRAME_pain304
 #define FRAME_pain304         	103
+#undef FRAME_pain305
 #define FRAME_pain305         	104
+#undef FRAME_pain306
 #define FRAME_pain306         	105
+#undef FRAME_pain307
 #define FRAME_pain307         	106
+#undef FRAME_pain308
 #define FRAME_pain308         	107
+#undef FRAME_pain309
 #define FRAME_pain309         	108
+#undef FRAME_pain310
 #define FRAME_pain310         	109
+#undef FRAME_pain311
 #define FRAME_pain311         	110
+#undef FRAME_pain312
 #define FRAME_pain312         	111
+#undef FRAME_pain313
 #define FRAME_pain313         	112
+#undef FRAME_pain314
 #define FRAME_pain314         	113
+#undef FRAME_pain315
 #define FRAME_pain315         	114
+#undef FRAME_pain316
 #define FRAME_pain316         	115
+#undef FRAME_pain317
 #define FRAME_pain317         	116
+#undef FRAME_pain318
 #define FRAME_pain318         	117
+#undef FRAME_pain319
 #define FRAME_pain319         	118
+#undef FRAME_pain320
 #define FRAME_pain320         	119
+#undef FRAME_pain321
 #define FRAME_pain321         	120
+#undef FRAME_stand101
 #define FRAME_stand101        	121
+#undef FRAME_stand102
 #define FRAME_stand102        	122
+#undef FRAME_stand103
 #define FRAME_stand103        	123
+#undef FRAME_stand104
 #define FRAME_stand104        	124
+#undef FRAME_stand105
 #define FRAME_stand105        	125
+#undef FRAME_stand106
 #define FRAME_stand106        	126
+#undef FRAME_stand107
 #define FRAME_stand107        	127
+#undef FRAME_stand108
 #define FRAME_stand108        	128
+#undef FRAME_stand109
 #define FRAME_stand109        	129
+#undef FRAME_stand110
 #define FRAME_stand110        	130
+#undef FRAME_stand111
 #define FRAME_stand111        	131
+#undef FRAME_stand112
 #define FRAME_stand112        	132
+#undef FRAME_stand113
 #define FRAME_stand113        	133
+#undef FRAME_stand114
 #define FRAME_stand114        	134
+#undef FRAME_stand115
 #define FRAME_stand115        	135
+#undef FRAME_stand116
 #define FRAME_stand116        	136
+#undef FRAME_stand117
 #define FRAME_stand117        	137
+#undef FRAME_stand118
 #define FRAME_stand118        	138
+#undef FRAME_stand119
 #define FRAME_stand119        	139
+#undef FRAME_stand120
 #define FRAME_stand120        	140
+#undef FRAME_stand121
 #define FRAME_stand121        	141
+#undef FRAME_stand122
 #define FRAME_stand122        	142
+#undef FRAME_stand123
 #define FRAME_stand123        	143
+#undef FRAME_stand124
 #define FRAME_stand124        	144
+#undef FRAME_stand125
 #define FRAME_stand125        	145
+#undef FRAME_stand126
 #define FRAME_stand126        	146
+#undef FRAME_stand127
 #define FRAME_stand127        	147
+#undef FRAME_stand128
 #define FRAME_stand128        	148
+#undef FRAME_stand129
 #define FRAME_stand129        	149
+#undef FRAME_stand130
 #define FRAME_stand130        	150
+#undef FRAME_stand201
 #define FRAME_stand201        	151
+#undef FRAME_stand202
 #define FRAME_stand202        	152
+#undef FRAME_stand203
 #define FRAME_stand203        	153
+#undef FRAME_stand204
 #define FRAME_stand204        	154
+#undef FRAME_stand205
 #define FRAME_stand205        	155
+#undef FRAME_stand206
 #define FRAME_stand206        	156
+#undef FRAME_stand207
 #define FRAME_stand207        	157
+#undef FRAME_stand208
 #define FRAME_stand208        	158
+#undef FRAME_stand209
 #define FRAME_stand209        	159
+#undef FRAME_stand210
 #define FRAME_stand210        	160
+#undef FRAME_stand211
 #define FRAME_stand211        	161
+#undef FRAME_stand212
 #define FRAME_stand212        	162
+#undef FRAME_stand213
 #define FRAME_stand213        	163
+#undef FRAME_stand214
 #define FRAME_stand214        	164
+#undef FRAME_stand215
 #define FRAME_stand215        	165
+#undef FRAME_stand216
 #define FRAME_stand216        	166
+#undef FRAME_stand217
 #define FRAME_stand217        	167
+#undef FRAME_stand218
 #define FRAME_stand218        	168
+#undef FRAME_stand219
 #define FRAME_stand219        	169
+#undef FRAME_stand220
 #define FRAME_stand220        	170
+#undef FRAME_stand221
 #define FRAME_stand221        	171
+#undef FRAME_stand222
 #define FRAME_stand222        	172
+#undef FRAME_stand223
 #define FRAME_stand223        	173
+#undef FRAME_stand224
 #define FRAME_stand224        	174
+#undef FRAME_stand225
 #define FRAME_stand225        	175
+#undef FRAME_stand226
 #define FRAME_stand226        	176
+#undef FRAME_stand227
 #define FRAME_stand227        	177
+#undef FRAME_stand228
 #define FRAME_stand228        	178
+#undef FRAME_stand229
 #define FRAME_stand229        	179
+#undef FRAME_stand230
 #define FRAME_stand230        	180
+#undef FRAME_walk01
 #define FRAME_walk01          	181
+#undef FRAME_walk02
 #define FRAME_walk02          	182
+#undef FRAME_walk03
 #define FRAME_walk03          	183
+#undef FRAME_walk04
 #define FRAME_walk04          	184
+#undef FRAME_walk05
 #define FRAME_walk05          	185
+#undef FRAME_walk06
 #define FRAME_walk06          	186
+#undef FRAME_walk07
 #define FRAME_walk07          	187
+#undef FRAME_walk08
 #define FRAME_walk08          	188
+#undef FRAME_walk09
 #define FRAME_walk09          	189
+#undef FRAME_walk10
 #define FRAME_walk10          	190
+#undef FRAME_walk11
 #define FRAME_walk11          	191
+#undef FRAME_walk12
 #define FRAME_walk12          	192
+#undef FRAME_walk13
 #define FRAME_walk13          	193
+#undef FRAME_walk14
 #define FRAME_walk14          	194
+#undef FRAME_walk15
 #define FRAME_walk15          	195
+#undef FRAME_walk16
 #define FRAME_walk16          	196
+#undef FRAME_walk17
 #define FRAME_walk17          	197
+#undef FRAME_walk18
 #define FRAME_walk18          	198
+#undef FRAME_walk19
 #define FRAME_walk19          	199
+#undef FRAME_walk20
 #define FRAME_walk20          	200
+#undef FRAME_walk21
 #define FRAME_walk21          	201
+#undef FRAME_walk22
 #define FRAME_walk22          	202
+#undef FRAME_walk23
 #define FRAME_walk23          	203
+#undef FRAME_walk24
 #define FRAME_walk24          	204
+#undef FRAME_walk25
 #define FRAME_walk25          	205
 #define FRAME_walk26          	206
 #define FRAME_walk27          	207
@@ -66759,8 +67312,9 @@ void chick_reslash(edict_t *self)
 	if (self->enemy->health > 0)
 	{
 		if (range (self, self->enemy) == RANGE_MELEE)
+		{
 			if (random() <= 0.9)
-			{				
+			{
 				self->monsterinfo.currentmove = &chick_move_slash;
 				return;
 			}
@@ -66769,6 +67323,7 @@ void chick_reslash(edict_t *self)
 				self->monsterinfo.currentmove = &chick_move_end_slash;
 				return;
 			}
+		}
 	}
 	self->monsterinfo.currentmove = &chick_move_end_slash;
 }
@@ -67535,36 +68090,67 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_actvat29        	28
 #define FRAME_actvat30        	29
 #define FRAME_actvat31        	30
+#undef FRAME_attak101
 #define FRAME_attak101        	31
+#undef FRAME_attak102
 #define FRAME_attak102        	32
+#undef FRAME_attak103
 #define FRAME_attak103        	33
+#undef FRAME_attak104
 #define FRAME_attak104        	34
+#undef FRAME_attak105
 #define FRAME_attak105        	35
+#undef FRAME_attak106
 #define FRAME_attak106        	36
+#undef FRAME_attak107
 #define FRAME_attak107        	37
+#undef FRAME_attak108
 #define FRAME_attak108        	38
+#undef FRAME_attak109
 #define FRAME_attak109        	39
+#undef FRAME_attak110
 #define FRAME_attak110        	40
+#undef FRAME_attak111
 #define FRAME_attak111        	41
+#undef FRAME_attak112
 #define FRAME_attak112        	42
+#undef FRAME_attak113
 #define FRAME_attak113        	43
+#undef FRAME_attak114
 #define FRAME_attak114        	44
+#undef FRAME_attak201
 #define FRAME_attak201        	45
+#undef FRAME_attak202
 #define FRAME_attak202        	46
+#undef FRAME_attak203
 #define FRAME_attak203        	47
+#undef FRAME_attak204
 #define FRAME_attak204        	48
+#undef FRAME_attak205
 #define FRAME_attak205        	49
+#undef FRAME_attak206
 #define FRAME_attak206        	50
+#undef FRAME_attak207
 #define FRAME_attak207        	51
+#undef FRAME_attak208
 #define FRAME_attak208        	52
+#undef FRAME_attak209
 #define FRAME_attak209        	53
+#undef FRAME_attak210
 #define FRAME_attak210        	54
+#undef FRAME_attak211
 #define FRAME_attak211        	55
+#undef FRAME_attak212
 #define FRAME_attak212        	56
+#undef FRAME_attak213
 #define FRAME_attak213        	57
+#undef FRAME_attak214
 #define FRAME_attak214        	58
+#undef FRAME_attak215
 #define FRAME_attak215        	59
+#undef FRAME_attak216
 #define FRAME_attak216        	60
+#undef FRAME_attak217
 #define FRAME_attak217        	61
 #define FRAME_attak218        	62
 #define FRAME_attak219        	63
@@ -67574,13 +68160,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak223        	67
 #define FRAME_attak224        	68
 #define FRAME_attak225        	69
+#undef FRAME_attak301
 #define FRAME_attak301        	70
+#undef FRAME_attak302
 #define FRAME_attak302        	71
+#undef FRAME_attak303
 #define FRAME_attak303        	72
+#undef FRAME_attak304
 #define FRAME_attak304        	73
+#undef FRAME_attak305
 #define FRAME_attak305        	74
+#undef FRAME_attak306
 #define FRAME_attak306        	75
+#undef FRAME_attak307
 #define FRAME_attak307        	76
+#undef FRAME_attak308
 #define FRAME_attak308        	77
 #define FRAME_attak309        	78
 #define FRAME_attak310        	79
@@ -67608,85 +68202,165 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak332        	101
 #define FRAME_attak333        	102
 #define FRAME_attak334        	103
+#undef FRAME_death01
 #define FRAME_death01         	104
+#undef FRAME_death02
 #define FRAME_death02         	105
+#undef FRAME_death03
 #define FRAME_death03         	106
+#undef FRAME_death04
 #define FRAME_death04         	107
+#undef FRAME_death05
 #define FRAME_death05         	108
+#undef FRAME_death06
 #define FRAME_death06         	109
+#undef FRAME_death07
 #define FRAME_death07         	110
+#undef FRAME_death08
 #define FRAME_death08         	111
+#undef FRAME_death09
 #define FRAME_death09         	112
+#undef FRAME_death10
 #define FRAME_death10         	113
+#undef FRAME_death11
 #define FRAME_death11         	114
+#undef FRAME_death12
 #define FRAME_death12         	115
+#undef FRAME_death13
 #define FRAME_death13         	116
+#undef FRAME_pain101
 #define FRAME_pain101         	117
+#undef FRAME_pain102
 #define FRAME_pain102         	118
+#undef FRAME_pain103
 #define FRAME_pain103         	119
+#undef FRAME_pain104
 #define FRAME_pain104         	120
+#undef FRAME_pain105
 #define FRAME_pain105         	121
+#undef FRAME_pain106
 #define FRAME_pain106         	122
+#undef FRAME_pain107
 #define FRAME_pain107         	123
+#undef FRAME_pain201
 #define FRAME_pain201         	124
+#undef FRAME_pain202
 #define FRAME_pain202         	125
+#undef FRAME_pain203
 #define FRAME_pain203         	126
+#undef FRAME_pain204
 #define FRAME_pain204         	127
+#undef FRAME_pain205
 #define FRAME_pain205         	128
+#undef FRAME_pain206
 #define FRAME_pain206         	129
+#undef FRAME_pain207
 #define FRAME_pain207         	130
+#undef FRAME_pain208
 #define FRAME_pain208         	131
+#undef FRAME_pain301
 #define FRAME_pain301         	132
+#undef FRAME_pain302
 #define FRAME_pain302         	133
+#undef FRAME_pain303
 #define FRAME_pain303         	134
+#undef FRAME_pain304
 #define FRAME_pain304         	135
+#undef FRAME_pain305
 #define FRAME_pain305         	136
+#undef FRAME_pain306
 #define FRAME_pain306         	137
+#undef FRAME_pain307
 #define FRAME_pain307         	138
+#undef FRAME_pain308
 #define FRAME_pain308         	139
+#undef FRAME_pain309
 #define FRAME_pain309         	140
+#undef FRAME_pain310
 #define FRAME_pain310         	141
+#undef FRAME_pain311
 #define FRAME_pain311         	142
+#undef FRAME_pain312
 #define FRAME_pain312         	143
+#undef FRAME_stand101
 #define FRAME_stand101        	144
+#undef FRAME_stand102
 #define FRAME_stand102        	145
+#undef FRAME_stand103
 #define FRAME_stand103        	146
+#undef FRAME_stand104
 #define FRAME_stand104        	147
+#undef FRAME_stand105
 #define FRAME_stand105        	148
+#undef FRAME_stand106
 #define FRAME_stand106        	149
+#undef FRAME_stand107
 #define FRAME_stand107        	150
+#undef FRAME_stand108
 #define FRAME_stand108        	151
+#undef FRAME_stand109
 #define FRAME_stand109        	152
+#undef FRAME_stand110
 #define FRAME_stand110        	153
+#undef FRAME_stand111
 #define FRAME_stand111        	154
+#undef FRAME_stand112
 #define FRAME_stand112        	155
+#undef FRAME_stand113
 #define FRAME_stand113        	156
+#undef FRAME_stand114
 #define FRAME_stand114        	157
+#undef FRAME_stand115
 #define FRAME_stand115        	158
+#undef FRAME_stand116
 #define FRAME_stand116        	159
+#undef FRAME_stand117
 #define FRAME_stand117        	160
+#undef FRAME_stand118
 #define FRAME_stand118        	161
+#undef FRAME_stand119
 #define FRAME_stand119        	162
+#undef FRAME_stand120
 #define FRAME_stand120        	163
+#undef FRAME_stand121
 #define FRAME_stand121        	164
+#undef FRAME_stand122
 #define FRAME_stand122        	165
+#undef FRAME_stand123
 #define FRAME_stand123        	166
+#undef FRAME_stand124
 #define FRAME_stand124        	167
+#undef FRAME_stand125
 #define FRAME_stand125        	168
+#undef FRAME_stand126
 #define FRAME_stand126        	169
+#undef FRAME_stand127
 #define FRAME_stand127        	170
+#undef FRAME_stand128
 #define FRAME_stand128        	171
+#undef FRAME_stand129
 #define FRAME_stand129        	172
+#undef FRAME_stand130
 #define FRAME_stand130        	173
+#undef FRAME_stand131
 #define FRAME_stand131        	174
+#undef FRAME_stand132
 #define FRAME_stand132        	175
+#undef FRAME_stand133
 #define FRAME_stand133        	176
+#undef FRAME_stand134
 #define FRAME_stand134        	177
+#undef FRAME_stand135
 #define FRAME_stand135        	178
+#undef FRAME_stand136
 #define FRAME_stand136        	179
+#undef FRAME_stand137
 #define FRAME_stand137        	180
+#undef FRAME_stand138
 #define FRAME_stand138        	181
+#undef FRAME_stand139
 #define FRAME_stand139        	182
+#undef FRAME_stand140
 #define FRAME_stand140        	183
 #define FRAME_stand141        	184
 #define FRAME_stand142        	185
@@ -67700,57 +68374,109 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand150        	193
 #define FRAME_stand151        	194
 #define FRAME_stand152        	195
+#undef FRAME_stand201
 #define FRAME_stand201        	196
+#undef FRAME_stand202
 #define FRAME_stand202        	197
+#undef FRAME_stand203
 #define FRAME_stand203        	198
+#undef FRAME_stand204
 #define FRAME_stand204        	199
+#undef FRAME_stand205
 #define FRAME_stand205        	200
+#undef FRAME_stand206
 #define FRAME_stand206        	201
+#undef FRAME_stand207
 #define FRAME_stand207        	202
+#undef FRAME_stand208
 #define FRAME_stand208        	203
+#undef FRAME_stand209
 #define FRAME_stand209        	204
+#undef FRAME_stand210
 #define FRAME_stand210        	205
+#undef FRAME_stand211
 #define FRAME_stand211        	206
+#undef FRAME_stand212
 #define FRAME_stand212        	207
+#undef FRAME_stand213
 #define FRAME_stand213        	208
+#undef FRAME_stand214
 #define FRAME_stand214        	209
+#undef FRAME_stand215
 #define FRAME_stand215        	210
+#undef FRAME_stand216
 #define FRAME_stand216        	211
+#undef FRAME_stand217
 #define FRAME_stand217        	212
+#undef FRAME_stand218
 #define FRAME_stand218        	213
+#undef FRAME_stand219
 #define FRAME_stand219        	214
+#undef FRAME_stand220
 #define FRAME_stand220        	215
+#undef FRAME_stand221
 #define FRAME_stand221        	216
+#undef FRAME_stand222
 #define FRAME_stand222        	217
+#undef FRAME_stand223
 #define FRAME_stand223        	218
+#undef FRAME_stand224
 #define FRAME_stand224        	219
+#undef FRAME_stand225
 #define FRAME_stand225        	220
+#undef FRAME_stand226
 #define FRAME_stand226        	221
+#undef FRAME_stand227
 #define FRAME_stand227        	222
+#undef FRAME_stand228
 #define FRAME_stand228        	223
+#undef FRAME_stand229
 #define FRAME_stand229        	224
+#undef FRAME_stand230
 #define FRAME_stand230        	225
+#undef FRAME_stand231
 #define FRAME_stand231        	226
+#undef FRAME_stand232
 #define FRAME_stand232        	227
+#undef FRAME_stand233
 #define FRAME_stand233        	228
+#undef FRAME_stand234
 #define FRAME_stand234        	229
+#undef FRAME_stand235
 #define FRAME_stand235        	230
+#undef FRAME_stand236
 #define FRAME_stand236        	231
+#undef FRAME_stand237
 #define FRAME_stand237        	232
+#undef FRAME_stand238
 #define FRAME_stand238        	233
+#undef FRAME_stand239
 #define FRAME_stand239        	234
+#undef FRAME_stand240
 #define FRAME_stand240        	235
+#undef FRAME_stand241
 #define FRAME_stand241        	236
+#undef FRAME_stand242
 #define FRAME_stand242        	237
+#undef FRAME_stand243
 #define FRAME_stand243        	238
+#undef FRAME_stand244
 #define FRAME_stand244        	239
+#undef FRAME_stand245
 #define FRAME_stand245        	240
+#undef FRAME_stand246
 #define FRAME_stand246        	241
+#undef FRAME_stand247
 #define FRAME_stand247        	242
+#undef FRAME_stand248
 #define FRAME_stand248        	243
+#undef FRAME_stand249
 #define FRAME_stand249        	244
+#undef FRAME_stand250
 #define FRAME_stand250        	245
+#undef FRAME_stand251
 #define FRAME_stand251        	246
+#undef FRAME_stand252
 #define FRAME_stand252        	247
 
 #define MODEL_SCALE		1.000000
@@ -68462,88 +69188,171 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stop05          	10
 #define FRAME_stop06          	11
 #define FRAME_stop07          	12
+#undef FRAME_stand01
 #define FRAME_stand01         	13
+#undef FRAME_stand02
 #define FRAME_stand02         	14
+#undef FRAME_stand03
 #define FRAME_stand03         	15
+#undef FRAME_stand04
 #define FRAME_stand04         	16
+#undef FRAME_stand05
 #define FRAME_stand05         	17
+#undef FRAME_stand06
 #define FRAME_stand06         	18
+#undef FRAME_stand07
 #define FRAME_stand07         	19
+#undef FRAME_stand08
 #define FRAME_stand08         	20
+#undef FRAME_stand09
 #define FRAME_stand09         	21
+#undef FRAME_stand10
 #define FRAME_stand10         	22
+#undef FRAME_stand11
 #define FRAME_stand11         	23
+#undef FRAME_stand12
 #define FRAME_stand12         	24
+#undef FRAME_stand13
 #define FRAME_stand13         	25
+#undef FRAME_stand14
 #define FRAME_stand14         	26
+#undef FRAME_stand15
 #define FRAME_stand15         	27
+#undef FRAME_stand16
 #define FRAME_stand16         	28
+#undef FRAME_stand17
 #define FRAME_stand17         	29
+#undef FRAME_stand18
 #define FRAME_stand18         	30
+#undef FRAME_stand19
 #define FRAME_stand19         	31
+#undef FRAME_stand20
 #define FRAME_stand20         	32
+#undef FRAME_stand21
 #define FRAME_stand21         	33
+#undef FRAME_stand22
 #define FRAME_stand22         	34
+#undef FRAME_stand23
 #define FRAME_stand23         	35
+#undef FRAME_stand24
 #define FRAME_stand24         	36
+#undef FRAME_stand25
 #define FRAME_stand25         	37
+#undef FRAME_stand26
 #define FRAME_stand26         	38
+#undef FRAME_stand27
 #define FRAME_stand27         	39
+#undef FRAME_stand28
 #define FRAME_stand28         	40
+#undef FRAME_stand29
 #define FRAME_stand29         	41
+#undef FRAME_stand30
 #define FRAME_stand30         	42
+#undef FRAME_stand31
 #define FRAME_stand31         	43
+#undef FRAME_stand32
 #define FRAME_stand32         	44
+#undef FRAME_stand33
 #define FRAME_stand33         	45
+#undef FRAME_stand34
 #define FRAME_stand34         	46
+#undef FRAME_stand35
 #define FRAME_stand35         	47
+#undef FRAME_stand36
 #define FRAME_stand36         	48
+#undef FRAME_stand37
 #define FRAME_stand37         	49
+#undef FRAME_stand38
 #define FRAME_stand38         	50
+#undef FRAME_stand39
 #define FRAME_stand39         	51
+#undef FRAME_stand40
 #define FRAME_stand40         	52
+#undef FRAME_stand41
 #define FRAME_stand41         	53
+#undef FRAME_stand42
 #define FRAME_stand42         	54
+#undef FRAME_stand43
 #define FRAME_stand43         	55
+#undef FRAME_stand44
 #define FRAME_stand44         	56
+#undef FRAME_stand45
 #define FRAME_stand45         	57
+#undef FRAME_attak101
 #define FRAME_attak101        	58
+#undef FRAME_attak102
 #define FRAME_attak102        	59
+#undef FRAME_attak103
 #define FRAME_attak103        	60
+#undef FRAME_attak104
 #define FRAME_attak104        	61
+#undef FRAME_attak105
 #define FRAME_attak105        	62
+#undef FRAME_attak106
 #define FRAME_attak106        	63
+#undef FRAME_attak107
 #define FRAME_attak107        	64
+#undef FRAME_attak108
 #define FRAME_attak108        	65
+#undef FRAME_attak109
 #define FRAME_attak109        	66
+#undef FRAME_attak110
 #define FRAME_attak110        	67
+#undef FRAME_attak111
 #define FRAME_attak111        	68
+#undef FRAME_attak112
 #define FRAME_attak112        	69
+#undef FRAME_attak113
 #define FRAME_attak113        	70
+#undef FRAME_attak114
 #define FRAME_attak114        	71
+#undef FRAME_attak115
 #define FRAME_attak115        	72
+#undef FRAME_attak116
 #define FRAME_attak116        	73
+#undef FRAME_attak117
 #define FRAME_attak117        	74
+#undef FRAME_attak118
 #define FRAME_attak118        	75
+#undef FRAME_attak119
 #define FRAME_attak119        	76
+#undef FRAME_attak120
 #define FRAME_attak120        	77
+#undef FRAME_attak121
 #define FRAME_attak121        	78
+#undef FRAME_attak201
 #define FRAME_attak201        	79
+#undef FRAME_attak202
 #define FRAME_attak202        	80
+#undef FRAME_attak203
 #define FRAME_attak203        	81
+#undef FRAME_attak204
 #define FRAME_attak204        	82
+#undef FRAME_attak205
 #define FRAME_attak205        	83
+#undef FRAME_attak206
 #define FRAME_attak206        	84
+#undef FRAME_attak207
 #define FRAME_attak207        	85
+#undef FRAME_attak208
 #define FRAME_attak208        	86
+#undef FRAME_attak209
 #define FRAME_attak209        	87
+#undef FRAME_attak210
 #define FRAME_attak210        	88
+#undef FRAME_attak211
 #define FRAME_attak211        	89
+#undef FRAME_attak212
 #define FRAME_attak212        	90
+#undef FRAME_attak213
 #define FRAME_attak213        	91
+#undef FRAME_attak214
 #define FRAME_attak214        	92
+#undef FRAME_attak215
 #define FRAME_attak215        	93
+#undef FRAME_attak216
 #define FRAME_attak216        	94
+#undef FRAME_attak217
 #define FRAME_attak217        	95
 #define FRAME_bankl01         	96
 #define FRAME_bankl02         	97
@@ -68577,28 +69386,51 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_rollr07         	125
 #define FRAME_rollr08         	126
 #define FRAME_rollr09         	127
+#undef FRAME_defens01
 #define FRAME_defens01        	128
+#undef FRAME_defens02
 #define FRAME_defens02        	129
+#undef FRAME_defens03
 #define FRAME_defens03        	130
+#undef FRAME_defens04
 #define FRAME_defens04        	131
+#undef FRAME_defens05
 #define FRAME_defens05        	132
+#undef FRAME_defens06
 #define FRAME_defens06        	133
+#undef FRAME_pain101
 #define FRAME_pain101         	134
+#undef FRAME_pain102
 #define FRAME_pain102         	135
+#undef FRAME_pain103
 #define FRAME_pain103         	136
+#undef FRAME_pain104
 #define FRAME_pain104         	137
+#undef FRAME_pain105
 #define FRAME_pain105         	138
+#undef FRAME_pain106
 #define FRAME_pain106         	139
+#undef FRAME_pain107
 #define FRAME_pain107         	140
+#undef FRAME_pain108
 #define FRAME_pain108         	141
+#undef FRAME_pain109
 #define FRAME_pain109         	142
+#undef FRAME_pain201
 #define FRAME_pain201         	143
+#undef FRAME_pain202
 #define FRAME_pain202         	144
+#undef FRAME_pain203
 #define FRAME_pain203         	145
+#undef FRAME_pain204
 #define FRAME_pain204         	146
+#undef FRAME_pain301
 #define FRAME_pain301         	147
+#undef FRAME_pain302
 #define FRAME_pain302         	148
+#undef FRAME_pain303
 #define FRAME_pain303         	149
+#undef FRAME_pain304
 #define FRAME_pain304         	150
 
 #define MODEL_SCALE		1.000000
@@ -69254,34 +70086,63 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by ModelGen - Do NOT Modify
 
+#undef FRAME_stand1
 #define FRAME_stand1          	0
+#undef FRAME_stand2
 #define FRAME_stand2          	1
+#undef FRAME_stand3
 #define FRAME_stand3          	2
+#undef FRAME_stand4
 #define FRAME_stand4          	3
+#undef FRAME_stand5
 #define FRAME_stand5          	4
+#undef FRAME_stand6
 #define FRAME_stand6          	5
+#undef FRAME_stand7
 #define FRAME_stand7          	6
+#undef FRAME_walk1
 #define FRAME_walk1           	7
+#undef FRAME_walk2
 #define FRAME_walk2           	8
+#undef FRAME_walk3
 #define FRAME_walk3           	9
+#undef FRAME_walk4
 #define FRAME_walk4           	10
+#undef FRAME_walk5
 #define FRAME_walk5           	11
+#undef FRAME_walk6
 #define FRAME_walk6           	12
+#undef FRAME_walk7
 #define FRAME_walk7           	13
+#undef FRAME_walk8
 #define FRAME_walk8           	14
+#undef FRAME_walk9
 #define FRAME_walk9           	15
+#undef FRAME_walk10
 #define FRAME_walk10          	16
+#undef FRAME_walk11
 #define FRAME_walk11          	17
+#undef FRAME_walk12
 #define FRAME_walk12          	18
+#undef FRAME_walk13
 #define FRAME_walk13          	19
+#undef FRAME_walk14
 #define FRAME_walk14          	20
+#undef FRAME_walk15
 #define FRAME_walk15          	21
+#undef FRAME_walk16
 #define FRAME_walk16          	22
+#undef FRAME_run1
 #define FRAME_run1            	23
+#undef FRAME_run2
 #define FRAME_run2            	24
+#undef FRAME_run3
 #define FRAME_run3            	25
+#undef FRAME_run4
 #define FRAME_run4            	26
+#undef FRAME_run5
 #define FRAME_run5            	27
+#undef FRAME_run6
 #define FRAME_run6            	28
 #define FRAME_melee1          	29
 #define FRAME_melee2          	30
@@ -69300,42 +70161,78 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_melee15         	43
 #define FRAME_melee16         	44
 #define FRAME_melee17         	45
+#undef FRAME_attack1
 #define FRAME_attack1         	46
+#undef FRAME_attack2
 #define FRAME_attack2         	47
+#undef FRAME_attack3
 #define FRAME_attack3         	48
+#undef FRAME_attack4
 #define FRAME_attack4         	49
+#undef FRAME_attack5
 #define FRAME_attack5         	50
+#undef FRAME_attack6
 #define FRAME_attack6         	51
+#undef FRAME_attack7
 #define FRAME_attack7         	52
+#undef FRAME_attack8
 #define FRAME_attack8         	53
+#undef FRAME_attack9
 #define FRAME_attack9         	54
 #define FRAME_pain1           	55
+#undef FRAME_pain2
 #define FRAME_pain2           	56
+#undef FRAME_pain3
 #define FRAME_pain3           	57
+#undef FRAME_pain4
 #define FRAME_pain4           	58
+#undef FRAME_pain5
 #define FRAME_pain5           	59
+#undef FRAME_pain6
 #define FRAME_pain6           	60
+#undef FRAME_death1
 #define FRAME_death1          	61
+#undef FRAME_death2
 #define FRAME_death2          	62
+#undef FRAME_death3
 #define FRAME_death3          	63
+#undef FRAME_death4
 #define FRAME_death4          	64
+#undef FRAME_death5
 #define FRAME_death5          	65
+#undef FRAME_death6
 #define FRAME_death6          	66
+#undef FRAME_death7
 #define FRAME_death7          	67
+#undef FRAME_death8
 #define FRAME_death8          	68
+#undef FRAME_death9
 #define FRAME_death9          	69
+#undef FRAME_death10
 #define FRAME_death10         	70
+#undef FRAME_death11
 #define FRAME_death11         	71
+#undef FRAME_death12
 #define FRAME_death12         	72
+#undef FRAME_death13
 #define FRAME_death13         	73
+#undef FRAME_death14
 #define FRAME_death14         	74
+#undef FRAME_death15
 #define FRAME_death15         	75
+#undef FRAME_death16
 #define FRAME_death16         	76
+#undef FRAME_death17
 #define FRAME_death17         	77
+#undef FRAME_death18
 #define FRAME_death18         	78
+#undef FRAME_death19
 #define FRAME_death19         	79
+#undef FRAME_death20
 #define FRAME_death20         	80
+#undef FRAME_death21
 #define FRAME_death21         	81
+#undef FRAME_death22
 #define FRAME_death22         	82
 #define FRAME_painup1         	83
 #define FRAME_painup2         	84
@@ -69759,65 +70656,125 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by ModelGen - Do NOT Modify
 
+#undef FRAME_stand01
 #define FRAME_stand01         	0
+#undef FRAME_stand02
 #define FRAME_stand02         	1
+#undef FRAME_stand03
 #define FRAME_stand03         	2
+#undef FRAME_stand04
 #define FRAME_stand04         	3
+#undef FRAME_stand05
 #define FRAME_stand05         	4
+#undef FRAME_stand06
 #define FRAME_stand06         	5
+#undef FRAME_stand07
 #define FRAME_stand07         	6
+#undef FRAME_stand08
 #define FRAME_stand08         	7
+#undef FRAME_stand09
 #define FRAME_stand09         	8
+#undef FRAME_stand10
 #define FRAME_stand10         	9
+#undef FRAME_stand11
 #define FRAME_stand11         	10
+#undef FRAME_stand12
 #define FRAME_stand12         	11
+#undef FRAME_stand13
 #define FRAME_stand13         	12
+#undef FRAME_stand14
 #define FRAME_stand14         	13
+#undef FRAME_stand15
 #define FRAME_stand15         	14
+#undef FRAME_stand16
 #define FRAME_stand16         	15
+#undef FRAME_stand17
 #define FRAME_stand17         	16
+#undef FRAME_stand18
 #define FRAME_stand18         	17
+#undef FRAME_stand19
 #define FRAME_stand19         	18
+#undef FRAME_stand20
 #define FRAME_stand20         	19
+#undef FRAME_stand21
 #define FRAME_stand21         	20
+#undef FRAME_stand22
 #define FRAME_stand22         	21
+#undef FRAME_stand23
 #define FRAME_stand23         	22
+#undef FRAME_stand24
 #define FRAME_stand24         	23
+#undef FRAME_stand25
 #define FRAME_stand25         	24
+#undef FRAME_stand26
 #define FRAME_stand26         	25
+#undef FRAME_stand27
 #define FRAME_stand27         	26
+#undef FRAME_stand28
 #define FRAME_stand28         	27
+#undef FRAME_stand29
 #define FRAME_stand29         	28
+#undef FRAME_stand30
 #define FRAME_stand30         	29
+#undef FRAME_stand31
 #define FRAME_stand31         	30
+#undef FRAME_stand32
 #define FRAME_stand32         	31
+#undef FRAME_stand33
 #define FRAME_stand33         	32
+#undef FRAME_stand34
 #define FRAME_stand34         	33
+#undef FRAME_stand35
 #define FRAME_stand35         	34
+#undef FRAME_stand36
 #define FRAME_stand36         	35
+#undef FRAME_stand37
 #define FRAME_stand37         	36
+#undef FRAME_stand38
 #define FRAME_stand38         	37
+#undef FRAME_stand39
 #define FRAME_stand39         	38
+#undef FRAME_stand40
 #define FRAME_stand40         	39
+#undef FRAME_stand41
 #define FRAME_stand41         	40
+#undef FRAME_stand42
 #define FRAME_stand42         	41
+#undef FRAME_stand43
 #define FRAME_stand43         	42
+#undef FRAME_stand44
 #define FRAME_stand44         	43
+#undef FRAME_stand45
 #define FRAME_stand45         	44
+#undef FRAME_stand46
 #define FRAME_stand46         	45
+#undef FRAME_stand47
 #define FRAME_stand47         	46
+#undef FRAME_stand48
 #define FRAME_stand48         	47
+#undef FRAME_stand49
 #define FRAME_stand49         	48
+#undef FRAME_stand50
 #define FRAME_stand50         	49
+#undef FRAME_stand51
 #define FRAME_stand51         	50
+#undef FRAME_stand52
 #define FRAME_stand52         	51
+#undef FRAME_stand53
 #define FRAME_stand53         	52
+#undef FRAME_stand54
 #define FRAME_stand54         	53
+#undef FRAME_stand55
 #define FRAME_stand55         	54
+#undef FRAME_stand56
 #define FRAME_stand56         	55
+#undef FRAME_stand57
 #define FRAME_stand57         	56
+#undef FRAME_stand58
 #define FRAME_stand58         	57
+#undef FRAME_stand59
 #define FRAME_stand59         	58
+#undef FRAME_stand60
 #define FRAME_stand60         	59
 #define FRAME_stand61         	60
 #define FRAME_stand62         	61
@@ -69829,146 +70786,281 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand68         	67
 #define FRAME_stand69         	68
 #define FRAME_stand70         	69
+#undef FRAME_walk01
 #define FRAME_walk01          	70
+#undef FRAME_walk02
 #define FRAME_walk02          	71
+#undef FRAME_walk03
 #define FRAME_walk03          	72
+#undef FRAME_walk04
 #define FRAME_walk04          	73
+#undef FRAME_walk05
 #define FRAME_walk05          	74
+#undef FRAME_walk06
 #define FRAME_walk06          	75
+#undef FRAME_walk07
 #define FRAME_walk07          	76
+#undef FRAME_walk08
 #define FRAME_walk08          	77
+#undef FRAME_walk09
 #define FRAME_walk09          	78
+#undef FRAME_walk10
 #define FRAME_walk10          	79
+#undef FRAME_walk11
 #define FRAME_walk11          	80
+#undef FRAME_walk12
 #define FRAME_walk12          	81
+#undef FRAME_walk13
 #define FRAME_walk13          	82
+#undef FRAME_walk14
 #define FRAME_walk14          	83
+#undef FRAME_walk15
 #define FRAME_walk15          	84
+#undef FRAME_walk16
 #define FRAME_walk16          	85
+#undef FRAME_walk17
 #define FRAME_walk17          	86
+#undef FRAME_walk18
 #define FRAME_walk18          	87
+#undef FRAME_walk19
 #define FRAME_walk19          	88
+#undef FRAME_walk20
 #define FRAME_walk20          	89
+#undef FRAME_walk21
 #define FRAME_walk21          	90
+#undef FRAME_walk22
 #define FRAME_walk22          	91
+#undef FRAME_walk23
 #define FRAME_walk23          	92
+#undef FRAME_walk24
 #define FRAME_walk24          	93
+#undef FRAME_run01
 #define FRAME_run01           	94
+#undef FRAME_run02
 #define FRAME_run02           	95
+#undef FRAME_run03
 #define FRAME_run03           	96
+#undef FRAME_run04
 #define FRAME_run04           	97
+#undef FRAME_run05
 #define FRAME_run05           	98
+#undef FRAME_run06
 #define FRAME_run06           	99
+#undef FRAME_run07
 #define FRAME_run07           	100
+#undef FRAME_run08
 #define FRAME_run08           	101
+#undef FRAME_runs01
 #define FRAME_runs01          	102
+#undef FRAME_runs02
 #define FRAME_runs02          	103
+#undef FRAME_runs03
 #define FRAME_runs03          	104
+#undef FRAME_runs04
 #define FRAME_runs04          	105
+#undef FRAME_runs05
 #define FRAME_runs05          	106
+#undef FRAME_runs06
 #define FRAME_runs06          	107
+#undef FRAME_attak101
 #define FRAME_attak101        	108
+#undef FRAME_attak102
 #define FRAME_attak102        	109
+#undef FRAME_attak103
 #define FRAME_attak103        	110
+#undef FRAME_attak104
 #define FRAME_attak104        	111
+#undef FRAME_attak105
 #define FRAME_attak105        	112
+#undef FRAME_attak106
 #define FRAME_attak106        	113
+#undef FRAME_attak107
 #define FRAME_attak107        	114
+#undef FRAME_attak108
 #define FRAME_attak108        	115
+#undef FRAME_attak109
 #define FRAME_attak109        	116
+#undef FRAME_attak110
 #define FRAME_attak110        	117
+#undef FRAME_attak111
 #define FRAME_attak111        	118
+#undef FRAME_attak112
 #define FRAME_attak112        	119
+#undef FRAME_attak113
 #define FRAME_attak113        	120
+#undef FRAME_attak114
 #define FRAME_attak114        	121
+#undef FRAME_attak115
 #define FRAME_attak115        	122
+#undef FRAME_attak116
 #define FRAME_attak116        	123
+#undef FRAME_attak117
 #define FRAME_attak117        	124
+#undef FRAME_attak118
 #define FRAME_attak118        	125
+#undef FRAME_attak119
 #define FRAME_attak119        	126
+#undef FRAME_attak120
 #define FRAME_attak120        	127
+#undef FRAME_attak121
 #define FRAME_attak121        	128
+#undef FRAME_attak201
 #define FRAME_attak201        	129
+#undef FRAME_attak202
 #define FRAME_attak202        	130
+#undef FRAME_attak203
 #define FRAME_attak203        	131
+#undef FRAME_attak204
 #define FRAME_attak204        	132
+#undef FRAME_attak205
 #define FRAME_attak205        	133
+#undef FRAME_attak206
 #define FRAME_attak206        	134
+#undef FRAME_attak207
 #define FRAME_attak207        	135
+#undef FRAME_attak208
 #define FRAME_attak208        	136
+#undef FRAME_attak209
 #define FRAME_attak209        	137
+#undef FRAME_attak210
 #define FRAME_attak210        	138
+#undef FRAME_attak211
 #define FRAME_attak211        	139
+#undef FRAME_attak212
 #define FRAME_attak212        	140
+#undef FRAME_attak213
 #define FRAME_attak213        	141
+#undef FRAME_attak214
 #define FRAME_attak214        	142
+#undef FRAME_attak215
 #define FRAME_attak215        	143
+#undef FRAME_attak216
 #define FRAME_attak216        	144
+#undef FRAME_attak217
 #define FRAME_attak217        	145
+#undef FRAME_attak218
 #define FRAME_attak218        	146
+#undef FRAME_attak219
 #define FRAME_attak219        	147
+#undef FRAME_attak220
 #define FRAME_attak220        	148
+#undef FRAME_attak221
 #define FRAME_attak221        	149
+#undef FRAME_attak222
 #define FRAME_attak222        	150
+#undef FRAME_attak223
 #define FRAME_attak223        	151
+#undef FRAME_attak224
 #define FRAME_attak224        	152
+#undef FRAME_attak225
 #define FRAME_attak225        	153
 #define FRAME_attak226        	154
 #define FRAME_attak227        	155
 #define FRAME_attak228        	156
 #define FRAME_attak229        	157
 #define FRAME_attak230        	158
+#undef FRAME_pain101
 #define FRAME_pain101         	159
+#undef FRAME_pain102
 #define FRAME_pain102         	160
+#undef FRAME_pain103
 #define FRAME_pain103         	161
+#undef FRAME_pain104
 #define FRAME_pain104         	162
+#undef FRAME_pain105
 #define FRAME_pain105         	163
+#undef FRAME_pain106
 #define FRAME_pain106         	164
+#undef FRAME_pain107
 #define FRAME_pain107         	165
+#undef FRAME_pain108
 #define FRAME_pain108         	166
+#undef FRAME_pain109
 #define FRAME_pain109         	167
+#undef FRAME_pain110
 #define FRAME_pain110         	168
+#undef FRAME_pain111
 #define FRAME_pain111         	169
+#undef FRAME_pain112
 #define FRAME_pain112         	170
+#undef FRAME_pain113
 #define FRAME_pain113         	171
+#undef FRAME_pain114
 #define FRAME_pain114         	172
+#undef FRAME_pain115
 #define FRAME_pain115         	173
+#undef FRAME_pain116
 #define FRAME_pain116         	174
+#undef FRAME_pain117
 #define FRAME_pain117         	175
+#undef FRAME_pain118
 #define FRAME_pain118         	176
+#undef FRAME_pain201
 #define FRAME_pain201         	177
+#undef FRAME_pain202
 #define FRAME_pain202         	178
+#undef FRAME_pain203
 #define FRAME_pain203         	179
+#undef FRAME_pain204
 #define FRAME_pain204         	180
+#undef FRAME_pain205
 #define FRAME_pain205         	181
+#undef FRAME_pain206
 #define FRAME_pain206         	182
+#undef FRAME_pain207
 #define FRAME_pain207         	183
+#undef FRAME_pain208
 #define FRAME_pain208         	184
+#undef FRAME_pain301
 #define FRAME_pain301         	185
+#undef FRAME_pain302
 #define FRAME_pain302         	186
+#undef FRAME_pain303
 #define FRAME_pain303         	187
+#undef FRAME_pain304
 #define FRAME_pain304         	188
+#undef FRAME_pain305
 #define FRAME_pain305         	189
+#undef FRAME_death01
 #define FRAME_death01         	190
+#undef FRAME_death02
 #define FRAME_death02         	191
+#undef FRAME_death03
 #define FRAME_death03         	192
+#undef FRAME_death04
 #define FRAME_death04         	193
+#undef FRAME_death05
 #define FRAME_death05         	194
+#undef FRAME_death06
 #define FRAME_death06         	195
+#undef FRAME_death07
 #define FRAME_death07         	196
+#undef FRAME_death08
 #define FRAME_death08         	197
+#undef FRAME_death09
 #define FRAME_death09         	198
+#undef FRAME_death10
 #define FRAME_death10         	199
+#undef FRAME_death11
 #define FRAME_death11         	200
+#undef FRAME_duck01
 #define FRAME_duck01          	201
+#undef FRAME_duck02
 #define FRAME_duck02          	202
+#undef FRAME_duck03
 #define FRAME_duck03          	203
+#undef FRAME_duck04
 #define FRAME_duck04          	204
+#undef FRAME_duck05
 #define FRAME_duck05          	205
+#undef FRAME_duck06
 #define FRAME_duck06          	206
+#undef FRAME_duck07
 #define FRAME_duck07          	207
+#undef FRAME_duck08
 #define FRAME_duck08          	208
 
+#undef MODEL_SCALE
 #define MODEL_SCALE		1.150000
 /* ============ end inlined header: game/m_gunner.h ============ */
 
@@ -70737,26 +71829,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_takeof29        	110
 #define FRAME_takeof30        	111
 #define FRAME_land01          	112
+#undef FRAME_pain101
 #define FRAME_pain101         	113
+#undef FRAME_pain102
 #define FRAME_pain102         	114
+#undef FRAME_pain103
 #define FRAME_pain103         	115
+#undef FRAME_pain104
 #define FRAME_pain104         	116
+#undef FRAME_pain105
 #define FRAME_pain105         	117
+#undef FRAME_pain106
 #define FRAME_pain106         	118
+#undef FRAME_pain107
 #define FRAME_pain107         	119
+#undef FRAME_pain108
 #define FRAME_pain108         	120
+#undef FRAME_pain109
 #define FRAME_pain109         	121
+#undef FRAME_pain110
 #define FRAME_pain110         	122
+#undef FRAME_pain111
 #define FRAME_pain111         	123
+#undef FRAME_pain112
 #define FRAME_pain112         	124
+#undef FRAME_pain113
 #define FRAME_pain113         	125
+#undef FRAME_pain114
 #define FRAME_pain114         	126
+#undef FRAME_pain115
 #define FRAME_pain115         	127
+#undef FRAME_pain116
 #define FRAME_pain116         	128
+#undef FRAME_pain117
 #define FRAME_pain117         	129
+#undef FRAME_pain118
 #define FRAME_pain118         	130
+#undef FRAME_pain119
 #define FRAME_pain119         	131
+#undef FRAME_pain120
 #define FRAME_pain120         	132
+#undef FRAME_pain121
 #define FRAME_pain121         	133
 #define FRAME_pain122         	134
 #define FRAME_pain123         	135
@@ -70765,37 +71878,65 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain126         	138
 #define FRAME_pain127         	139
 #define FRAME_pain128         	140
+#undef FRAME_pain201
 #define FRAME_pain201         	141
+#undef FRAME_pain202
 #define FRAME_pain202         	142
+#undef FRAME_pain203
 #define FRAME_pain203         	143
+#undef FRAME_pain204
 #define FRAME_pain204         	144
+#undef FRAME_pain205
 #define FRAME_pain205         	145
+#undef FRAME_pain206
 #define FRAME_pain206         	146
+#undef FRAME_pain207
 #define FRAME_pain207         	147
+#undef FRAME_pain208
 #define FRAME_pain208         	148
 #define FRAME_pain209         	149
 #define FRAME_pain210         	150
 #define FRAME_pain211         	151
 #define FRAME_pain212         	152
+#undef FRAME_pain301
 #define FRAME_pain301         	153
+#undef FRAME_pain302
 #define FRAME_pain302         	154
+#undef FRAME_pain303
 #define FRAME_pain303         	155
+#undef FRAME_pain304
 #define FRAME_pain304         	156
+#undef FRAME_pain305
 #define FRAME_pain305         	157
+#undef FRAME_pain306
 #define FRAME_pain306         	158
+#undef FRAME_pain307
 #define FRAME_pain307         	159
+#undef FRAME_pain308
 #define FRAME_pain308         	160
+#undef FRAME_pain309
 #define FRAME_pain309         	161
+#undef FRAME_death101
 #define FRAME_death101        	162
+#undef FRAME_death102
 #define FRAME_death102        	163
+#undef FRAME_death103
 #define FRAME_death103        	164
+#undef FRAME_death104
 #define FRAME_death104        	165
+#undef FRAME_death105
 #define FRAME_death105        	166
+#undef FRAME_death106
 #define FRAME_death106        	167
+#undef FRAME_death107
 #define FRAME_death107        	168
+#undef FRAME_death108
 #define FRAME_death108        	169
+#undef FRAME_death109
 #define FRAME_death109        	170
+#undef FRAME_death110
 #define FRAME_death110        	171
+#undef FRAME_death111
 #define FRAME_death111        	172
 #define FRAME_backwd01        	173
 #define FRAME_backwd02        	174
@@ -70821,15 +71962,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_backwd22        	194
 #define FRAME_backwd23        	195
 #define FRAME_backwd24        	196
+#undef FRAME_attak101
 #define FRAME_attak101        	197
+#undef FRAME_attak102
 #define FRAME_attak102        	198
+#undef FRAME_attak103
 #define FRAME_attak103        	199
+#undef FRAME_attak104
 #define FRAME_attak104        	200
+#undef FRAME_attak105
 #define FRAME_attak105        	201
+#undef FRAME_attak106
 #define FRAME_attak106        	202
+#undef FRAME_attak107
 #define FRAME_attak107        	203
+#undef FRAME_attak108
 #define FRAME_attak108        	204
 
+#undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_hover.h ============ */
 
@@ -71478,211 +72628,409 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // This file generated by ModelGen - Do NOT Modify
 
 #define FRAME_gun02           	0
+#undef FRAME_stand01
 #define FRAME_stand01         	1
+#undef FRAME_stand02
 #define FRAME_stand02         	2
+#undef FRAME_stand03
 #define FRAME_stand03         	3
+#undef FRAME_stand04
 #define FRAME_stand04         	4
+#undef FRAME_stand05
 #define FRAME_stand05         	5
+#undef FRAME_stand06
 #define FRAME_stand06         	6
+#undef FRAME_stand07
 #define FRAME_stand07         	7
+#undef FRAME_stand08
 #define FRAME_stand08         	8
+#undef FRAME_stand09
 #define FRAME_stand09         	9
+#undef FRAME_stand10
 #define FRAME_stand10         	10
+#undef FRAME_stand11
 #define FRAME_stand11         	11
+#undef FRAME_stand12
 #define FRAME_stand12         	12
+#undef FRAME_stand13
 #define FRAME_stand13         	13
+#undef FRAME_stand14
 #define FRAME_stand14         	14
+#undef FRAME_stand15
 #define FRAME_stand15         	15
+#undef FRAME_stand16
 #define FRAME_stand16         	16
+#undef FRAME_stand17
 #define FRAME_stand17         	17
+#undef FRAME_stand18
 #define FRAME_stand18         	18
+#undef FRAME_stand19
 #define FRAME_stand19         	19
+#undef FRAME_stand20
 #define FRAME_stand20         	20
+#undef FRAME_stand21
 #define FRAME_stand21         	21
+#undef FRAME_stand22
 #define FRAME_stand22         	22
+#undef FRAME_stand23
 #define FRAME_stand23         	23
+#undef FRAME_stand24
 #define FRAME_stand24         	24
+#undef FRAME_stand25
 #define FRAME_stand25         	25
+#undef FRAME_stand26
 #define FRAME_stand26         	26
+#undef FRAME_stand27
 #define FRAME_stand27         	27
+#undef FRAME_stand28
 #define FRAME_stand28         	28
+#undef FRAME_stand29
 #define FRAME_stand29         	29
+#undef FRAME_stand30
 #define FRAME_stand30         	30
+#undef FRAME_stand31
 #define FRAME_stand31         	31
+#undef FRAME_stand32
 #define FRAME_stand32         	32
+#undef FRAME_stand33
 #define FRAME_stand33         	33
+#undef FRAME_stand34
 #define FRAME_stand34         	34
+#undef FRAME_stand35
 #define FRAME_stand35         	35
+#undef FRAME_stand36
 #define FRAME_stand36         	36
+#undef FRAME_stand37
 #define FRAME_stand37         	37
+#undef FRAME_stand38
 #define FRAME_stand38         	38
+#undef FRAME_stand39
 #define FRAME_stand39         	39
+#undef FRAME_stand40
 #define FRAME_stand40         	40
+#undef FRAME_stand41
 #define FRAME_stand41         	41
+#undef FRAME_stand42
 #define FRAME_stand42         	42
+#undef FRAME_stand43
 #define FRAME_stand43         	43
+#undef FRAME_stand44
 #define FRAME_stand44         	44
+#undef FRAME_stand45
 #define FRAME_stand45         	45
+#undef FRAME_stand46
 #define FRAME_stand46         	46
+#undef FRAME_stand47
 #define FRAME_stand47         	47
+#undef FRAME_stand48
 #define FRAME_stand48         	48
+#undef FRAME_stand49
 #define FRAME_stand49         	49
+#undef FRAME_stand50
 #define FRAME_stand50         	50
+#undef FRAME_stand51
 #define FRAME_stand51         	51
+#undef FRAME_stand52
 #define FRAME_stand52         	52
+#undef FRAME_stand53
 #define FRAME_stand53         	53
+#undef FRAME_stand54
 #define FRAME_stand54         	54
+#undef FRAME_stand55
 #define FRAME_stand55         	55
+#undef FRAME_stand56
 #define FRAME_stand56         	56
+#undef FRAME_stand57
 #define FRAME_stand57         	57
+#undef FRAME_stand58
 #define FRAME_stand58         	58
+#undef FRAME_stand59
 #define FRAME_stand59         	59
+#undef FRAME_stand60
 #define FRAME_stand60         	60
+#undef FRAME_stand61
 #define FRAME_stand61         	61
+#undef FRAME_stand62
 #define FRAME_stand62         	62
+#undef FRAME_stand63
 #define FRAME_stand63         	63
+#undef FRAME_stand64
 #define FRAME_stand64         	64
+#undef FRAME_stand65
 #define FRAME_stand65         	65
+#undef FRAME_stand66
 #define FRAME_stand66         	66
+#undef FRAME_stand67
 #define FRAME_stand67         	67
+#undef FRAME_stand68
 #define FRAME_stand68         	68
+#undef FRAME_stand69
 #define FRAME_stand69         	69
+#undef FRAME_stand70
 #define FRAME_stand70         	70
 #define FRAME_stand71         	71
+#undef FRAME_walk01
 #define FRAME_walk01          	72
+#undef FRAME_walk02
 #define FRAME_walk02          	73
+#undef FRAME_walk03
 #define FRAME_walk03          	74
+#undef FRAME_walk04
 #define FRAME_walk04          	75
+#undef FRAME_walk05
 #define FRAME_walk05          	76
+#undef FRAME_walk06
 #define FRAME_walk06          	77
+#undef FRAME_walk07
 #define FRAME_walk07          	78
+#undef FRAME_walk08
 #define FRAME_walk08          	79
+#undef FRAME_walk09
 #define FRAME_walk09          	80
+#undef FRAME_walk10
 #define FRAME_walk10          	81
+#undef FRAME_walk11
 #define FRAME_walk11          	82
+#undef FRAME_walk12
 #define FRAME_walk12          	83
+#undef FRAME_walk13
 #define FRAME_walk13          	84
+#undef FRAME_walk14
 #define FRAME_walk14          	85
+#undef FRAME_walk15
 #define FRAME_walk15          	86
+#undef FRAME_walk16
 #define FRAME_walk16          	87
+#undef FRAME_walk17
 #define FRAME_walk17          	88
+#undef FRAME_walk18
 #define FRAME_walk18          	89
+#undef FRAME_walk19
 #define FRAME_walk19          	90
+#undef FRAME_walk20
 #define FRAME_walk20          	91
+#undef FRAME_run01
 #define FRAME_run01           	92
+#undef FRAME_run02
 #define FRAME_run02           	93
+#undef FRAME_run03
 #define FRAME_run03           	94
+#undef FRAME_run04
 #define FRAME_run04           	95
+#undef FRAME_run05
 #define FRAME_run05           	96
+#undef FRAME_run06
 #define FRAME_run06           	97
+#undef FRAME_run07
 #define FRAME_run07           	98
+#undef FRAME_run08
 #define FRAME_run08           	99
+#undef FRAME_pain101
 #define FRAME_pain101         	100
+#undef FRAME_pain102
 #define FRAME_pain102         	101
+#undef FRAME_pain103
 #define FRAME_pain103         	102
+#undef FRAME_pain104
 #define FRAME_pain104         	103
+#undef FRAME_pain105
 #define FRAME_pain105         	104
+#undef FRAME_pain106
 #define FRAME_pain106         	105
+#undef FRAME_pain107
 #define FRAME_pain107         	106
+#undef FRAME_pain108
 #define FRAME_pain108         	107
+#undef FRAME_pain109
 #define FRAME_pain109         	108
+#undef FRAME_pain110
 #define FRAME_pain110         	109
+#undef FRAME_pain201
 #define FRAME_pain201         	110
+#undef FRAME_pain202
 #define FRAME_pain202         	111
+#undef FRAME_pain203
 #define FRAME_pain203         	112
+#undef FRAME_pain204
 #define FRAME_pain204         	113
+#undef FRAME_pain205
 #define FRAME_pain205         	114
+#undef FRAME_pain206
 #define FRAME_pain206         	115
+#undef FRAME_pain207
 #define FRAME_pain207         	116
+#undef FRAME_pain208
 #define FRAME_pain208         	117
+#undef FRAME_pain209
 #define FRAME_pain209         	118
+#undef FRAME_pain210
 #define FRAME_pain210         	119
+#undef FRAME_duck01
 #define FRAME_duck01          	120
+#undef FRAME_duck02
 #define FRAME_duck02          	121
+#undef FRAME_duck03
 #define FRAME_duck03          	122
+#undef FRAME_duck04
 #define FRAME_duck04          	123
+#undef FRAME_duck05
 #define FRAME_duck05          	124
+#undef FRAME_death101
 #define FRAME_death101        	125
+#undef FRAME_death102
 #define FRAME_death102        	126
+#undef FRAME_death103
 #define FRAME_death103        	127
+#undef FRAME_death104
 #define FRAME_death104        	128
+#undef FRAME_death105
 #define FRAME_death105        	129
+#undef FRAME_death106
 #define FRAME_death106        	130
+#undef FRAME_death107
 #define FRAME_death107        	131
+#undef FRAME_death108
 #define FRAME_death108        	132
+#undef FRAME_death109
 #define FRAME_death109        	133
+#undef FRAME_death110
 #define FRAME_death110        	134
+#undef FRAME_death111
 #define FRAME_death111        	135
+#undef FRAME_death112
 #define FRAME_death112        	136
+#undef FRAME_death113
 #define FRAME_death113        	137
+#undef FRAME_death114
 #define FRAME_death114        	138
+#undef FRAME_death115
 #define FRAME_death115        	139
+#undef FRAME_death116
 #define FRAME_death116        	140
+#undef FRAME_death117
 #define FRAME_death117        	141
+#undef FRAME_death118
 #define FRAME_death118        	142
 #define FRAME_death119        	143
 #define FRAME_death120        	144
+#undef FRAME_death201
 #define FRAME_death201        	145
+#undef FRAME_death202
 #define FRAME_death202        	146
+#undef FRAME_death203
 #define FRAME_death203        	147
+#undef FRAME_death204
 #define FRAME_death204        	148
+#undef FRAME_death205
 #define FRAME_death205        	149
+#undef FRAME_death206
 #define FRAME_death206        	150
+#undef FRAME_death207
 #define FRAME_death207        	151
+#undef FRAME_death208
 #define FRAME_death208        	152
+#undef FRAME_death209
 #define FRAME_death209        	153
+#undef FRAME_death210
 #define FRAME_death210        	154
+#undef FRAME_death211
 #define FRAME_death211        	155
+#undef FRAME_death212
 #define FRAME_death212        	156
+#undef FRAME_death213
 #define FRAME_death213        	157
+#undef FRAME_death214
 #define FRAME_death214        	158
+#undef FRAME_death215
 #define FRAME_death215        	159
+#undef FRAME_death216
 #define FRAME_death216        	160
+#undef FRAME_death217
 #define FRAME_death217        	161
+#undef FRAME_death218
 #define FRAME_death218        	162
+#undef FRAME_death219
 #define FRAME_death219        	163
+#undef FRAME_death220
 #define FRAME_death220        	164
+#undef FRAME_death221
 #define FRAME_death221        	165
+#undef FRAME_death222
 #define FRAME_death222        	166
+#undef FRAME_death223
 #define FRAME_death223        	167
+#undef FRAME_death224
 #define FRAME_death224        	168
+#undef FRAME_death225
 #define FRAME_death225        	169
+#undef FRAME_death301
 #define FRAME_death301        	170
+#undef FRAME_death302
 #define FRAME_death302        	171
+#undef FRAME_death303
 #define FRAME_death303        	172
+#undef FRAME_death304
 #define FRAME_death304        	173
+#undef FRAME_death305
 #define FRAME_death305        	174
+#undef FRAME_death306
 #define FRAME_death306        	175
+#undef FRAME_death307
 #define FRAME_death307        	176
+#undef FRAME_death308
 #define FRAME_death308        	177
+#undef FRAME_death309
 #define FRAME_death309        	178
 #define FRAME_block01         	179
 #define FRAME_block02         	180
 #define FRAME_block03         	181
 #define FRAME_block04         	182
 #define FRAME_block05         	183
+#undef FRAME_attak101
 #define FRAME_attak101        	184
+#undef FRAME_attak102
 #define FRAME_attak102        	185
+#undef FRAME_attak103
 #define FRAME_attak103        	186
+#undef FRAME_attak104
 #define FRAME_attak104        	187
+#undef FRAME_attak105
 #define FRAME_attak105        	188
+#undef FRAME_attak106
 #define FRAME_attak106        	189
+#undef FRAME_attak107
 #define FRAME_attak107        	190
+#undef FRAME_attak108
 #define FRAME_attak108        	191
+#undef FRAME_attak109
 #define FRAME_attak109        	192
+#undef FRAME_attak110
 #define FRAME_attak110        	193
+#undef FRAME_attak111
 #define FRAME_attak111        	194
+#undef FRAME_attak112
 #define FRAME_attak112        	195
+#undef FRAME_attak113
 #define FRAME_attak113        	196
+#undef FRAME_attak114
 #define FRAME_attak114        	197
+#undef FRAME_attak115
 #define FRAME_attak115        	198
+#undef FRAME_attak201
 #define FRAME_attak201        	199
+#undef FRAME_attak202
 #define FRAME_attak202        	200
+#undef FRAME_attak203
 #define FRAME_attak203        	201
+#undef FRAME_attak204
 #define FRAME_attak204        	202
+#undef FRAME_attak205
 #define FRAME_attak205        	203
+#undef FRAME_attak206
 #define FRAME_attak206        	204
+#undef FRAME_attak207
 #define FRAME_attak207        	205
+#undef FRAME_attak208
 #define FRAME_attak208        	206
 
 #define MODEL_SCALE		1.000000
@@ -72326,69 +73674,133 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand5          	4
 #define FRAME_stand6          	5
 #define FRAME_stand7          	6
+#undef FRAME_stand8
 #define FRAME_stand8          	7
+#undef FRAME_stand9
 #define FRAME_stand9          	8
+#undef FRAME_stand10
 #define FRAME_stand10         	9
+#undef FRAME_stand11
 #define FRAME_stand11         	10
+#undef FRAME_stand12
 #define FRAME_stand12         	11
+#undef FRAME_stand13
 #define FRAME_stand13         	12
+#undef FRAME_stand14
 #define FRAME_stand14         	13
+#undef FRAME_stand15
 #define FRAME_stand15         	14
+#undef FRAME_stand16
 #define FRAME_stand16         	15
+#undef FRAME_stand17
 #define FRAME_stand17         	16
+#undef FRAME_stand18
 #define FRAME_stand18         	17
+#undef FRAME_stand19
 #define FRAME_stand19         	18
+#undef FRAME_stand20
 #define FRAME_stand20         	19
+#undef FRAME_stand21
 #define FRAME_stand21         	20
+#undef FRAME_stand22
 #define FRAME_stand22         	21
+#undef FRAME_stand23
 #define FRAME_stand23         	22
+#undef FRAME_stand24
 #define FRAME_stand24         	23
+#undef FRAME_stand25
 #define FRAME_stand25         	24
+#undef FRAME_stand26
 #define FRAME_stand26         	25
+#undef FRAME_stand27
 #define FRAME_stand27         	26
+#undef FRAME_stand28
 #define FRAME_stand28         	27
+#undef FRAME_stand29
 #define FRAME_stand29         	28
+#undef FRAME_stand30
 #define FRAME_stand30         	29
+#undef FRAME_stand31
 #define FRAME_stand31         	30
+#undef FRAME_stand32
 #define FRAME_stand32         	31
+#undef FRAME_stand33
 #define FRAME_stand33         	32
+#undef FRAME_stand34
 #define FRAME_stand34         	33
+#undef FRAME_stand35
 #define FRAME_stand35         	34
+#undef FRAME_stand36
 #define FRAME_stand36         	35
+#undef FRAME_stand37
 #define FRAME_stand37         	36
+#undef FRAME_stand38
 #define FRAME_stand38         	37
+#undef FRAME_stand39
 #define FRAME_stand39         	38
+#undef FRAME_stand40
 #define FRAME_stand40         	39
+#undef FRAME_stand41
 #define FRAME_stand41         	40
+#undef FRAME_stand42
 #define FRAME_stand42         	41
+#undef FRAME_stand43
 #define FRAME_stand43         	42
+#undef FRAME_stand44
 #define FRAME_stand44         	43
+#undef FRAME_stand45
 #define FRAME_stand45         	44
+#undef FRAME_stand46
 #define FRAME_stand46         	45
+#undef FRAME_stand47
 #define FRAME_stand47         	46
+#undef FRAME_stand48
 #define FRAME_stand48         	47
+#undef FRAME_stand49
 #define FRAME_stand49         	48
+#undef FRAME_stand50
 #define FRAME_stand50         	49
+#undef FRAME_stand51
 #define FRAME_stand51         	50
+#undef FRAME_stand52
 #define FRAME_stand52         	51
+#undef FRAME_stand53
 #define FRAME_stand53         	52
+#undef FRAME_stand54
 #define FRAME_stand54         	53
+#undef FRAME_stand55
 #define FRAME_stand55         	54
+#undef FRAME_stand56
 #define FRAME_stand56         	55
+#undef FRAME_stand57
 #define FRAME_stand57         	56
+#undef FRAME_stand58
 #define FRAME_stand58         	57
+#undef FRAME_stand59
 #define FRAME_stand59         	58
+#undef FRAME_stand60
 #define FRAME_stand60         	59
+#undef FRAME_stand61
 #define FRAME_stand61         	60
+#undef FRAME_stand62
 #define FRAME_stand62         	61
+#undef FRAME_stand63
 #define FRAME_stand63         	62
+#undef FRAME_stand64
 #define FRAME_stand64         	63
+#undef FRAME_stand65
 #define FRAME_stand65         	64
+#undef FRAME_stand66
 #define FRAME_stand66         	65
+#undef FRAME_stand67
 #define FRAME_stand67         	66
+#undef FRAME_stand68
 #define FRAME_stand68         	67
+#undef FRAME_stand69
 #define FRAME_stand69         	68
+#undef FRAME_stand70
 #define FRAME_stand70         	69
+#undef FRAME_stand71
 #define FRAME_stand71         	70
 #define FRAME_stand72         	71
 #define FRAME_stand73         	72
@@ -72419,57 +73831,109 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand98         	97
 #define FRAME_stand99         	98
 #define FRAME_stand100        	99
+#undef FRAME_stand101
 #define FRAME_stand101        	100
+#undef FRAME_stand102
 #define FRAME_stand102        	101
+#undef FRAME_stand103
 #define FRAME_stand103        	102
+#undef FRAME_stand104
 #define FRAME_stand104        	103
+#undef FRAME_stand105
 #define FRAME_stand105        	104
+#undef FRAME_stand106
 #define FRAME_stand106        	105
+#undef FRAME_stand107
 #define FRAME_stand107        	106
+#undef FRAME_stand108
 #define FRAME_stand108        	107
+#undef FRAME_stand109
 #define FRAME_stand109        	108
+#undef FRAME_stand110
 #define FRAME_stand110        	109
+#undef FRAME_stand111
 #define FRAME_stand111        	110
+#undef FRAME_stand112
 #define FRAME_stand112        	111
+#undef FRAME_stand113
 #define FRAME_stand113        	112
+#undef FRAME_stand114
 #define FRAME_stand114        	113
+#undef FRAME_stand115
 #define FRAME_stand115        	114
+#undef FRAME_stand116
 #define FRAME_stand116        	115
+#undef FRAME_stand117
 #define FRAME_stand117        	116
+#undef FRAME_stand118
 #define FRAME_stand118        	117
+#undef FRAME_stand119
 #define FRAME_stand119        	118
+#undef FRAME_stand120
 #define FRAME_stand120        	119
+#undef FRAME_stand121
 #define FRAME_stand121        	120
+#undef FRAME_stand122
 #define FRAME_stand122        	121
+#undef FRAME_stand123
 #define FRAME_stand123        	122
+#undef FRAME_stand124
 #define FRAME_stand124        	123
+#undef FRAME_stand125
 #define FRAME_stand125        	124
+#undef FRAME_stand126
 #define FRAME_stand126        	125
+#undef FRAME_stand127
 #define FRAME_stand127        	126
+#undef FRAME_stand128
 #define FRAME_stand128        	127
+#undef FRAME_stand129
 #define FRAME_stand129        	128
+#undef FRAME_stand130
 #define FRAME_stand130        	129
+#undef FRAME_stand131
 #define FRAME_stand131        	130
+#undef FRAME_stand132
 #define FRAME_stand132        	131
+#undef FRAME_stand133
 #define FRAME_stand133        	132
+#undef FRAME_stand134
 #define FRAME_stand134        	133
+#undef FRAME_stand135
 #define FRAME_stand135        	134
+#undef FRAME_stand136
 #define FRAME_stand136        	135
+#undef FRAME_stand137
 #define FRAME_stand137        	136
+#undef FRAME_stand138
 #define FRAME_stand138        	137
+#undef FRAME_stand139
 #define FRAME_stand139        	138
+#undef FRAME_stand140
 #define FRAME_stand140        	139
+#undef FRAME_stand141
 #define FRAME_stand141        	140
+#undef FRAME_stand142
 #define FRAME_stand142        	141
+#undef FRAME_stand143
 #define FRAME_stand143        	142
+#undef FRAME_stand144
 #define FRAME_stand144        	143
+#undef FRAME_stand145
 #define FRAME_stand145        	144
+#undef FRAME_stand146
 #define FRAME_stand146        	145
+#undef FRAME_stand147
 #define FRAME_stand147        	146
+#undef FRAME_stand148
 #define FRAME_stand148        	147
+#undef FRAME_stand149
 #define FRAME_stand149        	148
+#undef FRAME_stand150
 #define FRAME_stand150        	149
+#undef FRAME_stand151
 #define FRAME_stand151        	150
+#undef FRAME_stand152
 #define FRAME_stand152        	151
 #define FRAME_stand153        	152
 #define FRAME_stand154        	153
@@ -72479,6 +73943,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand158        	157
 #define FRAME_stand159        	158
 #define FRAME_stand160        	159
+#undef FRAME_walk27
 #define FRAME_walk27          	160
 #define FRAME_walk28          	161
 #define FRAME_walk29          	162
@@ -72492,31 +73957,57 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk37          	170
 #define FRAME_walk38          	171
 #define FRAME_walk39          	172
+#undef FRAME_walk1
 #define FRAME_walk1           	173
+#undef FRAME_walk2
 #define FRAME_walk2           	174
+#undef FRAME_walk3
 #define FRAME_walk3           	175
+#undef FRAME_walk4
 #define FRAME_walk4           	176
+#undef FRAME_walk5
 #define FRAME_walk5           	177
+#undef FRAME_walk6
 #define FRAME_walk6           	178
+#undef FRAME_walk7
 #define FRAME_walk7           	179
+#undef FRAME_walk8
 #define FRAME_walk8           	180
+#undef FRAME_walk9
 #define FRAME_walk9           	181
+#undef FRAME_walk10
 #define FRAME_walk10          	182
+#undef FRAME_walk11
 #define FRAME_walk11          	183
+#undef FRAME_walk12
 #define FRAME_walk12          	184
+#undef FRAME_walk13
 #define FRAME_walk13          	185
+#undef FRAME_walk14
 #define FRAME_walk14          	186
+#undef FRAME_walk15
 #define FRAME_walk15          	187
+#undef FRAME_walk16
 #define FRAME_walk16          	188
+#undef FRAME_walk17
 #define FRAME_walk17          	189
+#undef FRAME_walk18
 #define FRAME_walk18          	190
+#undef FRAME_walk19
 #define FRAME_walk19          	191
+#undef FRAME_walk20
 #define FRAME_walk20          	192
+#undef FRAME_walk21
 #define FRAME_walk21          	193
+#undef FRAME_walk22
 #define FRAME_walk22          	194
+#undef FRAME_walk23
 #define FRAME_walk23          	195
+#undef FRAME_walk24
 #define FRAME_walk24          	196
+#undef FRAME_walk25
 #define FRAME_walk25          	197
+#undef FRAME_walk26
 #define FRAME_walk26          	198
 #define FRAME_st_pain2        	199
 #define FRAME_st_pain3        	200
@@ -73104,10 +74595,12 @@ void insane_checkdown (edict_t *self)
 	if (self->spawnflags & 32)				// Always stand
 		return;
 	if (random() < 0.3)
+	{
 		if (random() < 0.5)
 			self->monsterinfo.currentmove = &insane_move_uptodown;
 		else
-			self->monsterinfo.currentmove = &insane_move_jumpdown; 
+			self->monsterinfo.currentmove = &insane_move_jumpdown;
+	} 
 }
 
 void insane_checkup (edict_t *self)
@@ -73322,17 +74815,29 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by ModelGen - Do NOT Modify
 
+#undef FRAME_walk1
 #define FRAME_walk1           	0
+#undef FRAME_walk2
 #define FRAME_walk2           	1
+#undef FRAME_walk3
 #define FRAME_walk3           	2
+#undef FRAME_walk4
 #define FRAME_walk4           	3
+#undef FRAME_walk5
 #define FRAME_walk5           	4
+#undef FRAME_walk6
 #define FRAME_walk6           	5
+#undef FRAME_walk7
 #define FRAME_walk7           	6
+#undef FRAME_walk8
 #define FRAME_walk8           	7
+#undef FRAME_walk9
 #define FRAME_walk9           	8
+#undef FRAME_walk10
 #define FRAME_walk10          	9
+#undef FRAME_walk11
 #define FRAME_walk11          	10
+#undef FRAME_walk12
 #define FRAME_walk12          	11
 #define FRAME_wait1           	12
 #define FRAME_wait2           	13
@@ -73424,11 +74929,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_wait88          	99
 #define FRAME_wait89          	100
 #define FRAME_wait90          	101
+#undef FRAME_run1
 #define FRAME_run1            	102
+#undef FRAME_run2
 #define FRAME_run2            	103
+#undef FRAME_run3
 #define FRAME_run3            	104
+#undef FRAME_run4
 #define FRAME_run4            	105
+#undef FRAME_run5
 #define FRAME_run5            	106
+#undef FRAME_run6
 #define FRAME_run6            	107
 #define FRAME_paina1          	108
 #define FRAME_paina2          	109
@@ -73438,30 +74949,55 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_paina6          	113
 #define FRAME_paina7          	114
 #define FRAME_paina8          	115
+#undef FRAME_painb1
 #define FRAME_painb1          	116
+#undef FRAME_painb2
 #define FRAME_painb2          	117
+#undef FRAME_painb3
 #define FRAME_painb3          	118
+#undef FRAME_painb4
 #define FRAME_painb4          	119
+#undef FRAME_painb5
 #define FRAME_painb5          	120
+#undef FRAME_painb6
 #define FRAME_painb6          	121
+#undef FRAME_painb7
 #define FRAME_painb7          	122
+#undef FRAME_painb8
 #define FRAME_painb8          	123
+#undef FRAME_painb9
 #define FRAME_painb9          	124
+#undef FRAME_painb10
 #define FRAME_painb10         	125
+#undef FRAME_painb11
 #define FRAME_painb11         	126
+#undef FRAME_painb12
 #define FRAME_painb12         	127
+#undef FRAME_painb13
 #define FRAME_painb13         	128
+#undef FRAME_painb14
 #define FRAME_painb14         	129
+#undef FRAME_painb15
 #define FRAME_painb15         	130
+#undef FRAME_duck1
 #define FRAME_duck1           	131
+#undef FRAME_duck2
 #define FRAME_duck2           	132
+#undef FRAME_duck3
 #define FRAME_duck3           	133
+#undef FRAME_duck4
 #define FRAME_duck4           	134
+#undef FRAME_duck5
 #define FRAME_duck5           	135
+#undef FRAME_duck6
 #define FRAME_duck6           	136
+#undef FRAME_duck7
 #define FRAME_duck7           	137
+#undef FRAME_duck8
 #define FRAME_duck8           	138
+#undef FRAME_duck9
 #define FRAME_duck9           	139
+#undef FRAME_duck10
 #define FRAME_duck10          	140
 #define FRAME_duck11          	141
 #define FRAME_duck12          	142
@@ -73469,75 +75005,145 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_duck14          	144
 #define FRAME_duck15          	145
 #define FRAME_duck16          	146
+#undef FRAME_death1
 #define FRAME_death1          	147
+#undef FRAME_death2
 #define FRAME_death2          	148
+#undef FRAME_death3
 #define FRAME_death3          	149
+#undef FRAME_death4
 #define FRAME_death4          	150
+#undef FRAME_death5
 #define FRAME_death5          	151
+#undef FRAME_death6
 #define FRAME_death6          	152
+#undef FRAME_death7
 #define FRAME_death7          	153
+#undef FRAME_death8
 #define FRAME_death8          	154
+#undef FRAME_death9
 #define FRAME_death9          	155
+#undef FRAME_death10
 #define FRAME_death10         	156
+#undef FRAME_death11
 #define FRAME_death11         	157
+#undef FRAME_death12
 #define FRAME_death12         	158
+#undef FRAME_death13
 #define FRAME_death13         	159
+#undef FRAME_death14
 #define FRAME_death14         	160
+#undef FRAME_death15
 #define FRAME_death15         	161
+#undef FRAME_death16
 #define FRAME_death16         	162
+#undef FRAME_death17
 #define FRAME_death17         	163
+#undef FRAME_death18
 #define FRAME_death18         	164
+#undef FRAME_death19
 #define FRAME_death19         	165
+#undef FRAME_death20
 #define FRAME_death20         	166
+#undef FRAME_death21
 #define FRAME_death21         	167
+#undef FRAME_death22
 #define FRAME_death22         	168
+#undef FRAME_death23
 #define FRAME_death23         	169
+#undef FRAME_death24
 #define FRAME_death24         	170
+#undef FRAME_death25
 #define FRAME_death25         	171
+#undef FRAME_death26
 #define FRAME_death26         	172
+#undef FRAME_death27
 #define FRAME_death27         	173
+#undef FRAME_death28
 #define FRAME_death28         	174
+#undef FRAME_death29
 #define FRAME_death29         	175
+#undef FRAME_death30
 #define FRAME_death30         	176
+#undef FRAME_attack1
 #define FRAME_attack1         	177
+#undef FRAME_attack2
 #define FRAME_attack2         	178
+#undef FRAME_attack3
 #define FRAME_attack3         	179
+#undef FRAME_attack4
 #define FRAME_attack4         	180
+#undef FRAME_attack5
 #define FRAME_attack5         	181
+#undef FRAME_attack6
 #define FRAME_attack6         	182
+#undef FRAME_attack7
 #define FRAME_attack7         	183
+#undef FRAME_attack8
 #define FRAME_attack8         	184
+#undef FRAME_attack9
 #define FRAME_attack9         	185
+#undef FRAME_attack10
 #define FRAME_attack10        	186
+#undef FRAME_attack11
 #define FRAME_attack11        	187
+#undef FRAME_attack12
 #define FRAME_attack12        	188
+#undef FRAME_attack13
 #define FRAME_attack13        	189
+#undef FRAME_attack14
 #define FRAME_attack14        	190
+#undef FRAME_attack15
 #define FRAME_attack15        	191
+#undef FRAME_attack16
 #define FRAME_attack16        	192
+#undef FRAME_attack17
 #define FRAME_attack17        	193
+#undef FRAME_attack18
 #define FRAME_attack18        	194
+#undef FRAME_attack19
 #define FRAME_attack19        	195
+#undef FRAME_attack20
 #define FRAME_attack20        	196
+#undef FRAME_attack21
 #define FRAME_attack21        	197
+#undef FRAME_attack22
 #define FRAME_attack22        	198
+#undef FRAME_attack23
 #define FRAME_attack23        	199
+#undef FRAME_attack24
 #define FRAME_attack24        	200
+#undef FRAME_attack25
 #define FRAME_attack25        	201
+#undef FRAME_attack26
 #define FRAME_attack26        	202
+#undef FRAME_attack27
 #define FRAME_attack27        	203
+#undef FRAME_attack28
 #define FRAME_attack28        	204
+#undef FRAME_attack29
 #define FRAME_attack29        	205
+#undef FRAME_attack30
 #define FRAME_attack30        	206
+#undef FRAME_attack31
 #define FRAME_attack31        	207
+#undef FRAME_attack32
 #define FRAME_attack32        	208
+#undef FRAME_attack33
 #define FRAME_attack33        	209
+#undef FRAME_attack34
 #define FRAME_attack34        	210
+#undef FRAME_attack35
 #define FRAME_attack35        	211
+#undef FRAME_attack36
 #define FRAME_attack36        	212
+#undef FRAME_attack37
 #define FRAME_attack37        	213
+#undef FRAME_attack38
 #define FRAME_attack38        	214
+#undef FRAME_attack39
 #define FRAME_attack39        	215
+#undef FRAME_attack40
 #define FRAME_attack40        	216
 #define FRAME_attack41        	217
 #define FRAME_attack42        	218
@@ -74747,7 +76353,7 @@ void SV_NewChaseDir (edict_t *actor, edict_t *enemy, float dist)
 	}
 
 // try other directions
-	if ( ((rand()&3) & 1) ||  abs(deltay)>abs(deltax))
+	if ( ((rand()&3) & 1) ||  fabs(deltay)>fabs(deltax))
 	{
 		tdir=d[1];
 		d[1]=d[2];
@@ -74923,145 +76529,281 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attack07        	6
 #define FRAME_attack08        	7
 #define FRAME_attack09        	8
+#undef FRAME_attack10
 #define FRAME_attack10        	9
+#undef FRAME_attack11
 #define FRAME_attack11        	10
+#undef FRAME_attack12
 #define FRAME_attack12        	11
+#undef FRAME_attack13
 #define FRAME_attack13        	12
+#undef FRAME_attack14
 #define FRAME_attack14        	13
+#undef FRAME_attack15
 #define FRAME_attack15        	14
+#undef FRAME_death101
 #define FRAME_death101        	15
+#undef FRAME_death102
 #define FRAME_death102        	16
+#undef FRAME_death103
 #define FRAME_death103        	17
+#undef FRAME_death104
 #define FRAME_death104        	18
+#undef FRAME_death105
 #define FRAME_death105        	19
+#undef FRAME_death106
 #define FRAME_death106        	20
+#undef FRAME_death107
 #define FRAME_death107        	21
+#undef FRAME_death108
 #define FRAME_death108        	22
+#undef FRAME_death109
 #define FRAME_death109        	23
+#undef FRAME_death201
 #define FRAME_death201        	24
+#undef FRAME_death202
 #define FRAME_death202        	25
+#undef FRAME_death203
 #define FRAME_death203        	26
+#undef FRAME_death204
 #define FRAME_death204        	27
+#undef FRAME_death205
 #define FRAME_death205        	28
+#undef FRAME_death206
 #define FRAME_death206        	29
+#undef FRAME_death207
 #define FRAME_death207        	30
+#undef FRAME_death208
 #define FRAME_death208        	31
+#undef FRAME_death209
 #define FRAME_death209        	32
+#undef FRAME_death210
 #define FRAME_death210        	33
+#undef FRAME_pain101
 #define FRAME_pain101         	34
+#undef FRAME_pain102
 #define FRAME_pain102         	35
+#undef FRAME_pain103
 #define FRAME_pain103         	36
+#undef FRAME_pain104
 #define FRAME_pain104         	37
+#undef FRAME_pain105
 #define FRAME_pain105         	38
+#undef FRAME_pain201
 #define FRAME_pain201         	39
+#undef FRAME_pain202
 #define FRAME_pain202         	40
+#undef FRAME_pain203
 #define FRAME_pain203         	41
+#undef FRAME_pain204
 #define FRAME_pain204         	42
+#undef FRAME_pain205
 #define FRAME_pain205         	43
+#undef FRAME_pain206
 #define FRAME_pain206         	44
+#undef FRAME_pain301
 #define FRAME_pain301         	45
+#undef FRAME_pain302
 #define FRAME_pain302         	46
+#undef FRAME_pain303
 #define FRAME_pain303         	47
+#undef FRAME_pain304
 #define FRAME_pain304         	48
+#undef FRAME_pain305
 #define FRAME_pain305         	49
+#undef FRAME_pain306
 #define FRAME_pain306         	50
+#undef FRAME_pain307
 #define FRAME_pain307         	51
+#undef FRAME_pain308
 #define FRAME_pain308         	52
+#undef FRAME_pain309
 #define FRAME_pain309         	53
+#undef FRAME_pain310
 #define FRAME_pain310         	54
+#undef FRAME_pain311
 #define FRAME_pain311         	55
+#undef FRAME_run03
 #define FRAME_run03           	56
+#undef FRAME_run04
 #define FRAME_run04           	57
+#undef FRAME_run05
 #define FRAME_run05           	58
+#undef FRAME_run06
 #define FRAME_run06           	59
+#undef FRAME_run07
 #define FRAME_run07           	60
+#undef FRAME_run08
 #define FRAME_run08           	61
+#undef FRAME_stand101
 #define FRAME_stand101        	62
+#undef FRAME_stand102
 #define FRAME_stand102        	63
+#undef FRAME_stand103
 #define FRAME_stand103        	64
+#undef FRAME_stand104
 #define FRAME_stand104        	65
+#undef FRAME_stand105
 #define FRAME_stand105        	66
+#undef FRAME_stand106
 #define FRAME_stand106        	67
+#undef FRAME_stand107
 #define FRAME_stand107        	68
+#undef FRAME_stand108
 #define FRAME_stand108        	69
+#undef FRAME_stand109
 #define FRAME_stand109        	70
+#undef FRAME_stand110
 #define FRAME_stand110        	71
+#undef FRAME_stand111
 #define FRAME_stand111        	72
+#undef FRAME_stand112
 #define FRAME_stand112        	73
+#undef FRAME_stand113
 #define FRAME_stand113        	74
+#undef FRAME_stand114
 #define FRAME_stand114        	75
+#undef FRAME_stand115
 #define FRAME_stand115        	76
+#undef FRAME_stand116
 #define FRAME_stand116        	77
+#undef FRAME_stand117
 #define FRAME_stand117        	78
+#undef FRAME_stand118
 #define FRAME_stand118        	79
+#undef FRAME_stand119
 #define FRAME_stand119        	80
+#undef FRAME_stand120
 #define FRAME_stand120        	81
+#undef FRAME_stand121
 #define FRAME_stand121        	82
+#undef FRAME_stand122
 #define FRAME_stand122        	83
+#undef FRAME_stand123
 #define FRAME_stand123        	84
+#undef FRAME_stand124
 #define FRAME_stand124        	85
+#undef FRAME_stand125
 #define FRAME_stand125        	86
+#undef FRAME_stand126
 #define FRAME_stand126        	87
+#undef FRAME_stand127
 #define FRAME_stand127        	88
+#undef FRAME_stand128
 #define FRAME_stand128        	89
+#undef FRAME_stand129
 #define FRAME_stand129        	90
+#undef FRAME_stand130
 #define FRAME_stand130        	91
+#undef FRAME_stand131
 #define FRAME_stand131        	92
+#undef FRAME_stand132
 #define FRAME_stand132        	93
+#undef FRAME_stand133
 #define FRAME_stand133        	94
+#undef FRAME_stand134
 #define FRAME_stand134        	95
+#undef FRAME_stand135
 #define FRAME_stand135        	96
+#undef FRAME_stand136
 #define FRAME_stand136        	97
+#undef FRAME_stand137
 #define FRAME_stand137        	98
+#undef FRAME_stand138
 #define FRAME_stand138        	99
+#undef FRAME_stand139
 #define FRAME_stand139        	100
+#undef FRAME_stand140
 #define FRAME_stand140        	101
+#undef FRAME_stand141
 #define FRAME_stand141        	102
+#undef FRAME_stand142
 #define FRAME_stand142        	103
+#undef FRAME_stand143
 #define FRAME_stand143        	104
+#undef FRAME_stand144
 #define FRAME_stand144        	105
+#undef FRAME_stand145
 #define FRAME_stand145        	106
+#undef FRAME_stand146
 #define FRAME_stand146        	107
+#undef FRAME_stand147
 #define FRAME_stand147        	108
+#undef FRAME_stand148
 #define FRAME_stand148        	109
+#undef FRAME_stand149
 #define FRAME_stand149        	110
+#undef FRAME_stand150
 #define FRAME_stand150        	111
+#undef FRAME_stand151
 #define FRAME_stand151        	112
+#undef FRAME_stand152
 #define FRAME_stand152        	113
+#undef FRAME_stand153
 #define FRAME_stand153        	114
+#undef FRAME_stand154
 #define FRAME_stand154        	115
+#undef FRAME_stand155
 #define FRAME_stand155        	116
+#undef FRAME_stand156
 #define FRAME_stand156        	117
+#undef FRAME_stand157
 #define FRAME_stand157        	118
+#undef FRAME_stand158
 #define FRAME_stand158        	119
+#undef FRAME_stand159
 #define FRAME_stand159        	120
+#undef FRAME_stand160
 #define FRAME_stand160        	121
 #define FRAME_stand161        	122
 #define FRAME_stand162        	123
 #define FRAME_stand163        	124
 #define FRAME_stand164        	125
+#undef FRAME_walk01
 #define FRAME_walk01          	126
+#undef FRAME_walk02
 #define FRAME_walk02          	127
+#undef FRAME_walk03
 #define FRAME_walk03          	128
+#undef FRAME_walk04
 #define FRAME_walk04          	129
+#undef FRAME_walk05
 #define FRAME_walk05          	130
+#undef FRAME_walk06
 #define FRAME_walk06          	131
+#undef FRAME_walk07
 #define FRAME_walk07          	132
+#undef FRAME_walk08
 #define FRAME_walk08          	133
+#undef FRAME_walk09
 #define FRAME_walk09          	134
+#undef FRAME_walk10
 #define FRAME_walk10          	135
+#undef FRAME_walk11
 #define FRAME_walk11          	136
+#undef FRAME_walk12
 #define FRAME_walk12          	137
+#undef FRAME_walk13
 #define FRAME_walk13          	138
+#undef FRAME_walk14
 #define FRAME_walk14          	139
+#undef FRAME_walk15
 #define FRAME_walk15          	140
+#undef FRAME_walk16
 #define FRAME_walk16          	141
+#undef FRAME_walk17
 #define FRAME_walk17          	142
+#undef FRAME_walk18
 #define FRAME_walk18          	143
+#undef FRAME_walk19
 #define FRAME_walk19          	144
+#undef FRAME_walk20
 #define FRAME_walk20          	145
+#undef FRAME_walk21
 #define FRAME_walk21          	146
+#undef FRAME_walk22
 #define FRAME_walk22          	147
+#undef FRAME_walk23
 #define FRAME_walk23          	148
 
 #define MODEL_SCALE		1.000000
@@ -75786,12 +77528,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_break30           29
 #define FRAME_break31           30
 #define FRAME_break32           31
+#undef FRAME_death101
 #define FRAME_death101          32
+#undef FRAME_death102
 #define FRAME_death102          33
+#undef FRAME_death103
 #define FRAME_death103          34
+#undef FRAME_death104
 #define FRAME_death104          35
+#undef FRAME_death105
 #define FRAME_death105          36
+#undef FRAME_death106
 #define FRAME_death106          37
+#undef FRAME_death107
 #define FRAME_death107          38
 #define FRAME_drain01           39
 #define FRAME_drain02           40
@@ -75811,66 +77560,124 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_drain16           54
 #define FRAME_drain17           55
 #define FRAME_drain18           56
+#undef FRAME_pain101
 #define FRAME_pain101           57
+#undef FRAME_pain102
 #define FRAME_pain102           58
+#undef FRAME_pain103
 #define FRAME_pain103           59
+#undef FRAME_pain104
 #define FRAME_pain104           60
+#undef FRAME_pain105
 #define FRAME_pain105           61
+#undef FRAME_pain106
 #define FRAME_pain106           62
+#undef FRAME_pain107
 #define FRAME_pain107           63
+#undef FRAME_pain108
 #define FRAME_pain108           64
+#undef FRAME_pain109
 #define FRAME_pain109           65
+#undef FRAME_pain110
 #define FRAME_pain110           66
+#undef FRAME_pain111
 #define FRAME_pain111           67
+#undef FRAME_run01
 #define FRAME_run01             68
+#undef FRAME_run02
 #define FRAME_run02             69
+#undef FRAME_run03
 #define FRAME_run03             70
+#undef FRAME_run04
 #define FRAME_run04             71
+#undef FRAME_run05
 #define FRAME_run05             72
+#undef FRAME_run06
 #define FRAME_run06             73
+#undef FRAME_run07
 #define FRAME_run07             74
+#undef FRAME_run08
 #define FRAME_run08             75
+#undef FRAME_run09
 #define FRAME_run09             76
+#undef FRAME_run10
 #define FRAME_run10             77
+#undef FRAME_run11
 #define FRAME_run11             78
+#undef FRAME_run12
 #define FRAME_run12             79
 #define FRAME_run13             80
 #define FRAME_run14             81
 #define FRAME_run15             82
+#undef FRAME_stand01
 #define FRAME_stand01           83
+#undef FRAME_stand02
 #define FRAME_stand02           84
+#undef FRAME_stand03
 #define FRAME_stand03           85
+#undef FRAME_stand04
 #define FRAME_stand04           86
+#undef FRAME_stand05
 #define FRAME_stand05           87
+#undef FRAME_stand06
 #define FRAME_stand06           88
+#undef FRAME_stand07
 #define FRAME_stand07           89
+#undef FRAME_stand08
 #define FRAME_stand08           90
+#undef FRAME_stand09
 #define FRAME_stand09           91
+#undef FRAME_stand10
 #define FRAME_stand10           92
+#undef FRAME_stand11
 #define FRAME_stand11           93
+#undef FRAME_stand12
 #define FRAME_stand12           94
+#undef FRAME_stand13
 #define FRAME_stand13           95
+#undef FRAME_stand14
 #define FRAME_stand14           96
+#undef FRAME_stand15
 #define FRAME_stand15           97
+#undef FRAME_stand16
 #define FRAME_stand16           98
+#undef FRAME_stand17
 #define FRAME_stand17           99
+#undef FRAME_stand18
 #define FRAME_stand18           100
+#undef FRAME_stand19
 #define FRAME_stand19           101
+#undef FRAME_stand20
 #define FRAME_stand20           102
+#undef FRAME_stand21
 #define FRAME_stand21           103
+#undef FRAME_stand22
 #define FRAME_stand22           104
+#undef FRAME_stand23
 #define FRAME_stand23           105
+#undef FRAME_stand24
 #define FRAME_stand24           106
+#undef FRAME_stand25
 #define FRAME_stand25           107
+#undef FRAME_stand26
 #define FRAME_stand26           108
+#undef FRAME_stand27
 #define FRAME_stand27           109
+#undef FRAME_stand28
 #define FRAME_stand28           110
+#undef FRAME_stand29
 #define FRAME_stand29           111
+#undef FRAME_stand30
 #define FRAME_stand30           112
+#undef FRAME_stand31
 #define FRAME_stand31           113
+#undef FRAME_stand32
 #define FRAME_stand32           114
+#undef FRAME_stand33
 #define FRAME_stand33           115
+#undef FRAME_stand34
 #define FRAME_stand34           116
+#undef FRAME_stand35
 #define FRAME_stand35           117
 
 #define MODEL_SCALE             1.000000
@@ -76452,89 +78259,173 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by ModelGen - Do NOT Modify
 
+#undef FRAME_attak101
 #define FRAME_attak101        	0
+#undef FRAME_attak102
 #define FRAME_attak102        	1
+#undef FRAME_attak103
 #define FRAME_attak103        	2
+#undef FRAME_attak104
 #define FRAME_attak104        	3
+#undef FRAME_attak105
 #define FRAME_attak105        	4
+#undef FRAME_attak106
 #define FRAME_attak106        	5
+#undef FRAME_attak107
 #define FRAME_attak107        	6
+#undef FRAME_attak108
 #define FRAME_attak108        	7
+#undef FRAME_attak109
 #define FRAME_attak109        	8
+#undef FRAME_attak110
 #define FRAME_attak110        	9
+#undef FRAME_attak111
 #define FRAME_attak111        	10
+#undef FRAME_attak112
 #define FRAME_attak112        	11
+#undef FRAME_attak201
 #define FRAME_attak201        	12
+#undef FRAME_attak202
 #define FRAME_attak202        	13
+#undef FRAME_attak203
 #define FRAME_attak203        	14
+#undef FRAME_attak204
 #define FRAME_attak204        	15
+#undef FRAME_attak205
 #define FRAME_attak205        	16
+#undef FRAME_attak206
 #define FRAME_attak206        	17
+#undef FRAME_attak207
 #define FRAME_attak207        	18
+#undef FRAME_attak208
 #define FRAME_attak208        	19
+#undef FRAME_attak209
 #define FRAME_attak209        	20
+#undef FRAME_attak210
 #define FRAME_attak210        	21
+#undef FRAME_attak211
 #define FRAME_attak211        	22
+#undef FRAME_attak212
 #define FRAME_attak212        	23
+#undef FRAME_attak213
 #define FRAME_attak213        	24
+#undef FRAME_attak214
 #define FRAME_attak214        	25
+#undef FRAME_attak215
 #define FRAME_attak215        	26
+#undef FRAME_attak216
 #define FRAME_attak216        	27
+#undef FRAME_attak217
 #define FRAME_attak217        	28
+#undef FRAME_attak218
 #define FRAME_attak218        	29
+#undef FRAME_attak301
 #define FRAME_attak301        	30
+#undef FRAME_attak302
 #define FRAME_attak302        	31
+#undef FRAME_attak303
 #define FRAME_attak303        	32
+#undef FRAME_attak304
 #define FRAME_attak304        	33
+#undef FRAME_attak305
 #define FRAME_attak305        	34
+#undef FRAME_attak306
 #define FRAME_attak306        	35
+#undef FRAME_attak307
 #define FRAME_attak307        	36
+#undef FRAME_attak308
 #define FRAME_attak308        	37
+#undef FRAME_attak309
 #define FRAME_attak309        	38
+#undef FRAME_attak401
 #define FRAME_attak401        	39
+#undef FRAME_attak402
 #define FRAME_attak402        	40
+#undef FRAME_attak403
 #define FRAME_attak403        	41
+#undef FRAME_attak404
 #define FRAME_attak404        	42
+#undef FRAME_attak405
 #define FRAME_attak405        	43
+#undef FRAME_attak406
 #define FRAME_attak406        	44
+#undef FRAME_duck01
 #define FRAME_duck01          	45
+#undef FRAME_duck02
 #define FRAME_duck02          	46
+#undef FRAME_duck03
 #define FRAME_duck03          	47
+#undef FRAME_duck04
 #define FRAME_duck04          	48
+#undef FRAME_duck05
 #define FRAME_duck05          	49
+#undef FRAME_pain101
 #define FRAME_pain101         	50
+#undef FRAME_pain102
 #define FRAME_pain102         	51
+#undef FRAME_pain103
 #define FRAME_pain103         	52
+#undef FRAME_pain104
 #define FRAME_pain104         	53
+#undef FRAME_pain105
 #define FRAME_pain105         	54
+#undef FRAME_pain201
 #define FRAME_pain201         	55
+#undef FRAME_pain202
 #define FRAME_pain202         	56
+#undef FRAME_pain203
 #define FRAME_pain203         	57
+#undef FRAME_pain204
 #define FRAME_pain204         	58
+#undef FRAME_pain205
 #define FRAME_pain205         	59
+#undef FRAME_pain206
 #define FRAME_pain206         	60
+#undef FRAME_pain207
 #define FRAME_pain207         	61
+#undef FRAME_pain301
 #define FRAME_pain301         	62
+#undef FRAME_pain302
 #define FRAME_pain302         	63
+#undef FRAME_pain303
 #define FRAME_pain303         	64
+#undef FRAME_pain304
 #define FRAME_pain304         	65
+#undef FRAME_pain305
 #define FRAME_pain305         	66
+#undef FRAME_pain306
 #define FRAME_pain306         	67
+#undef FRAME_pain307
 #define FRAME_pain307         	68
+#undef FRAME_pain308
 #define FRAME_pain308         	69
+#undef FRAME_pain309
 #define FRAME_pain309         	70
+#undef FRAME_pain310
 #define FRAME_pain310         	71
+#undef FRAME_pain311
 #define FRAME_pain311         	72
+#undef FRAME_pain312
 #define FRAME_pain312         	73
+#undef FRAME_pain313
 #define FRAME_pain313         	74
+#undef FRAME_pain314
 #define FRAME_pain314         	75
+#undef FRAME_pain315
 #define FRAME_pain315         	76
+#undef FRAME_pain316
 #define FRAME_pain316         	77
+#undef FRAME_pain317
 #define FRAME_pain317         	78
+#undef FRAME_pain318
 #define FRAME_pain318         	79
+#undef FRAME_pain401
 #define FRAME_pain401         	80
+#undef FRAME_pain402
 #define FRAME_pain402         	81
+#undef FRAME_pain403
 #define FRAME_pain403         	82
+#undef FRAME_pain404
 #define FRAME_pain404         	83
 #define FRAME_pain405         	84
 #define FRAME_pain406         	85
@@ -76549,29 +78440,53 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_pain415         	94
 #define FRAME_pain416         	95
 #define FRAME_pain417         	96
+#undef FRAME_run01
 #define FRAME_run01           	97
+#undef FRAME_run02
 #define FRAME_run02           	98
+#undef FRAME_run03
 #define FRAME_run03           	99
+#undef FRAME_run04
 #define FRAME_run04           	100
+#undef FRAME_run05
 #define FRAME_run05           	101
+#undef FRAME_run06
 #define FRAME_run06           	102
+#undef FRAME_run07
 #define FRAME_run07           	103
+#undef FRAME_run08
 #define FRAME_run08           	104
+#undef FRAME_run09
 #define FRAME_run09           	105
+#undef FRAME_run10
 #define FRAME_run10           	106
+#undef FRAME_run11
 #define FRAME_run11           	107
+#undef FRAME_run12
 #define FRAME_run12           	108
+#undef FRAME_runs01
 #define FRAME_runs01          	109
+#undef FRAME_runs02
 #define FRAME_runs02          	110
+#undef FRAME_runs03
 #define FRAME_runs03          	111
+#undef FRAME_runs04
 #define FRAME_runs04          	112
+#undef FRAME_runs05
 #define FRAME_runs05          	113
+#undef FRAME_runs06
 #define FRAME_runs06          	114
+#undef FRAME_runs07
 #define FRAME_runs07          	115
+#undef FRAME_runs08
 #define FRAME_runs08          	116
+#undef FRAME_runs09
 #define FRAME_runs09          	117
+#undef FRAME_runs10
 #define FRAME_runs10          	118
+#undef FRAME_runs11
 #define FRAME_runs11          	119
+#undef FRAME_runs12
 #define FRAME_runs12          	120
 #define FRAME_runs13          	121
 #define FRAME_runs14          	122
@@ -76598,35 +78513,65 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_runt17          	143
 #define FRAME_runt18          	144
 #define FRAME_runt19          	145
+#undef FRAME_stand101
 #define FRAME_stand101        	146
+#undef FRAME_stand102
 #define FRAME_stand102        	147
+#undef FRAME_stand103
 #define FRAME_stand103        	148
+#undef FRAME_stand104
 #define FRAME_stand104        	149
+#undef FRAME_stand105
 #define FRAME_stand105        	150
+#undef FRAME_stand106
 #define FRAME_stand106        	151
+#undef FRAME_stand107
 #define FRAME_stand107        	152
+#undef FRAME_stand108
 #define FRAME_stand108        	153
+#undef FRAME_stand109
 #define FRAME_stand109        	154
+#undef FRAME_stand110
 #define FRAME_stand110        	155
+#undef FRAME_stand111
 #define FRAME_stand111        	156
+#undef FRAME_stand112
 #define FRAME_stand112        	157
+#undef FRAME_stand113
 #define FRAME_stand113        	158
+#undef FRAME_stand114
 #define FRAME_stand114        	159
+#undef FRAME_stand115
 #define FRAME_stand115        	160
+#undef FRAME_stand116
 #define FRAME_stand116        	161
+#undef FRAME_stand117
 #define FRAME_stand117        	162
+#undef FRAME_stand118
 #define FRAME_stand118        	163
+#undef FRAME_stand119
 #define FRAME_stand119        	164
+#undef FRAME_stand120
 #define FRAME_stand120        	165
+#undef FRAME_stand121
 #define FRAME_stand121        	166
+#undef FRAME_stand122
 #define FRAME_stand122        	167
+#undef FRAME_stand123
 #define FRAME_stand123        	168
+#undef FRAME_stand124
 #define FRAME_stand124        	169
+#undef FRAME_stand125
 #define FRAME_stand125        	170
+#undef FRAME_stand126
 #define FRAME_stand126        	171
+#undef FRAME_stand127
 #define FRAME_stand127        	172
+#undef FRAME_stand128
 #define FRAME_stand128        	173
+#undef FRAME_stand129
 #define FRAME_stand129        	174
+#undef FRAME_stand130
 #define FRAME_stand130        	175
 #define FRAME_stand301        	176
 #define FRAME_stand302        	177
@@ -76667,18 +78612,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand337        	212
 #define FRAME_stand338        	213
 #define FRAME_stand339        	214
+#undef FRAME_walk101
 #define FRAME_walk101         	215
+#undef FRAME_walk102
 #define FRAME_walk102         	216
+#undef FRAME_walk103
 #define FRAME_walk103         	217
+#undef FRAME_walk104
 #define FRAME_walk104         	218
+#undef FRAME_walk105
 #define FRAME_walk105         	219
+#undef FRAME_walk106
 #define FRAME_walk106         	220
+#undef FRAME_walk107
 #define FRAME_walk107         	221
+#undef FRAME_walk108
 #define FRAME_walk108         	222
+#undef FRAME_walk109
 #define FRAME_walk109         	223
+#undef FRAME_walk110
 #define FRAME_walk110         	224
+#undef FRAME_walk111
 #define FRAME_walk111         	225
+#undef FRAME_walk112
 #define FRAME_walk112         	226
+#undef FRAME_walk113
 #define FRAME_walk113         	227
 #define FRAME_walk114         	228
 #define FRAME_walk115         	229
@@ -76700,49 +78658,93 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_walk131         	245
 #define FRAME_walk132         	246
 #define FRAME_walk133         	247
+#undef FRAME_walk201
 #define FRAME_walk201         	248
+#undef FRAME_walk202
 #define FRAME_walk202         	249
+#undef FRAME_walk203
 #define FRAME_walk203         	250
+#undef FRAME_walk204
 #define FRAME_walk204         	251
+#undef FRAME_walk205
 #define FRAME_walk205         	252
+#undef FRAME_walk206
 #define FRAME_walk206         	253
+#undef FRAME_walk207
 #define FRAME_walk207         	254
+#undef FRAME_walk208
 #define FRAME_walk208         	255
+#undef FRAME_walk209
 #define FRAME_walk209         	256
+#undef FRAME_walk210
 #define FRAME_walk210         	257
+#undef FRAME_walk211
 #define FRAME_walk211         	258
+#undef FRAME_walk212
 #define FRAME_walk212         	259
+#undef FRAME_walk213
 #define FRAME_walk213         	260
+#undef FRAME_walk214
 #define FRAME_walk214         	261
+#undef FRAME_walk215
 #define FRAME_walk215         	262
+#undef FRAME_walk216
 #define FRAME_walk216         	263
+#undef FRAME_walk217
 #define FRAME_walk217         	264
+#undef FRAME_walk218
 #define FRAME_walk218         	265
+#undef FRAME_walk219
 #define FRAME_walk219         	266
+#undef FRAME_walk220
 #define FRAME_walk220         	267
+#undef FRAME_walk221
 #define FRAME_walk221         	268
+#undef FRAME_walk222
 #define FRAME_walk222         	269
+#undef FRAME_walk223
 #define FRAME_walk223         	270
+#undef FRAME_walk224
 #define FRAME_walk224         	271
+#undef FRAME_death101
 #define FRAME_death101        	272
+#undef FRAME_death102
 #define FRAME_death102        	273
+#undef FRAME_death103
 #define FRAME_death103        	274
+#undef FRAME_death104
 #define FRAME_death104        	275
+#undef FRAME_death105
 #define FRAME_death105        	276
+#undef FRAME_death106
 #define FRAME_death106        	277
+#undef FRAME_death107
 #define FRAME_death107        	278
+#undef FRAME_death108
 #define FRAME_death108        	279
+#undef FRAME_death109
 #define FRAME_death109        	280
+#undef FRAME_death110
 #define FRAME_death110        	281
+#undef FRAME_death111
 #define FRAME_death111        	282
+#undef FRAME_death112
 #define FRAME_death112        	283
+#undef FRAME_death113
 #define FRAME_death113        	284
+#undef FRAME_death114
 #define FRAME_death114        	285
+#undef FRAME_death115
 #define FRAME_death115        	286
+#undef FRAME_death116
 #define FRAME_death116        	287
+#undef FRAME_death117
 #define FRAME_death117        	288
+#undef FRAME_death118
 #define FRAME_death118        	289
+#undef FRAME_death119
 #define FRAME_death119        	290
+#undef FRAME_death120
 #define FRAME_death120        	291
 #define FRAME_death121        	292
 #define FRAME_death122        	293
@@ -76760,60 +78762,115 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death134        	305
 #define FRAME_death135        	306
 #define FRAME_death136        	307
+#undef FRAME_death201
 #define FRAME_death201        	308
+#undef FRAME_death202
 #define FRAME_death202        	309
+#undef FRAME_death203
 #define FRAME_death203        	310
+#undef FRAME_death204
 #define FRAME_death204        	311
+#undef FRAME_death205
 #define FRAME_death205        	312
+#undef FRAME_death206
 #define FRAME_death206        	313
+#undef FRAME_death207
 #define FRAME_death207        	314
+#undef FRAME_death208
 #define FRAME_death208        	315
+#undef FRAME_death209
 #define FRAME_death209        	316
+#undef FRAME_death210
 #define FRAME_death210        	317
+#undef FRAME_death211
 #define FRAME_death211        	318
+#undef FRAME_death212
 #define FRAME_death212        	319
+#undef FRAME_death213
 #define FRAME_death213        	320
+#undef FRAME_death214
 #define FRAME_death214        	321
+#undef FRAME_death215
 #define FRAME_death215        	322
+#undef FRAME_death216
 #define FRAME_death216        	323
+#undef FRAME_death217
 #define FRAME_death217        	324
+#undef FRAME_death218
 #define FRAME_death218        	325
+#undef FRAME_death219
 #define FRAME_death219        	326
+#undef FRAME_death220
 #define FRAME_death220        	327
+#undef FRAME_death221
 #define FRAME_death221        	328
+#undef FRAME_death222
 #define FRAME_death222        	329
+#undef FRAME_death223
 #define FRAME_death223        	330
+#undef FRAME_death224
 #define FRAME_death224        	331
+#undef FRAME_death225
 #define FRAME_death225        	332
+#undef FRAME_death226
 #define FRAME_death226        	333
+#undef FRAME_death227
 #define FRAME_death227        	334
+#undef FRAME_death228
 #define FRAME_death228        	335
+#undef FRAME_death229
 #define FRAME_death229        	336
+#undef FRAME_death230
 #define FRAME_death230        	337
+#undef FRAME_death231
 #define FRAME_death231        	338
+#undef FRAME_death232
 #define FRAME_death232        	339
+#undef FRAME_death233
 #define FRAME_death233        	340
+#undef FRAME_death234
 #define FRAME_death234        	341
+#undef FRAME_death235
 #define FRAME_death235        	342
+#undef FRAME_death301
 #define FRAME_death301        	343
+#undef FRAME_death302
 #define FRAME_death302        	344
+#undef FRAME_death303
 #define FRAME_death303        	345
+#undef FRAME_death304
 #define FRAME_death304        	346
+#undef FRAME_death305
 #define FRAME_death305        	347
+#undef FRAME_death306
 #define FRAME_death306        	348
+#undef FRAME_death307
 #define FRAME_death307        	349
+#undef FRAME_death308
 #define FRAME_death308        	350
+#undef FRAME_death309
 #define FRAME_death309        	351
+#undef FRAME_death310
 #define FRAME_death310        	352
+#undef FRAME_death311
 #define FRAME_death311        	353
+#undef FRAME_death312
 #define FRAME_death312        	354
+#undef FRAME_death313
 #define FRAME_death313        	355
+#undef FRAME_death314
 #define FRAME_death314        	356
+#undef FRAME_death315
 #define FRAME_death315        	357
+#undef FRAME_death316
 #define FRAME_death316        	358
+#undef FRAME_death317
 #define FRAME_death317        	359
+#undef FRAME_death318
 #define FRAME_death318        	360
+#undef FRAME_death319
 #define FRAME_death319        	361
+#undef FRAME_death320
 #define FRAME_death320        	362
 #define FRAME_death321        	363
 #define FRAME_death322        	364
@@ -76928,6 +78985,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_death609        	473
 #define FRAME_death610        	474
 
+#undef MODEL_SCALE
 #define MODEL_SCALE		1.200000
 /* ============ end inlined header: game/m_soldier.h ============ */
 
@@ -78509,6 +80567,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_stand_59        	252
 #define FRAME_stand_60        	253
 
+#undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_supertank.h ============ */
 
@@ -79253,112 +81312,219 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // This file generated by qdata - Do NOT Modify
 
+#undef FRAME_stand01
 #define FRAME_stand01         	0
+#undef FRAME_stand02
 #define FRAME_stand02         	1
+#undef FRAME_stand03
 #define FRAME_stand03         	2
+#undef FRAME_stand04
 #define FRAME_stand04         	3
+#undef FRAME_stand05
 #define FRAME_stand05         	4
+#undef FRAME_stand06
 #define FRAME_stand06         	5
+#undef FRAME_stand07
 #define FRAME_stand07         	6
+#undef FRAME_stand08
 #define FRAME_stand08         	7
+#undef FRAME_stand09
 #define FRAME_stand09         	8
+#undef FRAME_stand10
 #define FRAME_stand10         	9
+#undef FRAME_stand11
 #define FRAME_stand11         	10
+#undef FRAME_stand12
 #define FRAME_stand12         	11
+#undef FRAME_stand13
 #define FRAME_stand13         	12
+#undef FRAME_stand14
 #define FRAME_stand14         	13
+#undef FRAME_stand15
 #define FRAME_stand15         	14
+#undef FRAME_stand16
 #define FRAME_stand16         	15
+#undef FRAME_stand17
 #define FRAME_stand17         	16
+#undef FRAME_stand18
 #define FRAME_stand18         	17
+#undef FRAME_stand19
 #define FRAME_stand19         	18
+#undef FRAME_stand20
 #define FRAME_stand20         	19
+#undef FRAME_stand21
 #define FRAME_stand21         	20
+#undef FRAME_stand22
 #define FRAME_stand22         	21
+#undef FRAME_stand23
 #define FRAME_stand23         	22
+#undef FRAME_stand24
 #define FRAME_stand24         	23
+#undef FRAME_stand25
 #define FRAME_stand25         	24
+#undef FRAME_stand26
 #define FRAME_stand26         	25
+#undef FRAME_stand27
 #define FRAME_stand27         	26
+#undef FRAME_stand28
 #define FRAME_stand28         	27
+#undef FRAME_stand29
 #define FRAME_stand29         	28
+#undef FRAME_stand30
 #define FRAME_stand30         	29
+#undef FRAME_walk01
 #define FRAME_walk01          	30
+#undef FRAME_walk02
 #define FRAME_walk02          	31
+#undef FRAME_walk03
 #define FRAME_walk03          	32
+#undef FRAME_walk04
 #define FRAME_walk04          	33
+#undef FRAME_walk05
 #define FRAME_walk05          	34
+#undef FRAME_walk06
 #define FRAME_walk06          	35
+#undef FRAME_walk07
 #define FRAME_walk07          	36
+#undef FRAME_walk08
 #define FRAME_walk08          	37
+#undef FRAME_walk09
 #define FRAME_walk09          	38
+#undef FRAME_walk10
 #define FRAME_walk10          	39
+#undef FRAME_walk11
 #define FRAME_walk11          	40
+#undef FRAME_walk12
 #define FRAME_walk12          	41
+#undef FRAME_walk13
 #define FRAME_walk13          	42
+#undef FRAME_walk14
 #define FRAME_walk14          	43
+#undef FRAME_walk15
 #define FRAME_walk15          	44
+#undef FRAME_walk16
 #define FRAME_walk16          	45
+#undef FRAME_walk17
 #define FRAME_walk17          	46
+#undef FRAME_walk18
 #define FRAME_walk18          	47
+#undef FRAME_walk19
 #define FRAME_walk19          	48
+#undef FRAME_walk20
 #define FRAME_walk20          	49
+#undef FRAME_walk21
 #define FRAME_walk21          	50
+#undef FRAME_walk22
 #define FRAME_walk22          	51
+#undef FRAME_walk23
 #define FRAME_walk23          	52
+#undef FRAME_walk24
 #define FRAME_walk24          	53
+#undef FRAME_walk25
 #define FRAME_walk25          	54
+#undef FRAME_attak101
 #define FRAME_attak101        	55
+#undef FRAME_attak102
 #define FRAME_attak102        	56
+#undef FRAME_attak103
 #define FRAME_attak103        	57
+#undef FRAME_attak104
 #define FRAME_attak104        	58
+#undef FRAME_attak105
 #define FRAME_attak105        	59
+#undef FRAME_attak106
 #define FRAME_attak106        	60
+#undef FRAME_attak107
 #define FRAME_attak107        	61
+#undef FRAME_attak108
 #define FRAME_attak108        	62
+#undef FRAME_attak109
 #define FRAME_attak109        	63
+#undef FRAME_attak110
 #define FRAME_attak110        	64
+#undef FRAME_attak111
 #define FRAME_attak111        	65
+#undef FRAME_attak112
 #define FRAME_attak112        	66
+#undef FRAME_attak113
 #define FRAME_attak113        	67
+#undef FRAME_attak114
 #define FRAME_attak114        	68
+#undef FRAME_attak115
 #define FRAME_attak115        	69
+#undef FRAME_attak116
 #define FRAME_attak116        	70
+#undef FRAME_attak117
 #define FRAME_attak117        	71
+#undef FRAME_attak118
 #define FRAME_attak118        	72
+#undef FRAME_attak119
 #define FRAME_attak119        	73
+#undef FRAME_attak120
 #define FRAME_attak120        	74
+#undef FRAME_attak121
 #define FRAME_attak121        	75
+#undef FRAME_attak122
 #define FRAME_attak122        	76
+#undef FRAME_attak201
 #define FRAME_attak201        	77
+#undef FRAME_attak202
 #define FRAME_attak202        	78
+#undef FRAME_attak203
 #define FRAME_attak203        	79
+#undef FRAME_attak204
 #define FRAME_attak204        	80
+#undef FRAME_attak205
 #define FRAME_attak205        	81
+#undef FRAME_attak206
 #define FRAME_attak206        	82
+#undef FRAME_attak207
 #define FRAME_attak207        	83
+#undef FRAME_attak208
 #define FRAME_attak208        	84
+#undef FRAME_attak209
 #define FRAME_attak209        	85
+#undef FRAME_attak210
 #define FRAME_attak210        	86
+#undef FRAME_attak211
 #define FRAME_attak211        	87
+#undef FRAME_attak212
 #define FRAME_attak212        	88
+#undef FRAME_attak213
 #define FRAME_attak213        	89
+#undef FRAME_attak214
 #define FRAME_attak214        	90
+#undef FRAME_attak215
 #define FRAME_attak215        	91
+#undef FRAME_attak216
 #define FRAME_attak216        	92
+#undef FRAME_attak217
 #define FRAME_attak217        	93
+#undef FRAME_attak218
 #define FRAME_attak218        	94
+#undef FRAME_attak219
 #define FRAME_attak219        	95
+#undef FRAME_attak220
 #define FRAME_attak220        	96
+#undef FRAME_attak221
 #define FRAME_attak221        	97
+#undef FRAME_attak222
 #define FRAME_attak222        	98
+#undef FRAME_attak223
 #define FRAME_attak223        	99
+#undef FRAME_attak224
 #define FRAME_attak224        	100
+#undef FRAME_attak225
 #define FRAME_attak225        	101
+#undef FRAME_attak226
 #define FRAME_attak226        	102
+#undef FRAME_attak227
 #define FRAME_attak227        	103
+#undef FRAME_attak228
 #define FRAME_attak228        	104
+#undef FRAME_attak229
 #define FRAME_attak229        	105
+#undef FRAME_attak230
 #define FRAME_attak230        	106
 #define FRAME_attak231        	107
 #define FRAME_attak232        	108
@@ -79368,39 +81534,73 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak236        	112
 #define FRAME_attak237        	113
 #define FRAME_attak238        	114
+#undef FRAME_attak301
 #define FRAME_attak301        	115
+#undef FRAME_attak302
 #define FRAME_attak302        	116
+#undef FRAME_attak303
 #define FRAME_attak303        	117
+#undef FRAME_attak304
 #define FRAME_attak304        	118
+#undef FRAME_attak305
 #define FRAME_attak305        	119
+#undef FRAME_attak306
 #define FRAME_attak306        	120
+#undef FRAME_attak307
 #define FRAME_attak307        	121
+#undef FRAME_attak308
 #define FRAME_attak308        	122
+#undef FRAME_attak309
 #define FRAME_attak309        	123
+#undef FRAME_attak310
 #define FRAME_attak310        	124
+#undef FRAME_attak311
 #define FRAME_attak311        	125
+#undef FRAME_attak312
 #define FRAME_attak312        	126
+#undef FRAME_attak313
 #define FRAME_attak313        	127
+#undef FRAME_attak314
 #define FRAME_attak314        	128
+#undef FRAME_attak315
 #define FRAME_attak315        	129
+#undef FRAME_attak316
 #define FRAME_attak316        	130
+#undef FRAME_attak317
 #define FRAME_attak317        	131
+#undef FRAME_attak318
 #define FRAME_attak318        	132
+#undef FRAME_attak319
 #define FRAME_attak319        	133
+#undef FRAME_attak320
 #define FRAME_attak320        	134
+#undef FRAME_attak321
 #define FRAME_attak321        	135
+#undef FRAME_attak322
 #define FRAME_attak322        	136
+#undef FRAME_attak323
 #define FRAME_attak323        	137
+#undef FRAME_attak324
 #define FRAME_attak324        	138
+#undef FRAME_attak325
 #define FRAME_attak325        	139
+#undef FRAME_attak326
 #define FRAME_attak326        	140
+#undef FRAME_attak327
 #define FRAME_attak327        	141
+#undef FRAME_attak328
 #define FRAME_attak328        	142
+#undef FRAME_attak329
 #define FRAME_attak329        	143
+#undef FRAME_attak330
 #define FRAME_attak330        	144
+#undef FRAME_attak331
 #define FRAME_attak331        	145
+#undef FRAME_attak332
 #define FRAME_attak332        	146
+#undef FRAME_attak333
 #define FRAME_attak333        	147
+#undef FRAME_attak334
 #define FRAME_attak334        	148
 #define FRAME_attak335        	149
 #define FRAME_attak336        	150
@@ -79421,131 +81621,254 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAME_attak351        	165
 #define FRAME_attak352        	166
 #define FRAME_attak353        	167
+#undef FRAME_attak401
 #define FRAME_attak401        	168
+#undef FRAME_attak402
 #define FRAME_attak402        	169
+#undef FRAME_attak403
 #define FRAME_attak403        	170
+#undef FRAME_attak404
 #define FRAME_attak404        	171
+#undef FRAME_attak405
 #define FRAME_attak405        	172
+#undef FRAME_attak406
 #define FRAME_attak406        	173
+#undef FRAME_attak407
 #define FRAME_attak407        	174
+#undef FRAME_attak408
 #define FRAME_attak408        	175
+#undef FRAME_attak409
 #define FRAME_attak409        	176
+#undef FRAME_attak410
 #define FRAME_attak410        	177
+#undef FRAME_attak411
 #define FRAME_attak411        	178
+#undef FRAME_attak412
 #define FRAME_attak412        	179
+#undef FRAME_attak413
 #define FRAME_attak413        	180
+#undef FRAME_attak414
 #define FRAME_attak414        	181
+#undef FRAME_attak415
 #define FRAME_attak415        	182
+#undef FRAME_attak416
 #define FRAME_attak416        	183
+#undef FRAME_attak417
 #define FRAME_attak417        	184
+#undef FRAME_attak418
 #define FRAME_attak418        	185
+#undef FRAME_attak419
 #define FRAME_attak419        	186
+#undef FRAME_attak420
 #define FRAME_attak420        	187
+#undef FRAME_attak421
 #define FRAME_attak421        	188
+#undef FRAME_attak422
 #define FRAME_attak422        	189
+#undef FRAME_attak423
 #define FRAME_attak423        	190
+#undef FRAME_attak424
 #define FRAME_attak424        	191
+#undef FRAME_attak425
 #define FRAME_attak425        	192
+#undef FRAME_attak426
 #define FRAME_attak426        	193
 #define FRAME_attak427        	194
 #define FRAME_attak428        	195
 #define FRAME_attak429        	196
+#undef FRAME_pain101
 #define FRAME_pain101         	197
+#undef FRAME_pain102
 #define FRAME_pain102         	198
+#undef FRAME_pain103
 #define FRAME_pain103         	199
+#undef FRAME_pain104
 #define FRAME_pain104         	200
+#undef FRAME_pain201
 #define FRAME_pain201         	201
+#undef FRAME_pain202
 #define FRAME_pain202         	202
+#undef FRAME_pain203
 #define FRAME_pain203         	203
+#undef FRAME_pain204
 #define FRAME_pain204         	204
+#undef FRAME_pain205
 #define FRAME_pain205         	205
+#undef FRAME_pain301
 #define FRAME_pain301         	206
+#undef FRAME_pain302
 #define FRAME_pain302         	207
+#undef FRAME_pain303
 #define FRAME_pain303         	208
+#undef FRAME_pain304
 #define FRAME_pain304         	209
+#undef FRAME_pain305
 #define FRAME_pain305         	210
+#undef FRAME_pain306
 #define FRAME_pain306         	211
+#undef FRAME_pain307
 #define FRAME_pain307         	212
+#undef FRAME_pain308
 #define FRAME_pain308         	213
+#undef FRAME_pain309
 #define FRAME_pain309         	214
+#undef FRAME_pain310
 #define FRAME_pain310         	215
+#undef FRAME_pain311
 #define FRAME_pain311         	216
+#undef FRAME_pain312
 #define FRAME_pain312         	217
+#undef FRAME_pain313
 #define FRAME_pain313         	218
+#undef FRAME_pain314
 #define FRAME_pain314         	219
+#undef FRAME_pain315
 #define FRAME_pain315         	220
+#undef FRAME_pain316
 #define FRAME_pain316         	221
+#undef FRAME_death101
 #define FRAME_death101        	222
+#undef FRAME_death102
 #define FRAME_death102        	223
+#undef FRAME_death103
 #define FRAME_death103        	224
+#undef FRAME_death104
 #define FRAME_death104        	225
+#undef FRAME_death105
 #define FRAME_death105        	226
+#undef FRAME_death106
 #define FRAME_death106        	227
+#undef FRAME_death107
 #define FRAME_death107        	228
+#undef FRAME_death108
 #define FRAME_death108        	229
+#undef FRAME_death109
 #define FRAME_death109        	230
+#undef FRAME_death110
 #define FRAME_death110        	231
+#undef FRAME_death111
 #define FRAME_death111        	232
+#undef FRAME_death112
 #define FRAME_death112        	233
+#undef FRAME_death113
 #define FRAME_death113        	234
+#undef FRAME_death114
 #define FRAME_death114        	235
+#undef FRAME_death115
 #define FRAME_death115        	236
+#undef FRAME_death116
 #define FRAME_death116        	237
+#undef FRAME_death117
 #define FRAME_death117        	238
+#undef FRAME_death118
 #define FRAME_death118        	239
+#undef FRAME_death119
 #define FRAME_death119        	240
+#undef FRAME_death120
 #define FRAME_death120        	241
+#undef FRAME_death121
 #define FRAME_death121        	242
+#undef FRAME_death122
 #define FRAME_death122        	243
+#undef FRAME_death123
 #define FRAME_death123        	244
+#undef FRAME_death124
 #define FRAME_death124        	245
+#undef FRAME_death125
 #define FRAME_death125        	246
+#undef FRAME_death126
 #define FRAME_death126        	247
+#undef FRAME_death127
 #define FRAME_death127        	248
+#undef FRAME_death128
 #define FRAME_death128        	249
+#undef FRAME_death129
 #define FRAME_death129        	250
+#undef FRAME_death130
 #define FRAME_death130        	251
+#undef FRAME_death131
 #define FRAME_death131        	252
+#undef FRAME_death132
 #define FRAME_death132        	253
+#undef FRAME_recln101
 #define FRAME_recln101        	254
+#undef FRAME_recln102
 #define FRAME_recln102        	255
+#undef FRAME_recln103
 #define FRAME_recln103        	256
+#undef FRAME_recln104
 #define FRAME_recln104        	257
+#undef FRAME_recln105
 #define FRAME_recln105        	258
+#undef FRAME_recln106
 #define FRAME_recln106        	259
+#undef FRAME_recln107
 #define FRAME_recln107        	260
+#undef FRAME_recln108
 #define FRAME_recln108        	261
+#undef FRAME_recln109
 #define FRAME_recln109        	262
+#undef FRAME_recln110
 #define FRAME_recln110        	263
+#undef FRAME_recln111
 #define FRAME_recln111        	264
+#undef FRAME_recln112
 #define FRAME_recln112        	265
+#undef FRAME_recln113
 #define FRAME_recln113        	266
+#undef FRAME_recln114
 #define FRAME_recln114        	267
+#undef FRAME_recln115
 #define FRAME_recln115        	268
+#undef FRAME_recln116
 #define FRAME_recln116        	269
+#undef FRAME_recln117
 #define FRAME_recln117        	270
+#undef FRAME_recln118
 #define FRAME_recln118        	271
+#undef FRAME_recln119
 #define FRAME_recln119        	272
+#undef FRAME_recln120
 #define FRAME_recln120        	273
+#undef FRAME_recln121
 #define FRAME_recln121        	274
+#undef FRAME_recln122
 #define FRAME_recln122        	275
+#undef FRAME_recln123
 #define FRAME_recln123        	276
+#undef FRAME_recln124
 #define FRAME_recln124        	277
+#undef FRAME_recln125
 #define FRAME_recln125        	278
+#undef FRAME_recln126
 #define FRAME_recln126        	279
+#undef FRAME_recln127
 #define FRAME_recln127        	280
+#undef FRAME_recln128
 #define FRAME_recln128        	281
+#undef FRAME_recln129
 #define FRAME_recln129        	282
+#undef FRAME_recln130
 #define FRAME_recln130        	283
+#undef FRAME_recln131
 #define FRAME_recln131        	284
+#undef FRAME_recln132
 #define FRAME_recln132        	285
+#undef FRAME_recln133
 #define FRAME_recln133        	286
+#undef FRAME_recln134
 #define FRAME_recln134        	287
+#undef FRAME_recln135
 #define FRAME_recln135        	288
+#undef FRAME_recln136
 #define FRAME_recln136        	289
+#undef FRAME_recln137
 #define FRAME_recln137        	290
+#undef FRAME_recln138
 #define FRAME_recln138        	291
+#undef FRAME_recln139
 #define FRAME_recln139        	292
+#undef FRAME_recln140
 #define FRAME_recln140        	293
 
 #define MODEL_SCALE		1.000000
@@ -82358,7 +84681,6 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 	int		sorted[MAX_CLIENTS];
 	int		sortedscores[MAX_CLIENTS];
 	int		score, total;
-	int		picnum;
 	int		x, y;
 	gclient_t	*cl;
 	edict_t		*cl_ent;
@@ -82401,7 +84723,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 		cl = &game.clients[sorted[i]];
 		cl_ent = g_edicts + 1 + sorted[i];
 
-		picnum = gi.imageindex ("i_fixme");
+		gi.imageindex ("i_fixme");
 		x = (i>=6) ? 160 : 0;
 		y = 32 + 32 * (i%6);
 
@@ -87567,7 +89889,6 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	int		row, column;
 	byte	*buf_p;
 	byte	*buffer;
-	int		length;
 	TargaHeader		targa_header;
 	byte			*targa_rgba;
 	byte tmp[2];
@@ -87577,7 +89898,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	//
 	// load the file
 	//
-	length = ri.FS_LoadFile (name, (void **)&buffer);
+	ri.FS_LoadFile (name, (void **)&buffer);
 	if (!buffer)
 	{
 		ri.Con_Printf (PRINT_DEVELOPER, "Bad tga file %s\n", name);
@@ -88244,6 +90565,8 @@ qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboole
 
 		return GL_Upload32 (trans, width, height, mipmap);
 	}
+
+	return true;
 }
 
 
@@ -88898,7 +91221,6 @@ void R_LightPoint (vec3_t p, vec3_t color)
 	float		r;
 	int			lnum;
 	dlight_t	*dl;
-	float		light;
 	vec3_t		dist;
 	float		add;
 	
@@ -88926,7 +91248,6 @@ void R_LightPoint (vec3_t p, vec3_t color)
 	//
 	// add dynamic lights
 	//
-	light = 0;
 	dl = r_newrefdef.dlights;
 	for (lnum=0 ; lnum<r_newrefdef.num_dlights ; lnum++, dl++)
 	{
@@ -89058,7 +91379,6 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	float		scale[4];
 	int			nummaps;
 	float		*bl;
-	lightstyle_t	*style;
 	int monolightmap;
 
 	if ( surf->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP) )
@@ -89073,15 +91393,8 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 // set to full bright if no light data
 	if (!surf->samples)
 	{
-		int maps;
-
 		for (i=0 ; i<size*3 ; i++)
 			s_blocklights[i] = 255;
-		for (maps = 0 ; maps < MAXLIGHTMAPS && surf->styles[maps] != 255 ;
-			 maps++)
-		{
-			style = &r_newrefdef.lightstyles[surf->styles[maps]];
-		}
 		goto store;
 	}
 
@@ -89853,18 +92166,12 @@ extern	vec3_t			lightspot;
 
 void GL_DrawAliasShadow (dmdl_t *paliashdr, int posenum)
 {
-	dtrivertx_t	*verts;
 	int		*order;
 	vec3_t	point;
 	float	height, lheight;
 	int		count;
-	daliasframe_t	*frame;
 
 	lheight = currententity->origin[2] - lightspot[2];
-
-	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
-		+ currententity->frame * paliashdr->framesize);
-	verts = frame->verts;
 
 	height = 0;
 
@@ -92489,48 +94796,6 @@ void	R_SetGL2D (void)
 	qglColor4f (1,1,1,1);
 }
 
-static void GL_DrawColoredStereoLinePair( float r, float g, float b, float y )
-{
-	qglColor3f( r, g, b );
-	qglVertex2f( 0, y );
-	qglVertex2f( vid.width, y );
-	qglColor3f( 0, 0, 0 );
-	qglVertex2f( 0, y + 1 );
-	qglVertex2f( vid.width, y + 1 );
-}
-
-static void GL_DrawStereoPattern( void )
-{
-	int i;
-
-	if ( !( gl_config.renderer & GL_RENDERER_INTERGRAPH ) )
-		return;
-
-	if ( !gl_state.stereo_enabled )
-		return;
-
-	R_SetGL2D();
-
-	qglDrawBuffer( GL_BACK_LEFT );
-
-	for ( i = 0; i < 20; i++ )
-	{
-		qglBegin( GL_LINES );
-			GL_DrawColoredStereoLinePair( 1, 0, 0, 0 );
-			GL_DrawColoredStereoLinePair( 1, 0, 0, 2 );
-			GL_DrawColoredStereoLinePair( 1, 0, 0, 4 );
-			GL_DrawColoredStereoLinePair( 1, 0, 0, 6 );
-			GL_DrawColoredStereoLinePair( 0, 1, 0, 8 );
-			GL_DrawColoredStereoLinePair( 1, 1, 0, 10);
-			GL_DrawColoredStereoLinePair( 1, 1, 0, 12);
-			GL_DrawColoredStereoLinePair( 0, 1, 0, 14);
-		qglEnd();
-		
-		GLimp_EndFrame();
-	}
-}
-
-
 /*
 ====================
 R_SetLightLevel
@@ -92952,6 +95217,8 @@ int R_Init( void *hinstance, void *hWnd )
 	err = qglGetError();
 	if ( err != GL_NO_ERROR )
 		ri.Con_Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
+
+	return true;
 }
 
 /*
@@ -93578,7 +95845,9 @@ msurface_t	*r_alpha_surfaces;
 
 #define LIGHTMAP_BYTES 4
 
+#undef BLOCK_WIDTH
 #define	BLOCK_WIDTH		128
+#undef BLOCK_HEIGHT
 #define	BLOCK_HEIGHT	128
 
 #define	MAX_LIGHTMAPS	128
@@ -94072,7 +96341,7 @@ void R_RenderBrushPoly (msurface_t *fa)
 	}
 
 	// dynamic this frame or dynamic previously
-	if ( ( fa->dlightframe == r_framecount ) )
+	if ( fa->dlightframe == r_framecount )
 	{
 dynamic:
 		if ( gl_dynamic->value )
@@ -94261,7 +96530,7 @@ static void GL_RenderLightmappedPoly( msurface_t *surf )
 	}
 
 	// dynamic this frame or dynamic previously
-	if ( ( surf->dlightframe == r_framecount ) )
+	if ( surf->dlightframe == r_framecount )
 	{
 dynamic:
 		if ( gl_dynamic->value )
@@ -94995,7 +97264,6 @@ void GL_BuildPolygonFromSurface(msurface_t *fa)
 {
 	int			i, lindex, lnumverts;
 	medge_t		*pedges, *r_pedge;
-	int			vertpage;
 	float		*vec;
 	float		s, t;
 	glpoly_t	*poly;
@@ -95004,8 +97272,6 @@ void GL_BuildPolygonFromSurface(msurface_t *fa)
 // reconstruct the polygon
 	pedges = currentmodel->edges;
 	lnumverts = fa->numedges;
-	vertpage = 0;
-
 	VectorClear (total);
 	//
 	// draw texture
@@ -95959,7 +98225,6 @@ static qboolean	initialized = false;
 static qboolean	enabled = false;
 static qboolean playLooping = false;
 static byte 	remap[100];
-static byte		cdrom;
 static byte		playTrack;
 static byte		maxTrack;
 
@@ -95977,7 +98242,7 @@ static void CDAudio_Eject(void)
 {
 	DWORD	dwReturn;
 
-    if (dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_OPEN, (DWORD)NULL))
+    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_OPEN, (DWORD)NULL)))
 		Com_DPrintf("MCI_SET_DOOR_OPEN failed (%i)\n", dwReturn);
 }
 
@@ -95986,7 +98251,7 @@ static void CDAudio_CloseDoor(void)
 {
 	DWORD	dwReturn;
 
-    if (dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_CLOSED, (DWORD)NULL))
+    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_CLOSED, (DWORD)NULL)))
 		Com_DPrintf("MCI_SET_DOOR_CLOSED failed (%i)\n", dwReturn);
 }
 
@@ -96126,7 +98391,7 @@ void CDAudio_Stop(void)
 	if (!playing)
 		return;
 
-    if (dwReturn = mciSendCommand(wDeviceID, MCI_STOP, 0, (DWORD)NULL))
+    if ((dwReturn = mciSendCommand(wDeviceID, MCI_STOP, 0, (DWORD)NULL)))
 		Com_DPrintf("MCI_STOP failed (%i)", dwReturn);
 
 	wasPlaying = false;
@@ -96146,7 +98411,7 @@ void CDAudio_Pause(void)
 		return;
 
 	mciGenericParms.dwCallback = (DWORD)cl_hwnd;
-    if (dwReturn = mciSendCommand(wDeviceID, MCI_PAUSE, 0, (DWORD)(LPVOID) &mciGenericParms))
+    if ((dwReturn = mciSendCommand(wDeviceID, MCI_PAUSE, 0, (DWORD)(LPVOID) &mciGenericParms)))
 		Com_DPrintf("MCI_PAUSE failed (%i)", dwReturn);
 
 	wasPlaying = playing;
@@ -96373,7 +98638,7 @@ int CDAudio_Init(void)
 		return -1;
 
 	mciOpenParms.lpstrDeviceType = "cdaudio";
-	if (dwReturn = mciSendCommand(0, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_SHAREABLE, (DWORD) (LPVOID) &mciOpenParms))
+	if ((dwReturn = mciSendCommand(0, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_SHAREABLE, (DWORD) (LPVOID) &mciOpenParms)))
 	{
 		Com_Printf("CDAudio_Init: MCI_OPEN failed (%i)\n", dwReturn);
 		return -1;
@@ -96382,7 +98647,7 @@ int CDAudio_Init(void)
 
     // Set the time format to track/minute/second/frame (TMSF).
     mciSetParms.dwTimeFormat = MCI_FORMAT_TMSF;
-    if (dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_TIME_FORMAT, (DWORD)(LPVOID) &mciSetParms))
+    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_TIME_FORMAT, (DWORD)(LPVOID) &mciSetParms)))
     {
 		Com_Printf("MCI_SET_TIME_FORMAT failed (%i)\n", dwReturn);
         mciSendCommand(wDeviceID, MCI_CLOSE, 0, (DWORD)NULL);
@@ -96553,9 +98818,9 @@ int CCheckParm (char *parm)
 void InitConProc (int argc, char **argv)
 {
 	unsigned	threadAddr;
-	HANDLE		hFile;
-	HANDLE		heventParent;
-	HANDLE		heventChild;
+	HANDLE		hFile = NULL;
+	HANDLE		heventParent = NULL;
+	HANDLE		heventChild = NULL;
 	int			t;
 
 	ccom_argc = argc;
@@ -97523,6 +99788,8 @@ PDWORD RawValuePointer (int axis)
 	case JOY_AXIS_V:
 		return &ji.dwVpos;
 	}
+
+	return NULL;
 }
 
 
@@ -97964,6 +100231,8 @@ qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
 			return true;
 		return false;
 	}
+
+	return false;
 }
 
 /*
@@ -97994,6 +100263,8 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
 			return true;
 		return false;
 	}
+
+	return false;
 }
 
 char	*NET_AdrToString (netadr_t a)
@@ -98230,7 +100501,7 @@ void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
 {
 	int		ret;
 	struct sockaddr	addr;
-	int		net_socket;
+	int		net_socket = 0;
 
 	if ( to.type == NA_LOOPBACK )
 	{
@@ -98592,10 +100863,7 @@ NET_Init
 */
 void NET_Init (void)
 {
-	WORD	wVersionRequested; 
 	int		r;
-
-	wVersionRequested = MAKEWORD(1, 1); 
 
 	r = WSAStartup (MAKEWORD(1, 1), &winsockdata);
 
@@ -99578,7 +101846,7 @@ how many sample are required to fill it up.
 int SNDDMA_GetDMAPos(void)
 {
 	MMTIME	mmtime;
-	int		s;
+	int		s = 0;
 	DWORD	dwWrite;
 
 	if (dsound_init) 
@@ -99703,8 +101971,8 @@ void SNDDMA_Submit(void)
 	while (((snd_sent - snd_completed) >> sample16) < 8)
 	{
 		h = lpWaveHdr + ( snd_sent&WAV_MASK );
-	if (paintedtime/256 <= snd_sent)
-		break;	//	Com_Printf ("submit overrun\n");
+		if (paintedtime/256 <= snd_sent)
+			break;	//	Com_Printf ("submit overrun\n");
 //Com_Printf ("send %i\n", snd_sent);
 		snd_sent++;
 		/* 
@@ -99835,6 +102103,7 @@ unsigned	sys_frame_time;
 
 static HANDLE		qwclsemaphore;
 
+#undef MAX_NUM_ARGVS
 #define	MAX_NUM_ARGVS	128
 int			argc;
 char		*argv[MAX_NUM_ARGVS];
@@ -100395,9 +102664,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	int				time, oldtime, newtime;
 	char			*cddir;
 
-    /* previous instances do not exist in Win32 */
-    if (hPrevInstance)
-        return 0;
+	/* previous instances do not exist in Win32 */
+	if (hPrevInstance)
+		return 0;
 
 	global_hInstance = hInstance;
 
@@ -100583,8 +102852,6 @@ void VID_Printf (int print_level, char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-	static qboolean	inupdate;
-	
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
@@ -100608,8 +102875,6 @@ void VID_Error (int err_level, char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-	static qboolean	inupdate;
-	
 	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
@@ -100754,8 +103019,6 @@ LONG WINAPI MainWndProc (
     WPARAM  wParam,
     LPARAM  lParam)
 {
-	LONG			lRet = 0;
-
 	if ( uMsg == MSH_MOUSEWHEEL )
 	{
 		if ( ( ( int ) wParam ) > 0 )
@@ -100905,7 +103168,7 @@ LONG WINAPI MainWndProc (
 	case MM_MCINOTIFY:
 		{
 			LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-			lRet = CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
+			CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
 		}
 		break;
 
@@ -101774,7 +104037,6 @@ extern glwstate_t glw_state;
 /* ============ end inlined header: win32/glw_win.h ============ */
 /* already inlined above: win32/winquake.h */
 
-static qboolean GLimp_SwitchFullscreen( int width, int height );
 qboolean GLimp_InitGL (void);
 
 glwstate_t glw_state;
