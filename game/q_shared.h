@@ -17,7 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-	
+
+#ifndef Q_SHARED_H
+#define Q_SHARED_H
+
 // q_shared.h -- included first by ALL program modules
 
 #ifdef _WIN32
@@ -1199,3 +1202,5 @@ typedef struct
 extern int vidref_val;
 // PGM
 // ==================
+
+#endif	// Q_SHARED_H

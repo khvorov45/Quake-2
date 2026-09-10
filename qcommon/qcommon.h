@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef QCOMMON_H
+#define QCOMMON_H
+
 // qcommon.h -- definitions common between client and server, but not game.dll
 
 #include "../game/q_shared.h"
@@ -821,6 +824,8 @@ void SCR_BeginLoadingPlaque (void);
 void SV_Init (void);
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
 void SV_Frame (int msec);
+
+#endif	// QCOMMON_H
 
 
 

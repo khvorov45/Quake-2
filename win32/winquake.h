@@ -17,6 +17,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+#ifndef WINQUAKE_H
+#define WINQUAKE_H
+
 // winquake.h: Win32-specific Quake header file
 
 #pragma warning( disable : 4229 )  // mgraph gets this
@@ -42,3 +45,5 @@ void IN_MouseEvent (int mstate);
 
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
+
+#endif	// WINQUAKE_H

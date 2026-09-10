@@ -1012,7 +1012,7 @@ CONTROLS MENU
 
 =======================================================================
 */
-static cvar_t *win_noalttab;
+extern cvar_t *win_noalttab;	// global lives in vid_dll.c (unity build)
 extern cvar_t *in_joystick;
 
 static menuframework_s	s_options_menu;

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sys_win.h
 
 #include "../qcommon/qcommon.h"
+#include "../game/game.h"
 #include "winquake.h"
 #include "resource.h"
 #include <errno.h>
@@ -443,12 +444,20 @@ void Sys_AppActivate (void)
 /*
 ========================================================================
 
-GAME DLL
+GAME INTERFACE
+
+The game logic is statically linked into the exe by the unity build
+(q2sp.c) — there is no gamex86.dll on disk any more, so these
+engine-side entry points are thin shims over the game's GetGameAPI.
 
 ========================================================================
 */
 
+extern game_export_t *GetGameAPI (game_import_t *import);
+
+#if 0	// original gamex86.dll machinery
 static HINSTANCE	game_library;
+#endif
 
 /*
 =================
@@ -457,19 +466,23 @@ Sys_UnloadGame
 */
 void Sys_UnloadGame (void)
 {
-	if (!FreeLibrary (game_library))
-		Com_Error (ERR_FATAL, "FreeLibrary failed for game library");
-	game_library = NULL;
+	// statically linked — nothing to unload
 }
 
 /*
 =================
 Sys_GetGameAPI
 
-Loads the game dll
+The game is statically linked — call GetGameAPI directly (g_main.c)
 =================
 */
 void *Sys_GetGameAPI (void *parms)
+{
+	return GetGameAPI ((game_import_t *)parms);
+}
+
+#if 0	// ---- original gamex86.dll dynamic loading ----
+void *Sys_GetGameAPI_old (void *parms)
 {
 	void	*(*GetGameAPI) (void *);
 	char	name[MAX_OSPATH];
@@ -544,6 +557,7 @@ void *Sys_GetGameAPI (void *parms)
 
 	return GetGameAPI (parms);
 }
+#endif	// original gamex86.dll dynamic loading
 
 //=======================================================================
 

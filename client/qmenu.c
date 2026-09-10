@@ -672,3 +672,8 @@ void SpinControl_Draw( menulist_s *s )
 	}
 }
 
+// keep the re.* shims file-local — ref_gl's own Draw_Char/Draw_Fill
+// follow later in the unity translation unit
+#undef Draw_Char
+#undef Draw_Fill
+

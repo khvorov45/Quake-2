@@ -30,6 +30,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Structure containing functions exported from refresh DLL
 refexport_t	re;
 
+// the GL renderer is statically linked in by the unity build (gl_rmain.c)
+extern refexport_t GetRefAPI( refimport_t rimp );
+
 cvar_t *win_noalttab;
 
 #ifndef WM_MOUSEWHEEL
@@ -542,10 +545,8 @@ void VID_NewWindow ( int width, int height)
 
 void VID_FreeReflib (void)
 {
-	if ( !FreeLibrary( reflib_library ) )
-		Com_Error( ERR_FATAL, "Reflib FreeLibrary failed" );
+	// statically linked renderer — nothing to FreeLibrary
 	memset (&re, 0, sizeof(re));
-	reflib_library = NULL;
 	reflib_active  = false;
 }
 
@@ -557,8 +558,7 @@ VID_LoadRefresh
 qboolean VID_LoadRefresh( char *name )
 {
 	refimport_t	ri;
-	GetRefAPI_t	GetRefAPI;
-	
+
 	if ( reflib_active )
 	{
 		re.Shutdown();
@@ -566,13 +566,6 @@ qboolean VID_LoadRefresh( char *name )
 	}
 
 	Com_Printf( "------- Loading %s -------\n", name );
-
-	if ( ( reflib_library = LoadLibrary( name ) ) == 0 )
-	{
-		Com_Printf( "LoadLibrary(\"%s\") failed\n", name );
-
-		return false;
-	}
 
 	ri.Cmd_AddCommand = Cmd_AddCommand;
 	ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
@@ -590,9 +583,6 @@ qboolean VID_LoadRefresh( char *name )
 	ri.Vid_GetModeInfo = VID_GetModeInfo;
 	ri.Vid_MenuInit = VID_MenuInit;
 	ri.Vid_NewWindow = VID_NewWindow;
-
-	if ( ( GetRefAPI = (void *) GetProcAddress( reflib_library, "GetRefAPI" ) ) == 0 )
-		Com_Error( ERR_FATAL, "GetProcAddress failed on %s", name );
 
 	re = GetRefAPI( ri );
 

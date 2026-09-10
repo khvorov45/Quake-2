@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // disable data conversion warnings
 
+#ifndef GL_LOCAL_H
+#define GL_LOCAL_H
+
 #if 0
 #pragma warning(disable : 4244)     // MIPS
 #pragma warning(disable : 4136)     // X86
@@ -58,9 +61,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	unsigned		width, height;			// coordinates from main game
-} viddef_t;
+} rviddef_t;
 
-extern	viddef_t	vid;
+extern	rviddef_t	vid;
 
 
 /*
@@ -457,4 +460,6 @@ int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen
 void		GLimp_AppActivate( qboolean active );
 void		GLimp_EnableLogging( qboolean enable );
 void		GLimp_LogNewFrame( void );
+
+#endif	// GL_LOCAL_H
 
