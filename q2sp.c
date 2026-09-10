@@ -1,42 +1,3 @@
-// qcommon.h -- definitions common between client and server, but not game.dll
-
-/* ============ begin inlined header: game/q_shared.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-#ifndef Q_SHARED_H
-#define Q_SHARED_H
-
-// q_shared.h -- included first by ALL program modules
-
-#ifdef _WIN32
-// unknown pragmas are SUPPOSED to be ignored, but....
-#pragma warning(disable : 4244)     // MIPS
-#pragma warning(disable : 4136)     // X86
-#pragma warning(disable : 4051)     // ALPHA
-
-#pragma warning(disable : 4018)     // signed/unsigned mismatch
-#pragma warning(disable : 4305)		// truncation from const double to float
-
-#endif
-
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>
@@ -46,11 +7,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <time.h>
 
-#if (defined _M_IX86 || defined __i386__) && !defined C_ONLY && !defined __sun__
-#define id386	1
-#else
 #define id386	0
-#endif
 
 #if defined _M_ALPHA && !defined C_ONLY
 #define idaxp	1
@@ -1207,7 +1164,6 @@ extern int vidref_val;
 // PGM
 // ==================
 
-#endif	// Q_SHARED_H
 /* ============ end inlined header: game/q_shared.h ============ */
 
 
@@ -11257,7 +11213,6 @@ void FS_InitFilesystem (void)
 /* ============ begin source: qcommon/md4.c ============ */
 /* GLOBAL.H - RSAREF types and constants */
 
-#include <string.h>
 
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;
@@ -19269,11 +19224,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //define	PARANOID			// speed sapping error checking
 
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 /* ============ begin inlined header: client/ref.h ============ */
 /*
@@ -35243,7 +35193,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#include <ctype.h>
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -39388,8 +39337,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#include <string.h>
-#include <ctype.h>
 
 /* already inlined above: client/client.h */
 /* already inlined above: client/qmenu.h */
@@ -42286,7 +42233,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#include <stdlib.h>
 /* already inlined above: client/client.h */
 
 #if id386
@@ -87757,11 +87703,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #  include <windows.h>
 #endif
 
-#include <stdio.h>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <math.h>
 
 #ifndef GL_COLOR_INDEX8_EXT
 #define GL_COLOR_INDEX8_EXT GL_COLOR_INDEX
@@ -87797,10 +87741,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __QGL_H__
 
 #ifdef _WIN32
-#  include <windows.h>
+#include <windows.h>
 #endif
-
-#include <GL/gl.h>
 
 qboolean QGL_Init( const char *dllname );
 void     QGL_Shutdown( void );
@@ -95776,7 +95718,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // GL_RSURF.C: surface-related refresh code
-#include <assert.h>
 
 /* already inlined above: ref_gl/gl_local.h */
 
@@ -98157,7 +98098,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
 // rights reserved.
 
-#include <windows.h>
 /* already inlined above: client/client.h */
 
 extern	HWND	cl_hwnd;
@@ -98666,9 +98606,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // conproc.c -- support for qhost
-#include <stdio.h>
 #include <process.h>
-#include <windows.h>
 /* ============ begin inlined header: win32/conproc.h ============ */
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -99159,7 +99097,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #pragma warning( disable : 4229 )  // mgraph gets this
 
-#include <windows.h>
 
 #include <dsound.h>
 
@@ -100921,9 +100858,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* already inlined above: win32/winquake.h */
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <direct.h>
-#include <io.h>
 #include <conio.h>
 
 //===============================================================================
@@ -102019,13 +101954,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #endif
 /* ============ end inlined header: win32/resource.h ============ */
-#include <errno.h>
-#include <float.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <direct.h>
-#include <io.h>
-#include <conio.h>
 /* already inlined above: win32/conproc.h */
 
 #define MINIMUM_WIN_MEMORY	0x0a00000
@@ -102696,12 +102624,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Main windowed and fullscreen graphics interface module. This module
 // is used for both the software and OpenGL rendering versions of the
 // Quake refresh engine.
-#include <assert.h>
-#include <float.h>
 
 /* already inlined above: client/client.h */
 /* already inlined above: win32/winquake.h */
-//#include "zmouse.h"
 
 // Structure containing functions exported from refresh DLL
 refexport_t	re;
@@ -103927,8 +103852,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ** GLimp_SwitchFullscreen
 **
 */
-#include <assert.h>
-#include <windows.h>
 /* already inlined above: ref_gl/gl_local.h */
 /* ============ begin inlined header: win32/glw_win.h ============ */
 /*
@@ -104589,7 +104512,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ** QGL_Init() - loads libraries, assigns function pointers, etc.
 ** QGL_Shutdown() - unloads libraries, NULLs function pointers
 */
-#include <float.h>
 /* already inlined above: ref_gl/gl_local.h */
 /* already inlined above: win32/glw_win.h */
 
