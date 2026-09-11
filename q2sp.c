@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define id386	0
-
 #if defined _M_ALPHA && !defined C_ONLY
 #define idaxp	1
 #else
@@ -4180,7 +4178,6 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-#if !id386 || defined __linux__
 int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 {
 	float	dist1, dist2;
@@ -4247,240 +4244,6 @@ dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 
 	return sides;
 }
-#else
-#pragma warning( disable: 4035 )
-
-__declspec( naked ) int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
-{
-	static int bops_initialized;
-	static int Ljmptab[8];
-
-	__asm {
-
-		push ebx
-
-		cmp bops_initialized, 1
-		je  initialized
-		mov bops_initialized, 1
-
-		mov Ljmptab[0*4], offset Lcase0
-		mov Ljmptab[1*4], offset Lcase1
-		mov Ljmptab[2*4], offset Lcase2
-		mov Ljmptab[3*4], offset Lcase3
-		mov Ljmptab[4*4], offset Lcase4
-		mov Ljmptab[5*4], offset Lcase5
-		mov Ljmptab[6*4], offset Lcase6
-		mov Ljmptab[7*4], offset Lcase7
-
-initialized:
-
-		mov edx,ds:dword ptr[4+12+esp]
-		mov ecx,ds:dword ptr[4+4+esp]
-		xor eax,eax
-		mov ebx,ds:dword ptr[4+8+esp]
-		mov al,ds:byte ptr[17+edx]
-		cmp al,8
-		jge Lerror
-		fld ds:dword ptr[0+edx]
-		fld st(0)
-		jmp dword ptr[Ljmptab+eax*4]
-Lcase0:
-		fmul ds:dword ptr[ebx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ebx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase1:
-		fmul ds:dword ptr[ecx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ebx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase2:
-		fmul ds:dword ptr[ebx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ecx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase3:
-		fmul ds:dword ptr[ecx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ecx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase4:
-		fmul ds:dword ptr[ebx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ebx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase5:
-		fmul ds:dword ptr[ecx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ebx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase6:
-		fmul ds:dword ptr[ebx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ecx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ecx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-		jmp LSetSides
-Lcase7:
-		fmul ds:dword ptr[ecx]
-		fld ds:dword ptr[0+4+edx]
-		fxch st(2)
-		fmul ds:dword ptr[ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[4+ecx]
-		fld ds:dword ptr[0+8+edx]
-		fxch st(2)
-		fmul ds:dword ptr[4+ebx]
-		fxch st(2)
-		fld st(0)
-		fmul ds:dword ptr[8+ecx]
-		fxch st(5)
-		faddp st(3),st(0)
-		fmul ds:dword ptr[8+ebx]
-		fxch st(1)
-		faddp st(3),st(0)
-		fxch st(3)
-		faddp st(2),st(0)
-LSetSides:
-		faddp st(2),st(0)
-		fcomp ds:dword ptr[12+edx]
-		xor ecx,ecx
-		fnstsw ax
-		fcomp ds:dword ptr[12+edx]
-		and ah,1
-		xor ah,1
-		add cl,ah
-		fnstsw ax
-		and ah,1
-		add ah,ah
-		add cl,ah
-		pop ebx
-		mov eax,ecx
-		ret
-Lerror:
-		int 3
-	}
-}
-#pragma warning( default: 4035 )
-#endif
 
 void ClearBounds (vec3_t mins, vec3_t maxs)
 {
@@ -20427,13 +20190,6 @@ void CL_DrawInventory (void);
 // cl_pred.c
 //
 void CL_PredictMovement (void);
-
-#if id386
-void x86_TimerStart( void );
-void x86_TimerStop( void );
-void x86_TimerInit( unsigned long smallest, unsigned longest );
-unsigned long *x86_TimerGetHistogram( void );
-#endif
 
 #endif	// CLIENT_H
 /* ============ end inlined header: client/client.h ============ */
@@ -41745,11 +41501,6 @@ int		snd_scaletable[32][256];
 int 	*snd_p, snd_linear_count, snd_vol;
 short	*snd_out;
 
-void S_WriteLinearBlastStereo16 (void);
-
-#if !(defined __linux__ && defined __i386__)
-#if	!id386
-
 void S_WriteLinearBlastStereo16 (void)
 {
 	int		i;
@@ -41774,53 +41525,6 @@ void S_WriteLinearBlastStereo16 (void)
 			snd_out[i+1] = val;
 	}
 }
-#else
-__declspec( naked ) void S_WriteLinearBlastStereo16 (void)
-{
-	__asm {
-
- push edi
- push ebx
- mov ecx,ds:dword ptr[snd_linear_count]
- mov ebx,ds:dword ptr[snd_p]
- mov edi,ds:dword ptr[snd_out]
-LWLBLoopTop:
- mov eax,ds:dword ptr[-8+ebx+ecx*4]
- sar eax,8
- cmp eax,07FFFh
- jg LClampHigh
- cmp eax,0FFFF8000h
- jnl LClampDone
- mov eax,0FFFF8000h
- jmp LClampDone
-LClampHigh:
- mov eax,07FFFh
-LClampDone:
- mov edx,ds:dword ptr[-4+ebx+ecx*4]
- sar edx,8
- cmp edx,07FFFh
- jg LClampHigh2
- cmp edx,0FFFF8000h
- jnl LClampDone2
- mov edx,0FFFF8000h
- jmp LClampDone2
-LClampHigh2:
- mov edx,07FFFh
-LClampDone2:
- shl edx,16
- and eax,0FFFFh
- or edx,eax
- mov ds:dword ptr[-4+edi+ecx*2],edx
- sub ecx,2
- jnz LWLBLoopTop
- pop ebx
- pop edi
- ret
-	}
-}
-
-#endif
-#endif
 
 void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 {
@@ -42078,10 +41782,6 @@ void S_InitScaletable (void)
 	}
 }
 
-
-#if !(defined __linux__ && defined __i386__)
-#if	!id386
-
 void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 {
 	int 	data;
@@ -42111,81 +41811,6 @@ void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 	ch->pos += count;
 }
 
-#else
-
-__declspec( naked ) void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
-{
-	__asm {
- push esi
- push edi
- push ebx
- push ebp
- mov ebx,ds:dword ptr[4+16+esp]
- mov esi,ds:dword ptr[8+16+esp]
- mov eax,ds:dword ptr[4+ebx]
- mov edx,ds:dword ptr[8+ebx]
- cmp eax,255
- jna LLeftSet
- mov eax,255
-LLeftSet:
- cmp edx,255
- jna LRightSet
- mov edx,255
-LRightSet:
- and eax,0F8h
- add esi,20
- and edx,0F8h
- mov edi,ds:dword ptr[16+ebx]
- mov ecx,ds:dword ptr[12+16+esp]
- add esi,edi
- shl eax,7
- add edi,ecx
- shl edx,7
- mov ds:dword ptr[16+ebx],edi
- add eax,offset snd_scaletable
- add edx,offset snd_scaletable
- sub ebx,ebx
- mov bl,ds:byte ptr[-1+esi+ecx*1]
- test ecx,1
- jz LMix8Loop
- mov edi,ds:dword ptr[eax+ebx*4]
- mov ebp,ds:dword ptr[edx+ebx*4]
- add edi,ds:dword ptr[paintbuffer+0-8+ecx*8]
- add ebp,ds:dword ptr[paintbuffer+4-8+ecx*8]
- mov ds:dword ptr[paintbuffer+0-8+ecx*8],edi
- mov ds:dword ptr[paintbuffer+4-8+ecx*8],ebp
- mov bl,ds:byte ptr[-2+esi+ecx*1]
- dec ecx
- jz LDone
-LMix8Loop:
- mov edi,ds:dword ptr[eax+ebx*4]
- mov ebp,ds:dword ptr[edx+ebx*4]
- add edi,ds:dword ptr[paintbuffer+0-8+ecx*8]
- add ebp,ds:dword ptr[paintbuffer+4-8+ecx*8]
- mov bl,ds:byte ptr[-2+esi+ecx*1]
- mov ds:dword ptr[paintbuffer+0-8+ecx*8],edi
- mov ds:dword ptr[paintbuffer+4-8+ecx*8],ebp
- mov edi,ds:dword ptr[eax+ebx*4]
- mov ebp,ds:dword ptr[edx+ebx*4]
- mov bl,ds:byte ptr[-3+esi+ecx*1]
- add edi,ds:dword ptr[paintbuffer+0-8*2+ecx*8]
- add ebp,ds:dword ptr[paintbuffer+4-8*2+ecx*8]
- mov ds:dword ptr[paintbuffer+0-8*2+ecx*8],edi
- mov ds:dword ptr[paintbuffer+4-8*2+ecx*8],ebp
- sub ecx,2
- jnz LMix8Loop
-LDone:
- pop ebp
- pop ebx
- pop edi
- pop esi
- ret
-	}
-}
-
-#endif
-#endif
-
 void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 {
 	int data;
@@ -42212,125 +41837,6 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 	ch->pos += count;
 }
 
-/* ============ end source: client/snd_mix.c ============ */
-/* ============ begin source: client/x86.c ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-/* already inlined above: client/client.h */
-
-#if id386
-
-static unsigned long bias;
-static unsigned long *histogram;
-static unsigned long start, range;
-static unsigned long bias;
-
-__declspec( naked ) void x86_TimerStart( void )
-{
-	__asm _emit 0fh
-	__asm _emit 31h
-	__asm mov  start, eax
-	__asm ret
-}
-
-__declspec( naked ) void x86_TimerStop( void )
-{
-	__asm push edi
-	__asm mov edi, histogram
-	__asm _emit 0fh
-	__asm _emit 31h
-	__asm sub eax, start
-	__asm sub eax, bias
-	__asm js discard
-	__asm cmp eax, range
-	__asm jge  discard
-	__asm lea edi, [edi + eax*4]
-	__asm inc dword ptr [edi]
-discard:
-	__asm pop edi
-	__asm ret
-}
-
-#pragma warning( disable: 4035 )
-static __declspec( naked ) unsigned long x86_TimerStopBias( void )
-{
-	__asm push edi
-	__asm mov edi, histogram
-	__asm _emit 0fh
-	__asm _emit 31h
-	__asm sub eax, start
-	__asm pop edi
-	__asm ret
-}
-#pragma warning( default:4035 )
-
-void x86_TimerInit( unsigned long smallest, unsigned length )
-{
-	int i;
-	unsigned long biastable[100];
-
-	range = length;
-	bias = 10000;
-
-	for ( i = 0; i < 100; i++ )
-	{
-		x86_TimerStart();
-		biastable[i] = x86_TimerStopBias();
-
-		if ( bias > biastable[i] )
-			bias = biastable[i];
-	}
-
-	bias += smallest;
-	histogram = Z_Malloc( range * sizeof( unsigned long ) );
-}
-
-unsigned long *x86_TimerGetHistogram( void )
-{
-	return histogram;
-}
-
-#endif
-/* ============ end source: client/x86.c ============ */
-
-/* muzzle-flash tables shared by client fx and monsters */
-/* ============ begin source: game/m_flash.c ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
 // m_flash.c
 
 /* already inlined above: game/q_shared.h */
@@ -97643,19 +97149,11 @@ void EmitWaterPolys (msurface_t *fa)
 			os = v[3];
 			ot = v[4];
 
-#if !id386
 			s = os + r_turbsin[(int)((ot*0.125+r_newrefdef.time) * TURBSCALE) & 255];
-#else
-			s = os + r_turbsin[Q_ftol( ((ot*0.125+rdt) * TURBSCALE) ) & 255];
-#endif
 			s += scroll;
 			s *= (1.0/64);
 
-#if !id386
 			t = ot + r_turbsin[(int)((os*0.125+rdt) * TURBSCALE) & 255];
-#else
-			t = ot + r_turbsin[Q_ftol( ((os*0.125+rdt) * TURBSCALE) ) & 255];
-#endif
 			t *= (1.0/64);
 
 			qglTexCoord2f (s, t);
