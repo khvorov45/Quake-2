@@ -323,7 +323,7 @@ static void PerpendicularVector(vec3_t dst, const vec3_t src) {
 	VectorNormalize(dst);
 }
 
-void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees) {
+static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees) {
 	vec3_t vf = {dir[0], dir[1], dir[2]};
 
 	vec3_t vr;
@@ -376,17 +376,109 @@ void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, f
 	}
 }
 
-char *COM_SkipPath (char *pathname);
-void COM_StripExtension (char *in, char *out);
-void COM_FileBase (char *in, char *out);
-void COM_FilePath (char *in, char *out);
-void COM_DefaultExtension (char *path, char *extension);
+static void COM_StripExtension(char* in, char* out) {
+	while (*in && *in != '.') {
+		*out++ = *in++;
+	}
+	*out = 0;
+}
 
-char *COM_Parse (char **data_p);
+static void COM_FilePath(char *in, char *out) {
+	char* s = in + strlen(in) - 1;
+	while (s != in && *s != '/') {
+		s--;
+	}
+	strncpy(out, in, s-in);
+	out[s-in] = 0;
+}
+
+static void Com_Printf(char *msg, ...);
+
+static void Com_sprintf(char *dest, int size, char *fmt, ...) {
+	char bigbuffer[0x10000];
+	va_list argptr;
+	va_start(argptr, fmt);
+	int len = vsprintf (bigbuffer, fmt, argptr);
+	va_end (argptr);
+	if (len >= size) {
+		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
+	}
+	strncpy (dest, bigbuffer, size-1);
+}
+
+static char com_token[MAX_TOKEN_CHARS];
+
+// Parse a token out of a string
 // data is an in/out parm, returns a parsed out token
+static char *COM_Parse (char **data_p) {
+	char* data = *data_p;
+	int len = 0;
+	com_token[0] = 0;
 
-void Com_sprintf (char *dest, int size, char *fmt, ...);
-int	Q_vsnprintf (char *str, size_t size, char *format, va_list ap);
+	if (!data)
+	{
+		*data_p = NULL;
+		return "";
+	}
+
+	int c = *data;
+
+	// skip whitespace
+	skipwhite:
+	while ((c = *data) <= ' ') {
+		if (c == 0) {
+			*data_p = NULL;
+			return "";
+		}
+		data++;
+	}
+
+	// skip // comments
+	if (c=='/' && data[1] == '/') {
+		while (*data && *data != '\n') {
+			data++;
+		}
+		goto skipwhite;
+	}
+
+	// handle quoted strings specially
+	if (c == '\"') {
+		data++;
+		for (;;) {
+			c = *data++;
+			if (c=='\"' || !c) {
+				com_token[len] = 0;
+				*data_p = data;
+				return com_token;
+			}
+			if (len < MAX_TOKEN_CHARS) {
+				com_token[len] = c;
+				len++;
+			}
+		}
+	}
+
+	// parse a regular word
+	do {
+		if (len < MAX_TOKEN_CHARS) {
+			com_token[len] = c;
+			len++;
+		}
+		data++;
+		c = *data;
+	} while (c > 32);
+
+	if (len == MAX_TOKEN_CHARS) {
+		// Com_Printf ("Token exceeded %i chars, discarded.\n", MAX_TOKEN_CHARS);
+		len = 0;
+	}
+	com_token[len] = 0;
+
+	*data_p = data;
+	return com_token;
+}
+
+int	Q_vsnprintf(char *str, size_t size, char *format, va_list ap);
 
 void Com_PageInMemory (byte *buffer, int size);
 
@@ -459,7 +551,6 @@ void	Sys_FindClose (void);
 
 // this is only here so the functions in q_shared.c and q_shwin.c can link
 void Sys_Error (char *error, ...);
-void Com_Printf (char *msg, ...);
 
 
 /*
@@ -2555,7 +2646,6 @@ MISC
 
 void		Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush));
 void		Com_EndRedirect (void);
-void 		Com_Printf (char *fmt, ...);
 void 		Com_DPrintf (char *fmt, ...);
 void 		Com_Error (int code, char *fmt, ...);
 void 		Com_Quit (void);
@@ -4089,37 +4179,6 @@ __declspec( naked ) long Q_ftol( float f )
 
 /*
 ============
-COM_SkipPath
-============
-*/
-char *COM_SkipPath (char *pathname)
-{
-	char	*last;
-
-	last = pathname;
-	while (*pathname)
-	{
-		if (*pathname=='/')
-			last = pathname+1;
-		pathname++;
-	}
-	return last;
-}
-
-/*
-============
-COM_StripExtension
-============
-*/
-void COM_StripExtension (char *in, char *out)
-{
-	while (*in && *in != '.')
-		*out++ = *in++;
-	*out = 0;
-}
-
-/*
-============
 COM_FileExtension
 ============
 */
@@ -4137,78 +4196,6 @@ char *COM_FileExtension (char *in)
 		exten[i] = *in;
 	exten[i] = 0;
 	return exten;
-}
-
-/*
-============
-COM_FileBase
-============
-*/
-void COM_FileBase (char *in, char *out)
-{
-	char *s, *s2;
-
-	s = in + strlen(in) - 1;
-
-	while (s != in && *s != '.')
-		s--;
-
-	for (s2 = s ; s2 != in && *s2 != '/' ; s2--)
-	;
-
-	if (s-s2 < 2)
-		out[0] = 0;
-	else
-	{
-		s--;
-		strncpy (out,s2+1, s-s2);
-		out[s-s2] = 0;
-	}
-}
-
-/*
-============
-COM_FilePath
-
-Returns the path up to, but not including the last /
-============
-*/
-void COM_FilePath (char *in, char *out)
-{
-	char *s;
-
-	s = in + strlen(in) - 1;
-
-	while (s != in && *s != '/')
-		s--;
-
-	strncpy (out,in, s-in);
-	out[s-in] = 0;
-}
-
-
-/*
-==================
-COM_DefaultExtension
-==================
-*/
-void COM_DefaultExtension (char *path, char *extension)
-{
-	char    *src;
-//
-// if path doesn't have a .EXT, append extension
-// (extension should include the .)
-//
-	src = path + strlen(path) - 1;
-
-	while (*src != '/' && src != path)
-	{
-		if (*src == '.')
-			return;                 // it has an extension
-		src--;
-	}
-
-	strcat (path, extension);
 }
 
 /*
@@ -4346,97 +4333,6 @@ char	*va(char *format, ...)
 	return string;
 }
 
-
-char	com_token[MAX_TOKEN_CHARS];
-
-/*
-==============
-COM_Parse
-
-Parse a token out of a string
-==============
-*/
-char *COM_Parse (char **data_p)
-{
-	int		c;
-	int		len;
-	char	*data;
-
-	data = *data_p;
-	len = 0;
-	com_token[0] = 0;
-
-	if (!data)
-	{
-		*data_p = NULL;
-		return "";
-	}
-
-// skip whitespace
-skipwhite:
-	while ( (c = *data) <= ' ')
-	{
-		if (c == 0)
-		{
-			*data_p = NULL;
-			return "";
-		}
-		data++;
-	}
-
-// skip // comments
-	if (c=='/' && data[1] == '/')
-	{
-		while (*data && *data != '\n')
-			data++;
-		goto skipwhite;
-	}
-
-// handle quoted strings specially
-	if (c == '\"')
-	{
-		data++;
-		while (1)
-		{
-			c = *data++;
-			if (c=='\"' || !c)
-			{
-				com_token[len] = 0;
-				*data_p = data;
-				return com_token;
-			}
-			if (len < MAX_TOKEN_CHARS)
-			{
-				com_token[len] = c;
-				len++;
-			}
-		}
-	}
-
-// parse a regular word
-	do
-	{
-		if (len < MAX_TOKEN_CHARS)
-		{
-			com_token[len] = c;
-			len++;
-		}
-		data++;
-		c = *data;
-	} while (c>32);
-
-	if (len == MAX_TOKEN_CHARS)
-	{
-//		Com_Printf ("Token exceeded %i chars, discarded.\n", MAX_TOKEN_CHARS);
-		len = 0;
-	}
-	com_token[len] = 0;
-
-	*data_p = data;
-	return com_token;
-}
-
-
 /*
 ===============
 Com_PageInMemory
@@ -4506,20 +4402,6 @@ int Q_strcasecmp (char *s1, char *s2)
 }
 
 
-
-void Com_sprintf (char *dest, int size, char *fmt, ...)
-{
-	int		len;
-	va_list		argptr;
-	char	bigbuffer[0x10000];
-
-	va_start (argptr,fmt);
-	len = vsprintf (bigbuffer,fmt,argptr);
-	va_end (argptr);
-	if (len >= size)
-		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
-	strncpy (dest, bigbuffer, size-1);
-}
 
 /*
 ============
@@ -49501,34 +49383,6 @@ game_export_t *GetGameAPI (game_import_t *import)
 	return &globals;
 }
 
-#ifndef GAME_HARD_LINKED
-// this is only here so the functions in q_shared.c and q_shwin.c can link
-void Sys_Error (char *error, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-
-	va_start (argptr, error);
-	vsprintf (text, error, argptr);
-	va_end (argptr);
-
-	gi.error (ERR_FATAL, "%s", text);
-}
-
-void Com_Printf (char *msg, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-
-	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
-	va_end (argptr);
-
-	gi.dprintf ("%s", text);
-}
-
-#endif
-
 //======================================================================
 
 
@@ -87879,8 +87733,6 @@ char	*va(char *format, ...);
 // does a varargs printf into a temp buffer
 #endif
 
-void COM_StripExtension (char *in, char *out);
-
 void	Draw_GetPicSize (int *w, int *h, char *name);
 void	Draw_Pic (int x, int y, char *name);
 void	Draw_StretchPic (int x, int y, int w, int h, char *name);
@@ -94624,34 +94476,6 @@ refexport_t GetRefAPI (refimport_t rimp )
 	return re;
 }
 
-
-#ifndef REF_HARD_LINKED
-// this is only here so the functions in q_shared.c and q_shwin.c can link
-void Sys_Error (char *error, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-
-	va_start (argptr, error);
-	vsprintf (text, error, argptr);
-	va_end (argptr);
-
-	ri.Sys_Error (ERR_FATAL, "%s", text);
-}
-
-void Com_Printf (char *fmt, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-
-	va_start (argptr, fmt);
-	vsprintf (text, fmt, argptr);
-	va_end (argptr);
-
-	ri.Con_Printf (PRINT_ALL, "%s", text);
-}
-
-#endif
 /* ============ end source: ref_gl/gl_rmain.c ============ */
 /* ============ begin source: ref_gl/gl_rmisc.c ============ */
 /*
