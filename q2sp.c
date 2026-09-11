@@ -397,7 +397,7 @@ static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 //
 
 static void Sys_ConsoleOutput(char *string);
-static char* FS_Gamedir (void);
+static char* FS_Gamedir();
 
 //
 // SECTION Console
