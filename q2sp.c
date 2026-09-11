@@ -376,6 +376,32 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 	}
 }
 
+//
+// SECTION Commands
+//
+
+#define	MAXPRINTMSG	4096
+
+// nothing outside the Cvar_*() functions should modify these fields!
+typedef struct cvar_s
+{
+	char		*name;
+	char		*string;
+	char		*latched_string;	// for CVAR_LATCH vars
+	int			flags;
+	qboolean	modified;	// set each time the cvar is changed
+	float		value;
+	struct cvar_s *next;
+} cvar_t;
+
+static int rd_target;
+static char* rd_buffer;
+static int rd_buffersize;
+static void	(*rd_flush)(int target, char *buffer);
+
+static cvar_t* logfile_active; // 1 = buffer log, 2 = flush after each print
+static FILE* logfile;
+
 static void COM_StripExtension(char* in, char* out) {
 	while (*in && *in != '.') {
 		*out++ = *in++;
@@ -392,24 +418,66 @@ static void COM_FilePath(char *in, char *out) {
 	out[s-in] = 0;
 }
 
-static void Com_Printf(char *msg, ...);
-
 static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	char bigbuffer[0x10000];
 	va_list argptr;
 	va_start(argptr, fmt);
 	int len = vsprintf (bigbuffer, fmt, argptr);
 	va_end (argptr);
-	if (len >= size) {
-		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
-	}
+	assert(len < size);
 	strncpy (dest, bigbuffer, size-1);
 }
 
-static char com_token[MAX_TOKEN_CHARS];
+static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap);
+static void Con_Print (char *text);
+static void Sys_ConsoleOutput(char *string);
+static char* FS_Gamedir (void);
+
+// Both client and server can use this, and it will output
+// to the apropriate place.
+static void Com_Printf (char *fmt, ...) {
+	char msg[MAXPRINTMSG];
+	va_list argptr;
+	va_start(argptr, fmt);
+	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+	va_end(argptr);
+
+	if (rd_target) {
+		if ((strlen(msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
+			rd_flush(rd_target, rd_buffer);
+			*rd_buffer = 0;
+		}
+		strcat(rd_buffer, msg);
+		return;
+	}
+
+	Con_Print(msg);
+
+	// also echo to debugging console
+	Sys_ConsoleOutput(msg);
+
+	// logfile
+	if (logfile_active && logfile_active->value) {
+		char name[MAX_QPATH];
+
+		if (!logfile) {
+			Com_sprintf(name, sizeof(name), "%s/qconsole.log", FS_Gamedir());
+			logfile = fopen (name, "w");
+		}
+
+		if (logfile) {
+			fprintf (logfile, "%s", msg);
+		}
+
+		if (logfile_active->value > 1) {
+			fflush (logfile); // force it to save every time
+		}
+	}
+}
 
 // Parse a token out of a string
 // data is an in/out parm, returns a parsed out token
+static char com_token[MAX_TOKEN_CHARS];
 static char *COM_Parse (char **data_p) {
 	char* data = *data_p;
 	int len = 0;
@@ -478,7 +546,7 @@ static char *COM_Parse (char **data_p) {
 	return com_token;
 }
 
-int	Q_vsnprintf(char *str, size_t size, char *format, va_list ap);
+
 
 void Com_PageInMemory (byte *buffer, int size);
 
@@ -571,17 +639,6 @@ CVARS (console variables)
 							// but can be set from the command line
 #define	CVAR_LATCH		16	// save changes until server restart
 
-// nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s
-{
-	char		*name;
-	char		*string;
-	char		*latched_string;	// for CVAR_LATCH vars
-	int			flags;
-	qboolean	modified;	// set each time the cvar is changed
-	float		value;
-	struct cvar_s *next;
-} cvar_t;
 
 #endif		// CVAR
 
@@ -2604,7 +2661,7 @@ FILESYSTEM
 
 void	FS_InitFilesystem (void);
 void	FS_SetGamedir (char *dir);
-char	*FS_Gamedir (void);
+
 char	*FS_NextPath (char *prevpath);
 void	FS_ExecAutoexec (void);
 
@@ -2705,7 +2762,7 @@ void	*Sys_GetGameAPI (void *parms);
 // loads the game dll and calls the api init function
 
 char	*Sys_ConsoleInput (void);
-void	Sys_ConsoleOutput (char *string);
+
 void	Sys_SendKeyEvents (void);
 void	Sys_Error (char *error, ...);
 void	Sys_Quit (void);
@@ -2724,7 +2781,7 @@ void CL_Init (void);
 void CL_Drop (void);
 void CL_Shutdown (void);
 void CL_Frame (int msec);
-void Con_Print (char *text);
+
 void SCR_BeginLoadingPlaque (void);
 
 void SV_Init (void);
@@ -7299,8 +7356,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* already inlined above: qcommon/qcommon.h */
 #include <setjmp.h>
 
-#define	MAXPRINTMSG	4096
-
 #define MAX_NUM_ARGVS	50
 
 
@@ -7319,11 +7374,8 @@ cvar_t	*log_stats;
 cvar_t	*developer;
 cvar_t	*timescale;
 cvar_t	*fixedtime;
-cvar_t	*logfile_active;	// 1 = buffer log, 2 = flush after each print
 cvar_t	*showtrace;
 cvar_t	*dedicated;
-
-FILE	*logfile;
 
 int			server_state;
 
@@ -7340,11 +7392,6 @@ CLIENT / SERVER interactions
 
 ============================================================================
 */
-
-static int	rd_target;
-static char	*rd_buffer;
-static int	rd_buffersize;
-static void	(*rd_flush)(int target, char *buffer);
 
 void Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush))
 {
@@ -7367,57 +7414,6 @@ void Com_EndRedirect (void)
 	rd_buffersize = 0;
 	rd_flush = NULL;
 }
-
-/*
-=============
-Com_Printf
-
-Both client and server can use this, and it will output
-to the apropriate place.
-=============
-*/
-void Com_Printf (char *fmt, ...)
-{
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
-
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
-	va_end (argptr);
-
-	if (rd_target)
-	{
-		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1))
-		{
-			rd_flush(rd_target, rd_buffer);
-			*rd_buffer = 0;
-		}
-		strcat (rd_buffer, msg);
-		return;
-	}
-
-	Con_Print (msg);
-
-	// also echo to debugging console
-	Sys_ConsoleOutput (msg);
-
-	// logfile
-	if (logfile_active && logfile_active->value)
-	{
-		char	name[MAX_QPATH];
-
-		if (!logfile)
-		{
-			Com_sprintf (name, sizeof(name), "%s/qconsole.log", FS_Gamedir ());
-			logfile = fopen (name, "w");
-		}
-		if (logfile)
-			fprintf (logfile, "%s", msg);
-		if (logfile_active->value > 1)
-			fflush (logfile);		// force it to save every time
-	}
-}
-
 
 /*
 ================
