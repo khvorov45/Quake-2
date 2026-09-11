@@ -137,17 +137,74 @@ static vec_t VectorLength(vec3_t v) {
 	return length;
 }
 
-void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross);
-vec_t VectorNormalize (vec3_t v);		// returns vector length
-vec_t VectorNormalize2 (vec3_t v, vec3_t out);
-void VectorInverse (vec3_t v);
-void VectorScale (vec3_t in, vec_t scale, vec3_t out);
-int Q_log2(int val);
+static void CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross) {
+	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
+	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
+	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
+}
 
-void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
-void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);
+static vec_t VectorNormalize(vec3_t v) {
+	float length_squared = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+	float length = sqrt(length_squared);
+	if (length) {
+		float ilength = 1 / length;
+		v[0] *= ilength;
+		v[1] *= ilength;
+		v[2] *= ilength;
+	}
+	return length;
+}
 
-void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+static void VectorScale(vec3_t in, vec_t scale, vec3_t out) {
+	out[0] = in[0] * scale;
+	out[1] = in[1] * scale;
+	out[2] = in[2] * scale;
+}
+
+static void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]) {
+	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] + in1[0][2] * in2[2][0];
+	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] + in1[0][2] * in2[2][1];
+	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] + in1[0][2] * in2[2][2];
+	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] + in1[1][2] * in2[2][0];
+	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] + in1[1][2] * in2[2][1];
+	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] + in1[1][2] * in2[2][2];
+	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] + in1[2][2] * in2[2][0];
+	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] + in1[2][2] * in2[2][1];
+	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] + in1[2][2] * in2[2][2];
+}
+
+static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up) {
+	float yaw = angles[YAW] * (M_PI*2 / 360);
+	float sy = sin(yaw);
+	float cy = cos(yaw);
+
+	float pitch = angles[PITCH] * (M_PI*2 / 360);
+	float sp = sin(pitch);
+	float cp = cos(pitch);
+
+	float roll = angles[ROLL] * (M_PI*2 / 360);
+	float sr = sin(roll);
+	float cr = cos(roll);
+
+	if (forward) {
+		forward[0] = cp*cy;
+		forward[1] = cp*sy;
+		forward[2] = -sp;
+	}
+
+	if (right) {
+		right[0] = (-1*sr*sp*cy+-1*cr*-sy);
+		right[1] = (-1*sr*sp*sy+-1*cr*cy);
+		right[2] = -1*sr*cp;
+	}
+
+	if (up) {
+		up[0] = (cr*sp*cy+-sr*-sy);
+		up[1] = (cr*sp*sy+-sr*cy);
+		up[2] = cr*cp;
+	}
+}
+
 int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
 float	anglemod(float a);
 float LerpAngle (float a1, float a2, float frac);
@@ -3912,45 +3969,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 #pragma optimize( "", on )
 #endif
 
-
-
-void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
-{
-	float		angle;
-	static float		sr, sp, sy, cr, cp, cy;
-	// static to help MS compiler fp bugs
-
-	angle = angles[YAW] * (M_PI*2 / 360);
-	sy = sin(angle);
-	cy = cos(angle);
-	angle = angles[PITCH] * (M_PI*2 / 360);
-	sp = sin(angle);
-	cp = cos(angle);
-	angle = angles[ROLL] * (M_PI*2 / 360);
-	sr = sin(angle);
-	cr = cos(angle);
-
-	if (forward)
-	{
-		forward[0] = cp*cy;
-		forward[1] = cp*sy;
-		forward[2] = -sp;
-	}
-	if (right)
-	{
-		right[0] = (-1*sr*sp*cy+-1*cr*-sy);
-		right[1] = (-1*sr*sp*sy+-1*cr*cy);
-		right[2] = -1*sr*cp;
-	}
-	if (up)
-	{
-		up[0] = (cr*sp*cy+-sr*-sy);
-		up[1] = (cr*sp*sy+-sr*cy);
-		up[2] = cr*cp;
-	}
-}
-
-
 void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal )
 {
 	float d;
@@ -4004,70 +4022,6 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 	*/
 	VectorNormalize( dst );
 }
-
-
-
-/*
-================
-R_ConcatRotations
-================
-*/
-void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3])
-{
-	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
-				in1[0][2] * in2[2][0];
-	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
-				in1[0][2] * in2[2][1];
-	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
-				in1[0][2] * in2[2][2];
-	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
-				in1[1][2] * in2[2][0];
-	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
-				in1[1][2] * in2[2][1];
-	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
-				in1[1][2] * in2[2][2];
-	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
-				in1[2][2] * in2[2][0];
-	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
-				in1[2][2] * in2[2][1];
-	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
-				in1[2][2] * in2[2][2];
-}
-
-
-/*
-================
-R_ConcatTransforms
-================
-*/
-void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4])
-{
-	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
-				in1[0][2] * in2[2][0];
-	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
-				in1[0][2] * in2[2][1];
-	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
-				in1[0][2] * in2[2][2];
-	out[0][3] = in1[0][0] * in2[0][3] + in1[0][1] * in2[1][3] +
-				in1[0][2] * in2[2][3] + in1[0][3];
-	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
-				in1[1][2] * in2[2][0];
-	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
-				in1[1][2] * in2[2][1];
-	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
-				in1[1][2] * in2[2][2];
-	out[1][3] = in1[1][0] * in2[0][3] + in1[1][1] * in2[1][3] +
-				in1[1][2] * in2[2][3] + in1[1][3];
-	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
-				in1[2][2] * in2[2][0];
-	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
-				in1[2][2] * in2[2][1];
-	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
-				in1[2][2] * in2[2][2];
-	out[2][3] = in1[2][0] * in2[0][3] + in1[2][1] * in2[1][3] +
-				in1[2][2] * in2[2][3] + in1[2][3];
-}
-
 
 //============================================================================
 
@@ -4236,76 +4190,7 @@ dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 	return sides;
 }
 
-
-vec_t VectorNormalize (vec3_t v)
-{
-	float	length, ilength;
-
-	length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	length = sqrt (length);		// FIXME
-
-	if (length)
-	{
-		ilength = 1/length;
-		v[0] *= ilength;
-		v[1] *= ilength;
-		v[2] *= ilength;
-	}
-
-	return length;
-
-}
-
-vec_t VectorNormalize2 (vec3_t v, vec3_t out)
-{
-	float	length, ilength;
-
-	length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	length = sqrt (length);		// FIXME
-
-	if (length)
-	{
-		ilength = 1/length;
-		out[0] = v[0]*ilength;
-		out[1] = v[1]*ilength;
-		out[2] = v[2]*ilength;
-	}
-
-	return length;
-
-}
-
-void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross)
-{
-	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
-	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
-	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
-
 double sqrt(double x);
-
-void VectorInverse (vec3_t v)
-{
-	v[0] = -v[0];
-	v[1] = -v[1];
-	v[2] = -v[2];
-}
-
-void VectorScale (vec3_t in, vec_t scale, vec3_t out)
-{
-	out[0] = in[0]*scale;
-	out[1] = in[1]*scale;
-	out[2] = in[2]*scale;
-}
-
-
-int Q_log2(int val)
-{
-	int answer=0;
-	while (val>>=1)
-		answer++;
-	return answer;
-}
 
 
 
