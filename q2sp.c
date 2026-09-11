@@ -1,3 +1,7 @@
+//
+// SECTION Init
+//
+
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>
@@ -63,7 +67,7 @@ typedef enum {
 } multicast_t;
 
 //
-// SECTION MATHLIB
+// SECTION Math
 //
 
 typedef float vec_t;
@@ -377,21 +381,45 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 }
 
 //
+// SECTION Strings
+//
+
+// vsprintf into a sized buffer; the destination is always null-terminated
+// on overflow, which even MSVC's _vsnprintf doesn't guarantee
+static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
+	int len = vsnprintf(str, size, format, ap);
+	str[size-1] = 0;
+	return len;
+}
+
+//
+// SECTION System
+//
+
+static void Sys_ConsoleOutput(char *string);
+static char* FS_Gamedir (void);
+
+//
+// SECTION Console
+//
+
+static void Con_Print(char *text);
+
+//
 // SECTION Commands
 //
 
 #define	MAXPRINTMSG	4096
 
 // nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s
-{
-	char		*name;
-	char		*string;
-	char		*latched_string;	// for CVAR_LATCH vars
-	int			flags;
-	qboolean	modified;	// set each time the cvar is changed
-	float		value;
-	struct cvar_s *next;
+typedef struct cvar_s {
+	char			*name;
+	char			*string;
+	char			*latched_string; // for CVAR_LATCH vars
+	int				flags;
+	qboolean		modified; // set each time the cvar is changed
+	float			value;
+	struct cvar_s 	*next;
 } cvar_t;
 
 static int rd_target;
@@ -427,11 +455,6 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	assert(len < size);
 	strncpy (dest, bigbuffer, size-1);
 }
-
-static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap);
-static void Con_Print (char *text);
-static void Sys_ConsoleOutput(char *string);
-static char* FS_Gamedir (void);
 
 // Both client and server can use this, and it will output
 // to the apropriate place.
@@ -546,9 +569,12 @@ static char *COM_Parse (char **data_p) {
 	return com_token;
 }
 
-
-
-void Com_PageInMemory (byte *buffer, int size);
+static int paged_total;
+static void Com_PageInMemory(byte *buffer, int size) {
+	for (int i=size-1 ; i>0 ; i-=4096) {
+		paged_total += buffer[i];
+	}
+}
 
 //=============================================
 
@@ -4391,24 +4417,6 @@ char	*va(char *format, ...)
 }
 
 /*
-===============
-Com_PageInMemory
-
-===============
-*/
-int	paged_total;
-
-void Com_PageInMemory (byte *buffer, int size)
-{
-	int		i;
-
-	for (i=size-1 ; i>0 ; i-=4096)
-		paged_total += buffer[i];
-}
-
-
-
-/*
 ============================================================================
 
 					LIBRARY REPLACEMENT FUNCTIONS
@@ -4456,30 +4464,6 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 int Q_strcasecmp (char *s1, char *s2)
 {
 	return Q_strncasecmp (s1, s2, 99999);
-}
-
-
-
-/*
-============
-Q_vsnprintf
-
-vsprintf into a sized buffer; the destination is always null-terminated
-on overflow, which even MSVC's _vsnprintf doesn't guarantee
-============
-*/
-int Q_vsnprintf (char *str, size_t size, char *format, va_list ap)
-{
-	int		len;
-
-#ifdef _MSC_VER
-	len = _vsnprintf (str, size, format, ap);
-	str[size-1] = 0;
-#else
-	len = vsnprintf (str, size, format, ap);
-#endif
-
-	return len;
 }
 
 /*
