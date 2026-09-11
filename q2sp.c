@@ -94,6 +94,7 @@ vec3_t vec3_origin = {0,0,0};
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
 #define Q_ftol(f) (long)(f)
+#define DEG2RAD(a) ((a * M_PI ) / 180.0F)
 
 #define DotProduct(x, y)		(x[0]*y[0] + x[1]*y[1] + x[2]*y[2])
 #define VectorSubtract(a, b, c)	(c[0]=a[0]-b[0], c[1]=a[1]-b[1], c[2]=a[2]-b[2])
@@ -174,15 +175,15 @@ static void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3])
 }
 
 static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up) {
-	float yaw = angles[YAW] * (M_PI*2 / 360);
+	float yaw = DEG2RAD(angles[YAW]);
 	float sy = sin(yaw);
 	float cy = cos(yaw);
 
-	float pitch = angles[PITCH] * (M_PI*2 / 360);
+	float pitch = DEG2RAD(angles[PITCH]);
 	float sp = sin(pitch);
 	float cp = cos(pitch);
 
-	float roll = angles[ROLL] * (M_PI*2 / 360);
+	float roll = DEG2RAD(angles[ROLL]);
 	float sr = sin(roll);
 	float cr = cos(roll);
 
@@ -205,32 +206,175 @@ static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 	}
 }
 
-int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
-float	anglemod(float a);
-float LerpAngle (float a1, float a2, float frac);
+// Returns 1, 2, or 1 + 2
+static int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p) {
 
-#define BOX_ON_PLANE_SIDE(emins, emaxs, p)	\
-	(((p)->type < 3)?						\
-	(										\
-		((p)->dist <= (emins)[(p)->type])?	\
-			1								\
-		:									\
-		(									\
-			((p)->dist >= (emaxs)[(p)->type])?\
-				2							\
-			:								\
-				3							\
-		)									\
-	)										\
-	:										\
-		BoxOnPlaneSide( (emins), (emaxs), (p)))
+	// fast axial cases
+	if (p->type < 3) {
+		if (p->dist <= emins[p->type]) {
+			return 1;
+		}
+		if (p->dist >= emaxs[p->type]) {
+			return 2;
+		}
+		return 3;
+	}
 
-void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
-void PerpendicularVector( vec3_t dst, const vec3_t src );
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
+	// general case
+	float dist1 = 0;
+	float dist2 = 0;
+	switch (p->signbits) {
+	case 0:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 1:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 2:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 3:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 4:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 5:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 6:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	case 7:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	default:
+		assert(0);
+		break;
+	}
 
+	int sides = 0;
+	if (dist1 >= p->dist) {
+		sides = 1;
+	}
+	if (dist2 < p->dist) {
+		sides |= 2;
+	}
 
-//=============================================
+	assert(sides != 0);
+	return sides;
+}
+
+static float anglemod(float a) {
+	a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
+	return a;
+}
+
+static float LerpAngle (float a2, float a1, float frac) {
+	if (a1 - a2 > 180) {
+		a1 -= 360;
+	}
+	if (a1 - a2 < -180) {
+		a1 += 360;
+	}
+	return a2 + frac * (a1 - a2);
+}
+
+static void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal) {
+	float inv_denom = 1.0F / DotProduct( normal, normal );
+	float d = DotProduct( normal, p ) * inv_denom;
+
+	vec3_t n;
+	n[0] = normal[0] * inv_denom;
+	n[1] = normal[1] * inv_denom;
+	n[2] = normal[2] * inv_denom;
+
+	dst[0] = p[0] - d * n[0];
+	dst[1] = p[1] - d * n[1];
+	dst[2] = p[2] - d * n[2];
+}
+
+// assumes "src" is normalized
+static void PerpendicularVector(vec3_t dst, const vec3_t src) {
+
+	// find the smallest magnitude axially aligned vector
+	int	pos = 0;
+	float minelem = 1.0F;
+	for (int i = 0; i < 3; i++) {
+		if (fabs( src[i] ) < minelem) {
+			pos = i;
+			minelem = fabs( src[i] );
+		}
+	}
+
+	vec3_t tempvec;
+	tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;
+	tempvec[pos] = 1.0F;
+
+	ProjectPointOnPlane(dst, tempvec, src);
+	VectorNormalize(dst);
+}
+
+void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees) {
+	vec3_t vf = {dir[0], dir[1], dir[2]};
+
+	vec3_t vr;
+	PerpendicularVector(vr, dir);
+
+	vec3_t vup;
+	CrossProduct(vr, vf, vup);
+
+	float m[3][3];
+	m[0][0] = vr[0];
+	m[1][0] = vr[1];
+	m[2][0] = vr[2];
+
+	m[0][1] = vup[0];
+	m[1][1] = vup[1];
+	m[2][1] = vup[2];
+
+	m[0][2] = vf[0];
+	m[1][2] = vf[1];
+	m[2][2] = vf[2];
+
+	float im[3][3];
+	memcpy(im, m, sizeof(im));
+	im[0][1] = m[1][0];
+	im[0][2] = m[2][0];
+	im[1][0] = m[0][1];
+	im[1][2] = m[2][1];
+	im[2][0] = m[0][2];
+	im[2][1] = m[1][2];
+
+	float zrot[3][3] = {};
+	zrot[0][0] = zrot[1][1] = zrot[2][2] = 1.0F;
+
+	float radians = DEG2RAD(degrees);
+	float cos_val = cos(radians);
+	float sin_val = sin(radians);
+	zrot[0][0] = cos_val;
+	zrot[0][1] = sin_val;
+	zrot[1][0] = -sin_val;
+	zrot[1][1] = cos_val;
+
+	float tmpmat[3][3];
+	R_ConcatRotations(m, zrot, tmpmat);
+
+	float rot[3][3];
+	R_ConcatRotations(tmpmat, im, rot);
+
+	for (int i = 0; i < 3; i++) {
+		dst[i] = rot[i][0] * point[0] + rot[i][1] * point[1] + rot[i][2] * point[2];
+	}
+}
 
 char *COM_SkipPath (char *pathname);
 void COM_StripExtension (char *in, char *out);
@@ -3902,7 +4046,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 /* already inlined above: game/q_shared.h */
 
-#define DEG2RAD( a ) ( a * M_PI ) / 180.0F
+
 
 //============================================================================
 
@@ -3910,118 +4054,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #pragma optimize( "", off )
 #endif
 
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees )
-{
-	float	m[3][3];
-	float	im[3][3];
-	float	zrot[3][3];
-	float	tmpmat[3][3];
-	float	rot[3][3];
-	int	i;
-	vec3_t vr, vup, vf;
-
-	vf[0] = dir[0];
-	vf[1] = dir[1];
-	vf[2] = dir[2];
-
-	PerpendicularVector( vr, dir );
-	CrossProduct( vr, vf, vup );
-
-	m[0][0] = vr[0];
-	m[1][0] = vr[1];
-	m[2][0] = vr[2];
-
-	m[0][1] = vup[0];
-	m[1][1] = vup[1];
-	m[2][1] = vup[2];
-
-	m[0][2] = vf[0];
-	m[1][2] = vf[1];
-	m[2][2] = vf[2];
-
-	memcpy( im, m, sizeof( im ) );
-
-	im[0][1] = m[1][0];
-	im[0][2] = m[2][0];
-	im[1][0] = m[0][1];
-	im[1][2] = m[2][1];
-	im[2][0] = m[0][2];
-	im[2][1] = m[1][2];
-
-	memset( zrot, 0, sizeof( zrot ) );
-	zrot[0][0] = zrot[1][1] = zrot[2][2] = 1.0F;
-
-	zrot[0][0] = cos( DEG2RAD( degrees ) );
-	zrot[0][1] = sin( DEG2RAD( degrees ) );
-	zrot[1][0] = -sin( DEG2RAD( degrees ) );
-	zrot[1][1] = cos( DEG2RAD( degrees ) );
-
-	R_ConcatRotations( m, zrot, tmpmat );
-	R_ConcatRotations( tmpmat, im, rot );
-
-	for ( i = 0; i < 3; i++ )
-	{
-		dst[i] = rot[i][0] * point[0] + rot[i][1] * point[1] + rot[i][2] * point[2];
-	}
-}
-
 #ifdef _WIN32
 #pragma optimize( "", on )
 #endif
-
-void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal )
-{
-	float d;
-	vec3_t n;
-	float inv_denom;
-
-	inv_denom = 1.0F / DotProduct( normal, normal );
-
-	d = DotProduct( normal, p ) * inv_denom;
-
-	n[0] = normal[0] * inv_denom;
-	n[1] = normal[1] * inv_denom;
-	n[2] = normal[2] * inv_denom;
-
-	dst[0] = p[0] - d * n[0];
-	dst[1] = p[1] - d * n[1];
-	dst[2] = p[2] - d * n[2];
-}
-
-/*
-** assumes "src" is normalized
-*/
-void PerpendicularVector( vec3_t dst, const vec3_t src )
-{
-	int	pos;
-	int i;
-	float minelem = 1.0F;
-	vec3_t tempvec;
-
-	/*
-	** find the smallest magnitude axially aligned vector
-	*/
-	for ( pos = 0, i = 0; i < 3; i++ )
-	{
-		if ( fabs( src[i] ) < minelem )
-		{
-			pos = i;
-			minelem = fabs( src[i] );
-		}
-	}
-	tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;
-	tempvec[pos] = 1.0F;
-
-	/*
-	** project the point onto the plane defined by src
-	*/
-	ProjectPointOnPlane( dst, tempvec, src );
-
-	/*
-	** normalize the result
-	*/
-	VectorNormalize( dst );
-}
 
 //============================================================================
 
@@ -4051,150 +4086,6 @@ __declspec( naked ) long Q_ftol( float f )
 }
 #pragma warning (default:4035)
 #endif
-
-/*
-===============
-LerpAngle
-
-===============
-*/
-float LerpAngle (float a2, float a1, float frac)
-{
-	if (a1 - a2 > 180)
-		a1 -= 360;
-	if (a1 - a2 < -180)
-		a1 += 360;
-	return a2 + frac * (a1 - a2);
-}
-
-
-float	anglemod(float a)
-{
-#if 0
-	if (a >= 0)
-		a -= 360*(int)(a/360);
-	else
-		a += 360*( 1 + (int)(-a/360) );
-#endif
-	a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
-	return a;
-}
-
-	int		i;
-	vec3_t	corners[2];
-
-
-// this is the slow, general version
-int BoxOnPlaneSide2 (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
-{
-	int		i;
-	float	dist1, dist2;
-	int		sides;
-	vec3_t	corners[2];
-
-	for (i=0 ; i<3 ; i++)
-	{
-		if (p->normal[i] < 0)
-		{
-			corners[0][i] = emins[i];
-			corners[1][i] = emaxs[i];
-		}
-		else
-		{
-			corners[1][i] = emins[i];
-			corners[0][i] = emaxs[i];
-		}
-	}
-	dist1 = DotProduct (p->normal, corners[0]) - p->dist;
-	dist2 = DotProduct (p->normal, corners[1]) - p->dist;
-	sides = 0;
-	if (dist1 >= 0)
-		sides = 1;
-	if (dist2 < 0)
-		sides |= 2;
-
-	return sides;
-}
-
-/*
-==================
-BoxOnPlaneSide
-
-Returns 1, 2, or 1 + 2
-==================
-*/
-int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
-{
-	float	dist1, dist2;
-	int		sides;
-
-// fast axial cases
-	if (p->type < 3)
-	{
-		if (p->dist <= emins[p->type])
-			return 1;
-		if (p->dist >= emaxs[p->type])
-			return 2;
-		return 3;
-	}
-
-// general case
-	switch (p->signbits)
-	{
-	case 0:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 1:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 2:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 3:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 4:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 5:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 6:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	case 7:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	default:
-		dist1 = dist2 = 0;		// shut up compiler
-		assert( 0 );
-		break;
-	}
-
-	sides = 0;
-	if (dist1 >= p->dist)
-		sides = 1;
-	if (dist2 < p->dist)
-		sides |= 2;
-
-	assert( sides != 0 );
-
-	return sides;
-}
-
-double sqrt(double x);
-
-
-
-//====================================================================================
 
 /*
 ============
@@ -6599,8 +6490,7 @@ void CM_BoxLeafnums_r (int nodenum)
 
 		node = &map_nodes[nodenum];
 		plane = node->plane;
-//		s = BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
-		s = BOX_ON_PLANE_SIDE(leaf_mins, leaf_maxs, plane);
+		s = BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
 		if (s == 1)
 			nodenum = node->children[0];
 		else if (s == 2)
@@ -93260,7 +93150,7 @@ qboolean R_CullBox (vec3_t mins, vec3_t maxs)
 		return false;
 
 	for (i=0 ; i<4 ; i++)
-		if ( BOX_ON_PLANE_SIDE(mins, maxs, &frustum[i]) == 2)
+		if (BoxOnPlaneSide(mins, maxs, &frustum[i]) == 2)
 			return true;
 	return false;
 }
