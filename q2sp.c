@@ -53,24 +53,18 @@ typedef enum {false, true}	qboolean;
 #define PRINT_ALERT			2
 
 // destination class for gi.multicast()
-typedef enum
-{
-MULTICAST_ALL,
-MULTICAST_PHS,
-MULTICAST_PVS,
-MULTICAST_ALL_R,
-MULTICAST_PHS_R,
-MULTICAST_PVS_R
+typedef enum {
+	MULTICAST_ALL,
+	MULTICAST_PHS,
+	MULTICAST_PVS,
+	MULTICAST_ALL_R,
+	MULTICAST_PHS_R,
+	MULTICAST_PVS_R
 } multicast_t;
 
-
-/*
-==============================================================
-
-MATHLIB
-
-==============================================================
-*/
+//
+// SECTION MATHLIB
+//
 
 typedef float vec_t;
 typedef vec_t vec3_t[3];
@@ -84,43 +78,65 @@ typedef	int	fixed16_t;
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
-struct cplane_s;
+// plane_t structure
+// !!! if this is changed, it must be changed in asm code too !!!
+typedef struct cplane_s {
+	vec3_t	normal;
+	float	dist;
+	byte	type;		// for fast side tests
+	byte	signbits;	// signx + (signy<<1) + (signz<<1)
+	byte	pad[2];
+} cplane_t;
 
-extern vec3_t vec3_origin;
+vec3_t vec3_origin = {0,0,0};
 
 #define	nanmask (255<<23)
-
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
-// microsoft's fabs seems to be ungodly slow...
-//float Q_fabs (float f);
-//#define	fabs(f) Q_fabs(f)
-#if !defined C_ONLY && !defined __linux__ && !defined __sgi
-extern long Q_ftol( float f );
-#else
-#define Q_ftol( f ) ( long ) (f)
-#endif
+#define Q_ftol(f) (long)(f)
 
-#define DotProduct(x,y)			(x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
-#define VectorSubtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2])
-#define VectorAdd(a,b,c)		(c[0]=a[0]+b[0],c[1]=a[1]+b[1],c[2]=a[2]+b[2])
-#define VectorCopy(a,b)			(b[0]=a[0],b[1]=a[1],b[2]=a[2])
+#define DotProduct(x, y)		(x[0]*y[0] + x[1]*y[1] + x[2]*y[2])
+#define VectorSubtract(a, b, c)	(c[0]=a[0]-b[0], c[1]=a[1]-b[1], c[2]=a[2]-b[2])
+#define VectorAdd(a, b, c)		(c[0]=a[0]+b[0], c[1]=a[1]+b[1], c[2]=a[2]+b[2])
+#define VectorCopy(a, b)		(b[0]=a[0], b[1]=a[1], b[2]=a[2])
 #define VectorClear(a)			(a[0]=a[1]=a[2]=0)
-#define VectorNegate(a,b)		(b[0]=-a[0],b[1]=-a[1],b[2]=-a[2])
+#define VectorNegate(a, b)		(b[0]=-a[0], b[1]=-a[1], b[2]=-a[2])
 #define VectorSet(v, x, y, z)	(v[0]=(x), v[1]=(y), v[2]=(z))
 
-void VectorMA (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
+static void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc) {
+	vecc[0] = veca[0] + scale*vecb[0];
+	vecc[1] = veca[1] + scale*vecb[1];
+	vecc[2] = veca[2] + scale*vecb[2];
+}
 
-// just in case you do't want to use the macros
-vec_t _DotProduct (vec3_t v1, vec3_t v2);
-void _VectorSubtract (vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorAdd (vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorCopy (vec3_t in, vec3_t out);
+static void AddPointToBounds(vec3_t v, vec3_t mins, vec3_t maxs) {
+	for (int i = 0; i < 3; i++) {
+		vec_t val = v[i];
+		if (val < mins[i]) {
+			mins[i] = val;
+		}
+		if (val > maxs[i]) {
+			maxs[i] = val;
+		}
+	}
+}
 
-void ClearBounds (vec3_t mins, vec3_t maxs);
-void AddPointToBounds (vec3_t v, vec3_t mins, vec3_t maxs);
-int VectorCompare (vec3_t v1, vec3_t v2);
-vec_t VectorLength (vec3_t v);
+static int VectorCompare(vec3_t v1, vec3_t v2) {
+	if (v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2]) {
+		return 0;
+	}
+	return 1;
+}
+
+static vec_t VectorLength(vec3_t v) {
+	vec_t length_squared = 0;
+	for (int i = 0; i < 3; i++) {
+		length_squared += v[i]*v[i];
+	}
+	vec_t length = sqrt(length_squared);
+	return length;
+}
+
 void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross);
 vec_t VectorNormalize (vec3_t v);		// returns vector length
 vec_t VectorNormalize2 (vec3_t v, vec3_t out);
@@ -350,17 +366,6 @@ COLLISION DETECTION
 #define	AREA_SOLID		1
 #define	AREA_TRIGGERS	2
 
-
-// plane_t structure
-// !!! if this is changed, it must be changed in asm code too !!!
-typedef struct cplane_s
-{
-	vec3_t	normal;
-	float	dist;
-	byte	type;			// for fast side tests
-	byte	signbits;		// signx + (signy<<1) + (signz<<1)
-	byte	pad[2];
-} cplane_t;
 
 // structure offset for asm code
 #define CPLANE_NORMAL_X			0
@@ -3842,8 +3847,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define DEG2RAD( a ) ( a * M_PI ) / 180.0F
 
-vec3_t vec3_origin = {0,0,0};
-
 //============================================================================
 
 #ifdef _WIN32
@@ -4233,36 +4236,6 @@ dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 	return sides;
 }
 
-void ClearBounds (vec3_t mins, vec3_t maxs)
-{
-	mins[0] = mins[1] = mins[2] = 99999;
-	maxs[0] = maxs[1] = maxs[2] = -99999;
-}
-
-void AddPointToBounds (vec3_t v, vec3_t mins, vec3_t maxs)
-{
-	int		i;
-	vec_t	val;
-
-	for (i=0 ; i<3 ; i++)
-	{
-		val = v[i];
-		if (val < mins[i])
-			mins[i] = val;
-		if (val > maxs[i])
-			maxs[i] = val;
-	}
-}
-
-
-int VectorCompare (vec3_t v1, vec3_t v2)
-{
-	if (v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2])
-			return 0;
-
-	return 1;
-}
-
 
 vec_t VectorNormalize (vec3_t v)
 {
@@ -4302,40 +4275,6 @@ vec_t VectorNormalize2 (vec3_t v, vec3_t out)
 
 }
 
-void VectorMA (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc)
-{
-	vecc[0] = veca[0] + scale*vecb[0];
-	vecc[1] = veca[1] + scale*vecb[1];
-	vecc[2] = veca[2] + scale*vecb[2];
-}
-
-
-vec_t _DotProduct (vec3_t v1, vec3_t v2)
-{
-	return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
-}
-
-void _VectorSubtract (vec3_t veca, vec3_t vecb, vec3_t out)
-{
-	out[0] = veca[0]-vecb[0];
-	out[1] = veca[1]-vecb[1];
-	out[2] = veca[2]-vecb[2];
-}
-
-void _VectorAdd (vec3_t veca, vec3_t vecb, vec3_t out)
-{
-	out[0] = veca[0]+vecb[0];
-	out[1] = veca[1]+vecb[1];
-	out[2] = veca[2]+vecb[2];
-}
-
-void _VectorCopy (vec3_t in, vec3_t out)
-{
-	out[0] = in[0];
-	out[1] = in[1];
-	out[2] = in[2];
-}
-
 void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross)
 {
 	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
@@ -4344,19 +4283,6 @@ void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross)
 }
 
 double sqrt(double x);
-
-vec_t VectorLength(vec3_t v)
-{
-	int		i;
-	float	length;
-
-	length = 0;
-	for (i=0 ; i< 3 ; i++)
-		length += v[i]*v[i];
-	length = sqrt (length);		// FIXME
-
-	return length;
-}
 
 void VectorInverse (vec3_t v)
 {
@@ -56615,7 +56541,7 @@ void Touch_Multi (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *su
 		vec3_t	forward;
 
 		AngleVectors(other->s.angles, forward, NULL, NULL);
-		if (_DotProduct(forward, self->movedir) < 0)
+		if (DotProduct(forward, self->movedir) < 0)
 			return;
 	}
 
