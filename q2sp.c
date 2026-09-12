@@ -381,6 +381,19 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 }
 
 //
+// SECTION Sizebuf
+//
+
+typedef struct sizebuf_s {
+	qboolean	allowoverflow;	// if false, do a Com_Error
+	qboolean	overflowed;		// set to true if the buffer size failed
+	byte		*data;
+	int			maxsize;
+	int			cursize;
+	int			readcount;
+} sizebuf_t;
+
+//
 // SECTION Strings
 //
 
@@ -393,6 +406,118 @@ static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 }
 
 //
+// SECTION Input
+//
+
+typedef enum {
+	key_game,
+	key_console,
+	key_message,
+	key_menu
+} keydest_t;
+
+//
+// SECTION Network
+//
+
+#define	MAX_MSGLEN 1400
+
+typedef enum {
+	NS_CLIENT,
+	NS_SERVER
+} netsrc_t;
+
+typedef enum {
+	NA_LOOPBACK,
+	NA_BROADCAST,
+	NA_IP,
+	NA_IPX,
+	NA_BROADCAST_IPX
+} netadrtype_t;
+
+typedef struct {
+	netadrtype_t	type;
+	byte			ip[4];
+	byte			ipx[10];
+	unsigned short	port;
+} netadr_t;
+
+typedef struct {
+	qboolean	fatal_error;
+	netsrc_t	sock;
+	int			dropped;			// between last packet and previous
+	int			last_received;		// for timeouts
+	int			last_sent;			// for retransmits
+	netadr_t	remote_address;
+	int			qport;				// qport value to write when transmitting sequencing variables
+	int			incoming_sequence;
+	int			incoming_acknowledged;
+	int			incoming_reliable_acknowledged;	// single bit
+	int			incoming_reliable_sequence;		// single bit, maintained local
+	int			outgoing_sequence;
+	int			reliable_sequence;			// single bit
+	int			last_reliable_sequence;		// sequence number of last send
+
+	//  reliable staging and holding areas
+	sizebuf_t	message;						// writing buffer to send to server
+	byte		message_buf[MAX_MSGLEN-16];		// leave space for header
+
+	// message is copied to this buffer when it is first transfered
+	int			reliable_length;
+	byte		reliable_buf[MAX_MSGLEN-16];	// unacked reliable message
+} netchan_t;
+
+//
+// SECTION User info
+//
+
+// Persistant through an arbitrary number of server connections
+static struct {
+	enum {
+		ca_uninitialized,
+		ca_disconnected, 	// not talking to a server
+		ca_connecting,		// sending request packets to the server
+		ca_connected,		// netchan_t established, waiting for svc_serverdata
+		ca_active			// game views should be displayed
+	} state;
+
+	keydest_t	key_dest;
+	int			framecount;
+	int			realtime;			// always increasing, no clamping, etc
+	float		frametime;			// seconds since last frame
+
+	// screen rendering information
+	float		disable_screen;			// showing loading plaque between levels or changing rendering dlls if time gets > 30 seconds ahead, break it
+	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
+
+	// connection information
+	char		servername[MAX_OSPATH];	// name of server from original connect
+	float		connect_time;			// for connection retransmits
+	int			quakePort;				// a 16 bit value that allows quake servers to work around address translating routers
+	netchan_t	netchan;
+	int			serverProtocol;			// in case we are doing some kind of version hack
+	int			challenge;				// from the server to use for connecting
+	FILE*		download;				// file transfer from server
+	char		downloadtempname[MAX_OSPATH];
+	char		downloadname[MAX_OSPATH];
+	int			downloadnumber;
+
+	enum {
+		dl_none,
+		dl_model,
+		dl_sound,
+		dl_skin,
+		dl_single
+	} downloadtype;
+	int downloadpercent;
+
+	// demo recording info must be here, so it isn't cleared on level change
+	qboolean	demorecording;
+	qboolean	demowaiting;	// don't record until a non-delta message is received
+	FILE		*demofile;
+} cls;
+
+//
 // SECTION System
 //
 
@@ -403,7 +528,104 @@ static char* FS_Gamedir();
 // SECTION Console
 //
 
-static void Con_Print(char *text);
+#define	NUM_CON_TIMES 4
+#define CON_TEXTSIZE 32768
+
+static struct {
+	qboolean	initialized;
+	char		text[CON_TEXTSIZE];
+	int			current;		// line where next message will be printed
+	int			x;				// offset in current line for next print
+	int			display;		// bottom of console displays this line
+	int			ormask;			// high bit mask for colored characters
+	int 		linewidth;		// characters across screen
+	int			totallines;		// total lines in console scrollback
+	float		cursorspeed;
+	int			vislines;
+	float		times[NUM_CON_TIMES];	// cls.realtime time the line was generated
+} con;
+
+static void Con_Linefeed() {
+	con.x = 0;
+	if (con.display == con.current) {
+		con.display++;
+	}
+	con.current++;
+	memset(&con.text[(con.current%con.totallines)*con.linewidth], ' ', con.linewidth);
+}
+
+
+// Handles cursor positioning, line wrapping, etc
+// All console printing must go through this in order to be logged to disk
+// If no console is visible, the text will appear at the top of the game window
+static void Con_Print(char *txt) {
+	int		y;
+	int		c, l;
+	static int	cr;
+	int		mask;
+
+	if (!con.initialized)
+		return;
+
+	if (txt[0] == 1 || txt[0] == 2)
+	{
+		mask = 128;		// go to colored text
+		txt++;
+	}
+	else
+		mask = 0;
+
+
+	while ( (c = *txt) )
+	{
+	// count word length
+		for (l=0 ; l< con.linewidth ; l++)
+			if ( txt[l] <= ' ')
+				break;
+
+	// word wrap
+		if (l != con.linewidth && (con.x + l > con.linewidth) )
+			con.x = 0;
+
+		txt++;
+
+		if (cr)
+		{
+			con.current--;
+			cr = false;
+		}
+
+
+		if (!con.x)
+		{
+			Con_Linefeed ();
+		// mark time for transparent overlay
+			if (con.current >= 0)
+				con.times[con.current % NUM_CON_TIMES] = cls.realtime;
+		}
+
+		switch (c)
+		{
+		case '\n':
+			con.x = 0;
+			break;
+
+		case '\r':
+			con.x = 0;
+			cr = 1;
+			break;
+
+		default:	// display character and advance
+			y = con.current % con.totallines;
+			con.text[y*con.linewidth+con.x] = c | mask | con.ormask;
+			con.x++;
+			if (con.x >= con.linewidth)
+				con.x = 0;
+			break;
+		}
+
+	}
+}
 
 //
 // SECTION Commands
@@ -458,7 +680,7 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 
 // Both client and server can use this, and it will output
 // to the apropriate place.
-static void Com_Printf (char *fmt, ...) {
+static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
 	va_list argptr;
 	va_start(argptr, fmt);
@@ -1582,16 +1804,6 @@ extern int vidref_val;
 
 //============================================================================
 
-typedef struct sizebuf_s
-{
-	qboolean	allowoverflow;	// if false, do a Com_Error
-	qboolean	overflowed;		// set to true if the buffer size failed
-	byte	*data;
-	int		maxsize;
-	int		cursize;
-	int		readcount;
-} sizebuf_t;
-
 void SZ_Init (sizebuf_t *buf, byte *data, int length);
 void SZ_Clear (sizebuf_t *buf);
 void *SZ_GetSpace (sizebuf_t *buf, int length);
@@ -2034,22 +2246,8 @@ NET
 
 #define	PORT_ANY	-1
 
-#define	MAX_MSGLEN		1400		// max length of a message
+
 #define	PACKET_HEADER	10			// two ints and a short
-
-typedef enum {NA_LOOPBACK, NA_BROADCAST, NA_IP, NA_IPX, NA_BROADCAST_IPX} netadrtype_t;
-
-typedef enum {NS_CLIENT, NS_SERVER} netsrc_t;
-
-typedef struct
-{
-	netadrtype_t	type;
-
-	byte	ip[4];
-	byte	ipx[10];
-
-	unsigned short	port;
-} netadr_t;
 
 void		NET_Init (void);
 void		NET_Shutdown (void);
@@ -2071,40 +2269,6 @@ void		NET_Sleep(int msec);
 #define	OLD_AVG		0.99		// total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
 
 #define	MAX_LATENT	32
-
-typedef struct
-{
-	qboolean	fatal_error;
-
-	netsrc_t	sock;
-
-	int			dropped;			// between last packet and previous
-
-	int			last_received;		// for timeouts
-	int			last_sent;			// for retransmits
-
-	netadr_t	remote_address;
-	int			qport;				// qport value to write when transmitting
-
-// sequencing variables
-	int			incoming_sequence;
-	int			incoming_acknowledged;
-	int			incoming_reliable_acknowledged;	// single bit
-
-	int			incoming_reliable_sequence;		// single bit, maintained local
-
-	int			outgoing_sequence;
-	int			reliable_sequence;			// single bit
-	int			last_reliable_sequence;		// sequence number of last send
-
-// reliable staging and holding areas
-	sizebuf_t	message;		// writing buffer to send to server
-	byte		message_buf[MAX_MSGLEN-16];		// leave space for header
-
-// message is copied to this buffer when it is first transfered
-	int			reliable_length;
-	byte		reliable_buf[MAX_MSGLEN-16];	// unacked reliable message
-} netchan_t;
 
 extern	netadr_t	net_from;
 extern	sizebuf_t	net_message;
@@ -19135,33 +19299,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // console
 //
 
-#define	NUM_CON_TIMES 4
-
-#define		CON_TEXTSIZE	32768
-typedef struct
-{
-	qboolean	initialized;
-
-	char	text[CON_TEXTSIZE];
-	int		current;		// line where next message will be printed
-	int		x;				// offset in current line for next print
-	int		display;		// bottom of console displays this line
-
-	int		ormask;			// high bit mask for colored characters
-
-	int 	linewidth;		// characters across screen
-	int		totallines;		// total lines in console scrollback
-
-	float	cursorspeed;
-
-	int		vislines;
-
-	float	times[NUM_CON_TIMES];	// cls.realtime time the line was generated
-								// for transparent notify lines
-} console_t;
-
-extern	console_t	con;
-
 void Con_DrawCharacter (int cx, int line, int num);
 
 void Con_CheckResize (void);
@@ -19340,71 +19477,8 @@ extern	client_state_t	cl;
 /*
 ==================================================================
 
-the client_static_t structure is persistant through an arbitrary number
-of server connections
-
 ==================================================================
 */
-
-typedef enum {
-	ca_uninitialized,
-	ca_disconnected, 	// not talking to a server
-	ca_connecting,		// sending request packets to the server
-	ca_connected,		// netchan_t established, waiting for svc_serverdata
-	ca_active			// game views should be displayed
-} connstate_t;
-
-typedef enum {
-	dl_none,
-	dl_model,
-	dl_sound,
-	dl_skin,
-	dl_single
-} dltype_t;		// download type
-
-typedef enum {key_game, key_console, key_message, key_menu} keydest_t;
-
-typedef struct
-{
-	connstate_t	state;
-	keydest_t	key_dest;
-
-	int			framecount;
-	int			realtime;			// always increasing, no clamping, etc
-	float		frametime;			// seconds since last frame
-
-// screen rendering information
-	float		disable_screen;		// showing loading plaque between levels
-									// or changing rendering dlls
-									// if time gets > 30 seconds ahead, break it
-	int			disable_servercount;	// when we receive a frame and cl.servercount
-									// > cls.disable_servercount, clear disable_screen
-
-// connection information
-	char		servername[MAX_OSPATH];	// name of server from original connect
-	float		connect_time;		// for connection retransmits
-
-	int			quakePort;			// a 16 bit value that allows quake servers
-									// to work around address translating routers
-	netchan_t	netchan;
-	int			serverProtocol;		// in case we are doing some kind of version hack
-
-	int			challenge;			// from the server to use for connecting
-
-	FILE		*download;			// file transfer from server
-	char		downloadtempname[MAX_OSPATH];
-	char		downloadname[MAX_OSPATH];
-	int			downloadnumber;
-	dltype_t	downloadtype;
-	int			downloadpercent;
-
-// demo recording info must be here, so it isn't cleared on level change
-	qboolean	demorecording;
-	qboolean	demowaiting;	// don't record until a non-delta message is received
-	FILE		*demofile;
-} client_static_t;
-
-extern client_static_t	cls;
 
 //=============================================================================
 
@@ -24945,7 +25019,6 @@ cvar_t	*gender_auto;
 
 cvar_t	*cl_vwep;
 
-client_static_t	cls;
 client_state_t	cl;
 
 centity_t		cl_entities[MAX_EDICTS];
@@ -32878,8 +32951,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /* already inlined above: client/client.h */
 
-console_t	con;
-
 cvar_t		*con_notifytime;
 
 
@@ -33179,102 +33250,6 @@ void Con_Init (void)
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	con.initialized = true;
 }
-
-
-/*
-===============
-Con_Linefeed
-===============
-*/
-void Con_Linefeed (void)
-{
-	con.x = 0;
-	if (con.display == con.current)
-		con.display++;
-	con.current++;
-	memset (&con.text[(con.current%con.totallines)*con.linewidth]
-	, ' ', con.linewidth);
-}
-
-/*
-================
-Con_Print
-
-Handles cursor positioning, line wrapping, etc
-All console printing must go through this in order to be logged to disk
-If no console is visible, the text will appear at the top of the game window
-================
-*/
-void Con_Print (char *txt)
-{
-	int		y;
-	int		c, l;
-	static int	cr;
-	int		mask;
-
-	if (!con.initialized)
-		return;
-
-	if (txt[0] == 1 || txt[0] == 2)
-	{
-		mask = 128;		// go to colored text
-		txt++;
-	}
-	else
-		mask = 0;
-
-
-	while ( (c = *txt) )
-	{
-	// count word length
-		for (l=0 ; l< con.linewidth ; l++)
-			if ( txt[l] <= ' ')
-				break;
-
-	// word wrap
-		if (l != con.linewidth && (con.x + l > con.linewidth) )
-			con.x = 0;
-
-		txt++;
-
-		if (cr)
-		{
-			con.current--;
-			cr = false;
-		}
-
-
-		if (!con.x)
-		{
-			Con_Linefeed ();
-		// mark time for transparent overlay
-			if (con.current >= 0)
-				con.times[con.current % NUM_CON_TIMES] = cls.realtime;
-		}
-
-		switch (c)
-		{
-		case '\n':
-			con.x = 0;
-			break;
-
-		case '\r':
-			con.x = 0;
-			cr = 1;
-			break;
-
-		default:	// display character and advance
-			y = con.current % con.totallines;
-			con.text[y*con.linewidth+con.x] = c | mask | con.ormask;
-			con.x++;
-			if (con.x >= con.linewidth)
-				con.x = 0;
-			break;
-		}
-
-	}
-}
-
 
 /*
 ==============
