@@ -545,85 +545,82 @@ static struct {
 	float		times[NUM_CON_TIMES];	// cls.realtime time the line was generated
 } con;
 
-static void Con_Linefeed() {
-	con.x = 0;
-	if (con.display == con.current) {
-		con.display++;
-	}
-	con.current++;
-	memset(&con.text[(con.current%con.totallines)*con.linewidth], ' ', con.linewidth);
-}
-
-
 // Handles cursor positioning, line wrapping, etc
 // All console printing must go through this in order to be logged to disk
 // If no console is visible, the text will appear at the top of the game window
 static void Con_Print(char *txt) {
-	int		y;
-	int		c, l;
-	static int	cr;
-	int		mask;
+	static int cr = false;
 
-	if (!con.initialized)
+	if (!con.initialized) {
 		return;
+	}
 
-	if (txt[0] == 1 || txt[0] == 2)
-	{
-		mask = 128;		// go to colored text
+	int mask = 0;
+	if (txt[0] == 1 || txt[0] == 2) {
+		int colored_text_mask = 128;
+		mask = colored_text_mask;
 		txt++;
 	}
-	else
-		mask = 0;
 
-
-	while ( (c = *txt) )
-	{
-	// count word length
-		for (l=0 ; l< con.linewidth ; l++)
-			if ( txt[l] <= ' ')
+	int c = 0;
+	while ((c = *txt)) {
+		// count word length
+		int l = 0;
+		for (l = 0; l < con.linewidth; l++) {
+			if (txt[l] <= ' ') {
 				break;
+			}
+		}
 
-	// word wrap
-		if (l != con.linewidth && (con.x + l > con.linewidth) )
+		// word wrap
+		if (l != con.linewidth && (con.x + l > con.linewidth)) {
 			con.x = 0;
+		}
 
 		txt++;
 
-		if (cr)
-		{
+		if (cr) {
 			con.current--;
 			cr = false;
 		}
 
+		if (!con.x) {
+			// Linefeed
+			{
+				con.x = 0;
+				if (con.display == con.current) {
+					con.display++;
+				}
+				con.current++;
+				memset(&con.text[(con.current%con.totallines)*con.linewidth], ' ', con.linewidth);
+			}
 
-		if (!con.x)
-		{
-			Con_Linefeed ();
-		// mark time for transparent overlay
-			if (con.current >= 0)
+			// mark time for transparent overlay
+			if (con.current >= 0) {
 				con.times[con.current % NUM_CON_TIMES] = cls.realtime;
+			}
 		}
 
-		switch (c)
-		{
-		case '\n':
+		switch (c) {
+		case '\n': {
 			con.x = 0;
-			break;
+		} break;
 
-		case '\r':
+		case '\r': {
 			con.x = 0;
 			cr = 1;
-			break;
+		} break;
 
-		default:	// display character and advance
-			y = con.current % con.totallines;
-			con.text[y*con.linewidth+con.x] = c | mask | con.ormask;
+		// display character and advance
+		default: {
+			int y = con.current % con.totallines;
+			con.text[y*con.linewidth + con.x] = c | mask | con.ormask;
 			con.x++;
-			if (con.x >= con.linewidth)
+			if (con.x >= con.linewidth) {
 				con.x = 0;
-			break;
+			}
+		} break;
 		}
-
 	}
 }
 
