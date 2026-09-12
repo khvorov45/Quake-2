@@ -510,12 +510,21 @@ static int Q_strcasecmp(char *s1, char *s2) {
 
 static int Q_stricmp(char *s1, char *s2) {return Q_strcasecmp(s1, s2);}
 
-// vsprintf into a sized buffer; the destination is always null-terminated
-// on overflow, which even MSVC's _vsnprintf doesn't guarantee
+// vsprintf into a sized buffer; the destination is always null-terminated on overflow, which even MSVC's _vsnprintf doesn't guarantee
 static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 	int len = vsnprintf(str, size, format, ap);
 	str[size-1] = 0;
 	return len;
+}
+
+// does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
+static char* va(char *format, ...) {
+	static char string[1024];
+	va_list argptr;
+	va_start (argptr, format);
+	Q_vsnprintf (string, sizeof(string), format, argptr);
+	va_end (argptr);
+	return string;
 }
 
 //
@@ -910,10 +919,6 @@ static void Com_PageInMemory(byte *buffer, int size) {
 //
 // SECTION ???
 //
-
-char	*va(char *format, ...);
-
-//=============================================
 
 //
 // key / value info strings
@@ -4539,52 +4544,6 @@ char *COM_FileExtension (char *in)
 	exten[i] = 0;
 	return exten;
 }
-
-/*
-============================================================================
-
-					BYTE ORDER FUNCTIONS
-
-============================================================================
-*/
-
-
-
-/*
-============
-va
-
-does a varargs printf into a temp buffer, so I don't need to have
-varargs versions of all text functions.
-============
-*/
-char	*va(char *format, ...)
-{
-	va_list		argptr;
-	static char		string[1024];
-
-	va_start (argptr, format);
-	Q_vsnprintf (string, sizeof(string), format, argptr);
-	va_end (argptr);
-
-	return string;
-}
-
-/*
-============================================================================
-
-					LIBRARY REPLACEMENT FUNCTIONS
-
-============================================================================
-*/
-
-/*
-=====================================================================
-
-  INFO STRINGS
-
-=====================================================================
-*/
 
 /*
 ===============
