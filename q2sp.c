@@ -642,7 +642,31 @@ static struct {
 // SECTION System
 //
 
+// directory searching
+#define SFF_ARCH    0x01
+#define SFF_HIDDEN  0x02
+#define SFF_RDONLY  0x04
+#define SFF_SUBDIR  0x08
+#define SFF_SYSTEM  0x10
+
+static int curtime;		// time returned by last Sys_Milliseconds
+
 static void Sys_ConsoleOutput(char *string);
+static int Sys_Milliseconds(void);
+static void Sys_Mkdir(char *path);
+static void Sys_Error(char *error, ...);
+
+// large block stack allocation routines
+static void	*Hunk_Begin (int maxsize);
+static void	*Hunk_Alloc (int size);
+static void	Hunk_Free (void *buf);
+static int	Hunk_End (void);
+
+// pass in an attribute mask of things you wish to REJECT
+static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
+static char	*Sys_FindNext (unsigned musthave, unsigned canthave);
+static void	Sys_FindClose();
+
 static char* FS_Gamedir();
 
 //
@@ -1056,8 +1080,7 @@ static void Info_SetValueForKey (char *s, char *key, char *value) {
 	*s = 0;
 }
 
-// Some characters are illegal in info strings because they
-// can mess up the server's parsing
+// Some characters are illegal in info strings because they can mess up the server's parsing
 static qboolean Info_Validate(char *s) {
 	if (strstr (s, "\"")) {
 		return false;
@@ -1069,67 +1092,18 @@ static qboolean Info_Validate(char *s) {
 }
 
 //
-// SECTION ???
+// SECTION CVARS (console variables)
 //
-
-/*
-==============================================================
-
-SYSTEM SPECIFIC
-
-==============================================================
-*/
-
-extern	int	curtime;		// time returned by last Sys_Milliseconds
-
-int		Sys_Milliseconds (void);
-void	Sys_Mkdir (char *path);
-
-// large block stack allocation routines
-void	*Hunk_Begin (int maxsize);
-void	*Hunk_Alloc (int size);
-void	Hunk_Free (void *buf);
-int		Hunk_End (void);
-
-// directory searching
-#define SFF_ARCH    0x01
-#define SFF_HIDDEN  0x02
-#define SFF_RDONLY  0x04
-#define SFF_SUBDIR  0x08
-#define SFF_SYSTEM  0x10
-
-/*
-** pass in an attribute mask of things you wish to REJECT
-*/
-char	*Sys_FindFirst (char *path, unsigned musthave, unsigned canthave );
-char	*Sys_FindNext ( unsigned musthave, unsigned canthave );
-void	Sys_FindClose (void);
-
-
-// this is only here so the functions in q_shared.c and q_shwin.c can link
-void Sys_Error (char *error, ...);
-
-
-/*
-==========================================================
-
-CVARS (console variables)
-
-==========================================================
-*/
-
-#ifndef CVAR
-#define	CVAR
 
 #define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
 #define	CVAR_USERINFO	2	// added to userinfo  when changed
 #define	CVAR_SERVERINFO	4	// added to serverinfo when changed
-#define	CVAR_NOSET		8	// don't allow change from console at all,
-							// but can be set from the command line
+#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
 #define	CVAR_LATCH		16	// save changes until server restart
 
-
-#endif		// CVAR
+//
+// SECTION ???
+//
 
 /*
 ==============================================================
@@ -86621,10 +86595,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __QGL_H__
 #define __QGL_H__
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 qboolean QGL_Init( const char *dllname );
 void     QGL_Shutdown( void );
 
@@ -99793,7 +99763,7 @@ void Hunk_Free (void *base)
 Sys_Milliseconds
 ================
 */
-int	curtime;
+
 int Sys_Milliseconds (void)
 {
 	static int		base;
