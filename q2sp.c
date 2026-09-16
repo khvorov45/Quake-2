@@ -477,6 +477,48 @@ typedef struct sizebuf_s {
 	int			readcount;
 } sizebuf_t;
 
+static void SZ_Init(sizebuf_t* buf, byte* data, int length) {
+	*buf = (sizebuf_t){.data = data, .maxsize = length};
+}
+
+static void SZ_Clear(sizebuf_t* buf) {
+	buf->cursize = 0;
+	buf->overflowed = false;
+}
+
+static void* SZ_GetSpace(sizebuf_t* buf, int length) {
+	if (buf->cursize + length > buf->maxsize) {
+		assert(buf->allowoverflow);
+		assert(length <= buf->maxsize);
+
+		buf->cursize = 0;
+		buf->overflowed = true;
+	}
+
+	void* data = buf->data + buf->cursize;
+	buf->cursize += length;
+	return data;
+}
+
+static void SZ_Write(sizebuf_t* buf, void* data, int length) {
+	void* dest = SZ_GetSpace(buf, length);
+	memcpy(dest, data, length);
+}
+
+static void SZ_Print(sizebuf_t* buf, char* data) {
+	int len = strlen(data) + 1; // NOTE: include null terminator
+
+	if (buf->cursize) {
+		if (buf->data[buf->cursize - 1]) {
+			memcpy((byte*)SZ_GetSpace(buf, len), data, len); // NOTE: no trailing 0 from previous prints
+		} else {
+			memcpy((byte*)SZ_GetSpace(buf, len - 1) - 1, data, len); // NOTE: write over trailing 0 from previous prints
+		}
+	} else {
+		memcpy((byte*)SZ_GetSpace(buf, len), data, len);
+	}
+}
+
 //
 // SECTION Strings
 //
@@ -589,7 +631,7 @@ typedef struct {
 } netchan_t;
 
 //
-// SECTION User info
+// SECTION User
 //
 
 // Persistant through an arbitrary number of server connections
@@ -637,6 +679,16 @@ static struct {
 	qboolean	demowaiting;	// don't record until a non-delta message is received
 	FILE		*demofile;
 } cls;
+
+// usercmd_t is sent to the server each client frame
+typedef struct usercmd_s {
+	byte	msec;
+	byte	buttons;
+	short	angles[3];
+	short	forwardmove, sidemove, upmove;
+	byte	impulse;		// remove?
+	byte	lightlevel;		// light level the player is standing on
+} usercmd_t;
 
 //
 // SECTION System
@@ -1102,16 +1154,803 @@ static qboolean Info_Validate(char *s) {
 #define	CVAR_LATCH		16	// save changes until server restart
 
 //
-// SECTION ???
+// SECTION Entity
 //
 
-/*
-==============================================================
+// entity_state_t->renderfx flags
+#define	RF_MINLIGHT			1		// allways have some light (viewmodel)
+#define	RF_VIEWERMODEL		2		// don't draw through eyes, only mirrors
+#define	RF_WEAPONMODEL		4		// only draw through eyes
+#define	RF_FULLBRIGHT		8		// allways draw full intensity
+#define	RF_DEPTHHACK		16		// for view weapon Z crunching
+#define	RF_TRANSLUCENT		32
+#define	RF_FRAMELERP		64
+#define RF_BEAM				128
+#define	RF_CUSTOMSKIN		256		// skin is an index in image_precache
+#define	RF_GLOW				512		// pulse lighting for bonus items
+#define RF_SHELL_RED		1024
+#define	RF_SHELL_GREEN		2048
+#define RF_SHELL_BLUE		4096
 
-COLLISION DETECTION
+// entity_state_t is the information conveyed from the server
+// in an update message about entities that the client will
+// need to render in some way
+typedef struct entity_state_s {
+	int		number;			// edict index
 
-==============================================================
-*/
+	vec3_t	origin;
+	vec3_t	angles;
+	vec3_t	old_origin;		// for lerping
+	int		modelindex;
+	int		modelindex2, modelindex3, modelindex4;	// weapons, CTF flags, etc
+	int		frame;
+	int		skinnum;
+
+	// PGM - we're filling it, so it needs to be unsigned
+	unsigned int	effects;
+
+	int		renderfx;
+
+	// for client side prediction, 8*(bits 0-4) is x/y radius 8*(bits 5-9)
+	// is z down distance, 8(bits10-15) is z up gi.linkentity sets this properly
+	int		solid;
+
+	// for looping sounds, to guarantee shutoff
+	// impulse events -- muzzle flashes, footsteps, etc
+	// events only go out for a single frame, they
+	// are automatically cleared each frame
+	int		sound;
+	int		event;
+} entity_state_t;
+
+//
+// SECTION Messages
+//
+
+#define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
+#define	SHORT2ANGLE(x)	((x)*(360.0/65536))
+
+#define NUMVERTEXNORMALS 162
+
+// ms and light always sent, the others are optional
+#define	CM_ANGLE1 	(1<<0)
+#define	CM_ANGLE2 	(1<<1)
+#define	CM_ANGLE3 	(1<<2)
+#define	CM_FORWARD	(1<<3)
+#define	CM_SIDE		(1<<4)
+#define	CM_UP		(1<<5)
+#define	CM_BUTTONS	(1<<6)
+#define	CM_IMPULSE	(1<<7)
+
+// try to pack the common update flags into the first byte
+#define	U_ORIGIN1	(1<<0)
+#define	U_ORIGIN2	(1<<1)
+#define	U_ANGLE2	(1<<2)
+#define	U_ANGLE3	(1<<3)
+#define	U_FRAME8	(1<<4)		// frame is a byte
+#define	U_EVENT		(1<<5)
+#define	U_REMOVE	(1<<6)		// REMOVE this entity, don't add it
+#define	U_MOREBITS1	(1<<7)		// read one additional byte
+
+// second byte
+#define	U_NUMBER16	(1<<8)		// NUMBER8 is implicit if not set
+#define	U_ORIGIN3	(1<<9)
+#define	U_ANGLE1	(1<<10)
+#define	U_MODEL		(1<<11)
+#define U_RENDERFX8	(1<<12)		// fullbright, etc
+#define	U_EFFECTS8	(1<<14)		// autorotate, trails, etc
+#define	U_MOREBITS2	(1<<15)		// read one additional byte
+
+// third byte
+#define	U_SKIN8		(1<<16)
+#define	U_FRAME16	(1<<17)		// frame is a short
+#define	U_RENDERFX16 (1<<18)	// 8 + 16 = 32
+#define	U_EFFECTS16	(1<<19)		// 8 + 16 = 32
+#define	U_MODEL2	(1<<20)		// weapons, flags, etc
+#define	U_MODEL3	(1<<21)
+#define	U_MODEL4	(1<<22)
+#define	U_MOREBITS3	(1<<23)		// read one additional byte
+
+// fourth byte
+#define	U_OLDORIGIN	(1<<24)		// FIXME: get rid of this
+#define	U_SKIN16	(1<<25)
+#define	U_SOUND		(1<<26)
+#define	U_SOLID		(1<<27)
+
+static vec3_t bytedirs[NUMVERTEXNORMALS] = {
+	{-0.525731, 0.000000, 0.850651},
+	{-0.442863, 0.238856, 0.864188},
+	{-0.295242, 0.000000, 0.955423},
+	{-0.309017, 0.500000, 0.809017},
+	{-0.162460, 0.262866, 0.951056},
+	{0.000000, 0.000000, 1.000000},
+	{0.000000, 0.850651, 0.525731},
+	{-0.147621, 0.716567, 0.681718},
+	{0.147621, 0.716567, 0.681718},
+	{0.000000, 0.525731, 0.850651},
+	{0.309017, 0.500000, 0.809017},
+	{0.525731, 0.000000, 0.850651},
+	{0.295242, 0.000000, 0.955423},
+	{0.442863, 0.238856, 0.864188},
+	{0.162460, 0.262866, 0.951056},
+	{-0.681718, 0.147621, 0.716567},
+	{-0.809017, 0.309017, 0.500000},
+	{-0.587785, 0.425325, 0.688191},
+	{-0.850651, 0.525731, 0.000000},
+	{-0.864188, 0.442863, 0.238856},
+	{-0.716567, 0.681718, 0.147621},
+	{-0.688191, 0.587785, 0.425325},
+	{-0.500000, 0.809017, 0.309017},
+	{-0.238856, 0.864188, 0.442863},
+	{-0.425325, 0.688191, 0.587785},
+	{-0.716567, 0.681718, -0.147621},
+	{-0.500000, 0.809017, -0.309017},
+	{-0.525731, 0.850651, 0.000000},
+	{0.000000, 0.850651, -0.525731},
+	{-0.238856, 0.864188, -0.442863},
+	{0.000000, 0.955423, -0.295242},
+	{-0.262866, 0.951056, -0.162460},
+	{0.000000, 1.000000, 0.000000},
+	{0.000000, 0.955423, 0.295242},
+	{-0.262866, 0.951056, 0.162460},
+	{0.238856, 0.864188, 0.442863},
+	{0.262866, 0.951056, 0.162460},
+	{0.500000, 0.809017, 0.309017},
+	{0.238856, 0.864188, -0.442863},
+	{0.262866, 0.951056, -0.162460},
+	{0.500000, 0.809017, -0.309017},
+	{0.850651, 0.525731, 0.000000},
+	{0.716567, 0.681718, 0.147621},
+	{0.716567, 0.681718, -0.147621},
+	{0.525731, 0.850651, 0.000000},
+	{0.425325, 0.688191, 0.587785},
+	{0.864188, 0.442863, 0.238856},
+	{0.688191, 0.587785, 0.425325},
+	{0.809017, 0.309017, 0.500000},
+	{0.681718, 0.147621, 0.716567},
+	{0.587785, 0.425325, 0.688191},
+	{0.955423, 0.295242, 0.000000},
+	{1.000000, 0.000000, 0.000000},
+	{0.951056, 0.162460, 0.262866},
+	{0.850651, -0.525731, 0.000000},
+	{0.955423, -0.295242, 0.000000},
+	{0.864188, -0.442863, 0.238856},
+	{0.951056, -0.162460, 0.262866},
+	{0.809017, -0.309017, 0.500000},
+	{0.681718, -0.147621, 0.716567},
+	{0.850651, 0.000000, 0.525731},
+	{0.864188, 0.442863, -0.238856},
+	{0.809017, 0.309017, -0.500000},
+	{0.951056, 0.162460, -0.262866},
+	{0.525731, 0.000000, -0.850651},
+	{0.681718, 0.147621, -0.716567},
+	{0.681718, -0.147621, -0.716567},
+	{0.850651, 0.000000, -0.525731},
+	{0.809017, -0.309017, -0.500000},
+	{0.864188, -0.442863, -0.238856},
+	{0.951056, -0.162460, -0.262866},
+	{0.147621, 0.716567, -0.681718},
+	{0.309017, 0.500000, -0.809017},
+	{0.425325, 0.688191, -0.587785},
+	{0.442863, 0.238856, -0.864188},
+	{0.587785, 0.425325, -0.688191},
+	{0.688191, 0.587785, -0.425325},
+	{-0.147621, 0.716567, -0.681718},
+	{-0.309017, 0.500000, -0.809017},
+	{0.000000, 0.525731, -0.850651},
+	{-0.525731, 0.000000, -0.850651},
+	{-0.442863, 0.238856, -0.864188},
+	{-0.295242, 0.000000, -0.955423},
+	{-0.162460, 0.262866, -0.951056},
+	{0.000000, 0.000000, -1.000000},
+	{0.295242, 0.000000, -0.955423},
+	{0.162460, 0.262866, -0.951056},
+	{-0.442863, -0.238856, -0.864188},
+	{-0.309017, -0.500000, -0.809017},
+	{-0.162460, -0.262866, -0.951056},
+	{0.000000, -0.850651, -0.525731},
+	{-0.147621, -0.716567, -0.681718},
+	{0.147621, -0.716567, -0.681718},
+	{0.000000, -0.525731, -0.850651},
+	{0.309017, -0.500000, -0.809017},
+	{0.442863, -0.238856, -0.864188},
+	{0.162460, -0.262866, -0.951056},
+	{0.238856, -0.864188, -0.442863},
+	{0.500000, -0.809017, -0.309017},
+	{0.425325, -0.688191, -0.587785},
+	{0.716567, -0.681718, -0.147621},
+	{0.688191, -0.587785, -0.425325},
+	{0.587785, -0.425325, -0.688191},
+	{0.000000, -0.955423, -0.295242},
+	{0.000000, -1.000000, 0.000000},
+	{0.262866, -0.951056, -0.162460},
+	{0.000000, -0.850651, 0.525731},
+	{0.000000, -0.955423, 0.295242},
+	{0.238856, -0.864188, 0.442863},
+	{0.262866, -0.951056, 0.162460},
+	{0.500000, -0.809017, 0.309017},
+	{0.716567, -0.681718, 0.147621},
+	{0.525731, -0.850651, 0.000000},
+	{-0.238856, -0.864188, -0.442863},
+	{-0.500000, -0.809017, -0.309017},
+	{-0.262866, -0.951056, -0.162460},
+	{-0.850651, -0.525731, 0.000000},
+	{-0.716567, -0.681718, -0.147621},
+	{-0.716567, -0.681718, 0.147621},
+	{-0.525731, -0.850651, 0.000000},
+	{-0.500000, -0.809017, 0.309017},
+	{-0.238856, -0.864188, 0.442863},
+	{-0.262866, -0.951056, 0.162460},
+	{-0.864188, -0.442863, 0.238856},
+	{-0.809017, -0.309017, 0.500000},
+	{-0.688191, -0.587785, 0.425325},
+	{-0.681718, -0.147621, 0.716567},
+	{-0.442863, -0.238856, 0.864188},
+	{-0.587785, -0.425325, 0.688191},
+	{-0.309017, -0.500000, 0.809017},
+	{-0.147621, -0.716567, 0.681718},
+	{-0.425325, -0.688191, 0.587785},
+	{-0.162460, -0.262866, 0.951056},
+	{0.442863, -0.238856, 0.864188},
+	{0.162460, -0.262866, 0.951056},
+	{0.309017, -0.500000, 0.809017},
+	{0.147621, -0.716567, 0.681718},
+	{0.000000, -0.525731, 0.850651},
+	{0.425325, -0.688191, 0.587785},
+	{0.587785, -0.425325, 0.688191},
+	{0.688191, -0.587785, 0.425325},
+	{-0.955423, 0.295242, 0.000000},
+	{-0.951056, 0.162460, 0.262866},
+	{-1.000000, 0.000000, 0.000000},
+	{-0.850651, 0.000000, 0.525731},
+	{-0.955423, -0.295242, 0.000000},
+	{-0.951056, -0.162460, 0.262866},
+	{-0.864188, 0.442863, -0.238856},
+	{-0.951056, 0.162460, -0.262866},
+	{-0.809017, 0.309017, -0.500000},
+	{-0.864188, -0.442863, -0.238856},
+	{-0.951056, -0.162460, -0.262866},
+	{-0.809017, -0.309017, -0.500000},
+	{-0.681718, 0.147621, -0.716567},
+	{-0.681718, -0.147621, -0.716567},
+	{-0.850651, 0.000000, -0.525731},
+	{-0.688191, 0.587785, -0.425325},
+	{-0.587785, 0.425325, -0.688191},
+	{-0.425325, 0.688191, -0.587785},
+	{-0.425325, -0.688191, -0.587785},
+	{-0.587785, -0.425325, -0.688191},
+	{-0.688191, -0.587785, -0.425325},
+};
+
+static void MSG_WriteChar (sizebuf_t* sb, int c) {
+	assert((c >= -128) && (c <= 127));
+	byte* buf = SZ_GetSpace(sb, 1);
+	buf[0] = c;
+}
+
+static void MSG_WriteByte (sizebuf_t* sb, int c) {
+	assert(c >= 0 && c <= 255);
+	byte* buf = SZ_GetSpace (sb, 1);
+	buf[0] = c;
+}
+
+static void MSG_WriteShort(sizebuf_t* sb, int c) {
+	// assert(c >= ((short)0x8000) && c <= (short)0x7fff);
+	byte* buf = SZ_GetSpace(sb, 2);
+	buf[0] = c & 0xff;
+	buf[1] = c >> 8;
+}
+
+static void MSG_WriteLong(sizebuf_t* sb, int c) {
+	byte* buf = SZ_GetSpace(sb, 4);
+	buf[0] = c & 0xff;
+	buf[1] = (c>>8) & 0xff;
+	buf[2] = (c>>16) & 0xff;
+	buf[3] = c>>24;
+}
+
+static void MSG_WriteFloat(sizebuf_t* sb, float f) {
+	union {
+		float	f;
+		int	l;
+	} dat;
+	dat.f = f;
+	dat.l = LittleLong(dat.l);
+	SZ_Write(sb, &dat.l, 4);
+}
+
+static void MSG_WriteString(sizebuf_t* sb, char* s) {
+	if (!s) {
+		SZ_Write (sb, "", 1);
+	} else {
+		SZ_Write (sb, s, strlen(s) + 1);
+	}
+}
+
+static void MSG_WriteCoord(sizebuf_t* sb, float f) {
+	MSG_WriteShort(sb, (int)(f * 8));
+}
+
+static void MSG_WritePos(sizebuf_t* sb, vec3_t pos) {
+	MSG_WriteShort(sb, (int)(pos[0] * 8));
+	MSG_WriteShort(sb, (int)(pos[1] * 8));
+	MSG_WriteShort(sb, (int)(pos[2] * 8));
+}
+
+static void MSG_WriteAngle(sizebuf_t* sb, float f) {
+	MSG_WriteByte(sb, (int)(f*256/360) & 255);
+}
+
+static void MSG_WriteAngle16(sizebuf_t* sb, float f) {
+	MSG_WriteShort (sb, ANGLE2SHORT(f));
+}
+
+static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* cmd) {
+
+	// send the movement message
+	int bits = 0;
+	if (cmd->angles[0] != from->angles[0]) {
+		bits |= CM_ANGLE1;
+	}
+	if (cmd->angles[1] != from->angles[1]) {
+		bits |= CM_ANGLE2;
+	}
+	if (cmd->angles[2] != from->angles[2]) {
+		bits |= CM_ANGLE3;
+	}
+	if (cmd->forwardmove != from->forwardmove) {
+		bits |= CM_FORWARD;
+	}
+	if (cmd->sidemove != from->sidemove) {
+		bits |= CM_SIDE;
+	}
+	if (cmd->upmove != from->upmove) {
+		bits |= CM_UP;
+	}
+	if (cmd->buttons != from->buttons) {
+		bits |= CM_BUTTONS;
+	}
+	if (cmd->impulse != from->impulse) {
+		bits |= CM_IMPULSE;
+	}
+
+    MSG_WriteByte(buf, bits);
+
+	if (bits & CM_ANGLE1) {
+		MSG_WriteShort(buf, cmd->angles[0]);
+	}
+	if (bits & CM_ANGLE2) {
+		MSG_WriteShort(buf, cmd->angles[1]);
+	}
+	if (bits & CM_ANGLE3) {
+		MSG_WriteShort(buf, cmd->angles[2]);
+	}
+
+	if (bits & CM_FORWARD) {
+		MSG_WriteShort(buf, cmd->forwardmove);
+	}
+	if (bits & CM_SIDE) {
+		MSG_WriteShort(buf, cmd->sidemove);
+	}
+	if (bits & CM_UP) {
+		MSG_WriteShort(buf, cmd->upmove);
+	}
+
+ 	if (bits & CM_BUTTONS) {
+		MSG_WriteByte(buf, cmd->buttons);
+	}
+ 	if (bits & CM_IMPULSE) {
+		MSG_WriteByte(buf, cmd->impulse);
+	}
+
+    MSG_WriteByte(buf, cmd->msec);
+	MSG_WriteByte(buf, cmd->lightlevel);
+}
+
+// Writes part of a packetentities message. Can delta from either a baseline or a previous packet_entity
+static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, qboolean force, qboolean newentity) {
+	assert(to->number);
+	assert(to->number < MAX_EDICTS);
+
+	// send an update
+	int bits = 0;
+
+	if (to->number >= 256) {
+		bits |= U_NUMBER16;	// number8 is implicit otherwise
+	}
+
+	if (to->origin[0] != from->origin[0]) {
+		bits |= U_ORIGIN1;
+	}
+	if (to->origin[1] != from->origin[1]) {
+		bits |= U_ORIGIN2;
+	}
+	if (to->origin[2] != from->origin[2]) {
+		bits |= U_ORIGIN3;
+	}
+
+	if (to->angles[0] != from->angles[0]) {
+		bits |= U_ANGLE1;
+	}
+	if (to->angles[1] != from->angles[1]) {
+		bits |= U_ANGLE2;
+	}
+	if (to->angles[2] != from->angles[2]) {
+		bits |= U_ANGLE3;
+	}
+
+	if (to->skinnum != from->skinnum) {
+		if ((unsigned)to->skinnum < 256) {
+			bits |= U_SKIN8;
+		}
+		else if ((unsigned)to->skinnum < 0x10000) {
+			bits |= U_SKIN16;
+		}
+		else {
+			bits |= (U_SKIN8|U_SKIN16);
+		}
+	}
+
+	if (to->frame != from->frame) {
+		if (to->frame < 256) {
+			bits |= U_FRAME8;
+		} else {
+			bits |= U_FRAME16;
+		}
+	}
+
+	if (to->effects != from->effects) {
+		if (to->effects < 256) {
+			bits |= U_EFFECTS8;
+		} else if (to->effects < 0x8000) {
+			bits |= U_EFFECTS16;
+		} else {
+			bits |= U_EFFECTS8|U_EFFECTS16;
+		}
+	}
+
+	if (to->renderfx != from->renderfx) {
+		if (to->renderfx < 256) {
+			bits |= U_RENDERFX8;
+		} else if (to->renderfx < 0x8000) {
+			bits |= U_RENDERFX16;
+		} else {
+			bits |= U_RENDERFX8|U_RENDERFX16;
+		}
+	}
+
+	if (to->solid != from->solid) {
+		bits |= U_SOLID;
+	}
+
+	// event is not delta compressed, just 0 compressed
+	if (to->event) {
+		bits |= U_EVENT;
+	}
+
+	if (to->modelindex != from->modelindex) {
+		bits |= U_MODEL;
+	}
+	if (to->modelindex2 != from->modelindex2) {
+		bits |= U_MODEL2;
+	}
+	if (to->modelindex3 != from->modelindex3) {
+		bits |= U_MODEL3;
+	}
+	if (to->modelindex4 != from->modelindex4) {
+		bits |= U_MODEL4;
+	}
+
+	if (to->sound != from->sound) {
+		bits |= U_SOUND;
+	}
+
+	if (newentity || (to->renderfx & RF_BEAM)) {
+		bits |= U_OLDORIGIN;
+	}
+
+	// write the message
+	if (!bits && !force) {
+		return;	// nothing to send!
+	}
+
+	if (bits & 0xff000000) {
+		bits |= U_MOREBITS3 | U_MOREBITS2 | U_MOREBITS1;
+	} else if (bits & 0x00ff0000) {
+		bits |= U_MOREBITS2 | U_MOREBITS1;
+	} else if (bits & 0x0000ff00) {
+		bits |= U_MOREBITS1;
+	}
+
+	MSG_WriteByte(msg, bits&255);
+
+	if (bits & 0xff000000) {
+		MSG_WriteByte(msg, (bits>>8)&255);
+		MSG_WriteByte(msg, (bits>>16)&255);
+		MSG_WriteByte(msg, (bits>>24)&255);
+	} else if (bits & 0x00ff0000) {
+		MSG_WriteByte(msg, (bits>>8)&255);
+		MSG_WriteByte(msg, (bits>>16)&255);
+	} else if (bits & 0x0000ff00) {
+		MSG_WriteByte(msg, (bits>>8)&255);
+	}
+
+	if (bits & U_NUMBER16) {
+		MSG_WriteShort(msg, to->number);
+	} else {
+		MSG_WriteByte(msg, to->number);
+	}
+
+	if (bits & U_MODEL) {
+		MSG_WriteByte(msg, to->modelindex);
+	}
+	if (bits & U_MODEL2) {
+		MSG_WriteByte(msg, to->modelindex2);
+	}
+	if (bits & U_MODEL3) {
+		MSG_WriteByte(msg, to->modelindex3);
+	}
+	if (bits & U_MODEL4) {
+		MSG_WriteByte(msg, to->modelindex4);
+	}
+
+	if (bits & U_FRAME8) {
+		MSG_WriteByte(msg, to->frame);
+	}
+	if (bits & U_FRAME16) {
+		MSG_WriteShort (msg, to->frame);
+	}
+
+	// used for laser colors
+	if ((bits & U_SKIN8) && (bits & U_SKIN16)) {
+		MSG_WriteLong(msg, to->skinnum);
+	} else if (bits & U_SKIN8) {
+		MSG_WriteByte(msg, to->skinnum);
+	} else if (bits & U_SKIN16) {
+		MSG_WriteShort(msg, to->skinnum);
+	}
+
+	if ((bits & (U_EFFECTS8|U_EFFECTS16)) == (U_EFFECTS8|U_EFFECTS16)) {
+		MSG_WriteLong(msg, to->effects);
+	} else if (bits & U_EFFECTS8) {
+		MSG_WriteByte(msg, to->effects);
+	} else if (bits & U_EFFECTS16) {
+		MSG_WriteShort(msg, to->effects);
+	}
+
+	if ((bits & (U_RENDERFX8|U_RENDERFX16)) == (U_RENDERFX8|U_RENDERFX16)) {
+		MSG_WriteLong(msg, to->renderfx);
+	} else if (bits & U_RENDERFX8) {
+		MSG_WriteByte(msg, to->renderfx);
+	} else if (bits & U_RENDERFX16) {
+		MSG_WriteShort(msg, to->renderfx);
+	}
+
+	if (bits & U_ORIGIN1) {
+		MSG_WriteCoord(msg, to->origin[0]);
+	}
+	if (bits & U_ORIGIN2) {
+		MSG_WriteCoord(msg, to->origin[1]);
+	}
+	if (bits & U_ORIGIN3) {
+		MSG_WriteCoord(msg, to->origin[2]);
+	}
+
+	if (bits & U_ANGLE1) {
+		MSG_WriteAngle(msg, to->angles[0]);
+	}
+	if (bits & U_ANGLE2) {
+		MSG_WriteAngle(msg, to->angles[1]);
+	}
+	if (bits & U_ANGLE3) {
+		MSG_WriteAngle(msg, to->angles[2]);
+	}
+
+	if (bits & U_OLDORIGIN) {
+		MSG_WriteCoord(msg, to->old_origin[0]);
+		MSG_WriteCoord(msg, to->old_origin[1]);
+		MSG_WriteCoord(msg, to->old_origin[2]);
+	}
+
+	if (bits & U_SOUND) {
+		MSG_WriteByte(msg, to->sound);
+	}
+	if (bits & U_EVENT) {
+		MSG_WriteByte(msg, to->event);
+	}
+	if (bits & U_SOLID) {
+		MSG_WriteShort(msg, to->solid);
+	}
+}
+
+static void MSG_WriteDir(sizebuf_t* sb, vec3_t dir) {
+	if (!dir) {
+		MSG_WriteByte(sb, 0);
+		return;
+	}
+
+	float bestd = 0;
+	int best = 0;
+	for (int i = 0; i < NUMVERTEXNORMALS; i++) {
+		float d = DotProduct(dir, bytedirs[i]);
+		if (d > bestd) {
+			bestd = d;
+			best = i;
+		}
+	}
+	MSG_WriteByte (sb, best);
+}
+
+static void MSG_BeginReading(sizebuf_t* msg) {
+	msg->readcount = 0;
+}
+
+// returns -1 if no more characters are available
+static int MSG_ReadChar(sizebuf_t* msg_read) {
+	int c = -1;
+	if (msg_read->readcount + 1 <= msg_read->cursize) {
+		c = (signed char)msg_read->data[msg_read->readcount];
+	}
+	msg_read->readcount++;
+	return c;
+}
+
+static int MSG_ReadByte(sizebuf_t* msg_read) {
+	int	c = -1;
+	if (msg_read->readcount + 1 <= msg_read->cursize) {
+		c = (unsigned char)msg_read->data[msg_read->readcount];
+	}
+	msg_read->readcount++;
+	return c;
+}
+
+static int MSG_ReadShort (sizebuf_t* msg_read) {
+	int	c = - 1;
+	if (msg_read->readcount+2 <= msg_read->cursize) {
+		c = (short)(msg_read->data[msg_read->readcount] + (msg_read->data[msg_read->readcount+1]<<8));
+	}
+	msg_read->readcount += 2;
+	return c;
+}
+
+static int MSG_ReadLong(sizebuf_t* msg_read) {
+	int	c = -1;
+	if (msg_read->readcount + 4 <= msg_read->cursize) {
+		c = msg_read->data[msg_read->readcount]
+			+ (msg_read->data[msg_read->readcount+1]<<8)
+			+ (msg_read->data[msg_read->readcount+2]<<16)
+			+ (msg_read->data[msg_read->readcount+3]<<24);
+	}
+	msg_read->readcount += 4;
+	return c;
+}
+
+static float MSG_ReadFloat(sizebuf_t* msg_read) {
+	union {
+		byte	b[4];
+		float	f;
+		int		l;
+	} dat;
+	if (msg_read->readcount+4 > msg_read->cursize) {
+		dat.f = -1;
+	} else {
+		dat.b[0] =	msg_read->data[msg_read->readcount];
+		dat.b[1] =	msg_read->data[msg_read->readcount+1];
+		dat.b[2] =	msg_read->data[msg_read->readcount+2];
+		dat.b[3] =	msg_read->data[msg_read->readcount+3];
+	}
+	msg_read->readcount += 4;
+	dat.l = LittleLong(dat.l);
+	return dat.f;
+}
+
+static char* MSG_ReadString(sizebuf_t* msg_read) {
+	static char	string[2048];
+
+	int l = 0;
+	do {
+		int c = MSG_ReadChar(msg_read);
+		if (c == -1 || c == 0) {
+			break;
+		}
+		string[l] = c;
+		l++;
+	} while (l < sizeof(string) - 1);
+
+	string[l] = 0;
+	return string;
+}
+
+static char* MSG_ReadStringLine(sizebuf_t* msg_read) {
+	static char	string[2048];
+
+	int l = 0;
+	do {
+		int c = MSG_ReadChar (msg_read);
+		if (c == -1 || c == 0 || c == '\n') {
+			break;
+		}
+		string[l] = c;
+		l++;
+	} while (l < sizeof(string) - 1);
+
+	string[l] = 0;
+	return string;
+}
+
+static float MSG_ReadCoord(sizebuf_t* msg_read) {
+	return MSG_ReadShort(msg_read) * (1.0/8);
+}
+
+static void MSG_ReadPos(sizebuf_t* msg_read, vec3_t pos) {
+	pos[0] = MSG_ReadShort(msg_read) * (1.0/8);
+	pos[1] = MSG_ReadShort(msg_read) * (1.0/8);
+	pos[2] = MSG_ReadShort(msg_read) * (1.0/8);
+}
+
+static float MSG_ReadAngle(sizebuf_t* msg_read) {
+	return MSG_ReadChar(msg_read) * (360.0/256);
+}
+
+static float MSG_ReadAngle16 (sizebuf_t* msg_read) {
+	return SHORT2ANGLE(MSG_ReadShort(msg_read));
+}
+
+static void MSG_ReadDeltaUsercmd(sizebuf_t* msg_read, usercmd_t* from, usercmd_t* move) {
+	memcpy (move, from, sizeof(*move));
+	int bits = MSG_ReadByte (msg_read);
+
+	// read current angles
+	if (bits & CM_ANGLE1) {
+		move->angles[0] = MSG_ReadShort(msg_read);
+	}
+	if (bits & CM_ANGLE2) {
+		move->angles[1] = MSG_ReadShort(msg_read);
+	}
+	if (bits & CM_ANGLE3) {
+		move->angles[2] = MSG_ReadShort(msg_read);
+	}
+
+	// read movement
+	if (bits & CM_FORWARD) {
+		move->forwardmove = MSG_ReadShort(msg_read);
+	}
+	if (bits & CM_SIDE)
+		move->sidemove = MSG_ReadShort(msg_read);
+	if (bits & CM_UP)
+		move->upmove = MSG_ReadShort(msg_read);
+
+	// read buttons
+	if (bits & CM_BUTTONS) {
+		move->buttons = MSG_ReadByte(msg_read);
+	}
+
+	if (bits & CM_IMPULSE) {
+		move->impulse = MSG_ReadByte(msg_read);
+	}
+
+	// read time to run command
+	move->msec = MSG_ReadByte(msg_read);
+
+	// read the light level
+	move->lightlevel = MSG_ReadByte(msg_read);
+}
+
+static void MSG_ReadData (sizebuf_t *msg_read, void* data, int len) {
+	for (int i = 0; i < len; i++) {
+		((byte *)data)[i] = MSG_ReadByte(msg_read);
+	}
+}
+
+static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
+	int b = MSG_ReadByte(sb);
+	assert(b < NUMVERTEXNORMALS);
+	VectorCopy(bytedirs[b], dir);
+}
+
+//
+// SECTION COLLISION DETECTION
+//
 
 // lower bits are stronger, and will eat weaker brushes completely
 #define	CONTENTS_SOLID			1		// an eye is never valid in a solid
@@ -1146,20 +1985,14 @@ COLLISION DETECTION
 #define	CONTENTS_TRANSLUCENT	0x10000000	// auto set if any surface has trans
 #define	CONTENTS_LADDER			0x20000000
 
-
-
 #define	SURF_LIGHT		0x1		// value will hold the light strength
-
 #define	SURF_SLICK		0x2		// effects game physics
-
 #define	SURF_SKY		0x4		// don't draw, but add to skybox
 #define	SURF_WARP		0x8		// turbulent water warp
 #define	SURF_TRANS33	0x10
 #define	SURF_TRANS66	0x20
 #define	SURF_FLOWING	0x40	// scroll towards angle
 #define	SURF_NODRAW		0x80	// don't bother referencing the texture
-
-
 
 // content masks
 #define	MASK_ALL				(-1)
@@ -1172,12 +2005,10 @@ COLLISION DETECTION
 #define	MASK_SHOT				(CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_WINDOW|CONTENTS_DEADMONSTER)
 #define MASK_CURRENT			(CONTENTS_CURRENT_0|CONTENTS_CURRENT_90|CONTENTS_CURRENT_180|CONTENTS_CURRENT_270|CONTENTS_CURRENT_UP|CONTENTS_CURRENT_DOWN)
 
-
 // gi.BoxEdicts() can return a list of either solid or trigger entities
 // FIXME: eliminate AREA_ distinction?
 #define	AREA_SOLID		1
 #define	AREA_TRIGGERS	2
-
 
 // structure offset for asm code
 #define CPLANE_NORMAL_X			0
@@ -1189,45 +2020,39 @@ COLLISION DETECTION
 #define CPLANE_PAD0				18
 #define CPLANE_PAD1				19
 
-typedef struct cmodel_s
-{
-	vec3_t		mins, maxs;
-	vec3_t		origin;		// for sounds or lights
-	int			headnode;
+typedef struct cmodel_s {
+	vec3_t	mins, maxs;
+	vec3_t	origin;		// for sounds or lights
+	int		headnode;
 } cmodel_t;
 
-typedef struct csurface_s
-{
-	char		name[16];
-	int			flags;
-	int			value;
+typedef struct csurface_s {
+	char	name[16];
+	int		flags;
+	int		value;
 } csurface_t;
 
-typedef struct mapsurface_s  // used internally due to name len probs //ZOID
-{
+// used internally due to name len probs //ZOID
+typedef struct mapsurface_s {
 	csurface_t	c;
 	char		rname[32];
 } mapsurface_t;
 
 // a trace is returned when a box is swept through the world
-typedef struct
-{
-	qboolean	allsolid;	// if true, plane is not valid
-	qboolean	startsolid;	// if true, the initial point was in a solid area
-	float		fraction;	// time completed, 1.0 = didn't hit anything
-	vec3_t		endpos;		// final position
-	cplane_t	plane;		// surface normal at impact
-	csurface_t	*surface;	// surface hit
-	int			contents;	// contents on other side of surface hit
+typedef struct {
+	qboolean		allsolid;	// if true, plane is not valid
+	qboolean		startsolid;	// if true, the initial point was in a solid area
+	float			fraction;	// time completed, 1.0 = didn't hit anything
+	vec3_t			endpos;		// final position
+	cplane_t		plane;		// surface normal at impact
+	csurface_t		*surface;	// surface hit
+	int				contents;	// contents on other side of surface hit
 	struct edict_s	*ent;		// not set by CM_*() functions
 } trace_t;
 
-
-
 // pmove_state_t is the information necessary for client side movement
 // prediction
-typedef enum
-{
+typedef enum {
 	// can accelerate and turn
 	PM_NORMAL,
 	PM_SPECTATOR,
@@ -1251,43 +2076,23 @@ typedef enum
 // prediction stays in sync, so no floats are used.
 // if any part of the game code modifies this struct, it
 // will result in a prediction error of some degree.
-typedef struct
-{
+typedef struct {
 	pmtype_t	pm_type;
-
-	short		origin[3];		// 12.3
-	short		velocity[3];	// 12.3
-	byte		pm_flags;		// ducked, jump_held, etc
-	byte		pm_time;		// each unit = 8 ms
+	short		origin[3];			// 12.3
+	short		velocity[3];		// 12.3
+	byte		pm_flags;			// ducked, jump_held, etc
+	byte		pm_time;			// each unit = 8 ms
 	short		gravity;
-	short		delta_angles[3];	// add to command angles to get view direction
-									// changed by spawns, rotating objects, and teleporters
+	short		delta_angles[3];	// add to command angles to get view direction changed by spawns, rotating objects, and teleporters
 } pmove_state_t;
 
-
-//
 // button bits
-//
 #define	BUTTON_ATTACK		1
 #define	BUTTON_USE			2
 #define	BUTTON_ANY			128			// any key whatsoever
 
-
-// usercmd_t is sent to the server each client frame
-typedef struct usercmd_s
-{
-	byte	msec;
-	byte	buttons;
-	short	angles[3];
-	short	forwardmove, sidemove, upmove;
-	byte	impulse;		// remove?
-	byte	lightlevel;		// light level the player is standing on
-} usercmd_t;
-
-
 #define	MAXTOUCH	32
-typedef struct
-{
+typedef struct {
 	// state (in / out)
 	pmove_state_t	s;
 
@@ -1296,23 +2101,22 @@ typedef struct
 	qboolean		snapinitial;	// if s has been changed outside pmove
 
 	// results (out)
-	int			numtouch;
+	int				numtouch;
 	struct edict_s	*touchents[MAXTOUCH];
 
-	vec3_t		viewangles;			// clamped
-	float		viewheight;
+	vec3_t	viewangles;	// clamped
+	float	viewheight;
 
-	vec3_t		mins, maxs;			// bounding box size
+	vec3_t	mins, maxs;	// bounding box size
 
 	struct edict_s	*groundentity;
-	int			watertype;
-	int			waterlevel;
+	int				watertype;
+	int				waterlevel;
 
 	// callbacks to test the world
-	trace_t		(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
-	int			(*pointcontents) (vec3_t point);
+	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+	int		(*pointcontents) (vec3_t point);
 } pmove_t;
-
 
 // entity_state_t->effects
 // Effects are things handled on the client side (lights, particles, frame animations)
@@ -1338,6 +2142,7 @@ typedef struct
 #define	EF_TELEPORTER		0x00020000		// particle fountain
 #define EF_FLAG1			0x00040000
 #define EF_FLAG2			0x00080000
+
 // RAFAEL
 #define EF_IONRIPPER		0x00100000
 #define EF_GREENGIB			0x00200000
@@ -1346,49 +2151,29 @@ typedef struct
 #define EF_PLASMA			0x01000000
 #define EF_TRAP				0x02000000
 
-//ROGUE
+// ROGUE
 #define EF_TRACKER			0x04000000
 #define	EF_DOUBLE			0x08000000
 #define	EF_SPHERETRANS		0x10000000
 #define EF_TAGTRAIL			0x20000000
 #define EF_HALF_DAMAGE		0x40000000
 #define EF_TRACKERTRAIL		0x80000000
-//ROGUE
 
-// entity_state_t->renderfx flags
-#define	RF_MINLIGHT			1		// allways have some light (viewmodel)
-#define	RF_VIEWERMODEL		2		// don't draw through eyes, only mirrors
-#define	RF_WEAPONMODEL		4		// only draw through eyes
-#define	RF_FULLBRIGHT		8		// allways draw full intensity
-#define	RF_DEPTHHACK		16		// for view weapon Z crunching
-#define	RF_TRANSLUCENT		32
-#define	RF_FRAMELERP		64
-#define RF_BEAM				128
-#define	RF_CUSTOMSKIN		256		// skin is an index in image_precache
-#define	RF_GLOW				512		// pulse lighting for bonus items
-#define RF_SHELL_RED		1024
-#define	RF_SHELL_GREEN		2048
-#define RF_SHELL_BLUE		4096
-
-//ROGUE
+// ROGUE
 #define RF_IR_VISIBLE		0x00008000		// 32768
 #define	RF_SHELL_DOUBLE		0x00010000		// 65536
 #define	RF_SHELL_HALF_DAM	0x00020000
 #define RF_USE_DISGUISE		0x00040000
-//ROGUE
 
 // player_state_t->refdef flags
 #define	RDF_UNDERWATER		1		// warp the screen as apropriate
 #define RDF_NOWORLDMODEL	2		// used for player configuration screen
 
-//ROGUE
+// ROGUE
 #define	RDF_IRGOGGLES		4
 #define RDF_UVGOGGLES		8
-//ROGUE
 
-//
 // muzzle flashes / player effects
-//
 #define	MZ_BLASTER			0
 #define MZ_MACHINEGUN		1
 #define	MZ_SHOTGUN			2
@@ -1405,13 +2190,14 @@ typedef struct
 #define	MZ_SSHOTGUN			13
 #define	MZ_HYPERBLASTER		14
 #define	MZ_ITEMRESPAWN		15
+
 // RAFAEL
 #define MZ_IONRIPPER		16
 #define MZ_BLUEHYPERBLASTER 17
 #define MZ_PHALANX			18
 #define MZ_SILENCED			128		// bit flag ORed with one of the above numbers
 
-//ROGUE
+// ROGUE
 #define MZ_ETF_RIFLE		30
 #define MZ_UNUSED			31
 #define MZ_SHOTGUN2			32
@@ -1422,11 +2208,8 @@ typedef struct
 #define	MZ_NUKE2			37
 #define	MZ_NUKE4			38
 #define	MZ_NUKE8			39
-//ROGUE
 
-//
 // monster muzzle flashes
-//
 #define MZ2_TANK_BLASTER_1				1
 #define MZ2_TANK_BLASTER_2				2
 #define MZ2_TANK_BLASTER_3				3
@@ -1488,18 +2271,12 @@ typedef struct
 #define MZ2_GUNNER_GRENADE_4			56
 
 #define MZ2_CHICK_ROCKET_1				57
-
 #define MZ2_FLYER_BLASTER_1				58
 #define MZ2_FLYER_BLASTER_2				59
-
 #define MZ2_MEDIC_BLASTER_1				60
-
 #define MZ2_GLADIATOR_RAILGUN_1			61
-
 #define MZ2_HOVER_BLASTER_1				62
-
 #define MZ2_ACTOR_MACHINEGUN_1			63
-
 #define MZ2_SUPERTANK_MACHINEGUN_1		64
 #define MZ2_SUPERTANK_MACHINEGUN_2		65
 #define MZ2_SUPERTANK_MACHINEGUN_3		66
@@ -1521,7 +2298,6 @@ typedef struct
 #define MZ2_BOSS2_ROCKET_4				81
 
 #define MZ2_FLOAT_BLASTER_1				82
-
 #define MZ2_SOLDIER_BLASTER_3			83
 #define MZ2_SOLDIER_SHOTGUN_3			84
 #define MZ2_SOLDIER_MACHINEGUN_3		85
@@ -1580,7 +2356,7 @@ typedef struct
 #define MZ2_BOSS2_MACHINEGUN_R4			136
 #define MZ2_BOSS2_MACHINEGUN_R5			137
 
-//ROGUE
+// ROGUE
 #define	MZ2_CARRIER_MACHINEGUN_L1		138
 #define	MZ2_CARRIER_MACHINEGUN_R1		139
 #define	MZ2_CARRIER_GRENADE				140
@@ -1655,9 +2431,465 @@ typedef struct
 #define	MZ2_WIDOW2_BEAM_SWEEP_10		209
 #define	MZ2_WIDOW2_BEAM_SWEEP_11		210
 
-// ROGUE
+// this file is included in both the game dll and quake2,
+// the game needs it to source shot locations, the client
+// needs it to position muzzle flashes
+static vec3_t monster_flash_offset [] = {
+	// flash 0 is not used
+	0.0, 0.0, 0.0,
 
-extern	vec3_t monster_flash_offset [];
+	// MZ2_TANK_BLASTER_1				1
+	20.7, -18.5, 28.7,
+	// MZ2_TANK_BLASTER_2				2
+	16.6, -21.5, 30.1,
+	// MZ2_TANK_BLASTER_3				3
+	11.8, -23.9, 32.1,
+	// MZ2_TANK_MACHINEGUN_1			4
+	22.9, -0.7, 25.3,
+	// MZ2_TANK_MACHINEGUN_2			5
+	22.2, 6.2, 22.3,
+	// MZ2_TANK_MACHINEGUN_3			6
+	19.4, 13.1, 18.6,
+	// MZ2_TANK_MACHINEGUN_4			7
+	19.4, 18.8, 18.6,
+	// MZ2_TANK_MACHINEGUN_5			8
+	17.9, 25.0, 18.6,
+	// MZ2_TANK_MACHINEGUN_6			9
+	14.1, 30.5, 20.6,
+	// MZ2_TANK_MACHINEGUN_7			10
+	9.3, 35.3, 22.1,
+	// MZ2_TANK_MACHINEGUN_8			11
+	4.7, 38.4, 22.1,
+	// MZ2_TANK_MACHINEGUN_9			12
+	-1.1, 40.4, 24.1,
+	// MZ2_TANK_MACHINEGUN_10			13
+	-6.5, 41.2, 24.1,
+	// MZ2_TANK_MACHINEGUN_11			14
+	3.2, 40.1, 24.7,
+	// MZ2_TANK_MACHINEGUN_12			15
+	11.7, 36.7, 26.0,
+	// MZ2_TANK_MACHINEGUN_13			16
+	18.9, 31.3, 26.0,
+	// MZ2_TANK_MACHINEGUN_14			17
+	24.4, 24.4, 26.4,
+	// MZ2_TANK_MACHINEGUN_15			18
+	27.1, 17.1, 27.2,
+	// MZ2_TANK_MACHINEGUN_16			19
+	28.5, 9.1, 28.0,
+	// MZ2_TANK_MACHINEGUN_17			20
+	27.1, 2.2, 28.0,
+	// MZ2_TANK_MACHINEGUN_18			21
+	24.9, -2.8, 28.0,
+	// MZ2_TANK_MACHINEGUN_19			22
+	21.6, -7.0, 26.4,
+	// MZ2_TANK_ROCKET_1				23
+	6.2, 29.1, 49.1,
+	// MZ2_TANK_ROCKET_2				24
+	6.9, 23.8, 49.1,
+	// MZ2_TANK_ROCKET_3				25
+	8.3, 17.8, 49.5,
+
+	// MZ2_INFANTRY_MACHINEGUN_1		26
+	26.6, 7.1, 13.1,
+	// MZ2_INFANTRY_MACHINEGUN_2		27
+	18.2, 7.5, 15.4,
+	// MZ2_INFANTRY_MACHINEGUN_3		28
+	17.2, 10.3, 17.9,
+	// MZ2_INFANTRY_MACHINEGUN_4		29
+	17.0, 12.8, 20.1,
+	// MZ2_INFANTRY_MACHINEGUN_5		30
+	15.1, 14.1, 21.8,
+	// MZ2_INFANTRY_MACHINEGUN_6		31
+	11.8, 17.2, 23.1,
+	// MZ2_INFANTRY_MACHINEGUN_7		32
+	11.4, 20.2, 21.0,
+	// MZ2_INFANTRY_MACHINEGUN_8		33
+	9.0, 23.0, 18.9,
+	// MZ2_INFANTRY_MACHINEGUN_9		34
+	13.9, 18.6, 17.7,
+	// MZ2_INFANTRY_MACHINEGUN_10		35
+	15.4, 15.6, 15.8,
+	// MZ2_INFANTRY_MACHINEGUN_11		36
+	10.2, 15.2, 25.1,
+	// MZ2_INFANTRY_MACHINEGUN_12		37
+	-1.9, 15.1, 28.2,
+	// MZ2_INFANTRY_MACHINEGUN_13		38
+	-12.4, 13.0, 20.2,
+
+	// MZ2_SOLDIER_BLASTER_1			39
+	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
+	// MZ2_SOLDIER_BLASTER_2			40
+	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_1			41
+	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_2			42
+	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_1			43
+	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_2			44
+	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
+
+	// MZ2_GUNNER_MACHINEGUN_1			45
+	30.1 * 1.15, 3.9 * 1.15, 19.6 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_2			46
+	29.1 * 1.15, 2.5 * 1.15, 20.7 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_3			47
+	28.2 * 1.15, 2.5 * 1.15, 22.2 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_4			48
+	28.2 * 1.15, 3.6 * 1.15, 22.0 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_5			49
+	26.9 * 1.15, 2.0 * 1.15, 23.4 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_6			50
+	26.5 * 1.15, 0.6 * 1.15, 20.8 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_7			51
+	26.9 * 1.15, 0.5 * 1.15, 21.5 * 1.15,
+	// MZ2_GUNNER_MACHINEGUN_8			52
+	29.0 * 1.15, 2.4 * 1.15, 19.5 * 1.15,
+	// MZ2_GUNNER_GRENADE_1				53
+	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
+	// MZ2_GUNNER_GRENADE_2				54
+	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
+	// MZ2_GUNNER_GRENADE_3				55
+	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
+	// MZ2_GUNNER_GRENADE_4				56
+	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
+
+	// MZ2_CHICK_ROCKET_1				57
+	//	-24.8, -9.0, 39.0,
+	24.8, -9.0, 39.0,				// PGM - this was incorrect in Q2
+	// MZ2_FLYER_BLASTER_1				58
+	12.1, 13.4, -14.5,
+	// MZ2_FLYER_BLASTER_2				59
+	12.1, -7.4, -14.5,
+	// MZ2_MEDIC_BLASTER_1				60
+	12.1, 5.4, 16.5,
+	// MZ2_GLADIATOR_RAILGUN_1			61
+	30.0, 18.0, 28.0,
+	// MZ2_HOVER_BLASTER_1				62
+	32.5, -0.8, 10.0,
+	// MZ2_ACTOR_MACHINEGUN_1			63
+	18.4, 7.4, 9.6,
+
+	// MZ2_SUPERTANK_MACHINEGUN_1		64
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_MACHINEGUN_2		65
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_MACHINEGUN_3		66
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_MACHINEGUN_4		67
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_MACHINEGUN_5		68
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_MACHINEGUN_6		69
+	30.0, 30.0, 88.5,
+	// MZ2_SUPERTANK_ROCKET_1			70
+	16.0, -22.5, 91.2,
+	// MZ2_SUPERTANK_ROCKET_2			71
+	16.0, -33.4, 86.7,
+	// MZ2_SUPERTANK_ROCKET_3			72
+	16.0, -42.8, 83.3,
+
+	// --- Start Xian Stuff ---
+	// MZ2_BOSS2_MACHINEGUN_L1			73
+	32,	-40,	70,
+	// MZ2_BOSS2_MACHINEGUN_L2			74
+	32,	-40,	70,
+	// MZ2_BOSS2_MACHINEGUN_L3			75
+	32,	-40,	70,
+	// MZ2_BOSS2_MACHINEGUN_L4			76
+	32,	-40,	70,
+	// MZ2_BOSS2_MACHINEGUN_L5			77
+	32,	-40,	70,
+	// --- End Xian Stuff
+
+	// MZ2_BOSS2_ROCKET_1				78
+	22.0, 16.0, 10.0,
+	// MZ2_BOSS2_ROCKET_2				79
+	22.0, 8.0, 10.0,
+	// MZ2_BOSS2_ROCKET_3				80
+	22.0, -8.0, 10.0,
+	// MZ2_BOSS2_ROCKET_4				81
+	22.0, -16.0, 10.0,
+
+	// MZ2_FLOAT_BLASTER_1				82
+	32.5, -0.8, 10,
+
+	// MZ2_SOLDIER_BLASTER_3			83
+	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_3			84
+	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_3			85
+	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
+	// MZ2_SOLDIER_BLASTER_4			86
+	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_4			87
+	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_4			88
+	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
+	// MZ2_SOLDIER_BLASTER_5			89
+	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_5			90
+	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_5			91
+	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
+	// MZ2_SOLDIER_BLASTER_6			92
+	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_6			93
+	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_6			94
+	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
+	// MZ2_SOLDIER_BLASTER_7			95
+	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_7			96
+	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_7			97
+	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
+	// MZ2_SOLDIER_BLASTER_8			98
+	//	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
+	31.5 * 1.2, 9.6 * 1.2, 10.1 * 1.2,
+	// MZ2_SOLDIER_SHOTGUN_8			99
+	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
+	// MZ2_SOLDIER_MACHINEGUN_8			100
+	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
+
+	// --- Xian shit below ---
+	// MZ2_MAKRON_BFG					101
+	17,		-19.5,	62.9,
+	// MZ2_MAKRON_BLASTER_1				102
+	-3.6,	-24.1,	59.5,
+	// MZ2_MAKRON_BLASTER_2				103
+	-1.6,	-19.3,	59.5,
+	// MZ2_MAKRON_BLASTER_3				104
+	-0.1,	-14.4,	59.5,
+	// MZ2_MAKRON_BLASTER_4				105
+	2.0,	-7.6,	59.5,
+	// MZ2_MAKRON_BLASTER_5				106
+	3.4,	1.3,	59.5,
+	// MZ2_MAKRON_BLASTER_6				107
+	3.7,	11.1,	59.5,
+	// MZ2_MAKRON_BLASTER_7				108
+	-0.3,	22.3,	59.5,
+	// MZ2_MAKRON_BLASTER_8				109
+	-6,		33,		59.5,
+	// MZ2_MAKRON_BLASTER_9				110
+	-9.3,	36.4,	59.5,
+	// MZ2_MAKRON_BLASTER_10			111
+	-7,		35,		59.5,
+	// MZ2_MAKRON_BLASTER_11			112
+	-2.1,	29,		59.5,
+	// MZ2_MAKRON_BLASTER_12			113
+	3.9,	17.3,	59.5,
+	// MZ2_MAKRON_BLASTER_13			114
+	6.1,	5.8,	59.5,
+	// MZ2_MAKRON_BLASTER_14			115
+	5.9,	-4.4,	59.5,
+	// MZ2_MAKRON_BLASTER_15			116
+	4.2,	-14.1,	59.5,
+	// MZ2_MAKRON_BLASTER_16			117
+	2.4,	-18.8,	59.5,
+	// MZ2_MAKRON_BLASTER_17			118
+	-1.8,	-25.5,	59.5,
+	// MZ2_MAKRON_RAILGUN_1				119
+	-17.3,	7.8,	72.4,
+
+	// MZ2_JORG_MACHINEGUN_L1			120
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_L2			121
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_L3			122
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_L4			123
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_L5			124
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_L6			125
+	78.5,	-47.1,	96,
+	// MZ2_JORG_MACHINEGUN_R1			126
+	78.5,	46.7,  96,
+	// MZ2_JORG_MACHINEGUN_R2			127
+	78.5,	46.7,	96,
+	// MZ2_JORG_MACHINEGUN_R3			128
+	78.5,	46.7,	96,
+	// MZ2_JORG_MACHINEGUN_R4			129
+	78.5,	46.7,	96,
+	// MZ2_JORG_MACHINEGUN_R5			130
+	78.5,	46.7,	96,
+	// MZ2_JORG_MACHINEGUN_R6			131
+	78.5,	46.7,	96,
+	// MZ2_JORG_BFG_1					132
+	6.3,	-9,		111.2,
+
+	// MZ2_BOSS2_MACHINEGUN_R1			73
+	32,	40,	70,
+	// MZ2_BOSS2_MACHINEGUN_R2			74
+	32,	40,	70,
+	// MZ2_BOSS2_MACHINEGUN_R3			75
+	32,	40,	70,
+	// MZ2_BOSS2_MACHINEGUN_R4			76
+	32,	40,	70,
+	// MZ2_BOSS2_MACHINEGUN_R5			77
+	32,	40,	70,
+
+	// --- End Xian Shit ---
+
+	// ROGUE
+	// note that the above really ends at 137
+	// carrier machineguns
+	// MZ2_CARRIER_MACHINEGUN_L1
+	56,	-32, 32,
+	// MZ2_CARRIER_MACHINEGUN_R1
+	56,	32, 32,
+	// MZ2_CARRIER_GRENADE
+	42,	24, 50,
+	// MZ2_TURRET_MACHINEGUN			141
+	16, 0, 0,
+	// MZ2_TURRET_ROCKET				142
+	16, 0, 0,
+	// MZ2_TURRET_BLASTER				143
+	16, 0, 0,
+	// MZ2_STALKER_BLASTER				144
+	24, 0, 6,
+	// MZ2_DAEDALUS_BLASTER				145
+	32.5, -0.8, 10.0,
+	// MZ2_MEDIC_BLASTER_2				146
+	12.1, 5.4, 16.5,
+	// MZ2_CARRIER_RAILGUN				147
+	32, 0, 6,
+	// MZ2_WIDOW_DISRUPTOR				148
+	57.72, 14.50, 88.81,
+	// MZ2_WIDOW_BLASTER				149
+	56,	32, 32,
+	// MZ2_WIDOW_RAIL					150
+	62, -20, 84,
+	// MZ2_WIDOW_PLASMABEAM				151			// PMM - not used!
+	32, 0, 6,
+	// MZ2_CARRIER_MACHINEGUN_L2		152
+	61,	-32, 12,
+	// MZ2_CARRIER_MACHINEGUN_R2		153
+	61,	32, 12,
+	// MZ2_WIDOW_RAIL_LEFT				154
+	17, -62, 91,
+	// MZ2_WIDOW_RAIL_RIGHT				155
+	68, 12, 86,
+	// MZ2_WIDOW_BLASTER_SWEEP1			156			pmm - the sweeps need to be in sequential order
+	47.5, 56, 89,
+	// MZ2_WIDOW_BLASTER_SWEEP2			157
+	54, 52, 91,
+	// MZ2_WIDOW_BLASTER_SWEEP3			158
+	58, 40, 91,
+	// MZ2_WIDOW_BLASTER_SWEEP4			159
+	68, 30, 88,
+	// MZ2_WIDOW_BLASTER_SWEEP5			160
+	74, 20, 88,
+	// MZ2_WIDOW_BLASTER_SWEEP6			161
+	73, 11, 87,
+	// MZ2_WIDOW_BLASTER_SWEEP7			162
+	73, 3, 87,
+	// MZ2_WIDOW_BLASTER_SWEEP8			163
+	70, -12, 87,
+	// MZ2_WIDOW_BLASTER_SWEEP9			164
+	67, -20, 90,
+	// MZ2_WIDOW_BLASTER_100			165
+	-20, 76, 90,
+	// MZ2_WIDOW_BLASTER_90				166
+	-8, 74, 90,
+	// MZ2_WIDOW_BLASTER_80				167
+	0, 72, 90,
+	// MZ2_WIDOW_BLASTER_70				168		d06
+	10, 71, 89,
+	// MZ2_WIDOW_BLASTER_60				169		d07
+	23, 70, 87,
+	// MZ2_WIDOW_BLASTER_50				170		d08
+	32, 64, 85,
+	// MZ2_WIDOW_BLASTER_40				171
+	40, 58, 84,
+	// MZ2_WIDOW_BLASTER_30				172		d10
+	48, 50, 83,
+	// MZ2_WIDOW_BLASTER_20				173
+	54, 42, 82,
+	// MZ2_WIDOW_BLASTER_10				174		d12
+	56, 34, 82,
+	// MZ2_WIDOW_BLASTER_0				175
+	58, 26, 82,
+	// MZ2_WIDOW_BLASTER_10L			176		d14
+	60, 16, 82,
+	// MZ2_WIDOW_BLASTER_20L			177
+	59, 6, 81,
+	// MZ2_WIDOW_BLASTER_30L			178		d16
+	58, -2, 80,
+	// MZ2_WIDOW_BLASTER_40L			179
+	57, -10, 79,
+	// MZ2_WIDOW_BLASTER_50L			180		d18
+	54, -18, 78,
+	// MZ2_WIDOW_BLASTER_60L			181
+	42, -32, 80,
+	// MZ2_WIDOW_BLASTER_70L			182		d20
+	36, -40, 78,
+	// MZ2_WIDOW_RUN_1					183
+	68.4, 10.88, 82.08,
+	// MZ2_WIDOW_RUN_2					184
+	68.51, 8.64, 85.14,
+	// MZ2_WIDOW_RUN_3					185
+	68.66, 6.38, 88.78,
+	// MZ2_WIDOW_RUN_4					186
+	68.73, 5.1, 84.47,
+	// MZ2_WIDOW_RUN_5					187
+	68.82, 4.79, 80.52,
+	// MZ2_WIDOW_RUN_6					188
+	68.77, 6.11, 85.37,
+	// MZ2_WIDOW_RUN_7					189
+	68.67, 7.99, 90.24,
+	// MZ2_WIDOW_RUN_8					190
+	68.55, 9.54, 87.36,
+	// MZ2_CARRIER_ROCKET_1				191
+	0, 0, -5,
+	// MZ2_CARRIER_ROCKET_2				192
+	0, 0, -5,
+	// MZ2_CARRIER_ROCKET_3				193
+	0, 0, -5,
+	// MZ2_CARRIER_ROCKET_4				194
+	0, 0, -5,
+	// MZ2_WIDOW2_BEAMER_1				195
+	//	72.13, -17.63, 93.77,
+	69.00, -17.63, 93.77,
+	// MZ2_WIDOW2_BEAMER_2				196
+	//	71.46, -17.08, 89.82,
+	69.00, -17.08, 89.82,
+	// MZ2_WIDOW2_BEAMER_3				197
+	//	71.47, -18.40, 90.70,
+	69.00, -18.40, 90.70,
+	// MZ2_WIDOW2_BEAMER_4				198
+	//	71.96, -18.34, 94.32,
+	69.00, -18.34, 94.32,
+	// MZ2_WIDOW2_BEAMER_5				199
+	//	72.25, -18.30, 97.98,
+	69.00, -18.30, 97.98,
+	// MZ2_WIDOW2_BEAM_SWEEP_1			200
+	45.04, -59.02, 92.24,
+	// MZ2_WIDOW2_BEAM_SWEEP_2			201
+	50.68, -54.70, 91.96,
+	// MZ2_WIDOW2_BEAM_SWEEP_3			202
+	56.57, -47.72, 91.65,
+	// MZ2_WIDOW2_BEAM_SWEEP_4			203
+	61.75, -38.75, 91.38,
+	// MZ2_WIDOW2_BEAM_SWEEP_5			204
+	65.55, -28.76, 91.24,
+	// MZ2_WIDOW2_BEAM_SWEEP_6			205
+	67.79, -18.90, 91.22,
+	// MZ2_WIDOW2_BEAM_SWEEP_7			206
+	68.60, -9.52, 91.23,
+	// MZ2_WIDOW2_BEAM_SWEEP_8			207
+	68.08, 0.18, 91.32,
+	// MZ2_WIDOW2_BEAM_SWEEP_9			208
+	66.14, 9.79, 91.44,
+	// MZ2_WIDOW2_BEAM_SWEEP_10			209
+	62.77, 18.91, 91.65,
+	// MZ2_WIDOW2_BEAM_SWEEP_11			210
+	58.29, 27.11, 92.00,
+
+	// end of table
+	0.0, 0.0, 0.0
+};
 
 
 // temp entity events
@@ -1666,8 +2898,7 @@ extern	vec3_t monster_flash_offset [];
 // at a location seperate from any existing entity.
 // Temporary entity messages are explicitly constructed
 // and broadcast.
-typedef enum
-{
+typedef enum {
 	TE_GUNSHOT,
 	TE_BLOOD,
 	TE_BLASTER,
@@ -1698,7 +2929,8 @@ typedef enum
 	TE_BLUEHYPERBLASTER,
 	TE_PLASMA_EXPLOSION,
 	TE_TUNNEL_SPARKS,
-//ROGUE
+
+	//ROGUE
 	TE_BLASTER2,
 	TE_RAILTRAIL2,
 	TE_FLAME,
@@ -1725,7 +2957,6 @@ typedef enum
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
 	TE_FLECHETTE
-//ROGUE
 } temp_event_t;
 
 #define SPLASH_UNKNOWN		0
@@ -1736,7 +2967,6 @@ typedef enum
 #define	SPLASH_LAVA			5
 #define SPLASH_BLOOD		6
 
-
 // sound channels
 // channel 0 never willingly overrides
 // other channels (1-7) allways override a playing sound on that channel
@@ -1745,17 +2975,16 @@ typedef enum
 #define	CHAN_VOICE              2
 #define	CHAN_ITEM               3
 #define	CHAN_BODY               4
+
 // modifier flags
 #define	CHAN_NO_PHS_ADD			8	// send to all clients, not just ones in PHS (ATTN 0 will also do this)
 #define	CHAN_RELIABLE			16	// send by reliable message, not datagram
-
 
 // sound attenuation values
 #define	ATTN_NONE               0	// full volume the entire level
 #define	ATTN_NORM               1
 #define	ATTN_IDLE               2
 #define	ATTN_STATIC             3	// diminish very rapidly with distance
-
 
 // player_state->stats[] indexes
 #define STAT_HEALTH_ICON		0
@@ -1776,9 +3005,7 @@ typedef enum
 #define	STAT_FLASHES			15		// cleared each frame, 1 = health, 2 = armor
 #define STAT_CHASE				16
 #define STAT_SPECTATOR			17
-
 #define	MAX_STATS				32
-
 
 // dmflags->value flags
 #define	DF_NO_HEALTH		0x00000001	// 1
@@ -1806,36 +3033,32 @@ typedef enum
 #define DF_NO_STACK_DOUBLE	0x00040000
 #define DF_NO_NUKES			0x00080000
 #define DF_NO_SPHERES		0x00100000
-//ROGUE
 
-/*
-ROGUE - VERSIONS
-1234	08/13/1998		Activision
-1235	08/14/1998		Id Software
-1236	08/15/1998		Steve Tietze
-1237	08/15/1998		Phil Dobranski
-1238	08/15/1998		John Sheley
-1239	08/17/1998		Barrett Alexander
-1230	08/17/1998		Brandon Fish
-1245	08/17/1998		Don MacAskill
-1246	08/17/1998		David "Zoid" Kirsch
-1247	08/17/1998		Manu Smith
-1248	08/17/1998		Geoff Scully
-1249	08/17/1998		Andy Van Fossen
-1240	08/20/1998		Activision Build 2
-1256	08/20/1998		Ranger Clan
-1257	08/20/1998		Ensemble Studios
-1258	08/21/1998		Robert Duffy
-1259	08/21/1998		Stephen Seachord
-1250	08/21/1998		Stephen Heaslip
-1267	08/21/1998		Samir Sandesara
-1268	08/21/1998		Oliver Wyman
-1269	08/21/1998		Steven Marchegiano
-1260	08/21/1998		Build #2 for Nihilistic
-1278	08/21/1998		Build #2 for Ensemble
-
-9999	08/20/1998		Internal Use
-*/
+// ROGUE - VERSIONS
+// 1234	08/13/1998		Activision
+// 1235	08/14/1998		Id Software
+// 1236	08/15/1998		Steve Tietze
+// 1237	08/15/1998		Phil Dobranski
+// 1238	08/15/1998		John Sheley
+// 1239	08/17/1998		Barrett Alexander
+// 1230	08/17/1998		Brandon Fish
+// 1245	08/17/1998		Don MacAskill
+// 1246	08/17/1998		David "Zoid" Kirsch
+// 1247	08/17/1998		Manu Smith
+// 1248	08/17/1998		Geoff Scully
+// 1249	08/17/1998		Andy Van Fossen
+// 1240	08/20/1998		Activision Build 2
+// 1256	08/20/1998		Ranger Clan
+// 1257	08/20/1998		Ensemble Studios
+// 1258	08/21/1998		Robert Duffy
+// 1259	08/21/1998		Stephen Seachord
+// 1250	08/21/1998		Stephen Heaslip
+// 1267	08/21/1998		Samir Sandesara
+// 1268	08/21/1998		Oliver Wyman
+// 1269	08/21/1998		Steven Marchegiano
+// 1260	08/21/1998		Build #2 for Nihilistic
+// 1278	08/21/1998		Build #2 for Ensemble
+// 9999	08/20/1998		Internal Use
 #define ROGUE_VERSION_ID		1278
 
 #define ROGUE_VERSION_STRING	"08/21/1998 Beta 2 for Ensemble"
@@ -1849,15 +3072,9 @@ ROGUE - VERSIONS
 ==========================================================
 */
 
-#define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
-#define	SHORT2ANGLE(x)	((x)*(360.0/65536))
-
-
-//
 // config strings are a general means of communication from
 // the server to all connected clients.
 // Each config string can be at most MAX_QPATH characters.
-//
 #define	CS_NAME				0
 #define	CS_CDTRACK			1
 #define	CS_SKY				2
@@ -1878,16 +3095,11 @@ ROGUE - VERSIONS
 #define CS_GENERAL			(CS_PLAYERSKINS+MAX_CLIENTS)
 #define	MAX_CONFIGSTRINGS	(CS_GENERAL+MAX_GENERAL)
 
-
-//==============================================
-
-
 // entity_state_t->event values
 // ertity events are for effects that take place reletive
 // to an existing entities origin.  Very network efficient.
 // All muzzle flashes really should be converted to events...
-typedef enum
-{
+typedef enum {
 	EV_NONE,
 	EV_ITEM_RESPAWN,
 	EV_FOOTSTEP,
@@ -1898,172 +3110,43 @@ typedef enum
 	EV_OTHER_TELEPORT
 } entity_event_t;
 
-
-// entity_state_t is the information conveyed from the server
-// in an update message about entities that the client will
-// need to render in some way
-typedef struct entity_state_s
-{
-	int		number;			// edict index
-
-	vec3_t	origin;
-	vec3_t	angles;
-	vec3_t	old_origin;		// for lerping
-	int		modelindex;
-	int		modelindex2, modelindex3, modelindex4;	// weapons, CTF flags, etc
-	int		frame;
-	int		skinnum;
-	unsigned int		effects;		// PGM - we're filling it, so it needs to be unsigned
-	int		renderfx;
-	int		solid;			// for client side prediction, 8*(bits 0-4) is x/y radius
-							// 8*(bits 5-9) is z down distance, 8(bits10-15) is z up
-							// gi.linkentity sets this properly
-	int		sound;			// for looping sounds, to guarantee shutoff
-	int		event;			// impulse events -- muzzle flashes, footsteps, etc
-							// events only go out for a single frame, they
-							// are automatically cleared each frame
-} entity_state_t;
-
-//==============================================
-
-
 // player_state_t is the information needed in addition to pmove_state_t
 // to rendered a view.  There will only be 10 player_state_t sent each second,
 // but the number of pmove_state_t changes will be reletive to client
 // frame rates
-typedef struct
-{
+typedef struct {
 	pmove_state_t	pmove;		// for prediction
 
 	// these fields do not need to be communicated bit-precise
-
 	vec3_t		viewangles;		// for fixed views
 	vec3_t		viewoffset;		// add to pmovestate->origin
-	vec3_t		kick_angles;	// add to view direction to get render angles
-								// set by weapon kicks, pain effects, etc
-
+	vec3_t		kick_angles;	// add to view direction to get render angles set by weapon kicks, pain effects, etc
 	vec3_t		gunangles;
 	vec3_t		gunoffset;
 	int			gunindex;
 	int			gunframe;
-
 	float		blend[4];		// rgba full screen effect
-
 	float		fov;			// horizontal field of view
-
 	int			rdflags;		// refdef flags
-
 	short		stats[MAX_STATS];		// fast status bar updates
 } player_state_t;
 
 
-// ==================
 // PGM
 #define VIDREF_GL		1
 #define VIDREF_SOFT		2
 #define VIDREF_OTHER	3
 
-extern int vidref_val;
-// PGM
-// ==================
-
-/* ============ end inlined header: game/q_shared.h ============ */
-
+static int vidref_val;
 
 #define	VERSION		3.19
-
 #define	BASEDIRNAME	"baseq2"
-
-#ifdef WIN32
-
-#ifdef NDEBUG
-#define BUILDSTRING "Win32 RELEASE"
-#else
 #define BUILDSTRING "Win32 DEBUG"
-#endif
-
-#ifdef _M_IX86
 #define	CPUSTRING	"x86"
-#elif defined _M_ALPHA
-#define	CPUSTRING	"AXP"
-#endif
 
-#elif defined __linux__
-
-#define BUILDSTRING "Linux"
-
-#ifdef __i386__
-#define CPUSTRING "i386"
-#elif defined __alpha__
-#define CPUSTRING "axp"
-#else
-#define CPUSTRING "Unknown"
-#endif
-
-#elif defined __sun__
-
-#define BUILDSTRING "Solaris"
-
-#ifdef __i386__
-#define CPUSTRING "i386"
-#else
-#define CPUSTRING "sparc"
-#endif
-
-#else	// !WIN32
-
-#define BUILDSTRING "NON-WIN32"
-#define	CPUSTRING	"NON-WIN32"
-
-#endif
-
-//============================================================================
-
-void SZ_Init (sizebuf_t *buf, byte *data, int length);
-void SZ_Clear (sizebuf_t *buf);
-void *SZ_GetSpace (sizebuf_t *buf, int length);
-void SZ_Write (sizebuf_t *buf, void *data, int length);
-void SZ_Print (sizebuf_t *buf, char *data);	// strcats onto the sizebuf
-
-//============================================================================
-
-struct usercmd_s;
-struct entity_state_s;
-
-void MSG_WriteChar (sizebuf_t *sb, int c);
-void MSG_WriteByte (sizebuf_t *sb, int c);
-void MSG_WriteShort (sizebuf_t *sb, int c);
-void MSG_WriteLong (sizebuf_t *sb, int c);
-void MSG_WriteFloat (sizebuf_t *sb, float f);
-void MSG_WriteString (sizebuf_t *sb, char *s);
-void MSG_WriteCoord (sizebuf_t *sb, float f);
-void MSG_WritePos (sizebuf_t *sb, vec3_t pos);
-void MSG_WriteAngle (sizebuf_t *sb, float f);
-void MSG_WriteAngle16 (sizebuf_t *sb, float f);
-void MSG_WriteDeltaUsercmd (sizebuf_t *sb, struct usercmd_s *from, struct usercmd_s *cmd);
-void MSG_WriteDeltaEntity (struct entity_state_s *from, struct entity_state_s *to, sizebuf_t *msg, qboolean force, qboolean newentity);
-void MSG_WriteDir (sizebuf_t *sb, vec3_t vector);
-
-
-void	MSG_BeginReading (sizebuf_t *sb);
-
-int		MSG_ReadChar (sizebuf_t *sb);
-int		MSG_ReadByte (sizebuf_t *sb);
-int		MSG_ReadShort (sizebuf_t *sb);
-int		MSG_ReadLong (sizebuf_t *sb);
-float	MSG_ReadFloat (sizebuf_t *sb);
-char	*MSG_ReadString (sizebuf_t *sb);
-char	*MSG_ReadStringLine (sizebuf_t *sb);
-
-float	MSG_ReadCoord (sizebuf_t *sb);
-void	MSG_ReadPos (sizebuf_t *sb, vec3_t pos);
-float	MSG_ReadAngle (sizebuf_t *sb);
-float	MSG_ReadAngle16 (sizebuf_t *sb);
-void	MSG_ReadDeltaUsercmd (sizebuf_t *sb, struct usercmd_s *from, struct usercmd_s *cmd);
-
-void	MSG_ReadDir (sizebuf_t *sb, vec3_t vector);
-
-void	MSG_ReadData (sizebuf_t *sb, void *buffer, int size);
+//
+// SECTION ???
+//
 
 //============================================================================
 
@@ -2204,16 +3287,6 @@ enum clc_ops_e
 
 // user_cmd_t communication
 
-// ms and light always sent, the others are optional
-#define	CM_ANGLE1 	(1<<0)
-#define	CM_ANGLE2 	(1<<1)
-#define	CM_ANGLE3 	(1<<2)
-#define	CM_FORWARD	(1<<3)
-#define	CM_SIDE		(1<<4)
-#define	CM_UP		(1<<5)
-#define	CM_BUTTONS	(1<<6)
-#define	CM_IMPULSE	(1<<7)
-
 //==============================================
 
 // a sound without an ent or pos will be a local only sound
@@ -2229,41 +3302,6 @@ enum clc_ops_e
 //==============================================
 
 // entity_state_t communication
-
-// try to pack the common update flags into the first byte
-#define	U_ORIGIN1	(1<<0)
-#define	U_ORIGIN2	(1<<1)
-#define	U_ANGLE2	(1<<2)
-#define	U_ANGLE3	(1<<3)
-#define	U_FRAME8	(1<<4)		// frame is a byte
-#define	U_EVENT		(1<<5)
-#define	U_REMOVE	(1<<6)		// REMOVE this entity, don't add it
-#define	U_MOREBITS1	(1<<7)		// read one additional byte
-
-// second byte
-#define	U_NUMBER16	(1<<8)		// NUMBER8 is implicit if not set
-#define	U_ORIGIN3	(1<<9)
-#define	U_ANGLE1	(1<<10)
-#define	U_MODEL		(1<<11)
-#define U_RENDERFX8	(1<<12)		// fullbright, etc
-#define	U_EFFECTS8	(1<<14)		// autorotate, trails, etc
-#define	U_MOREBITS2	(1<<15)		// read one additional byte
-
-// third byte
-#define	U_SKIN8		(1<<16)
-#define	U_FRAME16	(1<<17)		// frame is a short
-#define	U_RENDERFX16 (1<<18)	// 8 + 16 = 32
-#define	U_EFFECTS16	(1<<19)		// 8 + 16 = 32
-#define	U_MODEL2	(1<<20)		// weapons, flags, etc
-#define	U_MODEL3	(1<<21)
-#define	U_MODEL4	(1<<22)
-#define	U_MOREBITS3	(1<<23)		// read one additional byte
-
-// fourth byte
-#define	U_OLDORIGIN	(1<<24)		// FIXME: get rid of this
-#define	U_SKIN16	(1<<25)
-#define	U_SOUND		(1<<26)
-#define	U_SOLID		(1<<27)
 
 
 /*
@@ -3142,8 +4180,6 @@ void Qcommon_Init (int argc, char **argv);
 void Qcommon_Frame (int msec);
 void Qcommon_Shutdown (void);
 
-#define NUMVERTEXNORMALS	162
-extern	vec3_t	bytedirs[NUMVERTEXNORMALS];
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
@@ -4624,19 +5660,6 @@ float Q_fabs (float f)
 	return * ( float * ) &tmp;
 #endif
 }
-
-#if defined _M_IX86 && !defined C_ONLY
-#pragma warning (disable:4035)
-__declspec( naked ) long Q_ftol( float f )
-{
-	static int tmp;
-	__asm fld dword ptr [esp+4]
-	__asm fistp tmp
-	__asm mov eax, tmp
-	__asm ret
-}
-#pragma warning (default:4035)
-#endif
 
 /*
 ============
@@ -7542,584 +8565,9 @@ Handles byte ordering and avoids alignment errors
 ==============================================================================
 */
 
-vec3_t	bytedirs[NUMVERTEXNORMALS] =
-{
-/* ============ begin inlined header: client/anorms.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-{-0.525731, 0.000000, 0.850651},
-{-0.442863, 0.238856, 0.864188},
-{-0.295242, 0.000000, 0.955423},
-{-0.309017, 0.500000, 0.809017},
-{-0.162460, 0.262866, 0.951056},
-{0.000000, 0.000000, 1.000000},
-{0.000000, 0.850651, 0.525731},
-{-0.147621, 0.716567, 0.681718},
-{0.147621, 0.716567, 0.681718},
-{0.000000, 0.525731, 0.850651},
-{0.309017, 0.500000, 0.809017},
-{0.525731, 0.000000, 0.850651},
-{0.295242, 0.000000, 0.955423},
-{0.442863, 0.238856, 0.864188},
-{0.162460, 0.262866, 0.951056},
-{-0.681718, 0.147621, 0.716567},
-{-0.809017, 0.309017, 0.500000},
-{-0.587785, 0.425325, 0.688191},
-{-0.850651, 0.525731, 0.000000},
-{-0.864188, 0.442863, 0.238856},
-{-0.716567, 0.681718, 0.147621},
-{-0.688191, 0.587785, 0.425325},
-{-0.500000, 0.809017, 0.309017},
-{-0.238856, 0.864188, 0.442863},
-{-0.425325, 0.688191, 0.587785},
-{-0.716567, 0.681718, -0.147621},
-{-0.500000, 0.809017, -0.309017},
-{-0.525731, 0.850651, 0.000000},
-{0.000000, 0.850651, -0.525731},
-{-0.238856, 0.864188, -0.442863},
-{0.000000, 0.955423, -0.295242},
-{-0.262866, 0.951056, -0.162460},
-{0.000000, 1.000000, 0.000000},
-{0.000000, 0.955423, 0.295242},
-{-0.262866, 0.951056, 0.162460},
-{0.238856, 0.864188, 0.442863},
-{0.262866, 0.951056, 0.162460},
-{0.500000, 0.809017, 0.309017},
-{0.238856, 0.864188, -0.442863},
-{0.262866, 0.951056, -0.162460},
-{0.500000, 0.809017, -0.309017},
-{0.850651, 0.525731, 0.000000},
-{0.716567, 0.681718, 0.147621},
-{0.716567, 0.681718, -0.147621},
-{0.525731, 0.850651, 0.000000},
-{0.425325, 0.688191, 0.587785},
-{0.864188, 0.442863, 0.238856},
-{0.688191, 0.587785, 0.425325},
-{0.809017, 0.309017, 0.500000},
-{0.681718, 0.147621, 0.716567},
-{0.587785, 0.425325, 0.688191},
-{0.955423, 0.295242, 0.000000},
-{1.000000, 0.000000, 0.000000},
-{0.951056, 0.162460, 0.262866},
-{0.850651, -0.525731, 0.000000},
-{0.955423, -0.295242, 0.000000},
-{0.864188, -0.442863, 0.238856},
-{0.951056, -0.162460, 0.262866},
-{0.809017, -0.309017, 0.500000},
-{0.681718, -0.147621, 0.716567},
-{0.850651, 0.000000, 0.525731},
-{0.864188, 0.442863, -0.238856},
-{0.809017, 0.309017, -0.500000},
-{0.951056, 0.162460, -0.262866},
-{0.525731, 0.000000, -0.850651},
-{0.681718, 0.147621, -0.716567},
-{0.681718, -0.147621, -0.716567},
-{0.850651, 0.000000, -0.525731},
-{0.809017, -0.309017, -0.500000},
-{0.864188, -0.442863, -0.238856},
-{0.951056, -0.162460, -0.262866},
-{0.147621, 0.716567, -0.681718},
-{0.309017, 0.500000, -0.809017},
-{0.425325, 0.688191, -0.587785},
-{0.442863, 0.238856, -0.864188},
-{0.587785, 0.425325, -0.688191},
-{0.688191, 0.587785, -0.425325},
-{-0.147621, 0.716567, -0.681718},
-{-0.309017, 0.500000, -0.809017},
-{0.000000, 0.525731, -0.850651},
-{-0.525731, 0.000000, -0.850651},
-{-0.442863, 0.238856, -0.864188},
-{-0.295242, 0.000000, -0.955423},
-{-0.162460, 0.262866, -0.951056},
-{0.000000, 0.000000, -1.000000},
-{0.295242, 0.000000, -0.955423},
-{0.162460, 0.262866, -0.951056},
-{-0.442863, -0.238856, -0.864188},
-{-0.309017, -0.500000, -0.809017},
-{-0.162460, -0.262866, -0.951056},
-{0.000000, -0.850651, -0.525731},
-{-0.147621, -0.716567, -0.681718},
-{0.147621, -0.716567, -0.681718},
-{0.000000, -0.525731, -0.850651},
-{0.309017, -0.500000, -0.809017},
-{0.442863, -0.238856, -0.864188},
-{0.162460, -0.262866, -0.951056},
-{0.238856, -0.864188, -0.442863},
-{0.500000, -0.809017, -0.309017},
-{0.425325, -0.688191, -0.587785},
-{0.716567, -0.681718, -0.147621},
-{0.688191, -0.587785, -0.425325},
-{0.587785, -0.425325, -0.688191},
-{0.000000, -0.955423, -0.295242},
-{0.000000, -1.000000, 0.000000},
-{0.262866, -0.951056, -0.162460},
-{0.000000, -0.850651, 0.525731},
-{0.000000, -0.955423, 0.295242},
-{0.238856, -0.864188, 0.442863},
-{0.262866, -0.951056, 0.162460},
-{0.500000, -0.809017, 0.309017},
-{0.716567, -0.681718, 0.147621},
-{0.525731, -0.850651, 0.000000},
-{-0.238856, -0.864188, -0.442863},
-{-0.500000, -0.809017, -0.309017},
-{-0.262866, -0.951056, -0.162460},
-{-0.850651, -0.525731, 0.000000},
-{-0.716567, -0.681718, -0.147621},
-{-0.716567, -0.681718, 0.147621},
-{-0.525731, -0.850651, 0.000000},
-{-0.500000, -0.809017, 0.309017},
-{-0.238856, -0.864188, 0.442863},
-{-0.262866, -0.951056, 0.162460},
-{-0.864188, -0.442863, 0.238856},
-{-0.809017, -0.309017, 0.500000},
-{-0.688191, -0.587785, 0.425325},
-{-0.681718, -0.147621, 0.716567},
-{-0.442863, -0.238856, 0.864188},
-{-0.587785, -0.425325, 0.688191},
-{-0.309017, -0.500000, 0.809017},
-{-0.147621, -0.716567, 0.681718},
-{-0.425325, -0.688191, 0.587785},
-{-0.162460, -0.262866, 0.951056},
-{0.442863, -0.238856, 0.864188},
-{0.162460, -0.262866, 0.951056},
-{0.309017, -0.500000, 0.809017},
-{0.147621, -0.716567, 0.681718},
-{0.000000, -0.525731, 0.850651},
-{0.425325, -0.688191, 0.587785},
-{0.587785, -0.425325, 0.688191},
-{0.688191, -0.587785, 0.425325},
-{-0.955423, 0.295242, 0.000000},
-{-0.951056, 0.162460, 0.262866},
-{-1.000000, 0.000000, 0.000000},
-{-0.850651, 0.000000, 0.525731},
-{-0.955423, -0.295242, 0.000000},
-{-0.951056, -0.162460, 0.262866},
-{-0.864188, 0.442863, -0.238856},
-{-0.951056, 0.162460, -0.262866},
-{-0.809017, 0.309017, -0.500000},
-{-0.864188, -0.442863, -0.238856},
-{-0.951056, -0.162460, -0.262866},
-{-0.809017, -0.309017, -0.500000},
-{-0.681718, 0.147621, -0.716567},
-{-0.681718, -0.147621, -0.716567},
-{-0.850651, 0.000000, -0.525731},
-{-0.688191, 0.587785, -0.425325},
-{-0.587785, 0.425325, -0.688191},
-{-0.425325, 0.688191, -0.587785},
-{-0.425325, -0.688191, -0.587785},
-{-0.587785, -0.425325, -0.688191},
-{-0.688191, -0.587785, -0.425325},
-/* ============ end inlined header: client/anorms.h ============ */
-};
-
 //
 // writing functions
 //
-
-void MSG_WriteChar (sizebuf_t *sb, int c)
-{
-	byte	*buf;
-
-#ifdef PARANOID
-	if (c < -128 || c > 127)
-		Com_Error (ERR_FATAL, "MSG_WriteChar: range error");
-#endif
-
-	buf = SZ_GetSpace (sb, 1);
-	buf[0] = c;
-}
-
-void MSG_WriteByte (sizebuf_t *sb, int c)
-{
-	byte	*buf;
-
-#ifdef PARANOID
-	if (c < 0 || c > 255)
-		Com_Error (ERR_FATAL, "MSG_WriteByte: range error");
-#endif
-
-	buf = SZ_GetSpace (sb, 1);
-	buf[0] = c;
-}
-
-void MSG_WriteShort (sizebuf_t *sb, int c)
-{
-	byte	*buf;
-
-#ifdef PARANOID
-	if (c < ((short)0x8000) || c > (short)0x7fff)
-		Com_Error (ERR_FATAL, "MSG_WriteShort: range error");
-#endif
-
-	buf = SZ_GetSpace (sb, 2);
-	buf[0] = c&0xff;
-	buf[1] = c>>8;
-}
-
-void MSG_WriteLong (sizebuf_t *sb, int c)
-{
-	byte	*buf;
-
-	buf = SZ_GetSpace (sb, 4);
-	buf[0] = c&0xff;
-	buf[1] = (c>>8)&0xff;
-	buf[2] = (c>>16)&0xff;
-	buf[3] = c>>24;
-}
-
-void MSG_WriteFloat (sizebuf_t *sb, float f)
-{
-	union
-	{
-		float	f;
-		int	l;
-	} dat;
-
-
-	dat.f = f;
-	dat.l = LittleLong (dat.l);
-
-	SZ_Write (sb, &dat.l, 4);
-}
-
-void MSG_WriteString (sizebuf_t *sb, char *s)
-{
-	if (!s)
-		SZ_Write (sb, "", 1);
-	else
-		SZ_Write (sb, s, strlen(s)+1);
-}
-
-void MSG_WriteCoord (sizebuf_t *sb, float f)
-{
-	MSG_WriteShort (sb, (int)(f*8));
-}
-
-void MSG_WritePos (sizebuf_t *sb, vec3_t pos)
-{
-	MSG_WriteShort (sb, (int)(pos[0]*8));
-	MSG_WriteShort (sb, (int)(pos[1]*8));
-	MSG_WriteShort (sb, (int)(pos[2]*8));
-}
-
-void MSG_WriteAngle (sizebuf_t *sb, float f)
-{
-	MSG_WriteByte (sb, (int)(f*256/360) & 255);
-}
-
-void MSG_WriteAngle16 (sizebuf_t *sb, float f)
-{
-	MSG_WriteShort (sb, ANGLE2SHORT(f));
-}
-
-
-void MSG_WriteDeltaUsercmd (sizebuf_t *buf, usercmd_t *from, usercmd_t *cmd)
-{
-	int		bits;
-
-//
-// send the movement message
-//
-	bits = 0;
-	if (cmd->angles[0] != from->angles[0])
-		bits |= CM_ANGLE1;
-	if (cmd->angles[1] != from->angles[1])
-		bits |= CM_ANGLE2;
-	if (cmd->angles[2] != from->angles[2])
-		bits |= CM_ANGLE3;
-	if (cmd->forwardmove != from->forwardmove)
-		bits |= CM_FORWARD;
-	if (cmd->sidemove != from->sidemove)
-		bits |= CM_SIDE;
-	if (cmd->upmove != from->upmove)
-		bits |= CM_UP;
-	if (cmd->buttons != from->buttons)
-		bits |= CM_BUTTONS;
-	if (cmd->impulse != from->impulse)
-		bits |= CM_IMPULSE;
-
-    MSG_WriteByte (buf, bits);
-
-	if (bits & CM_ANGLE1)
-		MSG_WriteShort (buf, cmd->angles[0]);
-	if (bits & CM_ANGLE2)
-		MSG_WriteShort (buf, cmd->angles[1]);
-	if (bits & CM_ANGLE3)
-		MSG_WriteShort (buf, cmd->angles[2]);
-
-	if (bits & CM_FORWARD)
-		MSG_WriteShort (buf, cmd->forwardmove);
-	if (bits & CM_SIDE)
-	  	MSG_WriteShort (buf, cmd->sidemove);
-	if (bits & CM_UP)
-		MSG_WriteShort (buf, cmd->upmove);
-
- 	if (bits & CM_BUTTONS)
-	  	MSG_WriteByte (buf, cmd->buttons);
- 	if (bits & CM_IMPULSE)
-	    MSG_WriteByte (buf, cmd->impulse);
-
-    MSG_WriteByte (buf, cmd->msec);
-	MSG_WriteByte (buf, cmd->lightlevel);
-}
-
-
-void MSG_WriteDir (sizebuf_t *sb, vec3_t dir)
-{
-	int		i, best;
-	float	d, bestd;
-
-	if (!dir)
-	{
-		MSG_WriteByte (sb, 0);
-		return;
-	}
-
-	bestd = 0;
-	best = 0;
-	for (i=0 ; i<NUMVERTEXNORMALS ; i++)
-	{
-		d = DotProduct (dir, bytedirs[i]);
-		if (d > bestd)
-		{
-			bestd = d;
-			best = i;
-		}
-	}
-	MSG_WriteByte (sb, best);
-}
-
-
-void MSG_ReadDir (sizebuf_t *sb, vec3_t dir)
-{
-	int		b;
-
-	b = MSG_ReadByte (sb);
-	if (b >= NUMVERTEXNORMALS)
-		Com_Error (ERR_DROP, "MSF_ReadDir: out of range");
-	VectorCopy (bytedirs[b], dir);
-}
-
-
-/*
-==================
-MSG_WriteDeltaEntity
-
-Writes part of a packetentities message.
-Can delta from either a baseline or a previous packet_entity
-==================
-*/
-void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *msg, qboolean force, qboolean newentity)
-{
-	int		bits;
-
-	if (!to->number)
-		Com_Error (ERR_FATAL, "Unset entity number");
-	if (to->number >= MAX_EDICTS)
-		Com_Error (ERR_FATAL, "Entity number >= MAX_EDICTS");
-
-// send an update
-	bits = 0;
-
-	if (to->number >= 256)
-		bits |= U_NUMBER16;		// number8 is implicit otherwise
-
-	if (to->origin[0] != from->origin[0])
-		bits |= U_ORIGIN1;
-	if (to->origin[1] != from->origin[1])
-		bits |= U_ORIGIN2;
-	if (to->origin[2] != from->origin[2])
-		bits |= U_ORIGIN3;
-
-	if ( to->angles[0] != from->angles[0] )
-		bits |= U_ANGLE1;
-	if ( to->angles[1] != from->angles[1] )
-		bits |= U_ANGLE2;
-	if ( to->angles[2] != from->angles[2] )
-		bits |= U_ANGLE3;
-
-	if ( to->skinnum != from->skinnum )
-	{
-		if ((unsigned)to->skinnum < 256)
-			bits |= U_SKIN8;
-		else if ((unsigned)to->skinnum < 0x10000)
-			bits |= U_SKIN16;
-		else
-			bits |= (U_SKIN8|U_SKIN16);
-	}
-
-	if ( to->frame != from->frame )
-	{
-		if (to->frame < 256)
-			bits |= U_FRAME8;
-		else
-			bits |= U_FRAME16;
-	}
-
-	if ( to->effects != from->effects )
-	{
-		if (to->effects < 256)
-			bits |= U_EFFECTS8;
-		else if (to->effects < 0x8000)
-			bits |= U_EFFECTS16;
-		else
-			bits |= U_EFFECTS8|U_EFFECTS16;
-	}
-
-	if ( to->renderfx != from->renderfx )
-	{
-		if (to->renderfx < 256)
-			bits |= U_RENDERFX8;
-		else if (to->renderfx < 0x8000)
-			bits |= U_RENDERFX16;
-		else
-			bits |= U_RENDERFX8|U_RENDERFX16;
-	}
-
-	if ( to->solid != from->solid )
-		bits |= U_SOLID;
-
-	// event is not delta compressed, just 0 compressed
-	if ( to->event  )
-		bits |= U_EVENT;
-
-	if ( to->modelindex != from->modelindex )
-		bits |= U_MODEL;
-	if ( to->modelindex2 != from->modelindex2 )
-		bits |= U_MODEL2;
-	if ( to->modelindex3 != from->modelindex3 )
-		bits |= U_MODEL3;
-	if ( to->modelindex4 != from->modelindex4 )
-		bits |= U_MODEL4;
-
-	if ( to->sound != from->sound )
-		bits |= U_SOUND;
-
-	if (newentity || (to->renderfx & RF_BEAM))
-		bits |= U_OLDORIGIN;
-
-	//
-	// write the message
-	//
-	if (!bits && !force)
-		return;		// nothing to send!
-
-	//----------
-
-	if (bits & 0xff000000)
-		bits |= U_MOREBITS3 | U_MOREBITS2 | U_MOREBITS1;
-	else if (bits & 0x00ff0000)
-		bits |= U_MOREBITS2 | U_MOREBITS1;
-	else if (bits & 0x0000ff00)
-		bits |= U_MOREBITS1;
-
-	MSG_WriteByte (msg,	bits&255 );
-
-	if (bits & 0xff000000)
-	{
-		MSG_WriteByte (msg,	(bits>>8)&255 );
-		MSG_WriteByte (msg,	(bits>>16)&255 );
-		MSG_WriteByte (msg,	(bits>>24)&255 );
-	}
-	else if (bits & 0x00ff0000)
-	{
-		MSG_WriteByte (msg,	(bits>>8)&255 );
-		MSG_WriteByte (msg,	(bits>>16)&255 );
-	}
-	else if (bits & 0x0000ff00)
-	{
-		MSG_WriteByte (msg,	(bits>>8)&255 );
-	}
-
-	//----------
-
-	if (bits & U_NUMBER16)
-		MSG_WriteShort (msg, to->number);
-	else
-		MSG_WriteByte (msg,	to->number);
-
-	if (bits & U_MODEL)
-		MSG_WriteByte (msg,	to->modelindex);
-	if (bits & U_MODEL2)
-		MSG_WriteByte (msg,	to->modelindex2);
-	if (bits & U_MODEL3)
-		MSG_WriteByte (msg,	to->modelindex3);
-	if (bits & U_MODEL4)
-		MSG_WriteByte (msg,	to->modelindex4);
-
-	if (bits & U_FRAME8)
-		MSG_WriteByte (msg, to->frame);
-	if (bits & U_FRAME16)
-		MSG_WriteShort (msg, to->frame);
-
-	if ((bits & U_SKIN8) && (bits & U_SKIN16))		//used for laser colors
-		MSG_WriteLong (msg, to->skinnum);
-	else if (bits & U_SKIN8)
-		MSG_WriteByte (msg, to->skinnum);
-	else if (bits & U_SKIN16)
-		MSG_WriteShort (msg, to->skinnum);
-
-
-	if ( (bits & (U_EFFECTS8|U_EFFECTS16)) == (U_EFFECTS8|U_EFFECTS16) )
-		MSG_WriteLong (msg, to->effects);
-	else if (bits & U_EFFECTS8)
-		MSG_WriteByte (msg, to->effects);
-	else if (bits & U_EFFECTS16)
-		MSG_WriteShort (msg, to->effects);
-
-	if ( (bits & (U_RENDERFX8|U_RENDERFX16)) == (U_RENDERFX8|U_RENDERFX16) )
-		MSG_WriteLong (msg, to->renderfx);
-	else if (bits & U_RENDERFX8)
-		MSG_WriteByte (msg, to->renderfx);
-	else if (bits & U_RENDERFX16)
-		MSG_WriteShort (msg, to->renderfx);
-
-	if (bits & U_ORIGIN1)
-		MSG_WriteCoord (msg, to->origin[0]);
-	if (bits & U_ORIGIN2)
-		MSG_WriteCoord (msg, to->origin[1]);
-	if (bits & U_ORIGIN3)
-		MSG_WriteCoord (msg, to->origin[2]);
-
-	if (bits & U_ANGLE1)
-		MSG_WriteAngle(msg, to->angles[0]);
-	if (bits & U_ANGLE2)
-		MSG_WriteAngle(msg, to->angles[1]);
-	if (bits & U_ANGLE3)
-		MSG_WriteAngle(msg, to->angles[2]);
-
-	if (bits & U_OLDORIGIN)
-	{
-		MSG_WriteCoord (msg, to->old_origin[0]);
-		MSG_WriteCoord (msg, to->old_origin[1]);
-		MSG_WriteCoord (msg, to->old_origin[2]);
-	}
-
-	if (bits & U_SOUND)
-		MSG_WriteByte (msg, to->sound);
-	if (bits & U_EVENT)
-		MSG_WriteByte (msg, to->event);
-	if (bits & U_SOLID)
-		MSG_WriteShort (msg, to->solid);
-}
-
 
 //============================================================
 
@@ -8127,265 +8575,8 @@ void MSG_WriteDeltaEntity (entity_state_t *from, entity_state_t *to, sizebuf_t *
 // reading functions
 //
 
-void MSG_BeginReading (sizebuf_t *msg)
-{
-	msg->readcount = 0;
-}
-
-// returns -1 if no more characters are available
-int MSG_ReadChar (sizebuf_t *msg_read)
-{
-	int	c;
-
-	if (msg_read->readcount+1 > msg_read->cursize)
-		c = -1;
-	else
-		c = (signed char)msg_read->data[msg_read->readcount];
-	msg_read->readcount++;
-
-	return c;
-}
-
-int MSG_ReadByte (sizebuf_t *msg_read)
-{
-	int	c;
-
-	if (msg_read->readcount+1 > msg_read->cursize)
-		c = -1;
-	else
-		c = (unsigned char)msg_read->data[msg_read->readcount];
-	msg_read->readcount++;
-
-	return c;
-}
-
-int MSG_ReadShort (sizebuf_t *msg_read)
-{
-	int	c;
-
-	if (msg_read->readcount+2 > msg_read->cursize)
-		c = -1;
-	else
-		c = (short)(msg_read->data[msg_read->readcount]
-		+ (msg_read->data[msg_read->readcount+1]<<8));
-
-	msg_read->readcount += 2;
-
-	return c;
-}
-
-int MSG_ReadLong (sizebuf_t *msg_read)
-{
-	int	c;
-
-	if (msg_read->readcount+4 > msg_read->cursize)
-		c = -1;
-	else
-		c = msg_read->data[msg_read->readcount]
-		+ (msg_read->data[msg_read->readcount+1]<<8)
-		+ (msg_read->data[msg_read->readcount+2]<<16)
-		+ (msg_read->data[msg_read->readcount+3]<<24);
-
-	msg_read->readcount += 4;
-
-	return c;
-}
-
-float MSG_ReadFloat (sizebuf_t *msg_read)
-{
-	union
-	{
-		byte	b[4];
-		float	f;
-		int	l;
-	} dat;
-
-	if (msg_read->readcount+4 > msg_read->cursize)
-		dat.f = -1;
-	else
-	{
-		dat.b[0] =	msg_read->data[msg_read->readcount];
-		dat.b[1] =	msg_read->data[msg_read->readcount+1];
-		dat.b[2] =	msg_read->data[msg_read->readcount+2];
-		dat.b[3] =	msg_read->data[msg_read->readcount+3];
-	}
-	msg_read->readcount += 4;
-
-	dat.l = LittleLong (dat.l);
-
-	return dat.f;
-}
-
-char *MSG_ReadString (sizebuf_t *msg_read)
-{
-	static char	string[2048];
-	int		l,c;
-
-	l = 0;
-	do
-	{
-		c = MSG_ReadChar (msg_read);
-		if (c == -1 || c == 0)
-			break;
-		string[l] = c;
-		l++;
-	} while (l < sizeof(string)-1);
-
-	string[l] = 0;
-
-	return string;
-}
-
-char *MSG_ReadStringLine (sizebuf_t *msg_read)
-{
-	static char	string[2048];
-	int		l,c;
-
-	l = 0;
-	do
-	{
-		c = MSG_ReadChar (msg_read);
-		if (c == -1 || c == 0 || c == '\n')
-			break;
-		string[l] = c;
-		l++;
-	} while (l < sizeof(string)-1);
-
-	string[l] = 0;
-
-	return string;
-}
-
-float MSG_ReadCoord (sizebuf_t *msg_read)
-{
-	return MSG_ReadShort(msg_read) * (1.0/8);
-}
-
-void MSG_ReadPos (sizebuf_t *msg_read, vec3_t pos)
-{
-	pos[0] = MSG_ReadShort(msg_read) * (1.0/8);
-	pos[1] = MSG_ReadShort(msg_read) * (1.0/8);
-	pos[2] = MSG_ReadShort(msg_read) * (1.0/8);
-}
-
-float MSG_ReadAngle (sizebuf_t *msg_read)
-{
-	return MSG_ReadChar(msg_read) * (360.0/256);
-}
-
-float MSG_ReadAngle16 (sizebuf_t *msg_read)
-{
-	return SHORT2ANGLE(MSG_ReadShort(msg_read));
-}
-
-void MSG_ReadDeltaUsercmd (sizebuf_t *msg_read, usercmd_t *from, usercmd_t *move)
-{
-	int bits;
-
-	memcpy (move, from, sizeof(*move));
-
-	bits = MSG_ReadByte (msg_read);
-
-// read current angles
-	if (bits & CM_ANGLE1)
-		move->angles[0] = MSG_ReadShort (msg_read);
-	if (bits & CM_ANGLE2)
-		move->angles[1] = MSG_ReadShort (msg_read);
-	if (bits & CM_ANGLE3)
-		move->angles[2] = MSG_ReadShort (msg_read);
-
-// read movement
-	if (bits & CM_FORWARD)
-		move->forwardmove = MSG_ReadShort (msg_read);
-	if (bits & CM_SIDE)
-		move->sidemove = MSG_ReadShort (msg_read);
-	if (bits & CM_UP)
-		move->upmove = MSG_ReadShort (msg_read);
-
-// read buttons
-	if (bits & CM_BUTTONS)
-		move->buttons = MSG_ReadByte (msg_read);
-
-	if (bits & CM_IMPULSE)
-		move->impulse = MSG_ReadByte (msg_read);
-
-// read time to run command
-	move->msec = MSG_ReadByte (msg_read);
-
-// read the light level
-	move->lightlevel = MSG_ReadByte (msg_read);
-}
-
-
-void MSG_ReadData (sizebuf_t *msg_read, void *data, int len)
-{
-	int		i;
-
-	for (i=0 ; i<len ; i++)
-		((byte *)data)[i] = MSG_ReadByte (msg_read);
-}
-
 
 //===========================================================================
-
-void SZ_Init (sizebuf_t *buf, byte *data, int length)
-{
-	memset (buf, 0, sizeof(*buf));
-	buf->data = data;
-	buf->maxsize = length;
-}
-
-void SZ_Clear (sizebuf_t *buf)
-{
-	buf->cursize = 0;
-	buf->overflowed = false;
-}
-
-void *SZ_GetSpace (sizebuf_t *buf, int length)
-{
-	void	*data;
-
-	if (buf->cursize + length > buf->maxsize)
-	{
-		if (!buf->allowoverflow)
-			Com_Error (ERR_FATAL, "SZ_GetSpace: overflow without allowoverflow set");
-
-		if (length > buf->maxsize)
-			Com_Error (ERR_FATAL, "SZ_GetSpace: %i is > full buffer size", length);
-
-		Com_Printf ("SZ_GetSpace: overflow\n");
-		SZ_Clear (buf);
-		buf->overflowed = true;
-	}
-
-	data = buf->data + buf->cursize;
-	buf->cursize += length;
-
-	return data;
-}
-
-void SZ_Write (sizebuf_t *buf, void *data, int length)
-{
-	memcpy (SZ_GetSpace(buf,length),data,length);
-}
-
-void SZ_Print (sizebuf_t *buf, char *data)
-{
-	int		len;
-
-	len = strlen(data)+1;
-
-	if (buf->cursize)
-	{
-		if (buf->data[buf->cursize-1])
-			memcpy ((byte *)SZ_GetSpace(buf, len),data,len); // no trailing 0
-		else
-			memcpy ((byte *)SZ_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
-	}
-	else
-		memcpy ((byte *)SZ_GetSpace(buf, len),data,len);
-}
-
 
 //============================================================================
 
@@ -20328,7 +20519,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern	struct model_s	*cl_mod_powerscreen;
 
 //PGM
-int	vidref_val;
+
 //PGM
 
 /*
@@ -41218,471 +41409,6 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 
 /* already inlined above: game/q_shared.h */
 
-// this file is included in both the game dll and quake2,
-// the game needs it to source shot locations, the client
-// needs it to position muzzle flashes
-vec3_t monster_flash_offset [] =
-{
-// flash 0 is not used
-	0.0, 0.0, 0.0,
-
-// MZ2_TANK_BLASTER_1				1
-	20.7, -18.5, 28.7,
-// MZ2_TANK_BLASTER_2				2
-	16.6, -21.5, 30.1,
-// MZ2_TANK_BLASTER_3				3
-	11.8, -23.9, 32.1,
-// MZ2_TANK_MACHINEGUN_1			4
-	22.9, -0.7, 25.3,
-// MZ2_TANK_MACHINEGUN_2			5
-	22.2, 6.2, 22.3,
-// MZ2_TANK_MACHINEGUN_3			6
-	19.4, 13.1, 18.6,
-// MZ2_TANK_MACHINEGUN_4			7
-	19.4, 18.8, 18.6,
-// MZ2_TANK_MACHINEGUN_5			8
-	17.9, 25.0, 18.6,
-// MZ2_TANK_MACHINEGUN_6			9
-	14.1, 30.5, 20.6,
-// MZ2_TANK_MACHINEGUN_7			10
-	9.3, 35.3, 22.1,
-// MZ2_TANK_MACHINEGUN_8			11
-	4.7, 38.4, 22.1,
-// MZ2_TANK_MACHINEGUN_9			12
-	-1.1, 40.4, 24.1,
-// MZ2_TANK_MACHINEGUN_10			13
-	-6.5, 41.2, 24.1,
-// MZ2_TANK_MACHINEGUN_11			14
-	3.2, 40.1, 24.7,
-// MZ2_TANK_MACHINEGUN_12			15
-	11.7, 36.7, 26.0,
-// MZ2_TANK_MACHINEGUN_13			16
-	18.9, 31.3, 26.0,
-// MZ2_TANK_MACHINEGUN_14			17
-	24.4, 24.4, 26.4,
-// MZ2_TANK_MACHINEGUN_15			18
-	27.1, 17.1, 27.2,
-// MZ2_TANK_MACHINEGUN_16			19
-	28.5, 9.1, 28.0,
-// MZ2_TANK_MACHINEGUN_17			20
-	27.1, 2.2, 28.0,
-// MZ2_TANK_MACHINEGUN_18			21
-	24.9, -2.8, 28.0,
-// MZ2_TANK_MACHINEGUN_19			22
-	21.6, -7.0, 26.4,
-// MZ2_TANK_ROCKET_1				23
-	6.2, 29.1, 49.1,
-// MZ2_TANK_ROCKET_2				24
-	6.9, 23.8, 49.1,
-// MZ2_TANK_ROCKET_3				25
-	8.3, 17.8, 49.5,
-
-// MZ2_INFANTRY_MACHINEGUN_1		26
-	26.6, 7.1, 13.1,
-// MZ2_INFANTRY_MACHINEGUN_2		27
-	18.2, 7.5, 15.4,
-// MZ2_INFANTRY_MACHINEGUN_3		28
-	17.2, 10.3, 17.9,
-// MZ2_INFANTRY_MACHINEGUN_4		29
-	17.0, 12.8, 20.1,
-// MZ2_INFANTRY_MACHINEGUN_5		30
-	15.1, 14.1, 21.8,
-// MZ2_INFANTRY_MACHINEGUN_6		31
-	11.8, 17.2, 23.1,
-// MZ2_INFANTRY_MACHINEGUN_7		32
-	11.4, 20.2, 21.0,
-// MZ2_INFANTRY_MACHINEGUN_8		33
-	9.0, 23.0, 18.9,
-// MZ2_INFANTRY_MACHINEGUN_9		34
-	13.9, 18.6, 17.7,
-// MZ2_INFANTRY_MACHINEGUN_10		35
-	15.4, 15.6, 15.8,
-// MZ2_INFANTRY_MACHINEGUN_11		36
-	10.2, 15.2, 25.1,
-// MZ2_INFANTRY_MACHINEGUN_12		37
-	-1.9, 15.1, 28.2,
-// MZ2_INFANTRY_MACHINEGUN_13		38
-	-12.4, 13.0, 20.2,
-
-// MZ2_SOLDIER_BLASTER_1			39
-	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
-// MZ2_SOLDIER_BLASTER_2			40
-	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_1			41
-	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_2			42
-	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_1			43
-	10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_2			44
-	21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2,
-
-// MZ2_GUNNER_MACHINEGUN_1			45
-	30.1 * 1.15, 3.9 * 1.15, 19.6 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_2			46
-	29.1 * 1.15, 2.5 * 1.15, 20.7 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_3			47
-	28.2 * 1.15, 2.5 * 1.15, 22.2 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_4			48
-	28.2 * 1.15, 3.6 * 1.15, 22.0 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_5			49
-	26.9 * 1.15, 2.0 * 1.15, 23.4 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_6			50
-	26.5 * 1.15, 0.6 * 1.15, 20.8 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_7			51
-	26.9 * 1.15, 0.5 * 1.15, 21.5 * 1.15,
-// MZ2_GUNNER_MACHINEGUN_8			52
-	29.0 * 1.15, 2.4 * 1.15, 19.5 * 1.15,
-// MZ2_GUNNER_GRENADE_1				53
-	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
-// MZ2_GUNNER_GRENADE_2				54
-	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
-// MZ2_GUNNER_GRENADE_3				55
-	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
-// MZ2_GUNNER_GRENADE_4				56
-	4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15,
-
-// MZ2_CHICK_ROCKET_1				57
-//	-24.8, -9.0, 39.0,
-	24.8, -9.0, 39.0,			// PGM - this was incorrect in Q2
-
-// MZ2_FLYER_BLASTER_1				58
-	12.1, 13.4, -14.5,
-// MZ2_FLYER_BLASTER_2				59
-	12.1, -7.4, -14.5,
-
-// MZ2_MEDIC_BLASTER_1				60
-	12.1, 5.4, 16.5,
-
-// MZ2_GLADIATOR_RAILGUN_1			61
-	30.0, 18.0, 28.0,
-
-// MZ2_HOVER_BLASTER_1				62
-	32.5, -0.8, 10.0,
-
-// MZ2_ACTOR_MACHINEGUN_1			63
-	18.4, 7.4, 9.6,
-
-// MZ2_SUPERTANK_MACHINEGUN_1		64
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_MACHINEGUN_2		65
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_MACHINEGUN_3		66
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_MACHINEGUN_4		67
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_MACHINEGUN_5		68
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_MACHINEGUN_6		69
-	30.0, 30.0, 88.5,
-// MZ2_SUPERTANK_ROCKET_1			70
-	16.0, -22.5, 91.2,
-// MZ2_SUPERTANK_ROCKET_2			71
-	16.0, -33.4, 86.7,
-// MZ2_SUPERTANK_ROCKET_3			72
-	16.0, -42.8, 83.3,
-
-// --- Start Xian Stuff ---
-// MZ2_BOSS2_MACHINEGUN_L1			73
-	32,	-40,	70,
-// MZ2_BOSS2_MACHINEGUN_L2			74
-	32,	-40,	70,
-// MZ2_BOSS2_MACHINEGUN_L3			75
-	32,	-40,	70,
-// MZ2_BOSS2_MACHINEGUN_L4			76
-	32,	-40,	70,
-// MZ2_BOSS2_MACHINEGUN_L5			77
-	32,	-40,	70,
-// --- End Xian Stuff
-
-// MZ2_BOSS2_ROCKET_1				78
-	22.0, 16.0, 10.0,
-// MZ2_BOSS2_ROCKET_2				79
-	22.0, 8.0, 10.0,
-// MZ2_BOSS2_ROCKET_3				80
-	22.0, -8.0, 10.0,
-// MZ2_BOSS2_ROCKET_4				81
-	22.0, -16.0, 10.0,
-
-// MZ2_FLOAT_BLASTER_1				82
-	32.5, -0.8, 10,
-
-// MZ2_SOLDIER_BLASTER_3			83
-	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_3			84
-	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_3			85
-	20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2,
-// MZ2_SOLDIER_BLASTER_4			86
-	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_4			87
-	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_4			88
-	7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2,
-// MZ2_SOLDIER_BLASTER_5			89
-	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_5			90
-	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_5			91
-	30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2,
-// MZ2_SOLDIER_BLASTER_6			92
-	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_6			93
-	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_6			94
-	27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2,
-// MZ2_SOLDIER_BLASTER_7			95
-	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_7			96
-	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_7			97
-	28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2,
-// MZ2_SOLDIER_BLASTER_8			98
-//	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
-	31.5 * 1.2, 9.6 * 1.2, 10.1 * 1.2,
-// MZ2_SOLDIER_SHOTGUN_8			99
-	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
-// MZ2_SOLDIER_MACHINEGUN_8			100
-	34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2,
-
-// --- Xian shit below ---
-// MZ2_MAKRON_BFG					101
-	17,		-19.5,	62.9,
-// MZ2_MAKRON_BLASTER_1				102
-	-3.6,	-24.1,	59.5,
-// MZ2_MAKRON_BLASTER_2				103
-	-1.6,	-19.3,	59.5,
-// MZ2_MAKRON_BLASTER_3				104
-	-0.1,	-14.4,	59.5,
-// MZ2_MAKRON_BLASTER_4				105
-	2.0,	-7.6,	59.5,
-// MZ2_MAKRON_BLASTER_5				106
-	3.4,	1.3,	59.5,
-// MZ2_MAKRON_BLASTER_6				107
-	3.7,	11.1,	59.5,
-// MZ2_MAKRON_BLASTER_7				108
-	-0.3,	22.3,	59.5,
-// MZ2_MAKRON_BLASTER_8				109
-	-6,		33,		59.5,
-// MZ2_MAKRON_BLASTER_9				110
-	-9.3,	36.4,	59.5,
-// MZ2_MAKRON_BLASTER_10			111
-	-7,		35,		59.5,
-// MZ2_MAKRON_BLASTER_11			112
-	-2.1,	29,		59.5,
-// MZ2_MAKRON_BLASTER_12			113
-	3.9,	17.3,	59.5,
-// MZ2_MAKRON_BLASTER_13			114
-	6.1,	5.8,	59.5,
-// MZ2_MAKRON_BLASTER_14			115
-	5.9,	-4.4,	59.5,
-// MZ2_MAKRON_BLASTER_15			116
-	4.2,	-14.1,	59.5,
-// MZ2_MAKRON_BLASTER_16			117
-	2.4,	-18.8,	59.5,
-// MZ2_MAKRON_BLASTER_17			118
-	-1.8,	-25.5,	59.5,
-// MZ2_MAKRON_RAILGUN_1				119
-	-17.3,	7.8,	72.4,
-
-// MZ2_JORG_MACHINEGUN_L1			120
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_L2			121
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_L3			122
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_L4			123
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_L5			124
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_L6			125
-	78.5,	-47.1,	96,
-// MZ2_JORG_MACHINEGUN_R1			126
-	78.5,	46.7,  96,
-// MZ2_JORG_MACHINEGUN_R2			127
-	78.5,	46.7,	96,
-// MZ2_JORG_MACHINEGUN_R3			128
-	78.5,	46.7,	96,
-// MZ2_JORG_MACHINEGUN_R4			129
-	78.5,	46.7,	96,
-// MZ2_JORG_MACHINEGUN_R5			130
-	78.5,	46.7,	96,
-// MZ2_JORG_MACHINEGUN_R6			131
-	78.5,	46.7,	96,
-// MZ2_JORG_BFG_1					132
-	6.3,	-9,		111.2,
-
-// MZ2_BOSS2_MACHINEGUN_R1			73
-	32,	40,	70,
-// MZ2_BOSS2_MACHINEGUN_R2			74
-	32,	40,	70,
-// MZ2_BOSS2_MACHINEGUN_R3			75
-	32,	40,	70,
-// MZ2_BOSS2_MACHINEGUN_R4			76
-	32,	40,	70,
-// MZ2_BOSS2_MACHINEGUN_R5			77
-	32,	40,	70,
-
-// --- End Xian Shit ---
-
-// ROGUE
-// note that the above really ends at 137
-// carrier machineguns
-// MZ2_CARRIER_MACHINEGUN_L1
-	56,	-32, 32,
-// MZ2_CARRIER_MACHINEGUN_R1
-	56,	32, 32,
-// MZ2_CARRIER_GRENADE
-	42,	24, 50,
-// MZ2_TURRET_MACHINEGUN			141
-	16, 0, 0,
-// MZ2_TURRET_ROCKET				142
-	16, 0, 0,
-// MZ2_TURRET_BLASTER				143
-	16, 0, 0,
-// MZ2_STALKER_BLASTER				144
-	24, 0, 6,
-// MZ2_DAEDALUS_BLASTER				145
-	32.5, -0.8, 10.0,
-// MZ2_MEDIC_BLASTER_2				146
-	12.1, 5.4, 16.5,
-// MZ2_CARRIER_RAILGUN				147
-	32, 0, 6,
-// MZ2_WIDOW_DISRUPTOR				148
-	57.72, 14.50, 88.81,
-// MZ2_WIDOW_BLASTER				149
-	56,	32, 32,
-// MZ2_WIDOW_RAIL					150
-	62, -20, 84,
-// MZ2_WIDOW_PLASMABEAM				151		// PMM - not used!
-	32, 0, 6,
-// MZ2_CARRIER_MACHINEGUN_L2		152
-	61,	-32, 12,
-// MZ2_CARRIER_MACHINEGUN_R2		153
-	61,	32, 12,
-// MZ2_WIDOW_RAIL_LEFT				154
-	17, -62, 91,
-// MZ2_WIDOW_RAIL_RIGHT				155
-	68, 12, 86,
-// MZ2_WIDOW_BLASTER_SWEEP1			156			pmm - the sweeps need to be in sequential order
-	47.5, 56, 89,
-// MZ2_WIDOW_BLASTER_SWEEP2			157
-	54, 52, 91,
-// MZ2_WIDOW_BLASTER_SWEEP3			158
-	58, 40, 91,
-// MZ2_WIDOW_BLASTER_SWEEP4			159
-	68, 30, 88,
-// MZ2_WIDOW_BLASTER_SWEEP5			160
-	74, 20, 88,
-// MZ2_WIDOW_BLASTER_SWEEP6			161
-	73, 11, 87,
-// MZ2_WIDOW_BLASTER_SWEEP7			162
-	73, 3, 87,
-// MZ2_WIDOW_BLASTER_SWEEP8			163
-	70, -12, 87,
-// MZ2_WIDOW_BLASTER_SWEEP9			164
-	67, -20, 90,
-// MZ2_WIDOW_BLASTER_100			165
-	-20, 76, 90,
-// MZ2_WIDOW_BLASTER_90				166
-	-8, 74, 90,
-// MZ2_WIDOW_BLASTER_80				167
-	0, 72, 90,
-// MZ2_WIDOW_BLASTER_70				168		d06
-	10, 71, 89,
-// MZ2_WIDOW_BLASTER_60				169		d07
-	23, 70, 87,
-// MZ2_WIDOW_BLASTER_50				170		d08
-	32, 64, 85,
-// MZ2_WIDOW_BLASTER_40				171
-	40, 58, 84,
-// MZ2_WIDOW_BLASTER_30				172		d10
-	48, 50, 83,
-// MZ2_WIDOW_BLASTER_20				173
-	54, 42, 82,
-// MZ2_WIDOW_BLASTER_10				174		d12
-	56, 34, 82,
-// MZ2_WIDOW_BLASTER_0				175
-	58, 26, 82,
-// MZ2_WIDOW_BLASTER_10L			176		d14
-	60, 16, 82,
-// MZ2_WIDOW_BLASTER_20L			177
-	59, 6, 81,
-// MZ2_WIDOW_BLASTER_30L			178		d16
-	58, -2, 80,
-// MZ2_WIDOW_BLASTER_40L			179
-	57, -10, 79,
-// MZ2_WIDOW_BLASTER_50L			180		d18
-	54, -18, 78,
-// MZ2_WIDOW_BLASTER_60L			181
-	42, -32, 80,
-// MZ2_WIDOW_BLASTER_70L			182		d20
-	36, -40, 78,
-// MZ2_WIDOW_RUN_1					183
-	68.4, 10.88, 82.08,
-// MZ2_WIDOW_RUN_2					184
-	68.51, 8.64, 85.14,
-// MZ2_WIDOW_RUN_3					185
-	68.66, 6.38, 88.78,
-// MZ2_WIDOW_RUN_4					186
-	68.73, 5.1, 84.47,
-// MZ2_WIDOW_RUN_5					187
-	68.82, 4.79, 80.52,
-// MZ2_WIDOW_RUN_6					188
-	68.77, 6.11, 85.37,
-// MZ2_WIDOW_RUN_7					189
-	68.67, 7.99, 90.24,
-// MZ2_WIDOW_RUN_8					190
-	68.55, 9.54, 87.36,
-// MZ2_CARRIER_ROCKET_1				191
-	0, 0, -5,
-// MZ2_CARRIER_ROCKET_2				192
-	0, 0, -5,
-// MZ2_CARRIER_ROCKET_3				193
-	0, 0, -5,
-// MZ2_CARRIER_ROCKET_4				194
-	0, 0, -5,
-// MZ2_WIDOW2_BEAMER_1				195
-//	72.13, -17.63, 93.77,
-	69.00, -17.63, 93.77,
-// MZ2_WIDOW2_BEAMER_2				196
-//	71.46, -17.08, 89.82,
-	69.00, -17.08, 89.82,
-// MZ2_WIDOW2_BEAMER_3				197
-//	71.47, -18.40, 90.70,
-	69.00, -18.40, 90.70,
-// MZ2_WIDOW2_BEAMER_4				198
-//	71.96, -18.34, 94.32,
-	69.00, -18.34, 94.32,
-// MZ2_WIDOW2_BEAMER_5				199
-//	72.25, -18.30, 97.98,
-	69.00, -18.30, 97.98,
-// MZ2_WIDOW2_BEAM_SWEEP_1			200
-	45.04, -59.02, 92.24,
-// MZ2_WIDOW2_BEAM_SWEEP_2			201
-	50.68, -54.70, 91.96,
-// MZ2_WIDOW2_BEAM_SWEEP_3			202
-	56.57, -47.72, 91.65,
-// MZ2_WIDOW2_BEAM_SWEEP_4			203
-	61.75, -38.75, 91.38,
-// MZ2_WIDOW2_BEAM_SWEEP_5			204
-	65.55, -28.76, 91.24,
-// MZ2_WIDOW2_BEAM_SWEEP_6			205
-	67.79, -18.90, 91.22,
-// MZ2_WIDOW2_BEAM_SWEEP_7			206
-	68.60, -9.52, 91.23,
-// MZ2_WIDOW2_BEAM_SWEEP_8			207
-	68.08, 0.18, 91.32,
-// MZ2_WIDOW2_BEAM_SWEEP_9			208
-	66.14, 9.79, 91.44,
-// MZ2_WIDOW2_BEAM_SWEEP_10			209
-	62.77, 18.91, 91.65,
-// MZ2_WIDOW2_BEAM_SWEEP_11			210
-	58.29, 27.11, 92.00,
-
-// end of table
-	0.0, 0.0, 0.0
-};
 /* ============ end source: game/m_flash.c ============ */
 
 /* campaign game logic (formerly gamex86.dll) */
@@ -101218,84 +100944,6 @@ void *Sys_GetGameAPI (void *parms)
 {
 	return GetGameAPI ((game_import_t *)parms);
 }
-
-#if 0	// ---- original gamex86.dll dynamic loading ----
-void *Sys_GetGameAPI_old (void *parms)
-{
-	void	*(*GetGameAPI) (void *);
-	char	name[MAX_OSPATH];
-	char	*path;
-	char	cwd[MAX_OSPATH];
-#if defined _M_IX86
-	const char *gamename = "gamex86.dll";
-
-#ifdef NDEBUG
-	const char *debugdir = "release";
-#else
-	const char *debugdir = "debug";
-#endif
-
-#elif defined _M_ALPHA
-	const char *gamename = "gameaxp.dll";
-
-#ifdef NDEBUG
-	const char *debugdir = "releaseaxp";
-#else
-	const char *debugdir = "debugaxp";
-#endif
-
-#endif
-
-	if (game_library)
-		Com_Error (ERR_FATAL, "Sys_GetGameAPI without Sys_UnloadingGame");
-
-	// check the current debug directory first for development purposes
-	_getcwd (cwd, sizeof(cwd));
-	Com_sprintf (name, sizeof(name), "%s/%s/%s", cwd, debugdir, gamename);
-	game_library = LoadLibrary ( name );
-	if (game_library)
-	{
-		Com_DPrintf ("LoadLibrary (%s)\n", name);
-	}
-	else
-	{
-		// check the current directory for other development purposes
-		Com_sprintf (name, sizeof(name), "%s/%s", cwd, gamename);
-		game_library = LoadLibrary ( name );
-		if (game_library)
-		{
-			Com_DPrintf ("LoadLibrary (%s)\n", name);
-		}
-		else
-		{
-			// now run through the search paths
-			path = NULL;
-			while (1)
-			{
-				path = FS_NextPath (path);
-				if (!path)
-					return NULL;		// couldn't find one anywhere
-				Com_sprintf (name, sizeof(name), "%s/%s", path, gamename);
-				game_library = LoadLibrary (name);
-				if (game_library)
-				{
-					Com_DPrintf ("LoadLibrary (%s)\n",name);
-					break;
-				}
-			}
-		}
-	}
-
-	GetGameAPI = (void *)GetProcAddress (game_library, "GetGameAPI");
-	if (!GetGameAPI)
-	{
-		Sys_UnloadGame ();
-		return NULL;
-	}
-
-	return GetGameAPI (parms);
-}
-#endif	// original gamex86.dll dynamic loading
 
 //=======================================================================
 
