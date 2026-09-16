@@ -465,6 +465,67 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 }
 
 //
+// SECTION Memory
+//
+
+#define	Z_MAGIC 0x1d1d
+
+typedef struct zhead_s {
+	struct zhead_s* prev;
+	struct zhead_s* next;
+	short	magic;
+	short	tag;	// for group free
+	int		size;
+} zhead_t;
+
+static zhead_t z_chain;
+static int z_count;
+static int z_bytes;
+
+static void Z_Free(void *ptr) {
+	zhead_t* z = ((zhead_t*)ptr) - 1;
+	assert(z->magic == Z_MAGIC);
+
+	z->prev->next = z->next;
+	z->next->prev = z->prev;
+
+	z_count--;
+	z_bytes -= z->size;
+	free(z);
+}
+
+static void Z_FreeTags(int tag) {
+	for (zhead_t* z = z_chain.next; z != &z_chain;) {
+		zhead_t* next = z->next;
+		if (z->tag == tag) {
+			Z_Free((void *)(z+1));
+		}
+		z = next;
+	}
+}
+
+static void* Z_TagMalloc(int size, int tag) {
+	size = size + sizeof(zhead_t);
+	zhead_t* z = malloc(size);
+	assert(z);
+	memset (z, 0, size);
+	z_count++;
+	z_bytes += size;
+	z->magic = Z_MAGIC;
+	z->tag = tag;
+	z->size = size;
+
+	z->next = z_chain.next;
+	z->prev = &z_chain;
+	z_chain.next->prev = z;
+	z_chain.next = z;
+
+	return (void *)(z+1);
+}
+
+static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
+
+//
 // SECTION Sizebuf
 //
 
@@ -522,6 +583,13 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 //
 // SECTION Strings
 //
+
+static char* CopyString(char *in) {
+	int in_len = strlen(in);
+	char* out = Z_Malloc(in_len + 1);
+	strcpy(out, in);
+	return out;
+}
 
 static int Q_strcasecmp(char *s1, char *s2) {
 	int n = 99999;
@@ -1141,6 +1209,47 @@ static qboolean Info_Validate(char *s) {
 		return false;
 	}
 	return true;
+}
+
+static void Info_Print(char *s) {
+	if (*s == '\\') {
+		s++;
+	}
+
+	char key[512];
+	char value[512];
+	while (*s) {
+		char* o = key;
+		while (*s && *s != '\\') {
+			*o++ = *s++;
+		}
+
+		int l = o - key;
+		if (l < 20) {
+			memset (o, ' ', 20 - l);
+			key[20] = 0;
+		} else {
+			*o = 0;
+		}
+		Com_Printf ("%s", key);
+
+		if (!*s) {
+			Com_Printf ("MISSING VALUE\n");
+			return;
+		}
+
+		o = value;
+		s++;
+		while (*s && *s != '\\') {
+			*o++ = *s++;
+		}
+		*o = 0;
+
+		if (*s) {
+			s++;
+		}
+		Com_Printf ("%s\n", value);
+	}
 }
 
 //
@@ -3148,19 +3257,6 @@ static int vidref_val;
 // SECTION ???
 //
 
-//============================================================================
-
-extern	qboolean		bigendien;
-
-extern	short	LittleShort (short l);
-extern	int		BigLong (int l);
-extern	int		LittleLong (int l);
-extern	float	BigFloat (float l);
-extern	float	LittleFloat (float l);
-
-//============================================================================
-
-
 int	COM_Argc (void);
 char *COM_Argv (int arg);	// range and null checked
 void COM_ClearArgv (int arg);
@@ -3170,11 +3266,7 @@ void COM_AddParm (char *parm);
 void COM_Init (void);
 void COM_InitArgv (int argc, char **argv);
 
-char *CopyString (char *in);
-
 //============================================================================
-
-void Info_Print (char *s);
 
 
 /* crc.h */
@@ -4171,11 +4263,6 @@ extern	int		time_after_game;
 extern	int		time_before_ref;
 extern	int		time_after_ref;
 
-void Z_Free (void *ptr);
-void *Z_Malloc (int size);			// returns 0 filled memory
-void *Z_TagMalloc (int size, int tag);
-void Z_FreeTags (int tag);
-
 void Qcommon_Init (int argc, char **argv);
 void Qcommon_Frame (int msec);
 void Qcommon_Shutdown (void);
@@ -5134,8 +5221,6 @@ void	G_FreeEdict (edict_t *e);
 
 void	G_TouchTriggers (edict_t *ent);
 void	G_TouchSolids (edict_t *ent);
-
-char	*G_CopyString (char *in);
 
 float	*tv (float x, float y, float z);
 char	*vtos (vec3_t v);
@@ -8672,59 +8757,6 @@ int	memsearch (byte *start, int count, int search)
 }
 
 
-char *CopyString (char *in)
-{
-	char	*out;
-
-	out = Z_Malloc (strlen(in)+1);
-	strcpy (out, in);
-	return out;
-}
-
-
-
-void Info_Print (char *s)
-{
-	char	key[512];
-	char	value[512];
-	char	*o;
-	int		l;
-
-	if (*s == '\\')
-		s++;
-	while (*s)
-	{
-		o = key;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-
-		l = o - key;
-		if (l < 20)
-		{
-			memset (o, ' ', 20-l);
-			key[20] = 0;
-		}
-		else
-			*o = 0;
-		Com_Printf ("%s", key);
-
-		if (!*s)
-		{
-			Com_Printf ("MISSING VALUE\n");
-			return;
-		}
-
-		o = value;
-		s++;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-		*o = 0;
-
-		if (*s)
-			s++;
-		Com_Printf ("%s\n", value);
-	}
-}
 
 
 /*
@@ -8736,108 +8768,6 @@ just cleared malloc with counters now...
 
 ==============================================================================
 */
-
-#define	Z_MAGIC		0x1d1d
-
-
-typedef struct zhead_s
-{
-	struct zhead_s	*prev, *next;
-	short	magic;
-	short	tag;			// for group free
-	int		size;
-} zhead_t;
-
-zhead_t		z_chain;
-int		z_count, z_bytes;
-
-/*
-========================
-Z_Free
-========================
-*/
-void Z_Free (void *ptr)
-{
-	zhead_t	*z;
-
-	z = ((zhead_t *)ptr) - 1;
-
-	if (z->magic != Z_MAGIC)
-		Com_Error (ERR_FATAL, "Z_Free: bad magic");
-
-	z->prev->next = z->next;
-	z->next->prev = z->prev;
-
-	z_count--;
-	z_bytes -= z->size;
-	free (z);
-}
-
-
-/*
-========================
-Z_Stats_f
-========================
-*/
-void Z_Stats_f (void)
-{
-	Com_Printf ("%i bytes in %i blocks\n", z_bytes, z_count);
-}
-
-/*
-========================
-Z_FreeTags
-========================
-*/
-void Z_FreeTags (int tag)
-{
-	zhead_t	*z, *next;
-
-	for (z=z_chain.next ; z != &z_chain ; z=next)
-	{
-		next = z->next;
-		if (z->tag == tag)
-			Z_Free ((void *)(z+1));
-	}
-}
-
-/*
-========================
-Z_TagMalloc
-========================
-*/
-void *Z_TagMalloc (int size, int tag)
-{
-	zhead_t	*z;
-
-	size = size + sizeof(zhead_t);
-	z = malloc(size);
-	if (!z)
-		Com_Error (ERR_FATAL, "Z_Malloc: failed on allocation of %i bytes",size);
-	memset (z, 0, size);
-	z_count++;
-	z_bytes += size;
-	z->magic = Z_MAGIC;
-	z->tag = tag;
-	z->size = size;
-
-	z->next = z_chain.next;
-	z->prev = &z_chain;
-	z_chain.next->prev = z;
-	z_chain.next = z;
-
-	return (void *)(z+1);
-}
-
-/*
-========================
-Z_Malloc
-========================
-*/
-void *Z_Malloc (int size)
-{
-	return Z_TagMalloc (size, 0);
-}
 
 
 //============================================================================
@@ -9080,7 +9010,6 @@ void Qcommon_Init (int argc, char **argv)
 	//
 	// init commands and vars
 	//
-    Cmd_AddCommand ("z_stats", Z_Stats_f);
     Cmd_AddCommand ("error", Com_Error_f);
 
 	host_speeds = Cvar_Get ("host_speeds", "0", 0);
@@ -57034,16 +56963,6 @@ void vectoangles (vec3_t value1, vec3_t angles)
 	angles[YAW] = yaw;
 	angles[ROLL] = 0;
 }
-
-char *G_CopyString (char *in)
-{
-	char	*out;
-
-	out = gi.TagMalloc (strlen(in)+1, TAG_LEVEL);
-	strcpy (out, in);
-	return out;
-}
-
 
 void G_InitEdict (edict_t *e)
 {
