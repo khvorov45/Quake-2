@@ -894,6 +894,7 @@ static void Con_Print(char *txt) {
 //
 
 #define	MAXPRINTMSG	4096
+#define MAX_NUM_ARGVS 50
 
 // nothing outside the Cvar_*() functions should modify these fields!
 typedef struct cvar_s {
@@ -906,13 +907,16 @@ typedef struct cvar_s {
 	struct cvar_s 	*next;
 } cvar_t;
 
-static int rd_target;
-static char* rd_buffer;
-static int rd_buffersize;
-static void	(*rd_flush)(int target, char *buffer);
+static int		rd_target;
+static char*	rd_buffer;
+static int		rd_buffersize;
+static void		(*rd_flush)(int target, char *buffer);
 
-static cvar_t* logfile_active; // 1 = buffer log, 2 = flush after each print
-static FILE* logfile;
+static cvar_t*	logfile_active; // 1 = buffer log, 2 = flush after each print
+static FILE*	logfile;
+
+static int		com_argc;
+static char*	com_argv[MAX_NUM_ARGVS+1];
 
 static void COM_StripExtension(char* in, char* out) {
 	while (*in && *in != '.') {
@@ -1057,6 +1061,32 @@ static int paged_total;
 static void Com_PageInMemory(byte *buffer, int size) {
 	for (int i=size-1 ; i>0 ; i-=4096) {
 		paged_total += buffer[i];
+	}
+}
+
+static char* COM_Argv(int arg) {
+	if (arg < 0 || arg >= com_argc || !com_argv[arg]) {
+		return "";
+	}
+	return com_argv[arg];
+}
+
+static void COM_ClearArgv(int arg) {
+	if (arg < 0 || arg >= com_argc || !com_argv[arg]) {
+		return;
+	}
+	com_argv[arg] = "";
+}
+
+static void COM_InitArgv(int argc, char **argv) {
+	assert(argc <= MAX_NUM_ARGVS);
+	com_argc = argc;
+	for (int i = 0; i < argc; i++) {
+		if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
+			com_argv[i] = "";
+		} else {
+			com_argv[i] = argv[i];
+		}
 	}
 }
 
@@ -3256,15 +3286,6 @@ static int vidref_val;
 //
 // SECTION ???
 //
-
-int	COM_Argc (void);
-char *COM_Argv (int arg);	// range and null checked
-void COM_ClearArgv (int arg);
-int COM_CheckParm (char *parm);
-void COM_AddParm (char *parm);
-
-void COM_Init (void);
-void COM_InitArgv (int argc, char **argv);
 
 //============================================================================
 
@@ -6042,7 +6063,7 @@ void Cbuf_AddEarlyCommands (qboolean clear)
 	int		i;
 	char	*s;
 
-	for (i=0 ; i<COM_Argc() ; i++)
+	for (i=0 ; i < com_argc ; i++)
 	{
 		s = COM_Argv(i);
 		if (strcmp (s, "+set"))
@@ -6080,7 +6101,7 @@ qboolean Cbuf_AddLateCommands (void)
 
 // build the combined string to parse from
 	s = 0;
-	argc = COM_Argc();
+	argc = com_argc;
 	for (i=1 ; i<argc ; i++)
 	{
 		s += strlen (COM_Argv(i)) + 1;
@@ -8463,11 +8484,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* already inlined above: qcommon/qcommon.h */
 #include <setjmp.h>
 
-#define MAX_NUM_ARGVS	50
-
-
-int		com_argc;
-char	*com_argv[MAX_NUM_ARGVS+1];
 
 int		realtime;
 
@@ -8664,83 +8680,6 @@ Handles byte ordering and avoids alignment errors
 //===========================================================================
 
 //============================================================================
-
-
-/*
-================
-COM_CheckParm
-
-Returns the position (1 to argc-1) in the program's argument list
-where the given parameter apears, or 0 if not present
-================
-*/
-int COM_CheckParm (char *parm)
-{
-	int		i;
-
-	for (i=1 ; i<com_argc ; i++)
-	{
-		if (!strcmp (parm,com_argv[i]))
-			return i;
-	}
-
-	return 0;
-}
-
-int COM_Argc (void)
-{
-	return com_argc;
-}
-
-char *COM_Argv (int arg)
-{
-	if (arg < 0 || arg >= com_argc || !com_argv[arg])
-		return "";
-	return com_argv[arg];
-}
-
-void COM_ClearArgv (int arg)
-{
-	if (arg < 0 || arg >= com_argc || !com_argv[arg])
-		return;
-	com_argv[arg] = "";
-}
-
-
-/*
-================
-COM_InitArgv
-================
-*/
-void COM_InitArgv (int argc, char **argv)
-{
-	int		i;
-
-	if (argc > MAX_NUM_ARGVS)
-		Com_Error (ERR_FATAL, "argc > MAX_NUM_ARGVS");
-	com_argc = argc;
-	for (i=0 ; i<argc ; i++)
-	{
-		if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS )
-			com_argv[i] = "";
-		else
-			com_argv[i] = argv[i];
-	}
-}
-
-/*
-================
-COM_AddParm
-
-Adds the given string at the end of the current argument list
-================
-*/
-void COM_AddParm (char *parm)
-{
-	if (com_argc == MAX_NUM_ARGVS)
-		Com_Error (ERR_FATAL, "COM_AddParm: MAX_NUM)ARGS");
-	com_argv[com_argc++] = parm;
-}
 
 
 
