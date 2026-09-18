@@ -123,16 +123,6 @@ typedef	int	fixed16_t;
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
-// plane_t structure
-// !!! if this is changed, it must be changed in asm code too !!!
-typedef struct cplane_s {
-	vec3_t	normal;
-	float	dist;
-	byte	type;		// for fast side tests
-	byte	signbits;	// signx + (signy<<1) + (signz<<1)
-	byte	pad[2];
-} cplane_t;
-
 vec3_t vec3_origin = {0,0,0};
 
 #define	nanmask (255<<23)
@@ -249,73 +239,6 @@ static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 		up[1] = (cr*sp*sy+-sr*cy);
 		up[2] = cr*cp;
 	}
-}
-
-// Returns 1, 2, or 1 + 2
-static int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p) {
-
-	// fast axial cases
-	if (p->type < 3) {
-		if (p->dist <= emins[p->type]) {
-			return 1;
-		}
-		if (p->dist >= emaxs[p->type]) {
-			return 2;
-		}
-		return 3;
-	}
-
-	// general case
-	float dist1 = 0;
-	float dist2 = 0;
-	switch (p->signbits) {
-	case 0:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 1:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 2:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 3:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 4:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 5:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 6:
-		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	case 7:
-		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	int sides = 0;
-	if (dist1 >= p->dist) {
-		sides = 1;
-	}
-	if (dist2 < p->dist) {
-		sides |= 2;
-	}
-
-	assert(sides != 0);
-	return sides;
 }
 
 static float anglemod(float a) {
@@ -3414,215 +3337,9 @@ typedef struct {
 } darea_t;
 
 //
-// SECTION Mess
+// SECTION MZ2 (monster muzzle flashes)
 //
 
-//
-// per-level limits
-//
-#define	MAX_CLIENTS			256		// absolute limit
-#define	MAX_LIGHTSTYLES		256
-#define	MAX_MODELS			256		// these are sent over the net as bytes
-#define	MAX_SOUNDS			256		// so they cannot be blindly increased
-#define	MAX_IMAGES			256
-#define	MAX_ITEMS			256
-#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
-
-// gi.BoxEdicts() can return a list of either solid or trigger entities
-// FIXME: eliminate AREA_ distinction?
-#define	AREA_SOLID		1
-#define	AREA_TRIGGERS	2
-
-typedef struct cmodel_s {
-	vec3_t	mins, maxs;
-	vec3_t	origin;		// for sounds or lights
-	int		headnode;
-} cmodel_t;
-
-typedef struct csurface_s {
-	char	name[16];
-	int		flags;
-	int		value;
-} csurface_t;
-
-// used internally due to name len probs //ZOID
-typedef struct mapsurface_s {
-	csurface_t	c;
-	char		rname[32];
-} mapsurface_t;
-
-// a trace is returned when a box is swept through the world
-typedef struct {
-	qboolean		allsolid;	// if true, plane is not valid
-	qboolean		startsolid;	// if true, the initial point was in a solid area
-	float			fraction;	// time completed, 1.0 = didn't hit anything
-	vec3_t			endpos;		// final position
-	cplane_t		plane;		// surface normal at impact
-	csurface_t		*surface;	// surface hit
-	int				contents;	// contents on other side of surface hit
-	struct edict_s	*ent;		// not set by CM_*() functions
-} trace_t;
-
-// pmove_state_t is the information necessary for client side movement
-// prediction
-typedef enum {
-	// can accelerate and turn
-	PM_NORMAL,
-	PM_SPECTATOR,
-	// no acceleration or turning
-	PM_DEAD,
-	PM_GIB,		// different bounding box
-	PM_FREEZE
-} pmtype_t;
-
-// pmove->pm_flags
-#define	PMF_DUCKED			1
-#define	PMF_JUMP_HELD		2
-#define	PMF_ON_GROUND		4
-#define	PMF_TIME_WATERJUMP	8	// pm_time is waterjump
-#define	PMF_TIME_LAND		16	// pm_time is time before rejump
-#define	PMF_TIME_TELEPORT	32	// pm_time is non-moving time
-#define PMF_NO_PREDICTION	64	// temporarily disables prediction (used for grappling hook)
-
-// this structure needs to be communicated bit-accurate
-// from the server to the client to guarantee that
-// prediction stays in sync, so no floats are used.
-// if any part of the game code modifies this struct, it
-// will result in a prediction error of some degree.
-typedef struct {
-	pmtype_t	pm_type;
-	short		origin[3];			// 12.3
-	short		velocity[3];		// 12.3
-	byte		pm_flags;			// ducked, jump_held, etc
-	byte		pm_time;			// each unit = 8 ms
-	short		gravity;
-	short		delta_angles[3];	// add to command angles to get view direction changed by spawns, rotating objects, and teleporters
-} pmove_state_t;
-
-// button bits
-#define	BUTTON_ATTACK		1
-#define	BUTTON_USE			2
-#define	BUTTON_ANY			128			// any key whatsoever
-
-#define	MAXTOUCH	32
-typedef struct {
-	// state (in / out)
-	pmove_state_t	s;
-
-	// command (in)
-	usercmd_t		cmd;
-	qboolean		snapinitial;	// if s has been changed outside pmove
-
-	// results (out)
-	int				numtouch;
-	struct edict_s	*touchents[MAXTOUCH];
-
-	vec3_t	viewangles;	// clamped
-	float	viewheight;
-
-	vec3_t	mins, maxs;	// bounding box size
-
-	struct edict_s	*groundentity;
-	int				watertype;
-	int				waterlevel;
-
-	// callbacks to test the world
-	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
-	int		(*pointcontents) (vec3_t point);
-} pmove_t;
-
-// entity_state_t->effects
-// Effects are things handled on the client side (lights, particles, frame animations)
-// that happen constantly on the given entity.
-// An entity that has effects will be sent to the client
-// even if it has a zero index model.
-#define	EF_ROTATE			0x00000001		// rotate (bonus items)
-#define	EF_GIB				0x00000002		// leave a trail
-#define	EF_BLASTER			0x00000008		// redlight + trail
-#define	EF_ROCKET			0x00000010		// redlight + trail
-#define	EF_GRENADE			0x00000020
-#define	EF_HYPERBLASTER		0x00000040
-#define	EF_BFG				0x00000080
-#define EF_COLOR_SHELL		0x00000100
-#define EF_POWERSCREEN		0x00000200
-#define	EF_ANIM01			0x00000400		// automatically cycle between frames 0 and 1 at 2 hz
-#define	EF_ANIM23			0x00000800		// automatically cycle between frames 2 and 3 at 2 hz
-#define EF_ANIM_ALL			0x00001000		// automatically cycle through all frames at 2hz
-#define EF_ANIM_ALLFAST		0x00002000		// automatically cycle through all frames at 10hz
-#define	EF_FLIES			0x00004000
-#define	EF_QUAD				0x00008000
-#define	EF_PENT				0x00010000
-#define	EF_TELEPORTER		0x00020000		// particle fountain
-#define EF_FLAG1			0x00040000
-#define EF_FLAG2			0x00080000
-
-// RAFAEL
-#define EF_IONRIPPER		0x00100000
-#define EF_GREENGIB			0x00200000
-#define	EF_BLUEHYPERBLASTER 0x00400000
-#define EF_SPINNINGLIGHTS	0x00800000
-#define EF_PLASMA			0x01000000
-#define EF_TRAP				0x02000000
-
-// ROGUE
-#define EF_TRACKER			0x04000000
-#define	EF_DOUBLE			0x08000000
-#define	EF_SPHERETRANS		0x10000000
-#define EF_TAGTRAIL			0x20000000
-#define EF_HALF_DAMAGE		0x40000000
-#define EF_TRACKERTRAIL		0x80000000
-
-// ROGUE
-#define RF_IR_VISIBLE		0x00008000		// 32768
-#define	RF_SHELL_DOUBLE		0x00010000		// 65536
-#define	RF_SHELL_HALF_DAM	0x00020000
-#define RF_USE_DISGUISE		0x00040000
-
-// player_state_t->refdef flags
-#define	RDF_UNDERWATER		1		// warp the screen as apropriate
-#define RDF_NOWORLDMODEL	2		// used for player configuration screen
-
-// ROGUE
-#define	RDF_IRGOGGLES		4
-#define RDF_UVGOGGLES		8
-
-// muzzle flashes / player effects
-#define	MZ_BLASTER			0
-#define MZ_MACHINEGUN		1
-#define	MZ_SHOTGUN			2
-#define	MZ_CHAINGUN1		3
-#define	MZ_CHAINGUN2		4
-#define	MZ_CHAINGUN3		5
-#define	MZ_RAILGUN			6
-#define	MZ_ROCKET			7
-#define	MZ_GRENADE			8
-#define	MZ_LOGIN			9
-#define	MZ_LOGOUT			10
-#define	MZ_RESPAWN			11
-#define	MZ_BFG				12
-#define	MZ_SSHOTGUN			13
-#define	MZ_HYPERBLASTER		14
-#define	MZ_ITEMRESPAWN		15
-
-// RAFAEL
-#define MZ_IONRIPPER		16
-#define MZ_BLUEHYPERBLASTER 17
-#define MZ_PHALANX			18
-#define MZ_SILENCED			128		// bit flag ORed with one of the above numbers
-
-// ROGUE
-#define MZ_ETF_RIFLE		30
-#define MZ_UNUSED			31
-#define MZ_SHOTGUN2			32
-#define MZ_HEATBEAM			33
-#define MZ_BLASTER2			34
-#define	MZ_TRACKER			35
-#define	MZ_NUKE1			36
-#define	MZ_NUKE2			37
-#define	MZ_NUKE4			38
-#define	MZ_NUKE8			39
-
-// monster muzzle flashes
 #define MZ2_TANK_BLASTER_1				1
 #define MZ2_TANK_BLASTER_2				2
 #define MZ2_TANK_BLASTER_3				3
@@ -3844,10 +3561,7 @@ typedef struct {
 #define	MZ2_WIDOW2_BEAM_SWEEP_10		209
 #define	MZ2_WIDOW2_BEAM_SWEEP_11		210
 
-// this file is included in both the game dll and quake2,
-// the game needs it to source shot locations, the client
-// needs it to position muzzle flashes
-static vec3_t monster_flash_offset [] = {
+static vec3_t monster_flash_offset[] = {
 	// flash 0 is not used
 	0.0, 0.0, 0.0,
 
@@ -4304,6 +4018,341 @@ static vec3_t monster_flash_offset [] = {
 	0.0, 0.0, 0.0
 };
 
+//
+// SECTION CM (collision model)
+//
+
+typedef struct cmodel_s {
+	vec3_t	mins, maxs;
+	vec3_t	origin; // for sounds or lights
+	int		headnode;
+} cmodel_t;
+
+typedef struct csurface_s {
+	char	name[16];
+	int		flags;
+	int		value;
+} csurface_t;
+
+// !!! if this is changed, it must be changed in asm code too !!!
+typedef struct cplane_s {
+	vec3_t	normal;
+	float	dist;
+	byte	type;		// for fast side tests
+	byte	signbits;	// signx + (signy<<1) + (signz<<1)
+	byte	pad[2];
+} cplane_t;
+
+// a trace is returned when a box is swept through the world
+typedef struct {
+	qboolean		allsolid;	// if true, plane is not valid
+	qboolean		startsolid;	// if true, the initial point was in a solid area
+	float			fraction;	// time completed, 1.0 = didn't hit anything
+	vec3_t			endpos;		// final position
+	cplane_t		plane;		// surface normal at impact
+	csurface_t		*surface;	// surface hit
+	int				contents;	// contents on other side of surface hit
+	struct edict_s	*ent;		// not set by CM_*() functions
+} trace_t;
+
+// Returns 1, 2, or 1 + 2
+static int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
+
+	// fast axial cases
+	if (p->type < 3) {
+		if (p->dist <= emins[p->type]) {
+			return 1;
+		}
+		if (p->dist >= emaxs[p->type]) {
+			return 2;
+		}
+		return 3;
+	}
+
+	// general case
+	float dist1 = 0;
+	float dist2 = 0;
+	switch (p->signbits) {
+	case 0:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 1:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 2:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 3:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 4:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 5:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 6:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	case 7:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	int sides = 0;
+	if (dist1 >= p->dist) {
+		sides = 1;
+	}
+	if (dist2 < p->dist) {
+		sides |= 2;
+	}
+
+	assert(sides != 0);
+	return sides;
+}
+
+cmodel_t	*CM_LoadMap (char *name, qboolean clientload, unsigned *checksum);
+cmodel_t	*CM_InlineModel (char *name);	// *1, *2, etc
+
+int			CM_NumClusters (void);
+int			CM_NumInlineModels (void);
+char		*CM_EntityString (void);
+
+// creates a clipping hull for an arbitrary box
+int			CM_HeadnodeForBox (vec3_t mins, vec3_t maxs);
+
+
+// returns an ORed contents mask
+int			CM_PointContents (vec3_t p, int headnode);
+int			CM_TransformedPointContents (vec3_t p, int headnode, vec3_t origin, vec3_t angles);
+
+trace_t		CM_BoxTrace (vec3_t start, vec3_t end,
+						  vec3_t mins, vec3_t maxs,
+						  int headnode, int brushmask);
+trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
+						  vec3_t mins, vec3_t maxs,
+						  int headnode, int brushmask,
+						  vec3_t origin, vec3_t angles);
+
+byte		*CM_ClusterPVS (int cluster);
+byte		*CM_ClusterPHS (int cluster);
+
+int			CM_PointLeafnum (vec3_t p);
+
+// call with topnode set to the headnode, returns with topnode
+// set to the first node that splits the box
+int			CM_BoxLeafnums (vec3_t mins, vec3_t maxs, int *list,
+							int listsize, int *topnode);
+
+int			CM_LeafContents (int leafnum);
+int			CM_LeafCluster (int leafnum);
+int			CM_LeafArea (int leafnum);
+
+void		CM_SetAreaPortalState (int portalnum, qboolean open);
+qboolean	CM_AreasConnected (int area1, int area2);
+
+int			CM_WriteAreaBits (byte *buffer, int area);
+qboolean	CM_HeadnodeVisible (int headnode, byte *visbits);
+
+void		CM_WritePortalState (FILE *f);
+void		CM_ReadPortalState (FILE *f);
+
+//
+// SECTION Mess
+//
+
+//
+// per-level limits
+//
+#define	MAX_CLIENTS			256		// absolute limit
+#define	MAX_LIGHTSTYLES		256
+#define	MAX_MODELS			256		// these are sent over the net as bytes
+#define	MAX_SOUNDS			256		// so they cannot be blindly increased
+#define	MAX_IMAGES			256
+#define	MAX_ITEMS			256
+#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
+
+// gi.BoxEdicts() can return a list of either solid or trigger entities
+// FIXME: eliminate AREA_ distinction?
+#define	AREA_SOLID		1
+#define	AREA_TRIGGERS	2
+
+// used internally due to name len probs //ZOID
+typedef struct mapsurface_s {
+	csurface_t	c;
+	char		rname[32];
+} mapsurface_t;
+
+// pmove_state_t is the information necessary for client side movement
+// prediction
+typedef enum {
+	// can accelerate and turn
+	PM_NORMAL,
+	PM_SPECTATOR,
+	// no acceleration or turning
+	PM_DEAD,
+	PM_GIB,		// different bounding box
+	PM_FREEZE
+} pmtype_t;
+
+// pmove->pm_flags
+#define	PMF_DUCKED			1
+#define	PMF_JUMP_HELD		2
+#define	PMF_ON_GROUND		4
+#define	PMF_TIME_WATERJUMP	8	// pm_time is waterjump
+#define	PMF_TIME_LAND		16	// pm_time is time before rejump
+#define	PMF_TIME_TELEPORT	32	// pm_time is non-moving time
+#define PMF_NO_PREDICTION	64	// temporarily disables prediction (used for grappling hook)
+
+// this structure needs to be communicated bit-accurate
+// from the server to the client to guarantee that
+// prediction stays in sync, so no floats are used.
+// if any part of the game code modifies this struct, it
+// will result in a prediction error of some degree.
+typedef struct {
+	pmtype_t	pm_type;
+	short		origin[3];			// 12.3
+	short		velocity[3];		// 12.3
+	byte		pm_flags;			// ducked, jump_held, etc
+	byte		pm_time;			// each unit = 8 ms
+	short		gravity;
+	short		delta_angles[3];	// add to command angles to get view direction changed by spawns, rotating objects, and teleporters
+} pmove_state_t;
+
+// button bits
+#define	BUTTON_ATTACK		1
+#define	BUTTON_USE			2
+#define	BUTTON_ANY			128			// any key whatsoever
+
+#define	MAXTOUCH	32
+typedef struct {
+	// state (in / out)
+	pmove_state_t	s;
+
+	// command (in)
+	usercmd_t		cmd;
+	qboolean		snapinitial;	// if s has been changed outside pmove
+
+	// results (out)
+	int				numtouch;
+	struct edict_s	*touchents[MAXTOUCH];
+
+	vec3_t	viewangles;	// clamped
+	float	viewheight;
+
+	vec3_t	mins, maxs;	// bounding box size
+
+	struct edict_s	*groundentity;
+	int				watertype;
+	int				waterlevel;
+
+	// callbacks to test the world
+	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+	int		(*pointcontents) (vec3_t point);
+} pmove_t;
+
+// entity_state_t->effects
+// Effects are things handled on the client side (lights, particles, frame animations)
+// that happen constantly on the given entity.
+// An entity that has effects will be sent to the client
+// even if it has a zero index model.
+#define	EF_ROTATE			0x00000001		// rotate (bonus items)
+#define	EF_GIB				0x00000002		// leave a trail
+#define	EF_BLASTER			0x00000008		// redlight + trail
+#define	EF_ROCKET			0x00000010		// redlight + trail
+#define	EF_GRENADE			0x00000020
+#define	EF_HYPERBLASTER		0x00000040
+#define	EF_BFG				0x00000080
+#define EF_COLOR_SHELL		0x00000100
+#define EF_POWERSCREEN		0x00000200
+#define	EF_ANIM01			0x00000400		// automatically cycle between frames 0 and 1 at 2 hz
+#define	EF_ANIM23			0x00000800		// automatically cycle between frames 2 and 3 at 2 hz
+#define EF_ANIM_ALL			0x00001000		// automatically cycle through all frames at 2hz
+#define EF_ANIM_ALLFAST		0x00002000		// automatically cycle through all frames at 10hz
+#define	EF_FLIES			0x00004000
+#define	EF_QUAD				0x00008000
+#define	EF_PENT				0x00010000
+#define	EF_TELEPORTER		0x00020000		// particle fountain
+#define EF_FLAG1			0x00040000
+#define EF_FLAG2			0x00080000
+
+// RAFAEL
+#define EF_IONRIPPER		0x00100000
+#define EF_GREENGIB			0x00200000
+#define	EF_BLUEHYPERBLASTER 0x00400000
+#define EF_SPINNINGLIGHTS	0x00800000
+#define EF_PLASMA			0x01000000
+#define EF_TRAP				0x02000000
+
+// ROGUE
+#define EF_TRACKER			0x04000000
+#define	EF_DOUBLE			0x08000000
+#define	EF_SPHERETRANS		0x10000000
+#define EF_TAGTRAIL			0x20000000
+#define EF_HALF_DAMAGE		0x40000000
+#define EF_TRACKERTRAIL		0x80000000
+
+// ROGUE
+#define RF_IR_VISIBLE		0x00008000		// 32768
+#define	RF_SHELL_DOUBLE		0x00010000		// 65536
+#define	RF_SHELL_HALF_DAM	0x00020000
+#define RF_USE_DISGUISE		0x00040000
+
+// player_state_t->refdef flags
+#define	RDF_UNDERWATER		1		// warp the screen as apropriate
+#define RDF_NOWORLDMODEL	2		// used for player configuration screen
+
+// ROGUE
+#define	RDF_IRGOGGLES		4
+#define RDF_UVGOGGLES		8
+
+// muzzle flashes / player effects
+#define	MZ_BLASTER			0
+#define MZ_MACHINEGUN		1
+#define	MZ_SHOTGUN			2
+#define	MZ_CHAINGUN1		3
+#define	MZ_CHAINGUN2		4
+#define	MZ_CHAINGUN3		5
+#define	MZ_RAILGUN			6
+#define	MZ_ROCKET			7
+#define	MZ_GRENADE			8
+#define	MZ_LOGIN			9
+#define	MZ_LOGOUT			10
+#define	MZ_RESPAWN			11
+#define	MZ_BFG				12
+#define	MZ_SSHOTGUN			13
+#define	MZ_HYPERBLASTER		14
+#define	MZ_ITEMRESPAWN		15
+
+// RAFAEL
+#define MZ_IONRIPPER		16
+#define MZ_BLUEHYPERBLASTER 17
+#define MZ_PHALANX			18
+#define MZ_SILENCED			128		// bit flag ORed with one of the above numbers
+
+// ROGUE
+#define MZ_ETF_RIFLE		30
+#define MZ_UNUSED			31
+#define MZ_SHOTGUN2			32
+#define MZ_HEATBEAM			33
+#define MZ_BLASTER2			34
+#define	MZ_TRACKER			35
+#define	MZ_NUKE1			36
+#define	MZ_NUKE2			37
+#define	MZ_NUKE4			38
+#define	MZ_NUKE8			39
+
 
 // temp entity events
 //
@@ -4619,52 +4668,6 @@ enum svc_ops_e {
 //
 // SECTION ???
 //
-
-cmodel_t	*CM_LoadMap (char *name, qboolean clientload, unsigned *checksum);
-cmodel_t	*CM_InlineModel (char *name);	// *1, *2, etc
-
-int			CM_NumClusters (void);
-int			CM_NumInlineModels (void);
-char		*CM_EntityString (void);
-
-// creates a clipping hull for an arbitrary box
-int			CM_HeadnodeForBox (vec3_t mins, vec3_t maxs);
-
-
-// returns an ORed contents mask
-int			CM_PointContents (vec3_t p, int headnode);
-int			CM_TransformedPointContents (vec3_t p, int headnode, vec3_t origin, vec3_t angles);
-
-trace_t		CM_BoxTrace (vec3_t start, vec3_t end,
-						  vec3_t mins, vec3_t maxs,
-						  int headnode, int brushmask);
-trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
-						  vec3_t mins, vec3_t maxs,
-						  int headnode, int brushmask,
-						  vec3_t origin, vec3_t angles);
-
-byte		*CM_ClusterPVS (int cluster);
-byte		*CM_ClusterPHS (int cluster);
-
-int			CM_PointLeafnum (vec3_t p);
-
-// call with topnode set to the headnode, returns with topnode
-// set to the first node that splits the box
-int			CM_BoxLeafnums (vec3_t mins, vec3_t maxs, int *list,
-							int listsize, int *topnode);
-
-int			CM_LeafContents (int leafnum);
-int			CM_LeafCluster (int leafnum);
-int			CM_LeafArea (int leafnum);
-
-void		CM_SetAreaPortalState (int portalnum, qboolean open);
-qboolean	CM_AreasConnected (int area1, int area2);
-
-int			CM_WriteAreaBits (byte *buffer, int area);
-qboolean	CM_HeadnodeVisible (int headnode, byte *visbits);
-
-void		CM_WritePortalState (FILE *f);
-void		CM_ReadPortalState (FILE *f);
 
 /*
 ==============================================================
@@ -7178,7 +7181,7 @@ void CM_BoxLeafnums_r (int nodenum)
 
 		node = &map_nodes[nodenum];
 		plane = node->plane;
-		s = BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
+		s = CM_BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
 		if (s == 1)
 			nodenum = node->children[0];
 		else if (s == 2)
@@ -91483,7 +91486,7 @@ qboolean R_CullBox (vec3_t mins, vec3_t maxs)
 		return false;
 
 	for (i=0 ; i<4 ; i++)
-		if (BoxOnPlaneSide(mins, maxs, &frustum[i]) == 2)
+		if (CM_BoxOnPlaneSide(mins, maxs, &frustum[i]) == 2)
 			return true;
 	return false;
 }
