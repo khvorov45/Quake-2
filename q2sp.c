@@ -40171,8 +40171,8 @@ void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 	if (ch->rightvol > 255)
 		ch->rightvol = 255;
 
-	lscale = snd_scaletable[ ch->leftvol >> 11];
-	rscale = snd_scaletable[ ch->rightvol >> 11];
+	lscale = snd_scaletable[ ch->leftvol >> 3];
+	rscale = snd_scaletable[ ch->rightvol >> 3];
 	sfx = (signed char *)sc->data + ch->pos;
 
 	samp = &paintbuffer[offset];
@@ -98747,7 +98747,7 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	if (s_khz->value == 44)
 		dma.speed = 44100;
-	if (s_khz->value == 22)
+	else if (s_khz->value == 22)
 		dma.speed = 22050;
 	else
 		dma.speed = 11025;
@@ -98845,7 +98845,7 @@ qboolean SNDDMA_InitWav (void)
 
 	if (s_khz->value == 44)
 		dma.speed = 44100;
-	if (s_khz->value == 22)
+	else if (s_khz->value == 22)
 		dma.speed = 22050;
 	else
 		dma.speed = 11025;
