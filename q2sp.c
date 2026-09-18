@@ -1382,12 +1382,6 @@ static void MSG_ReadDeltaUsercmd(sizebuf_t* msg_read, usercmd_t* from, usercmd_t
 	move->lightlevel = MSG_ReadByte(msg_read);
 }
 
-static void MSG_ReadData (sizebuf_t *msg_read, void* data, int len) {
-	for (int i = 0; i < len; i++) {
-		((byte *)data)[i] = MSG_ReadByte(msg_read);
-	}
-}
-
 static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 	int b = MSG_ReadByte(sb);
 	assert(b < NUMVERTEXNORMALS);
@@ -20000,8 +19994,10 @@ void CL_ParseFrame (void)
 		cl.time = cl.frame.servertime - 100;
 
 	// read areabits
-	len = MSG_ReadByte (&net_message);
-	MSG_ReadData (&net_message, &cl.frame.areabits, len);
+	len = MSG_ReadByte(&net_message);
+	for (int ind = 0; ind < len; ind++) {
+		cl.frame.areabits[ind] = MSG_ReadByte(&net_message);
+	}
 
 	// read playerinfo
 	cmd = MSG_ReadByte (&net_message);
