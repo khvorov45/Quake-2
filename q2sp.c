@@ -692,116 +692,6 @@ typedef enum {
 } keydest_t;
 
 //
-// SECTION Network
-//
-
-#define	MAX_MSGLEN 1400
-
-typedef enum {
-	NS_CLIENT,
-	NS_SERVER
-} netsrc_t;
-
-typedef struct {
-	enum {
-		NA_LOOPBACK,
-		NA_BROADCAST,
-		NA_IP,
-		NA_IPX,
-		NA_BROADCAST_IPX
-	} type;
-
-	byte			ip[4];
-	byte			ipx[10];
-	unsigned short	port;
-} netadr_t;
-
-typedef struct {
-	qboolean	fatal_error;
-	netsrc_t	sock;
-	int			dropped;			// between last packet and previous
-	int			last_received;		// for timeouts
-	int			last_sent;			// for retransmits
-	netadr_t	remote_address;
-	int			qport;				// qport value to write when transmitting sequencing variables
-	int			incoming_sequence;
-	int			incoming_acknowledged;
-	int			incoming_reliable_acknowledged;	// single bit
-	int			incoming_reliable_sequence;		// single bit, maintained local
-	int			outgoing_sequence;
-	int			reliable_sequence;			// single bit
-	int			last_reliable_sequence;		// sequence number of last send
-
-	//  reliable staging and holding areas
-	sizebuf_t	message;						// writing buffer to send to server
-	byte		message_buf[MAX_MSGLEN-16];		// leave space for header
-
-	// message is copied to this buffer when it is first transfered
-	int			reliable_length;
-	byte		reliable_buf[MAX_MSGLEN-16];	// unacked reliable message
-} netchan_t;
-
-//
-// SECTION User
-//
-
-// Persistant through an arbitrary number of server connections
-static struct {
-	enum {
-		ca_uninitialized,
-		ca_disconnected, 	// not talking to a server
-		ca_connecting,		// sending request packets to the server
-		ca_connected,		// netchan_t established, waiting for svc_serverdata
-		ca_active			// game views should be displayed
-	} state;
-
-	keydest_t	key_dest;
-	int			framecount;
-	int			realtime;			// always increasing, no clamping, etc
-	float		frametime;			// seconds since last frame
-
-	// screen rendering information
-	float		disable_screen;			// showing loading plaque between levels or changing rendering dlls if time gets > 30 seconds ahead, break it
-	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
-
-	// connection information
-	char		servername[MAX_OSPATH];	// name of server from original connect
-	float		connect_time;			// for connection retransmits
-	int			quakePort;				// a 16 bit value that allows quake servers to work around address translating routers
-	netchan_t	netchan;
-	int			serverProtocol;			// in case we are doing some kind of version hack
-	int			challenge;				// from the server to use for connecting
-	FILE*		download;				// file transfer from server
-	char		downloadtempname[MAX_OSPATH];
-	char		downloadname[MAX_OSPATH];
-	int			downloadnumber;
-
-	enum {
-		dl_none,
-		dl_model,
-		dl_sound,
-		dl_skin,
-		dl_single
-	} downloadtype;
-	int downloadpercent;
-
-	// demo recording info must be here, so it isn't cleared on level change
-	qboolean	demorecording;
-	qboolean	demowaiting;	// don't record until a non-delta message is received
-	FILE		*demofile;
-} cls;
-
-// usercmd_t is sent to the server each client frame
-typedef struct usercmd_s {
-	byte	msec;
-	byte	buttons;
-	short	angles[3];
-	short	forwardmove, sidemove, upmove;
-	byte	impulse;		// remove?
-	byte	lightlevel;		// light level the player is standing on
-} usercmd_t;
-
-//
 // SECTION CLC (client to server)
 //
 
@@ -865,7 +755,7 @@ typedef struct entity_state_s {
 } entity_state_t;
 
 //
-// SECTION MSG (essages)
+// SECTION MSG (messages)
 //
 
 #define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
@@ -917,6 +807,16 @@ typedef struct entity_state_s {
 #define	U_SKIN16	(1<<25)
 #define	U_SOUND		(1<<26)
 #define	U_SOLID		(1<<27)
+
+// usercmd_t is sent to the server each client frame
+typedef struct usercmd_s {
+	byte	msec;
+	byte	buttons;
+	short	angles[3];
+	short	forwardmove, sidemove, upmove;
+	byte	impulse;		// remove?
+	byte	lightlevel;		// light level the player is standing on
+} usercmd_t;
 
 static vec3_t bytedirs[NUMVERTEXNORMALS] = {
 	{-0.525731, 0.000000, 0.850651},
@@ -1610,6 +1510,85 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 }
 
 //
+// SECTION Cvar (console variables)
+//
+
+#define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
+#define	CVAR_USERINFO	2	// added to userinfo  when changed
+#define	CVAR_SERVERINFO	4	// added to serverinfo when changed
+#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
+#define	CVAR_LATCH		16	// save changes until server restart
+
+// cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
+// The user can access cvars from the console in three ways:
+// r_draworder			prints the current value
+// r_draworder 0		sets the current value to 0
+// set r_draworder 0	as above, but creates the cvar if not present
+// Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
+
+// nothing outside the Cvar_*() functions should modify these fields!
+typedef struct cvar_s {
+	char			*name;
+	char			*string;
+	char			*latched_string; // for CVAR_LATCH vars
+	int				flags;
+	qboolean		modified; // set each time the cvar is changed
+	float			value;
+	struct cvar_s 	*next;
+} cvar_t;
+
+static cvar_t* cvar_vars;
+
+cvar_t *Cvar_Get (char *var_name, char *value, int flags);
+// creates the variable if it doesn't exist, or returns the existing one
+// if it exists, the value will not be changed, but flags will be ORed in
+// that allows variables to be unarchived without needing bitflags
+
+cvar_t 	*Cvar_Set (char *var_name, char *value);
+// will create the variable if it doesn't exist
+
+cvar_t *Cvar_ForceSet (char *var_name, char *value);
+// will set the variable even if NOSET or LATCH
+
+cvar_t 	*Cvar_FullSet (char *var_name, char *value, int flags);
+
+void	Cvar_SetValue (char *var_name, float value);
+// expands value to a string and calls Cvar_Set
+
+float	Cvar_VariableValue (char *var_name);
+// returns 0 if not defined or non numeric
+
+char	*Cvar_VariableString (char *var_name);
+// returns an empty string if not defined
+
+char 	*Cvar_CompleteVariable (char *partial);
+// attempts to match a partial variable name for command line completion
+// returns NULL if nothing fits
+
+void	Cvar_GetLatchedVars (void);
+// any CVAR_LATCHED variables that have been set will now take effect
+
+qboolean Cvar_Command (void);
+// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
+// command.  Returns true if the command was a variable reference that
+// was handled. (print or change)
+
+void 	Cvar_WriteVariables (char *path);
+// appends lines containing "set variable value" for all variables
+// with the archive flag set to true.
+
+void	Cvar_Init (void);
+
+char	*Cvar_Userinfo (void);
+// returns an info string containing all the CVAR_USERINFO cvars
+
+char	*Cvar_Serverinfo (void);
+// returns an info string containing all the CVAR_SERVERINFO cvars
+
+// this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
+static qboolean userinfo_modified;
+
+//
 // SECTION System
 //
 
@@ -1658,6 +1637,142 @@ static void FS_Read(void* buffer, int len, FILE* f);
 
 static void FS_FreeFile(void* buffer);
 static void FS_CreatePath(char* path);
+
+//
+// SECTION Network
+//
+
+#define	MAX_MSGLEN	1400
+#define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
+#define	MAX_LATENT	32
+
+typedef enum {
+	NS_CLIENT,
+	NS_SERVER
+} netsrc_t;
+
+typedef struct {
+	enum {
+		NA_LOOPBACK,
+		NA_BROADCAST,
+		NA_IP,
+		NA_IPX,
+		NA_BROADCAST_IPX
+	} type;
+
+	byte			ip[4];
+	byte			ipx[10];
+	unsigned short	port;
+} netadr_t;
+
+typedef struct {
+	qboolean	fatal_error;
+	netsrc_t	sock;
+	int			dropped;			// between last packet and previous
+	int			last_received;		// for timeouts
+	int			last_sent;			// for retransmits
+	netadr_t	remote_address;
+	int			qport;				// qport value to write when transmitting sequencing variables
+	int			incoming_sequence;
+	int			incoming_acknowledged;
+	int			incoming_reliable_acknowledged;	// single bit
+	int			incoming_reliable_sequence;		// single bit, maintained local
+	int			outgoing_sequence;
+	int			reliable_sequence;			// single bit
+	int			last_reliable_sequence;		// sequence number of last send
+
+	//  reliable staging and holding areas
+	sizebuf_t	message;						// writing buffer to send to server
+	byte		message_buf[MAX_MSGLEN - 16];		// leave space for header
+
+	// message is copied to this buffer when it is first transfered
+	int			reliable_length;
+	byte		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
+} netchan_t;
+
+cvar_t		*showpackets;
+cvar_t		*showdrop;
+cvar_t		*qport;
+
+netadr_t	net_from;
+sizebuf_t	net_message;
+byte		net_message_buffer[MAX_MSGLEN];
+
+void		NET_Init (void);
+void		NET_Shutdown (void);
+
+void		NET_Config (qboolean multiplayer);
+
+qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
+void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
+
+qboolean	NET_CompareAdr (netadr_t a, netadr_t b);
+qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
+qboolean	NET_IsLocalAddress (netadr_t adr);
+char		*NET_AdrToString (netadr_t a);
+qboolean	NET_StringToAdr (char *s, netadr_t *a);
+void		NET_Sleep(int msec);
+
+void Netchan_Init (void);
+void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
+
+qboolean Netchan_NeedReliable (netchan_t *chan);
+void Netchan_Transmit (netchan_t *chan, int length, byte *data);
+void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, byte *data);
+void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...);
+qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg);
+
+qboolean Netchan_CanReliable (netchan_t *chan);
+
+//
+// SECTION User
+//
+
+// Persistant through an arbitrary number of server connections
+static struct {
+	enum {
+		ca_uninitialized,
+		ca_disconnected, 	// not talking to a server
+		ca_connecting,		// sending request packets to the server
+		ca_connected,		// netchan_t established, waiting for svc_serverdata
+		ca_active			// game views should be displayed
+	} state;
+
+	keydest_t	key_dest;
+	int			framecount;
+	int			realtime;			// always increasing, no clamping, etc
+	float		frametime;			// seconds since last frame
+
+	// screen rendering information
+	float		disable_screen;			// showing loading plaque between levels or changing rendering dlls if time gets > 30 seconds ahead, break it
+	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
+
+	// connection information
+	char		servername[MAX_OSPATH];	// name of server from original connect
+	float		connect_time;			// for connection retransmits
+	int			quakePort;				// a 16 bit value that allows quake servers to work around address translating routers
+	netchan_t	netchan;
+	int			serverProtocol;			// in case we are doing some kind of version hack
+	int			challenge;				// from the server to use for connecting
+	FILE*		download;				// file transfer from server
+	char		downloadtempname[MAX_OSPATH];
+	char		downloadname[MAX_OSPATH];
+	int			downloadnumber;
+
+	enum {
+		dl_none,
+		dl_model,
+		dl_sound,
+		dl_skin,
+		dl_single
+	} downloadtype;
+	int downloadpercent;
+
+	// demo recording info must be here, so it isn't cleared on level change
+	qboolean	demorecording;
+	qboolean	demowaiting;	// don't record until a non-delta message is received
+	FILE		*demofile;
+} cls;
 
 //
 // SECTION Console
@@ -1758,85 +1873,6 @@ static void Con_Print(char *txt) {
 		}
 	}
 }
-
-//
-// SECTION Cvar (console variables)
-//
-
-#define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
-#define	CVAR_USERINFO	2	// added to userinfo  when changed
-#define	CVAR_SERVERINFO	4	// added to serverinfo when changed
-#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
-#define	CVAR_LATCH		16	// save changes until server restart
-
-// cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
-// The user can access cvars from the console in three ways:
-// r_draworder			prints the current value
-// r_draworder 0		sets the current value to 0
-// set r_draworder 0	as above, but creates the cvar if not present
-// Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
-
-// nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s {
-	char			*name;
-	char			*string;
-	char			*latched_string; // for CVAR_LATCH vars
-	int				flags;
-	qboolean		modified; // set each time the cvar is changed
-	float			value;
-	struct cvar_s 	*next;
-} cvar_t;
-
-static cvar_t* cvar_vars;
-
-cvar_t *Cvar_Get (char *var_name, char *value, int flags);
-// creates the variable if it doesn't exist, or returns the existing one
-// if it exists, the value will not be changed, but flags will be ORed in
-// that allows variables to be unarchived without needing bitflags
-
-cvar_t 	*Cvar_Set (char *var_name, char *value);
-// will create the variable if it doesn't exist
-
-cvar_t *Cvar_ForceSet (char *var_name, char *value);
-// will set the variable even if NOSET or LATCH
-
-cvar_t 	*Cvar_FullSet (char *var_name, char *value, int flags);
-
-void	Cvar_SetValue (char *var_name, float value);
-// expands value to a string and calls Cvar_Set
-
-float	Cvar_VariableValue (char *var_name);
-// returns 0 if not defined or non numeric
-
-char	*Cvar_VariableString (char *var_name);
-// returns an empty string if not defined
-
-char 	*Cvar_CompleteVariable (char *partial);
-// attempts to match a partial variable name for command line completion
-// returns NULL if nothing fits
-
-void	Cvar_GetLatchedVars (void);
-// any CVAR_LATCHED variables that have been set will now take effect
-
-qboolean Cvar_Command (void);
-// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
-// command.  Returns true if the command was a variable reference that
-// was handled. (print or change)
-
-void 	Cvar_WriteVariables (char *path);
-// appends lines containing "set variable value" for all variables
-// with the archive flag set to true.
-
-void	Cvar_Init (void);
-
-char	*Cvar_Userinfo (void);
-// returns an info string containing all the CVAR_USERINFO cvars
-
-char	*Cvar_Serverinfo (void);
-// returns an info string containing all the CVAR_SERVERINFO cvars
-
-// this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
-static qboolean userinfo_modified;
 
 //
 // SECTION COM (commands)
@@ -4056,10 +4092,6 @@ enum svc_ops_e {
 #define	PS_WEAPONFRAME		(1<<13)
 #define	PS_RDFLAGS			(1<<14)
 
-//
-// SECTION ???
-//
-
 // a sound without an ent or pos will be a local only sound
 #define	SND_VOLUME		(1<<0)		// a byte
 #define	SND_ATTENUATION	(1<<1)		// a byte
@@ -4070,67 +4102,15 @@ enum svc_ops_e {
 #define DEFAULT_SOUND_PACKET_VOLUME	1.0
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
 
-//===========================================================================
-
-/*
-==============================================================
-
-CVAR
-
-==============================================================
-*/
-
-/*
-==============================================================
-
-NET
-
-==============================================================
-*/
-
-// net.h -- quake's interface to the networking layer
-
 #define	PORT_ANY	-1
-
 
 #define	PACKET_HEADER	10			// two ints and a short
 
-void		NET_Init (void);
-void		NET_Shutdown (void);
-
-void		NET_Config (qboolean multiplayer);
-
-qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
-void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
-
-qboolean	NET_CompareAdr (netadr_t a, netadr_t b);
-qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
-qboolean	NET_IsLocalAddress (netadr_t adr);
-char		*NET_AdrToString (netadr_t a);
-qboolean	NET_StringToAdr (char *s, netadr_t *a);
-void		NET_Sleep(int msec);
+//
+// SECTION ???
+//
 
 //============================================================================
-
-#define	OLD_AVG		0.99		// total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
-
-#define	MAX_LATENT	32
-
-extern	netadr_t	net_from;
-extern	sizebuf_t	net_message;
-extern	byte		net_message_buffer[MAX_MSGLEN];
-
-
-void Netchan_Init (void);
-void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
-
-qboolean Netchan_NeedReliable (netchan_t *chan);
-void Netchan_Transmit (netchan_t *chan, int length, byte *data);
-void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, byte *data);
-void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...);
-qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg);
-
-qboolean Netchan_CanReliable (netchan_t *chan);
 
 
 /*
@@ -10511,14 +10491,6 @@ such as during the connection stage while waiting for the client to load,
 then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
-
-cvar_t		*showpackets;
-cvar_t		*showdrop;
-cvar_t		*qport;
-
-netadr_t	net_from;
-sizebuf_t	net_message;
-byte		net_message_buffer[MAX_MSGLEN];
 
 /*
 ===============
