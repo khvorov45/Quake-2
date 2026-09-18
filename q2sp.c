@@ -937,7 +937,7 @@ static void Con_Print(char *txt) {
 }
 
 //
-// SECTION Commands
+// SECTION com (Commands)
 //
 
 #define	MAXPRINTMSG	4096
@@ -1135,6 +1135,305 @@ static void COM_InitArgv(int argc, char **argv) {
 			com_argv[i] = argv[i];
 		}
 	}
+}
+
+//
+// SECTION Cmd (command execution)
+//
+
+// Command execution takes a null terminated string, breaks it into tokens,
+// then searches for a command or variable that matches the first token.
+
+typedef void (*xcommand_t)(void);
+
+void	Cmd_Init (void);
+
+void	Cmd_AddCommand (char *cmd_name, xcommand_t function);
+// called by the init functions of other parts of the program to
+// register commands and functions to call for them.
+// The cmd_name is referenced later, so it should not be in temp memory
+// if function is NULL, the command will be forwarded to the server
+// as a clc_stringcmd instead of executed locally
+void	Cmd_RemoveCommand (char *cmd_name);
+
+qboolean Cmd_Exists (char *cmd_name);
+// used by the cvar code to check for cvar / command name overlap
+
+char 	*Cmd_CompleteCommand (char *partial);
+// attempts to match a partial command for automatic command line completion
+// returns NULL if nothing fits
+
+int		Cmd_Argc (void);
+char	*Cmd_Argv (int arg);
+char	*Cmd_Args (void);
+// The functions that execute commands get their parameters with these
+// functions. Cmd_Argv () will return an empty string, not a NULL
+// if arg > argc, so string operations are always safe.
+
+
+void	Cmd_TokenizeString (char *text, qboolean macroExpand);
+// Takes a null terminated string.  Does not need to be /n terminated.
+// breaks the string up into arg tokens.
+
+void	Cmd_ForwardToServer (void);
+// adds the current command line as a clc_stringcmd to the client message.
+// things like godmode, noclip, etc, are commands directed to the server,
+// so when they are typed in at the console, they will need to be forwarded.
+
+void Cmd_ForwardToServer (void);
+
+//
+// SECTION Cbuf (command buffer)
+//
+
+// Any number of commands can be added in a frame, from several different sources.
+// Most commands come from either keybindings or console line input, but remote
+// servers can also send across commands and entire text files can be execed.
+// The + command line options are also added to the command buffer.
+// The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
+
+#define	MAX_ALIAS_NAME		32
+#define	ALIAS_LOOP_COUNT	16
+
+typedef struct cmd_function_s {
+	struct cmd_function_s*	next;
+	char*					name;
+	xcommand_t				function;
+} cmd_function_t;
+
+typedef struct cmdalias_s {
+	struct cmdalias_s*	next;
+	char	name[MAX_ALIAS_NAME];
+	char*	value;
+} cmdalias_t;
+
+static sizebuf_t	cmd_text;
+static byte			cmd_text_buf[8192];
+static qboolean		cmd_wait;
+
+// Used to defer any pending commands while a map is being loaded
+static char defer_text_buf[8192];
+
+// for detecting runaway loops
+static int alias_count;
+
+// possible commands to execute
+static cmd_function_t* cmd_functions;
+
+static	int		cmd_argc;
+static	char*	cmd_argv[MAX_STRING_TOKENS];
+static	char*	cmd_null_string = "";
+static	char	cmd_args[MAX_STRING_CHARS];
+
+static cmdalias_t* cmd_alias;
+
+// as new commands are generated from the console or keybindings, the text is added to the end of the command buffer.
+static void Cbuf_AddText(char* text) {
+	int l = strlen (text);
+	if (cmd_text.cursize + l >= cmd_text.maxsize) {
+		Com_Printf("Cbuf_AddText: overflow\n");
+		return;
+	}
+	SZ_Write(&cmd_text, text, l);
+}
+
+// When a command wants to issue other commands immediately, the text is
+// inserted at the beginning of the buffer, before any remaining unexecuted
+// commands.
+// Adds a \n to the text
+// FIXME: actually change the command buffer to do less copying
+static void Cbuf_InsertText(char* text) {
+	char* temp = 0;
+
+	// copy off any commands still remaining in the exec buffer
+	int templen = cmd_text.cursize;
+	if (templen) {
+		temp = Z_Malloc(templen);
+		memcpy(temp, cmd_text.data, templen);
+		SZ_Clear(&cmd_text);
+	}
+
+	// add the entire text of the file
+	Cbuf_AddText(text);
+
+	// add the copied off data
+	if (templen) {
+		SZ_Write(&cmd_text, temp, templen);
+		Z_Free(temp);
+	}
+}
+
+// Parses a single line of text into arguments and tries to execute it as if it was typed at the console
+// FIXME: lookupnoadd the token to speed search?
+static void Cmd_ExecuteString(char* text) {
+	Cmd_TokenizeString(text, true);
+
+	// execute the command line
+	if (!Cmd_Argc()) {
+		return; // no tokens
+	}
+
+	// check functions
+	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
+		if (!Q_strcasecmp(cmd_argv[0],cmd->name)) {
+			if (!cmd->function) {
+				// forward to server command
+				Cmd_ExecuteString(va("cmd %s", text));
+			} else {
+				cmd->function();
+			}
+			return;
+		}
+	}
+
+	// check alias
+	for (cmdalias_t* a = cmd_alias; a; a = a->next) {
+		if (!Q_strcasecmp (cmd_argv[0], a->name)) {
+			if (++alias_count == ALIAS_LOOP_COUNT) {
+				Com_Printf ("ALIAS_LOOP_COUNT\n");
+				return;
+			}
+			Cbuf_InsertText(a->value);
+			return;
+		}
+	}
+
+	// check cvars
+	if (Cvar_Command()) {
+		return;
+	}
+
+	// send it as a server command if we are connected
+	Cmd_ForwardToServer();
+}
+
+// Pulls off \n terminated lines of text from the command buffer and sends them through Cmd_ExecuteString.
+// Stops when the buffer is empty.
+// Normally called once per frame, but may be explicitly invoked.
+// Do not call inside a command function!
+static void Cbuf_Execute() {
+	char line[1024] = {};
+
+	alias_count = 0; // don't allow infinite alias loops
+
+	while (cmd_text.cursize) {
+		// find a \n or ; line break
+		char* text = (char*)cmd_text.data;
+
+		int quotes = 0;
+		int i = 0;
+		for (; i < cmd_text.cursize; i++) {
+			if (text[i] == '"') {
+				quotes++;
+			}
+			if (!(quotes&1) &&  text[i] == ';') {
+				break;	// don't break if inside a quoted string
+			}
+			if (text[i] == '\n') {
+				break;
+			}
+		}
+
+		memcpy (line, text, i);
+		line[i] = 0;
+
+		// delete the text from the command buffer and move remaining commands down
+		// this is necessary because commands (exec, alias) can insert data at the
+		// beginning of the text buffer
+
+		if (i == cmd_text.cursize) {
+			cmd_text.cursize = 0;
+		} else {
+			i++;
+			cmd_text.cursize -= i;
+			memmove (text, text+i, cmd_text.cursize);
+		}
+
+		// execute the command line
+		Cmd_ExecuteString(line);
+
+		if (cmd_wait) {
+			// skip out while text still remains in buffer, leaving it for next frame
+			cmd_wait = false;
+			break;
+		}
+	}
+}
+
+// Adds command line parameters as script statements
+// Commands lead with a +, and continue until another +
+// Set commands are added early, so they are guaranteed to be set before the client and server initialize for the first time.
+// Other commands are added late, after all initialization is complete.
+static void Cbuf_AddEarlyCommands(qboolean clear) {
+	for (int i = 0; i < com_argc; i++) {
+		char* s = COM_Argv(i);
+		if (strcmp (s, "+set")) {
+			continue;
+		}
+		Cbuf_AddText(va("set %s %s\n", COM_Argv(i + 1), COM_Argv(i + 2)));
+		if (clear) {
+			COM_ClearArgv(i);
+			COM_ClearArgv(i+1);
+			COM_ClearArgv(i+2);
+		}
+		i+=2;
+	}
+}
+
+// Adds command line parameters as script statements
+// Commands lead with a + and continue until another + or -
+// quake +vid_ref gl +map amlev1
+// Returns true if any late commands were added, which will keep the demoloop from immediately starting
+static qboolean Cbuf_AddLateCommands() {
+	// build the combined string to parse from
+	int s = 0;
+	int argc = com_argc;
+	for (int i=1 ; i<argc ; i++) {
+		s += strlen(COM_Argv(i)) + 1;
+	}
+	if (!s) {
+		return false;
+	}
+
+	char* text = Z_Malloc(s+1);
+	text[0] = 0;
+	for (int i=1 ; i<argc ; i++) {
+		strcat(text, COM_Argv(i));
+		if (i != argc-1) {
+			strcat(text, " ");
+		}
+	}
+
+	// pull out the commands
+	char* build = Z_Malloc(s+1);
+	build[0] = 0;
+
+	for (int i=0; i < s - 1; i++) {
+		if (text[i] == '+') {
+			i++;
+
+			int j = i;
+			while ((text[j] != '+') && (text[j] != '-') && (text[j] != 0)) {j++;}
+
+			char c = text[j];
+			text[j] = 0;
+
+			strcat(build, text+i);
+			strcat(build, "\n");
+			text[j] = c;
+			i = j-1;
+		}
+	}
+
+	qboolean ret = (build[0] != 0);
+	if (ret) {
+		Cbuf_AddText(build);
+	}
+
+	Z_Free(text);
+	Z_Free(build);
+
+	return ret;
 }
 
 //
@@ -2135,7 +2434,7 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 }
 
 //
-// SECTION COLLISION DETECTION
+// SECTION Mess
 //
 
 // lower bits are stronger, and will eat weaker brushes completely
@@ -3246,17 +3545,7 @@ typedef enum {
 // 1278	08/21/1998		Build #2 for Ensemble
 // 9999	08/20/1998		Internal Use
 #define ROGUE_VERSION_ID		1278
-
 #define ROGUE_VERSION_STRING	"08/21/1998 Beta 2 for Ensemble"
-
-// ROGUE
-/*
-==========================================================
-
-  ELEMENTS COMMUNICATED ACROSS THE NET
-
-==========================================================
-*/
 
 // config strings are a general means of communication from
 // the server to all connected clients.
@@ -3330,47 +3619,17 @@ static int vidref_val;
 #define BUILDSTRING "Win32 DEBUG"
 #define	CPUSTRING	"x86"
 
-//
-// SECTION ???
-//
-
-
-
-/*
-==============================================================
-
-PROTOCOL
-
-==============================================================
-*/
-
-// protocol.h -- communications protocols
-
 #define	PROTOCOL_VERSION	34
-
-//=========================================
 
 #define	PORT_MASTER	27900
 #define	PORT_CLIENT	27901
 #define	PORT_SERVER	27910
 
-//=========================================
-
-#define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered
-							// must be power of two
+#define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered must be power of two
 #define	UPDATE_MASK		(UPDATE_BACKUP-1)
 
-
-
-//==================
-// the svc_strings[] array in cl_parse.c should mirror this
-//==================
-
-//
 // server to client
-//
-enum svc_ops_e
-{
+enum svc_ops_e {
 	svc_bad,
 
 	// these ops are known to the game dll
@@ -3398,11 +3657,7 @@ enum svc_ops_e
 	svc_frame
 };
 
-//==============================================
-
-//
 // client to server
-//
 enum clc_ops_e
 {
 	clc_bad,
@@ -3411,10 +3666,6 @@ enum clc_ops_e
 	clc_userinfo,			// [[userinfo string]
 	clc_stringcmd			// [string] message
 };
-
-//==============================================
-
-// plyer_state_t communication
 
 #define	PS_M_TYPE			(1<<0)
 #define	PS_M_ORIGIN			(1<<1)
@@ -3433,11 +3684,9 @@ enum clc_ops_e
 #define	PS_WEAPONFRAME		(1<<13)
 #define	PS_RDFLAGS			(1<<14)
 
-//==============================================
-
-// user_cmd_t communication
-
-//==============================================
+//
+// SECTION ???
+//
 
 // a sound without an ent or pos will be a local only sound
 #define	SND_VOLUME		(1<<0)		// a byte
@@ -3449,119 +3698,7 @@ enum clc_ops_e
 #define DEFAULT_SOUND_PACKET_VOLUME	1.0
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
 
-//==============================================
-
-// entity_state_t communication
-
-
-/*
-==============================================================
-
-CMD
-
-Command text buffering and command execution
-
-==============================================================
-*/
-
-/*
-
-Any number of commands can be added in a frame, from several different sources.
-Most commands come from either keybindings or console line input, but remote
-servers can also send across commands and entire text files can be execed.
-
-The + command line options are also added to the command buffer.
-
-The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
-
-*/
-
-#define	EXEC_NOW	0		// don't return until completed
-#define	EXEC_INSERT	1		// insert at current position, but don't run yet
-#define	EXEC_APPEND	2		// add to end of the command buffer
-
-void Cbuf_Init (void);
-// allocates an initial text buffer that will grow as needed
-
-void Cbuf_AddText (char *text);
-// as new commands are generated from the console or keybindings,
-// the text is added to the end of the command buffer.
-
-void Cbuf_InsertText (char *text);
-// when a command wants to issue other commands immediately, the text is
-// inserted at the beginning of the buffer, before any remaining unexecuted
-// commands.
-
-void Cbuf_ExecuteText (int exec_when, char *text);
-// this can be used in place of either Cbuf_AddText or Cbuf_InsertText
-
-void Cbuf_AddEarlyCommands (qboolean clear);
-// adds all the +set commands from the command line
-
-qboolean Cbuf_AddLateCommands (void);
-// adds all the remaining + commands from the command line
-// Returns true if any late commands were added, which
-// will keep the demoloop from immediately starting
-
-void Cbuf_Execute (void);
-// Pulls off \n terminated lines of text from the command buffer and sends
-// them through Cmd_ExecuteString.  Stops when the buffer is empty.
-// Normally called once per frame, but may be explicitly invoked.
-// Do not call inside a command function!
-
-void Cbuf_CopyToDefer (void);
-void Cbuf_InsertFromDefer (void);
-// These two functions are used to defer any pending commands while a map
-// is being loaded
-
 //===========================================================================
-
-/*
-
-Command execution takes a null terminated string, breaks it into tokens,
-then searches for a command or variable that matches the first token.
-
-*/
-
-typedef void (*xcommand_t) (void);
-
-void	Cmd_Init (void);
-
-void	Cmd_AddCommand (char *cmd_name, xcommand_t function);
-// called by the init functions of other parts of the program to
-// register commands and functions to call for them.
-// The cmd_name is referenced later, so it should not be in temp memory
-// if function is NULL, the command will be forwarded to the server
-// as a clc_stringcmd instead of executed locally
-void	Cmd_RemoveCommand (char *cmd_name);
-
-qboolean Cmd_Exists (char *cmd_name);
-// used by the cvar code to check for cvar / command name overlap
-
-char 	*Cmd_CompleteCommand (char *partial);
-// attempts to match a partial command for automatic command line completion
-// returns NULL if nothing fits
-
-int		Cmd_Argc (void);
-char	*Cmd_Argv (int arg);
-char	*Cmd_Args (void);
-// The functions that execute commands get their parameters with these
-// functions. Cmd_Argv () will return an empty string, not a NULL
-// if arg > argc, so string operations are always safe.
-
-void	Cmd_TokenizeString (char *text, qboolean macroExpand);
-// Takes a null terminated string.  Does not need to be /n terminated.
-// breaks the string up into arg tokens.
-
-void	Cmd_ExecuteString (char *text);
-// Parses a single line of text into arguments and tries to execute it
-// as if it was typed at the console
-
-void	Cmd_ForwardToServer (void);
-// adds the current command line as a clc_stringcmd to the client message.
-// things like godmode, noclip, etc, are commands directed to the server,
-// so when they are typed in at the console, they will need to be forwarded.
-
 
 /*
 ==============================================================
@@ -4285,10 +4422,6 @@ MISC
 #define	ERR_FATAL	0		// exit the entire game with a popup window
 #define	ERR_DROP	1		// print to console and disconnect from game
 #define	ERR_QUIT	2		// not an error, just a normal exit
-
-#define	EXEC_NOW	0		// don't return until completed
-#define	EXEC_INSERT	1		// insert at current position, but don't run yet
-#define	EXEC_APPEND	2		// add to end of the command buffer
 
 #define	PRINT_ALL		0
 #define PRINT_DEVELOPER	1	// only print when "developer 1"
@@ -5856,23 +5989,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /* already inlined above: qcommon/qcommon.h */
 
-void Cmd_ForwardToServer (void);
-
-#define	MAX_ALIAS_NAME	32
-
-typedef struct cmdalias_s
-{
-	struct cmdalias_s	*next;
-	char	name[MAX_ALIAS_NAME];
-	char	*value;
-} cmdalias_t;
-
-cmdalias_t	*cmd_alias;
-
-qboolean	cmd_wait;
-
-#define	ALIAS_LOOP_COUNT	16
-int		alias_count;		// for detecting runaway loops
 
 
 //=============================================================================
@@ -5899,294 +6015,6 @@ void Cmd_Wait_f (void)
 
 =============================================================================
 */
-
-sizebuf_t	cmd_text;
-byte		cmd_text_buf[8192];
-
-byte		defer_text_buf[8192];
-
-/*
-============
-Cbuf_Init
-============
-*/
-void Cbuf_Init (void)
-{
-	SZ_Init (&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
-}
-
-/*
-============
-Cbuf_AddText
-
-Adds command text at the end of the buffer
-============
-*/
-void Cbuf_AddText (char *text)
-{
-	int		l;
-
-	l = strlen (text);
-
-	if (cmd_text.cursize + l >= cmd_text.maxsize)
-	{
-		Com_Printf ("Cbuf_AddText: overflow\n");
-		return;
-	}
-	SZ_Write (&cmd_text, text, strlen (text));
-}
-
-
-/*
-============
-Cbuf_InsertText
-
-Adds command text immediately after the current command
-Adds a \n to the text
-FIXME: actually change the command buffer to do less copying
-============
-*/
-void Cbuf_InsertText (char *text)
-{
-	char	*temp;
-	int		templen;
-
-// copy off any commands still remaining in the exec buffer
-	templen = cmd_text.cursize;
-	if (templen)
-	{
-		temp = Z_Malloc (templen);
-		memcpy (temp, cmd_text.data, templen);
-		SZ_Clear (&cmd_text);
-	}
-	else
-		temp = NULL;	// shut up compiler
-
-// add the entire text of the file
-	Cbuf_AddText (text);
-
-// add the copied off data
-	if (templen)
-	{
-		SZ_Write (&cmd_text, temp, templen);
-		Z_Free (temp);
-	}
-}
-
-
-/*
-============
-Cbuf_CopyToDefer
-============
-*/
-void Cbuf_CopyToDefer (void)
-{
-	memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
-	defer_text_buf[cmd_text.cursize] = 0;
-	cmd_text.cursize = 0;
-}
-
-/*
-============
-Cbuf_InsertFromDefer
-============
-*/
-void Cbuf_InsertFromDefer (void)
-{
-	Cbuf_InsertText (defer_text_buf);
-	defer_text_buf[0] = 0;
-}
-
-
-/*
-============
-Cbuf_ExecuteText
-============
-*/
-void Cbuf_ExecuteText (int exec_when, char *text)
-{
-	switch (exec_when)
-	{
-	case EXEC_NOW:
-		Cmd_ExecuteString (text);
-		break;
-	case EXEC_INSERT:
-		Cbuf_InsertText (text);
-		break;
-	case EXEC_APPEND:
-		Cbuf_AddText (text);
-		break;
-	default:
-		Com_Error (ERR_FATAL, "Cbuf_ExecuteText: bad exec_when");
-	}
-}
-
-/*
-============
-Cbuf_Execute
-============
-*/
-void Cbuf_Execute (void)
-{
-	int		i;
-	char	*text;
-	char	line[1024];
-	int		quotes;
-
-	alias_count = 0;		// don't allow infinite alias loops
-
-	while (cmd_text.cursize)
-	{
-// find a \n or ; line break
-		text = (char *)cmd_text.data;
-
-		quotes = 0;
-		for (i=0 ; i< cmd_text.cursize ; i++)
-		{
-			if (text[i] == '"')
-				quotes++;
-			if ( !(quotes&1) &&  text[i] == ';')
-				break;	// don't break if inside a quoted string
-			if (text[i] == '\n')
-				break;
-		}
-
-
-		memcpy (line, text, i);
-		line[i] = 0;
-
-// delete the text from the command buffer and move remaining commands down
-// this is necessary because commands (exec, alias) can insert data at the
-// beginning of the text buffer
-
-		if (i == cmd_text.cursize)
-			cmd_text.cursize = 0;
-		else
-		{
-			i++;
-			cmd_text.cursize -= i;
-			memmove (text, text+i, cmd_text.cursize);
-		}
-
-// execute the command line
-		Cmd_ExecuteString (line);
-
-		if (cmd_wait)
-		{
-			// skip out while text still remains in buffer, leaving it
-			// for next frame
-			cmd_wait = false;
-			break;
-		}
-	}
-}
-
-
-/*
-===============
-Cbuf_AddEarlyCommands
-
-Adds command line parameters as script statements
-Commands lead with a +, and continue until another +
-
-Set commands are added early, so they are guaranteed to be set before
-the client and server initialize for the first time.
-
-Other commands are added late, after all initialization is complete.
-===============
-*/
-void Cbuf_AddEarlyCommands (qboolean clear)
-{
-	int		i;
-	char	*s;
-
-	for (i=0 ; i < com_argc ; i++)
-	{
-		s = COM_Argv(i);
-		if (strcmp (s, "+set"))
-			continue;
-		Cbuf_AddText (va("set %s %s\n", COM_Argv(i+1), COM_Argv(i+2)));
-		if (clear)
-		{
-			COM_ClearArgv(i);
-			COM_ClearArgv(i+1);
-			COM_ClearArgv(i+2);
-		}
-		i+=2;
-	}
-}
-
-/*
-=================
-Cbuf_AddLateCommands
-
-Adds command line parameters as script statements
-Commands lead with a + and continue until another + or -
-quake +vid_ref gl +map amlev1
-
-Returns true if any late commands were added, which
-will keep the demoloop from immediately starting
-=================
-*/
-qboolean Cbuf_AddLateCommands (void)
-{
-	int		i, j;
-	int		s;
-	char	*text, *build, c;
-	int		argc;
-	qboolean	ret;
-
-// build the combined string to parse from
-	s = 0;
-	argc = com_argc;
-	for (i=1 ; i<argc ; i++)
-	{
-		s += strlen (COM_Argv(i)) + 1;
-	}
-	if (!s)
-		return false;
-
-	text = Z_Malloc (s+1);
-	text[0] = 0;
-	for (i=1 ; i<argc ; i++)
-	{
-		strcat (text,COM_Argv(i));
-		if (i != argc-1)
-			strcat (text, " ");
-	}
-
-// pull out the commands
-	build = Z_Malloc (s+1);
-	build[0] = 0;
-
-	for (i=0 ; i<s-1 ; i++)
-	{
-		if (text[i] == '+')
-		{
-			i++;
-
-			for (j=i ; (text[j] != '+') && (text[j] != '-') && (text[j] != 0) ; j++)
-				;
-
-			c = text[j];
-			text[j] = 0;
-
-			strcat (build, text+i);
-			strcat (build, "\n");
-			text[j] = c;
-			i = j-1;
-		}
-	}
-
-	ret = (build[0] != 0);
-	if (ret)
-		Cbuf_AddText (build);
-
-	Z_Free (text);
-	Z_Free (build);
-
-	return ret;
-}
 
 
 /*
@@ -6319,20 +6147,6 @@ void Cmd_Alias_f (void)
 =============================================================================
 */
 
-typedef struct cmd_function_s
-{
-	struct cmd_function_s	*next;
-	char					*name;
-	xcommand_t				function;
-} cmd_function_t;
-
-
-static	int			cmd_argc;
-static	char		*cmd_argv[MAX_STRING_TOKENS];
-static	char		*cmd_null_string = "";
-static	char		cmd_args[MAX_STRING_CHARS];
-
-static	cmd_function_t	*cmd_functions;		// possible commands to execute
 
 /*
 ============
@@ -6634,63 +6448,6 @@ char *Cmd_CompleteCommand (char *partial)
 	return NULL;
 }
 
-
-/*
-============
-Cmd_ExecuteString
-
-A complete command line has been parsed, so try to execute it
-FIXME: lookupnoadd the token to speed search?
-============
-*/
-void	Cmd_ExecuteString (char *text)
-{
-	cmd_function_t	*cmd;
-	cmdalias_t		*a;
-
-	Cmd_TokenizeString (text, true);
-
-	// execute the command line
-	if (!Cmd_Argc())
-		return;		// no tokens
-
-	// check functions
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
-	{
-		if (!Q_strcasecmp (cmd_argv[0],cmd->name))
-		{
-			if (!cmd->function)
-			{	// forward to server command
-				Cmd_ExecuteString (va("cmd %s", text));
-			}
-			else
-				cmd->function ();
-			return;
-		}
-	}
-
-	// check alias
-	for (a=cmd_alias ; a ; a=a->next)
-	{
-		if (!Q_strcasecmp (cmd_argv[0], a->name))
-		{
-			if (++alias_count == ALIAS_LOOP_COUNT)
-			{
-				Com_Printf ("ALIAS_LOOP_COUNT\n");
-				return;
-			}
-			Cbuf_InsertText (a->value);
-			return;
-		}
-	}
-
-	// check cvars
-	if (Cvar_Command ())
-		return;
-
-	// send it as a server command if we are connected
-	Cmd_ForwardToServer ();
-}
 
 /*
 ============
@@ -8961,7 +8718,9 @@ void Qcommon_Init (int argc, char **argv)
 	COM_InitArgv (argc, argv);
 
 	Swap_Init ();
-	Cbuf_Init ();
+
+	// NOTE: Cbuf: allocates an initial text buffer that will grow as needed
+	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
 
 	Cmd_Init ();
 	Cvar_Init ();
@@ -15584,7 +15343,13 @@ void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame)
 		SV_BroadcastCommand ("changing\n");
 		SV_SendClientMessages ();
 		SV_SpawnServer (level, spawnpoint, ss_game, attractloop, loadgame);
-		Cbuf_CopyToDefer ();
+
+		// NOTE: Copy to defer
+		{
+			memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
+			defer_text_buf[cmd_text.cursize] = 0;
+			cmd_text.cursize = 0;
+		}
 	}
 
 	SV_BroadcastCommand ("reconnect\n");
@@ -17471,7 +17236,8 @@ void SV_Begin_f (void)
 	// call the game begin function
 	ge->ClientBegin (sv_player);
 
-	Cbuf_InsertFromDefer ();
+	Cbuf_InsertText(defer_text_buf);
+	defer_text_buf[0] = 0;
 }
 
 //=============================================================================
@@ -18785,7 +18551,6 @@ typedef struct
 	void	(*Cmd_RemoveCommand) (char *name);
 	int		(*Cmd_Argc) (void);
 	char	*(*Cmd_Argv) (int i);
-	void	(*Cmd_ExecuteText) (int exec_when, char *text);
 
 	void	(*Con_Printf) (int print_level, char *str, ...);
 
@@ -101457,7 +101222,6 @@ qboolean VID_LoadRefresh( char *name )
 	ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
 	ri.Cmd_Argc = Cmd_Argc;
 	ri.Cmd_Argv = Cmd_Argv;
-	ri.Cmd_ExecuteText = Cbuf_ExecuteText;
 	ri.Con_Printf = VID_Printf;
 	ri.Sys_Error = VID_Error;
 	ri.FS_LoadFile = FS_LoadFile;
