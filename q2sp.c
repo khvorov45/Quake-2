@@ -2294,73 +2294,6 @@ static char* Cmd_Argv(int arg) {
 
 static char* Cmd_Args() {return cmd_args;}
 
-static char* Cmd_MacroExpandString(char* text) {
-	static char expanded[MAX_STRING_CHARS] = {};
-	char temporary[MAX_STRING_CHARS] = {};
-
-	qboolean inquote = false;
-	char* scan = text;
-
-	int len = strlen(scan);
-	if (len >= MAX_STRING_CHARS) {
-		Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
-		return NULL;
-	}
-
-	int count = 0;
-
-	for (int i = 0; i < len; i++) {
-		if (scan[i] == '"') {
-			inquote ^= 1;
-		}
-
-		if (inquote) {
-			// don't expand inside quotes
-			continue;
-		}
-
-		if (scan[i] != '$') {
-			continue;
-		}
-
-		// scan out the complete macro
-		char* start = scan + i + 1;
-		char* token = COM_Parse(&start);
-		if (!start) {
-			continue;
-		}
-
-		token = Cvar_VariableString(token);
-
-		int j = strlen(token);
-		len += j;
-		if (len >= MAX_STRING_CHARS) {
-			Com_Printf ("Expanded line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
-			return NULL;
-		}
-
-		strncpy(temporary, scan, i);
-		strcpy(temporary + i, token);
-		strcpy(temporary + i + j, start);
-
-		strcpy(expanded, temporary);
-		scan = expanded;
-		i--;
-
-		if (++count == 100) {
-			Com_Printf ("Macro expansion loop, discarded.\n");
-			return NULL;
-		}
-	}
-
-	if (inquote) {
-		Com_Printf("Line has unmatched quote, discarded.\n");
-		return NULL;
-	}
-
-	return scan;
-}
-
 // Parses the given string into command line tokens.
 // $Cvars will be expanded unless they are in a quoted token
 // Takes a null terminated string. Does not need to be /n terminated.
@@ -2375,10 +2308,70 @@ static void Cmd_TokenizeString(char* text, qboolean macroExpand) {
 
 	// macro expand the text
 	if (macroExpand) {
-		text = Cmd_MacroExpandString (text);
-	}
-	if (!text) {
-		return;
+		static char expanded[MAX_STRING_CHARS] = {};
+		char temporary[MAX_STRING_CHARS] = {};
+
+		qboolean inquote = false;
+		char* scan = text;
+
+		int len = strlen(scan);
+		if (len >= MAX_STRING_CHARS) {
+			Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+			return;
+		}
+
+		int count = 0;
+
+		for (int i = 0; i < len; i++) {
+			if (scan[i] == '"') {
+				inquote ^= 1;
+			}
+
+			if (inquote) {
+				// don't expand inside quotes
+				continue;
+			}
+
+			if (scan[i] != '$') {
+				continue;
+			}
+
+			// scan out the complete macro
+			char* start = scan + i + 1;
+			char* token = COM_Parse(&start);
+			if (!start) {
+				continue;
+			}
+
+			token = Cvar_VariableString(token);
+
+			int j = strlen(token);
+			len += j;
+			if (len >= MAX_STRING_CHARS) {
+				Com_Printf ("Expanded line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+				return;
+			}
+
+			strncpy(temporary, scan, i);
+			strcpy(temporary + i, token);
+			strcpy(temporary + i + j, start);
+
+			strcpy(expanded, temporary);
+			scan = expanded;
+			i--;
+
+			if (++count == 100) {
+				Com_Printf ("Macro expansion loop, discarded.\n");
+				return;
+			}
+		}
+
+		if (inquote) {
+			Com_Printf("Line has unmatched quote, discarded.\n");
+			return;
+		}
+
+		text = scan;
 	}
 
 	for (;;) {
