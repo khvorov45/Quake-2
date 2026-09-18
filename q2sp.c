@@ -1635,11 +1635,6 @@ static void Cvar_GetLatchedVars() {
 	}
 }
 
-qboolean Cvar_Command (void);
-// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
-// command.  Returns true if the command was a variable reference that
-// was handled. (print or change)
-
 void 	Cvar_WriteVariables (char *path);
 // appends lines containing "set variable value" for all variables
 // with the archive flag set to true.
@@ -2589,9 +2584,17 @@ static void Cmd_ExecuteString(char* text) {
 		}
 	}
 
-	// check cvars
-	if (Cvar_Command()) {
-		return;
+	// check cvar
+	{
+		cvar_t* v = Cvar_FindVar(Cmd_Argv(0));
+		if (v) {
+			if (cmd_argc == 1) {
+				Com_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
+			} else {
+				COM_SetCvar(v->name, Cmd_Argv(1));
+			}
+			return;
+		}
 	}
 
 	// send it as a server command if we are connected
@@ -8959,33 +8962,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /* already inlined above: qcommon/qcommon.h */
 
-
-/*
-============
-Cvar_Command
-
-Handles variable inspection and changing from the console
-============
-*/
-qboolean Cvar_Command (void)
-{
-	cvar_t			*v;
-
-// check variables
-	v = Cvar_FindVar (Cmd_Argv(0));
-	if (!v)
-		return false;
-
-// perform a variable print or set
-	if (cmd_argc == 1)
-	{
-		Com_Printf ("\"%s\" is \"%s\"\n", v->name, v->string);
-		return true;
-	}
-
-	COM_SetCvar (v->name, Cmd_Argv(1));
-	return true;
-}
 
 
 /*
