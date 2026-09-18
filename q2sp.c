@@ -18,50 +18,6 @@ typedef enum {false, true}	qboolean;
 #define NULL ((void *)0)
 #endif
 
-// angle indexes
-#define	PITCH				0		// up / down
-#define	YAW					1		// left / right
-#define	ROLL				2		// fall over
-
-#define	MAX_QPATH			64		// max length of a quake game pathname
-#define	MAX_OSPATH			128		// max length of a filesystem pathname
-
-//
-// per-level limits
-//
-#define	MAX_CLIENTS			256		// absolute limit
-#define	MAX_EDICTS			1024	// must change protocol to increase more
-#define	MAX_LIGHTSTYLES		256
-#define	MAX_MODELS			256		// these are sent over the net as bytes
-#define	MAX_SOUNDS			256		// so they cannot be blindly increased
-#define	MAX_IMAGES			256
-#define	MAX_ITEMS			256
-#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
-
-// game print flags
-#define	PRINT_LOW			0		// pickup messages
-#define	PRINT_MEDIUM		1		// death messages
-#define	PRINT_HIGH			2		// critical messages
-#define	PRINT_CHAT			3		// chat messages
-
-#define	ERR_FATAL			0		// exit the entire game with a popup window
-#define	ERR_DROP			1		// print to console and disconnect from game
-#define	ERR_DISCONNECT		2		// don't kill server
-
-#define	PRINT_ALL			0
-#define PRINT_DEVELOPER		1		// only print when "developer 1"
-#define PRINT_ALERT			2
-
-// destination class for gi.multicast()
-typedef enum {
-	MULTICAST_ALL,
-	MULTICAST_PHS,
-	MULTICAST_PVS,
-	MULTICAST_ALL_R,
-	MULTICAST_PHS_R,
-	MULTICAST_PVS_R
-} multicast_t;
-
 //
 // SECTION Byte order
 //
@@ -149,6 +105,11 @@ static void Swap_Init() {
 //
 // SECTION Math
 //
+
+// angle indexes
+#define	PITCH				0		// up / down
+#define	YAW					1		// left / right
+#define	ROLL				2		// fall over
 
 typedef float vec_t;
 typedef vec_t vec3_t[3];
@@ -695,7 +656,6 @@ typedef enum {
 // SECTION CLC (client to server)
 //
 
-// client to server
 enum clc_ops_e {
 	clc_bad,
 	clc_nop,
@@ -762,6 +722,8 @@ typedef struct entity_state_s {
 #define	SHORT2ANGLE(x)	((x)*(360.0/65536))
 
 #define NUMVERTEXNORMALS 162
+
+#define	MAX_EDICTS 1024	// must change protocol to increase more
 
 // ms and light always sent, the others are optional
 #define	CM_ANGLE1 	(1<<0)
@@ -1510,85 +1472,6 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 }
 
 //
-// SECTION Cvar (console variables)
-//
-
-#define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
-#define	CVAR_USERINFO	2	// added to userinfo  when changed
-#define	CVAR_SERVERINFO	4	// added to serverinfo when changed
-#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
-#define	CVAR_LATCH		16	// save changes until server restart
-
-// cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
-// The user can access cvars from the console in three ways:
-// r_draworder			prints the current value
-// r_draworder 0		sets the current value to 0
-// set r_draworder 0	as above, but creates the cvar if not present
-// Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
-
-// nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s {
-	char			*name;
-	char			*string;
-	char			*latched_string; // for CVAR_LATCH vars
-	int				flags;
-	qboolean		modified; // set each time the cvar is changed
-	float			value;
-	struct cvar_s 	*next;
-} cvar_t;
-
-static cvar_t* cvar_vars;
-
-cvar_t *Cvar_Get (char *var_name, char *value, int flags);
-// creates the variable if it doesn't exist, or returns the existing one
-// if it exists, the value will not be changed, but flags will be ORed in
-// that allows variables to be unarchived without needing bitflags
-
-cvar_t 	*Cvar_Set (char *var_name, char *value);
-// will create the variable if it doesn't exist
-
-cvar_t *Cvar_ForceSet (char *var_name, char *value);
-// will set the variable even if NOSET or LATCH
-
-cvar_t 	*Cvar_FullSet (char *var_name, char *value, int flags);
-
-void	Cvar_SetValue (char *var_name, float value);
-// expands value to a string and calls Cvar_Set
-
-float	Cvar_VariableValue (char *var_name);
-// returns 0 if not defined or non numeric
-
-char	*Cvar_VariableString (char *var_name);
-// returns an empty string if not defined
-
-char 	*Cvar_CompleteVariable (char *partial);
-// attempts to match a partial variable name for command line completion
-// returns NULL if nothing fits
-
-void	Cvar_GetLatchedVars (void);
-// any CVAR_LATCHED variables that have been set will now take effect
-
-qboolean Cvar_Command (void);
-// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
-// command.  Returns true if the command was a variable reference that
-// was handled. (print or change)
-
-void 	Cvar_WriteVariables (char *path);
-// appends lines containing "set variable value" for all variables
-// with the archive flag set to true.
-
-void	Cvar_Init (void);
-
-char	*Cvar_Userinfo (void);
-// returns an info string containing all the CVAR_USERINFO cvars
-
-char	*Cvar_Serverinfo (void);
-// returns an info string containing all the CVAR_SERVERINFO cvars
-
-// this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
-static qboolean userinfo_modified;
-
-//
 // SECTION System
 //
 
@@ -1637,6 +1520,137 @@ static void FS_Read(void* buffer, int len, FILE* f);
 
 static void FS_FreeFile(void* buffer);
 static void FS_CreatePath(char* path);
+
+//
+// SECTION Cvar (console variables)
+//
+
+// cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
+// The user can access cvars from the console in three ways:
+// r_draworder			prints the current value
+// r_draworder 0		sets the current value to 0
+// set r_draworder 0	as above, but creates the cvar if not present
+// Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
+
+#define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
+#define	CVAR_USERINFO	2	// added to userinfo  when changed
+#define	CVAR_SERVERINFO	4	// added to serverinfo when changed
+#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
+#define	CVAR_LATCH		16	// save changes until server restart
+
+// nothing outside the Cvar_*() functions should modify these fields!
+typedef struct cvar_s {
+	char			*name;
+	char			*string;
+	char			*latched_string; // for CVAR_LATCH vars
+	int				flags;
+	qboolean		modified; // set each time the cvar is changed
+	float			value;
+	struct cvar_s 	*next;
+} cvar_t;
+
+static cvar_t*	cvar_vars;
+static qboolean	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
+static int		server_state;
+
+static qboolean Cvar_InfoValidate(char* s) {
+	if (strstr(s, "\\")) {
+		return false;
+	}
+	if (strstr(s, "\"")) {
+		return false;
+	}
+	if (strstr(s, ";")) {
+		return false;
+	}
+	return true;
+}
+
+static cvar_t* Cvar_FindVar(char* var_name) {
+	for (cvar_t* var = cvar_vars; var; var = var->next) {
+		if (!strcmp (var_name, var->name)) {
+			return var;
+		}
+	}
+	return NULL;
+}
+
+// returns 0 if not defined or non numeric
+static float Cvar_VariableValue(char* var_name) {
+	cvar_t* var = Cvar_FindVar(var_name);
+	if (!var) {
+		return 0;
+	}
+	return atof(var->string);
+}
+
+// returns an empty string if not defined
+static char* Cvar_VariableString(char* var_name) {
+	cvar_t* var = Cvar_FindVar(var_name);
+	if (!var) {
+		return "";
+	}
+	return var->string;
+}
+
+// attempts to match a partial variable name for command line completion
+// returns NULL if nothing fits
+static char* Cvar_CompleteVariable(char* partial) {
+	int len = strlen(partial);
+	if (!len) {
+		return NULL;
+	}
+
+	// check exact match
+	for (cvar_t* cvar = cvar_vars; cvar; cvar=cvar->next) {
+		if (!strcmp(partial,cvar->name)) {
+			return cvar->name;
+		}
+	}
+
+	// check partial match
+	for (cvar_t* cvar = cvar_vars; cvar; cvar = cvar->next) {
+		if (!strncmp(partial,cvar->name, len)) {
+			return cvar->name;
+		}
+	}
+
+	return NULL;
+}
+
+// Any variables with latched values will now be updated
+static void Cvar_GetLatchedVars() {
+	for (cvar_t* var = cvar_vars ; var ; var = var->next) {
+		if (!var->latched_string) {
+			continue;
+		}
+		Z_Free(var->string);
+		var->string = var->latched_string;
+		var->latched_string = NULL;
+		var->value = atof(var->string);
+		if (!strcmp(var->name, "game")) {
+			FS_SetGamedir(var->string);
+			FS_ExecAutoexec();
+		}
+	}
+}
+
+qboolean Cvar_Command (void);
+// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
+// command.  Returns true if the command was a variable reference that
+// was handled. (print or change)
+
+void 	Cvar_WriteVariables (char *path);
+// appends lines containing "set variable value" for all variables
+// with the archive flag set to true.
+
+void	Cvar_Init (void);
+
+char	*Cvar_Userinfo (void);
+// returns an info string containing all the CVAR_USERINFO cvars
+
+char	*Cvar_Serverinfo (void);
+// returns an info string containing all the CVAR_SERVERINFO cvars
 
 //
 // SECTION Network
@@ -1728,6 +1742,8 @@ qboolean Netchan_CanReliable (netchan_t *chan);
 // SECTION User
 //
 
+#define	MAX_OSPATH 128 // max length of a filesystem pathname
+
 // Persistant through an arbitrary number of server connections
 static struct {
 	enum {
@@ -1775,11 +1791,15 @@ static struct {
 } cls;
 
 //
-// SECTION Console
+// SECTION Con (console)
 //
 
 #define	NUM_CON_TIMES 4
 #define CON_TEXTSIZE 32768
+
+#define	PRINT_MEDIUM	1	// death messages
+#define	PRINT_HIGH		2	// critical messages
+#define	PRINT_CHAT		3	// chat messages
 
 static struct {
 	qboolean	initialized;
@@ -1882,6 +1902,8 @@ static void Con_Print(char *txt) {
 #define MAX_NUM_ARGVS	50
 #define	MAX_TOKEN_CHARS	128		// max length of an individual token
 
+#define	MAX_QPATH 64 // max length of a quake game pathname
+
 static int		rd_target;
 static char*	rd_buffer;
 static int		rd_buffersize;
@@ -1965,7 +1987,7 @@ static void Com_Printf(char *fmt, ...) {
 
 // Parse a token out of a string
 // data is an in/out parm, returns a parsed out token
-static char *COM_Parse (char **data_p) {
+static char* COM_Parse(char** data_p) {
 	char* data = *data_p;
 	int len = 0;
 	com_token[0] = 0;
@@ -2024,7 +2046,7 @@ static char *COM_Parse (char **data_p) {
 	} while (c > 32);
 
 	if (len == MAX_TOKEN_CHARS) {
-		// Com_Printf ("Token exceeded %i chars, discarded.\n", MAX_TOKEN_CHARS);
+		Com_Printf ("Token exceeded %i chars, discarded.\n", MAX_TOKEN_CHARS);
 		len = 0;
 	}
 	com_token[len] = 0;
@@ -2064,6 +2086,162 @@ static void COM_InitArgv(int argc, char **argv) {
 			com_argv[i] = argv[i];
 		}
 	}
+}
+
+// creates the variable if it doesn't exist, or returns the existing one
+// if it exists, the value will not be changed, but flags will be ORed in
+// that allows variables to be unarchived without needing bitflags
+static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
+	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
+		if (!Cvar_InfoValidate(var_name)) {
+			Com_Printf("invalid info cvar name\n");
+			return NULL;
+		}
+	}
+
+	cvar_t* var = Cvar_FindVar(var_name);
+	if (var) {
+		var->flags |= flags;
+		return var;
+	}
+
+	if (!var_value) {
+		return NULL;
+	}
+
+	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
+		if (!Cvar_InfoValidate (var_value)) {
+			Com_Printf("invalid info cvar value\n");
+			return NULL;
+		}
+	}
+
+	var = Z_Malloc(sizeof(*var));
+	var->name = CopyString(var_name);
+	var->string = CopyString(var_value);
+	var->modified = true;
+	var->value = atof(var->string);
+
+	// link the variable in
+	var->next = cvar_vars;
+	cvar_vars = var;
+
+	var->flags = flags;
+	return var;
+}
+
+// will create the variable if it doesn't exist
+// will set the variable even if NOSET or LATCH when force = true
+static cvar_t* COM_SetCvar_(char* var_name, char* value, qboolean force) {
+	cvar_t* var = Cvar_FindVar (var_name);
+	if (!var) {
+		// create it
+		return COM_GetCvar(var_name, value, 0);
+	}
+
+	if (var->flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
+		if (!Cvar_InfoValidate (value)) {
+			Com_Printf("invalid info cvar value\n");
+			return var;
+		}
+	}
+
+	if (!force) {
+		if (var->flags & CVAR_NOSET) {
+			Com_Printf("%s is write protected.\n", var_name);
+			return var;
+		}
+
+		if (var->flags & CVAR_LATCH) {
+			if (var->latched_string) {
+				if (strcmp(value, var->latched_string) == 0) {
+					return var;
+				}
+				Z_Free (var->latched_string);
+			} else {
+				if (strcmp(value, var->string) == 0) {
+					return var;
+				}
+			}
+
+			if (server_state) {
+				Com_Printf("%s will be changed for next game.\n", var_name);
+				var->latched_string = CopyString(value);
+			} else {
+				var->string = CopyString(value);
+				var->value = atof (var->string);
+				if (!strcmp(var->name, "game"))
+				{
+					FS_SetGamedir (var->string);
+					FS_ExecAutoexec ();
+				}
+			}
+			return var;
+		}
+	} else {
+		if (var->latched_string) {
+			Z_Free (var->latched_string);
+			var->latched_string = NULL;
+		}
+	}
+
+	if (!strcmp(value, var->string)) {
+		// not changed
+		return var;
+	}
+
+	var->modified = true;
+
+	if (var->flags & CVAR_USERINFO) {
+		// transmit at next oportunity
+		userinfo_modified = true;
+	}
+
+	// free the old value string
+	Z_Free (var->string);
+
+	var->string = CopyString(value);
+	var->value = atof (var->string);
+
+	return var;
+}
+
+static cvar_t* COM_SetCvar(char* var_name, char* value)		{return COM_SetCvar_(var_name, value, false);}
+static cvar_t* Com_ForceSetCvar(char *var_name, char *value)	{return COM_SetCvar_(var_name, value, true);}
+
+static cvar_t* COM_FullSetCvar(char* var_name, char* value, int flags) {
+	cvar_t* var = Cvar_FindVar(var_name);
+	if (!var) {
+		// create it
+		return COM_GetCvar(var_name, value, flags);
+	}
+
+	var->modified = true;
+
+	if (var->flags & CVAR_USERINFO) {
+		// transmit at next oportunity
+		userinfo_modified = true;
+	}
+
+	// free the old value string
+	Z_Free (var->string);
+
+	var->string = CopyString(value);
+	var->value = atof (var->string);
+	var->flags = flags;
+
+	return var;
+}
+
+// converts value to string and sets as normal
+static void COM_SetValueCvar(char *var_name, float value) {
+	char val[32] = {};
+	if (value == (int)value) {
+		Com_sprintf (val, sizeof(val), "%i", (int)value);
+	} else {
+		Com_sprintf (val, sizeof(val), "%f", value);
+	}
+	COM_SetCvar (var_name, val);
 }
 
 //
@@ -2854,6 +3032,17 @@ static void Info_Print(char *s) {
 //
 // SECTION Mess
 //
+
+//
+// per-level limits
+//
+#define	MAX_CLIENTS			256		// absolute limit
+#define	MAX_LIGHTSTYLES		256
+#define	MAX_MODELS			256		// these are sent over the net as bytes
+#define	MAX_SOUNDS			256		// so they cannot be blindly increased
+#define	MAX_IMAGES			256
+#define	MAX_ITEMS			256
+#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
 
 // lower bits are stronger, and will eat weaker brushes completely
 #define	CONTENTS_SOLID			1		// an eye is never valid in a solid
@@ -4925,6 +5114,16 @@ struct edict_s
 
 //===============================================================
 
+// destination class for gi.multicast()
+typedef enum {
+	MULTICAST_ALL,
+	MULTICAST_PHS,
+	MULTICAST_PVS,
+	MULTICAST_ALL_R,
+	MULTICAST_PHS_R,
+	MULTICAST_PVS_R
+} multicast_t;
+
 //
 // functions provided by the main engine
 //
@@ -6843,7 +7042,7 @@ cmodel_t *CM_LoadMap (char *name, qboolean clientload, unsigned *checksum)
 	int				length;
 	static unsigned	last_checksum;
 
-	map_noareas = Cvar_Get ("map_noareas", "0", 0);
+	map_noareas = COM_GetCvar ("map_noareas", "0", 0);
 
 	if (  !strcmp (map_name, name) && (clientload || !Cvar_VariableValue ("flushmap")) )
 	{
@@ -8098,8 +8297,6 @@ cvar_t	*fixedtime;
 cvar_t	*showtrace;
 cvar_t	*dedicated;
 
-int			server_state;
-
 // host_speeds times
 int		time_before_game;
 int		time_after_game;
@@ -8158,6 +8355,7 @@ void Com_DPrintf (char *fmt, ...)
 	Com_Printf ("%s", msg);
 }
 
+#define	ERR_DISCONNECT		2		// don't kill server
 
 /*
 =============
@@ -8558,21 +8756,21 @@ void Qcommon_Init (int argc, char **argv)
 	//
     Cmd_AddCommand ("error", Com_Error_f);
 
-	host_speeds = Cvar_Get ("host_speeds", "0", 0);
-	log_stats = Cvar_Get ("log_stats", "0", 0);
-	developer = Cvar_Get ("developer", "0", 0);
-	timescale = Cvar_Get ("timescale", "1", 0);
-	fixedtime = Cvar_Get ("fixedtime", "0", 0);
-	logfile_active = Cvar_Get ("logfile", "0", 0);
-	showtrace = Cvar_Get ("showtrace", "0", 0);
+	host_speeds = COM_GetCvar ("host_speeds", "0", 0);
+	log_stats = COM_GetCvar ("log_stats", "0", 0);
+	developer = COM_GetCvar ("developer", "0", 0);
+	timescale = COM_GetCvar ("timescale", "1", 0);
+	fixedtime = COM_GetCvar ("fixedtime", "0", 0);
+	logfile_active = COM_GetCvar ("logfile", "0", 0);
+	showtrace = COM_GetCvar ("showtrace", "0", 0);
 #ifdef DEDICATED_ONLY
 	dedicated = Cvar_Get ("dedicated", "1", CVAR_NOSET);
 #else
-	dedicated = Cvar_Get ("dedicated", "0", CVAR_NOSET);
+	dedicated = COM_GetCvar ("dedicated", "0", CVAR_NOSET);
 #endif
 
 	s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
-	Cvar_Get ("version", s, CVAR_SERVERINFO|CVAR_NOSET);
+	COM_GetCvar ("version", s, CVAR_SERVERINFO|CVAR_NOSET);
 
 
 	if (dedicated->value)
@@ -8761,335 +8959,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /* already inlined above: qcommon/qcommon.h */
 
-/*
-============
-Cvar_InfoValidate
-============
-*/
-static qboolean Cvar_InfoValidate (char *s)
-{
-	if (strstr (s, "\\"))
-		return false;
-	if (strstr (s, "\""))
-		return false;
-	if (strstr (s, ";"))
-		return false;
-	return true;
-}
-
-/*
-============
-Cvar_FindVar
-============
-*/
-static cvar_t *Cvar_FindVar (char *var_name)
-{
-	cvar_t	*var;
-
-	for (var=cvar_vars ; var ; var=var->next)
-		if (!strcmp (var_name, var->name))
-			return var;
-
-	return NULL;
-}
-
-/*
-============
-Cvar_VariableValue
-============
-*/
-float Cvar_VariableValue (char *var_name)
-{
-	cvar_t	*var;
-
-	var = Cvar_FindVar (var_name);
-	if (!var)
-		return 0;
-	return atof (var->string);
-}
-
-
-/*
-============
-Cvar_VariableString
-============
-*/
-char *Cvar_VariableString (char *var_name)
-{
-	cvar_t *var;
-
-	var = Cvar_FindVar (var_name);
-	if (!var)
-		return "";
-	return var->string;
-}
-
-
-/*
-============
-Cvar_CompleteVariable
-============
-*/
-char *Cvar_CompleteVariable (char *partial)
-{
-	cvar_t		*cvar;
-	int			len;
-
-	len = strlen(partial);
-
-	if (!len)
-		return NULL;
-
-	// check exact match
-	for (cvar=cvar_vars ; cvar ; cvar=cvar->next)
-		if (!strcmp (partial,cvar->name))
-			return cvar->name;
-
-	// check partial match
-	for (cvar=cvar_vars ; cvar ; cvar=cvar->next)
-		if (!strncmp (partial,cvar->name, len))
-			return cvar->name;
-
-	return NULL;
-}
-
-
-/*
-============
-Cvar_Get
-
-If the variable already exists, the value will not be set
-The flags will be or'ed in if the variable exists.
-============
-*/
-cvar_t *Cvar_Get (char *var_name, char *var_value, int flags)
-{
-	cvar_t	*var;
-
-	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO))
-	{
-		if (!Cvar_InfoValidate (var_name))
-		{
-			Com_Printf("invalid info cvar name\n");
-			return NULL;
-		}
-	}
-
-	var = Cvar_FindVar (var_name);
-	if (var)
-	{
-		var->flags |= flags;
-		return var;
-	}
-
-	if (!var_value)
-		return NULL;
-
-	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO))
-	{
-		if (!Cvar_InfoValidate (var_value))
-		{
-			Com_Printf("invalid info cvar value\n");
-			return NULL;
-		}
-	}
-
-	var = Z_Malloc (sizeof(*var));
-	var->name = CopyString (var_name);
-	var->string = CopyString (var_value);
-	var->modified = true;
-	var->value = atof (var->string);
-
-	// link the variable in
-	var->next = cvar_vars;
-	cvar_vars = var;
-
-	var->flags = flags;
-
-	return var;
-}
-
-/*
-============
-Cvar_Set2
-============
-*/
-cvar_t *Cvar_Set2 (char *var_name, char *value, qboolean force)
-{
-	cvar_t	*var;
-
-	var = Cvar_FindVar (var_name);
-	if (!var)
-	{	// create it
-		return Cvar_Get (var_name, value, 0);
-	}
-
-	if (var->flags & (CVAR_USERINFO | CVAR_SERVERINFO))
-	{
-		if (!Cvar_InfoValidate (value))
-		{
-			Com_Printf("invalid info cvar value\n");
-			return var;
-		}
-	}
-
-	if (!force)
-	{
-		if (var->flags & CVAR_NOSET)
-		{
-			Com_Printf ("%s is write protected.\n", var_name);
-			return var;
-		}
-
-		if (var->flags & CVAR_LATCH)
-		{
-			if (var->latched_string)
-			{
-				if (strcmp(value, var->latched_string) == 0)
-					return var;
-				Z_Free (var->latched_string);
-			}
-			else
-			{
-				if (strcmp(value, var->string) == 0)
-					return var;
-			}
-
-			if (Com_ServerState())
-			{
-				Com_Printf ("%s will be changed for next game.\n", var_name);
-				var->latched_string = CopyString(value);
-			}
-			else
-			{
-				var->string = CopyString(value);
-				var->value = atof (var->string);
-				if (!strcmp(var->name, "game"))
-				{
-					FS_SetGamedir (var->string);
-					FS_ExecAutoexec ();
-				}
-			}
-			return var;
-		}
-	}
-	else
-	{
-		if (var->latched_string)
-		{
-			Z_Free (var->latched_string);
-			var->latched_string = NULL;
-		}
-	}
-
-	if (!strcmp(value, var->string))
-		return var;		// not changed
-
-	var->modified = true;
-
-	if (var->flags & CVAR_USERINFO)
-		userinfo_modified = true;	// transmit at next oportunity
-
-	Z_Free (var->string);	// free the old value string
-
-	var->string = CopyString(value);
-	var->value = atof (var->string);
-
-	return var;
-}
-
-/*
-============
-Cvar_ForceSet
-============
-*/
-cvar_t *Cvar_ForceSet (char *var_name, char *value)
-{
-	return Cvar_Set2 (var_name, value, true);
-}
-
-/*
-============
-Cvar_Set
-============
-*/
-cvar_t *Cvar_Set (char *var_name, char *value)
-{
-	return Cvar_Set2 (var_name, value, false);
-}
-
-/*
-============
-Cvar_FullSet
-============
-*/
-cvar_t *Cvar_FullSet (char *var_name, char *value, int flags)
-{
-	cvar_t	*var;
-
-	var = Cvar_FindVar (var_name);
-	if (!var)
-	{	// create it
-		return Cvar_Get (var_name, value, flags);
-	}
-
-	var->modified = true;
-
-	if (var->flags & CVAR_USERINFO)
-		userinfo_modified = true;	// transmit at next oportunity
-
-	Z_Free (var->string);	// free the old value string
-
-	var->string = CopyString(value);
-	var->value = atof (var->string);
-	var->flags = flags;
-
-	return var;
-}
-
-/*
-============
-Cvar_SetValue
-============
-*/
-void Cvar_SetValue (char *var_name, float value)
-{
-	char	val[32];
-
-	if (value == (int)value)
-		Com_sprintf (val, sizeof(val), "%i",(int)value);
-	else
-		Com_sprintf (val, sizeof(val), "%f",value);
-	Cvar_Set (var_name, val);
-}
-
-
-/*
-============
-Cvar_GetLatchedVars
-
-Any variables with latched values will now be updated
-============
-*/
-void Cvar_GetLatchedVars (void)
-{
-	cvar_t	*var;
-
-	for (var = cvar_vars ; var ; var = var->next)
-	{
-		if (!var->latched_string)
-			continue;
-		Z_Free (var->string);
-		var->string = var->latched_string;
-		var->latched_string = NULL;
-		var->value = atof(var->string);
-		if (!strcmp(var->name, "game"))
-		{
-			FS_SetGamedir (var->string);
-			FS_ExecAutoexec ();
-		}
-	}
-}
 
 /*
 ============
@@ -9114,7 +8983,7 @@ qboolean Cvar_Command (void)
 		return true;
 	}
 
-	Cvar_Set (v->name, Cmd_Argv(1));
+	COM_SetCvar (v->name, Cmd_Argv(1));
 	return true;
 }
 
@@ -9149,10 +9018,10 @@ void Cvar_Set_f (void)
 			Com_Printf ("flags can only be 'u' or 's'\n");
 			return;
 		}
-		Cvar_FullSet (Cmd_Argv(1), Cmd_Argv(2), flags);
+		COM_FullSetCvar (Cmd_Argv(1), Cmd_Argv(2), flags);
 	}
 	else
-		Cvar_Set (Cmd_Argv(1), Cmd_Argv(2));
+		COM_SetCvar (Cmd_Argv(1), Cmd_Argv(2));
 }
 
 
@@ -9882,12 +9751,12 @@ void FS_SetGamedir (char *dir)
 
 	if (!strcmp(dir,BASEDIRNAME) || (*dir == 0))
 	{
-		Cvar_FullSet ("gamedir", "", CVAR_SERVERINFO|CVAR_NOSET);
-		Cvar_FullSet ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+		COM_FullSetCvar ("gamedir", "", CVAR_SERVERINFO|CVAR_NOSET);
+		COM_FullSetCvar ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
 	}
 	else
 	{
-		Cvar_FullSet ("gamedir", dir, CVAR_SERVERINFO|CVAR_NOSET);
+		COM_FullSetCvar ("gamedir", dir, CVAR_SERVERINFO|CVAR_NOSET);
 		if (fs_cddir->string[0])
 			FS_AddGameDirectory (va("%s/%s", fs_cddir->string, dir) );
 		FS_AddGameDirectory (va("%s/%s", fs_basedir->string, dir) );
@@ -10108,14 +9977,14 @@ void FS_InitFilesystem (void)
 	// basedir <path>
 	// allows the game to run from outside the data tree
 	//
-	fs_basedir = Cvar_Get ("basedir", ".", CVAR_NOSET);
+	fs_basedir = COM_GetCvar ("basedir", ".", CVAR_NOSET);
 
 	//
 	// cddir <path>
 	// Logically concatenates the cddir after the basedir for
 	// allows the game to run from outside the data tree
 	//
-	fs_cddir = Cvar_Get ("cddir", "", CVAR_NOSET);
+	fs_cddir = COM_GetCvar ("cddir", "", CVAR_NOSET);
 	if (fs_cddir->string[0])
 		FS_AddGameDirectory (va("%s/"BASEDIRNAME, fs_cddir->string) );
 
@@ -10128,7 +9997,7 @@ void FS_InitFilesystem (void)
 	fs_base_searchpaths = fs_searchpaths;
 
 	// check for game override
-	fs_gamedirvar = Cvar_Get ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+	fs_gamedirvar = COM_GetCvar ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
 	if (fs_gamedirvar->string[0])
 		FS_SetGamedir (fs_gamedirvar->string);
 }
@@ -10505,9 +10374,9 @@ void Netchan_Init (void)
 	// pick a port value that should be nice and random
 	port = Sys_Milliseconds() & 0xffff;
 
-	showpackets = Cvar_Get ("showpackets", "0", 0);
-	showdrop = Cvar_Get ("showdrop", "0", 0);
-	qport = Cvar_Get ("qport", va("%i", port), CVAR_NOSET);
+	showpackets = COM_GetCvar ("showpackets", "0", 0);
+	showdrop = COM_GetCvar ("showdrop", "0", 0);
+	qport = COM_GetCvar ("qport", va("%i", port), CVAR_NOSET);
 }
 
 /*
@@ -12557,7 +12426,7 @@ void SV_SetMaster_f (void)
 	}
 
 	// make sure the server is listed public
-	Cvar_Set ("public", "1");
+	COM_SetCvar ("public", "1");
 
 	for (i=1 ; i<MAX_MASTERS ; i++)
 		memset (&master_adr[i], 0, sizeof(master_adr[i]));
@@ -12943,7 +12812,7 @@ void SV_ReadServerFile (void)
 			break;
 		FS_Read (string, sizeof(string), f);
 		Com_DPrintf ("Set %s = %s\n", name, string);
-		Cvar_ForceSet (name, string);
+		Com_ForceSetCvar (name, string);
 	}
 
 	fclose (f);
@@ -14656,9 +14525,9 @@ void SV_InitGameProgs (void)
 	import.TagFree = Z_Free;
 	import.FreeTags = Z_FreeTags;
 
-	import.cvar = Cvar_Get;
-	import.cvar_set = Cvar_Set;
-	import.cvar_forceset = Cvar_ForceSet;
+	import.cvar = COM_GetCvar;
+	import.cvar_set = COM_SetCvar;
+	import.cvar_forceset = Com_ForceSetCvar;
 
 	import.argc = Cmd_Argc;
 	import.argv = Cmd_Argv;
@@ -14856,7 +14725,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	unsigned	checksum;
 
 	if (attractloop)
-		Cvar_Set ("paused", "0");
+		COM_SetCvar ("paused", "0");
 
 	Com_Printf ("------- Server Initialization -------\n");
 
@@ -14958,7 +14827,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	SV_CheckForSavegame ();
 
 	// set serverinfo variable
-	Cvar_FullSet ("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
+	COM_FullSetCvar ("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
 
 	Com_Printf ("-------------------------------------\n");
 }
@@ -14996,7 +14865,7 @@ void SV_InitGame (void)
 	if (Cvar_VariableValue ("coop") && Cvar_VariableValue ("deathmatch"))
 	{
 		Com_Printf("Deathmatch and Coop both set, disabling Coop\n");
-		Cvar_FullSet ("coop", "0",  CVAR_SERVERINFO | CVAR_LATCH);
+		COM_FullSetCvar ("coop", "0",  CVAR_SERVERINFO | CVAR_LATCH);
 	}
 
 	// dedicated servers are can't be single player and are usually DM
@@ -15004,21 +14873,21 @@ void SV_InitGame (void)
 	if (dedicated->value)
 	{
 		if (!Cvar_VariableValue ("coop"))
-			Cvar_FullSet ("deathmatch", "1",  CVAR_SERVERINFO | CVAR_LATCH);
+			COM_FullSetCvar ("deathmatch", "1",  CVAR_SERVERINFO | CVAR_LATCH);
 	}
 
 	// init clients
 	if (Cvar_VariableValue ("deathmatch"))
 	{
 		if (maxclients->value <= 1)
-			Cvar_FullSet ("maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);
+			COM_FullSetCvar ("maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);
 		else if (maxclients->value > MAX_CLIENTS)
-			Cvar_FullSet ("maxclients", va("%i", MAX_CLIENTS), CVAR_SERVERINFO | CVAR_LATCH);
+			COM_FullSetCvar ("maxclients", va("%i", MAX_CLIENTS), CVAR_SERVERINFO | CVAR_LATCH);
 	}
 	else if (Cvar_VariableValue ("coop"))
 	{
 		if (maxclients->value <= 1 || maxclients->value > 4)
-			Cvar_FullSet ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
+			COM_FullSetCvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
 #ifdef COPYPROTECT
 		if (!sv.attractloop && !dedicated->value)
 			Sys_CopyProtect ();
@@ -15026,7 +14895,7 @@ void SV_InitGame (void)
 	}
 	else	// non-deathmatch, non-coop is one player
 	{
-		Cvar_FullSet ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
+		COM_FullSetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
 #ifdef COPYPROTECT
 		if (!sv.attractloop)
 			Sys_CopyProtect ();
@@ -15094,14 +14963,14 @@ void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame)
 	if (ch)
 	{
 		*ch = 0;
-			Cvar_Set ("nextserver", va("gamemap \"%s\"", ch+1));
+			COM_SetCvar ("nextserver", va("gamemap \"%s\"", ch+1));
 	}
 	else
-		Cvar_Set ("nextserver", "");
+		COM_SetCvar ("nextserver", "");
 
 	//ZOID special hack for end game screen in coop mode
 	if (Cvar_VariableValue ("coop") && !Q_stricmp(level, "victory.pcx"))
-		Cvar_Set ("nextserver", "gamemap \"*base1\"");
+		COM_SetCvar ("nextserver", "gamemap \"*base1\"");
 
 	// if there is a $, use the remainder as a spawnpoint
 	ch = strstr(level, "$");
@@ -16103,36 +15972,36 @@ void SV_Init (void)
 {
 	SV_InitOperatorCommands	();
 
-	rcon_password = Cvar_Get ("rcon_password", "", 0);
-	Cvar_Get ("skill", "1", 0);
-	Cvar_Get ("deathmatch", "0", CVAR_LATCH);
-	Cvar_Get ("coop", "0", CVAR_LATCH);
-	Cvar_Get ("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
-	Cvar_Get ("fraglimit", "0", CVAR_SERVERINFO);
-	Cvar_Get ("timelimit", "0", CVAR_SERVERINFO);
-	Cvar_Get ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
-	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
-	maxclients = Cvar_Get ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-	hostname = Cvar_Get ("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
-	timeout = Cvar_Get ("timeout", "125", 0);
-	zombietime = Cvar_Get ("zombietime", "2", 0);
-	sv_showclamp = Cvar_Get ("showclamp", "0", 0);
-	sv_paused = Cvar_Get ("paused", "0", 0);
-	sv_timedemo = Cvar_Get ("timedemo", "0", 0);
-	sv_enforcetime = Cvar_Get ("sv_enforcetime", "0", 0);
-	allow_download = Cvar_Get ("allow_download", "0", CVAR_ARCHIVE);
-	allow_download_players  = Cvar_Get ("allow_download_players", "0", CVAR_ARCHIVE);
-	allow_download_models = Cvar_Get ("allow_download_models", "1", CVAR_ARCHIVE);
-	allow_download_sounds = Cvar_Get ("allow_download_sounds", "1", CVAR_ARCHIVE);
-	allow_download_maps	  = Cvar_Get ("allow_download_maps", "1", CVAR_ARCHIVE);
+	rcon_password = COM_GetCvar ("rcon_password", "", 0);
+	COM_GetCvar ("skill", "1", 0);
+	COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
+	COM_GetCvar ("coop", "0", CVAR_LATCH);
+	COM_GetCvar ("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
+	COM_GetCvar ("fraglimit", "0", CVAR_SERVERINFO);
+	COM_GetCvar ("timelimit", "0", CVAR_SERVERINFO);
+	COM_GetCvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	COM_GetCvar ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
+	maxclients = COM_GetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
+	hostname = COM_GetCvar ("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	timeout = COM_GetCvar ("timeout", "125", 0);
+	zombietime = COM_GetCvar ("zombietime", "2", 0);
+	sv_showclamp = COM_GetCvar ("showclamp", "0", 0);
+	sv_paused = COM_GetCvar ("paused", "0", 0);
+	sv_timedemo = COM_GetCvar ("timedemo", "0", 0);
+	sv_enforcetime = COM_GetCvar ("sv_enforcetime", "0", 0);
+	allow_download = COM_GetCvar ("allow_download", "0", CVAR_ARCHIVE);
+	allow_download_players  = COM_GetCvar ("allow_download_players", "0", CVAR_ARCHIVE);
+	allow_download_models = COM_GetCvar ("allow_download_models", "1", CVAR_ARCHIVE);
+	allow_download_sounds = COM_GetCvar ("allow_download_sounds", "1", CVAR_ARCHIVE);
+	allow_download_maps	  = COM_GetCvar ("allow_download_maps", "1", CVAR_ARCHIVE);
 
-	sv_noreload = Cvar_Get ("sv_noreload", "0", 0);
+	sv_noreload = COM_GetCvar ("sv_noreload", "0", 0);
 
-	sv_airaccelerate = Cvar_Get("sv_airaccelerate", "0", CVAR_LATCH);
+	sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
 
-	public_server = Cvar_Get ("public", "0", 0);
+	public_server = COM_GetCvar ("public", "0", 0);
 
-	sv_reconnect_limit = Cvar_Get ("sv_reconnect_limit", "3", CVAR_ARCHIVE);
+	sv_reconnect_limit = COM_GetCvar ("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 
 	SZ_Init (&net_message, net_message_buffer, sizeof(net_message_buffer));
 }
@@ -17203,7 +17072,7 @@ void SV_Nextserver (void)
 		Cbuf_AddText (v);
 		Cbuf_AddText ("\n");
 	}
-	Cvar_Set ("nextserver","");
+	COM_SetCvar ("nextserver","");
 }
 
 /*
@@ -19885,9 +19754,9 @@ void SCR_PlayCinematic (char *arg)
 	if (old_khz != cin.s_rate/1000)
 	{
 		cin.restart_sound = true;
-		Cvar_SetValue ("s_khz", cin.s_rate/1000);
+		COM_SetValueCvar ("s_khz", cin.s_rate/1000);
 		CL_Snd_Restart_f ();
-		Cvar_SetValue ("s_khz", old_khz);
+		COM_SetValueCvar ("s_khz", old_khz);
 	}
 
 	cl.cinematicframe = 0;
@@ -24130,7 +23999,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("+klook", IN_KLookDown);
 	Cmd_AddCommand ("-klook", IN_KLookUp);
 
-	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0);
+	cl_nodelta = COM_GetCvar ("cl_nodelta", "0", 0);
 }
 
 
@@ -24717,11 +24586,11 @@ void CL_Pause_f (void)
 	// never pause in multiplayer
 	if (Cvar_VariableValue ("maxclients") > 1 || !Com_ServerState ())
 	{
-		Cvar_SetValue ("paused", 0);
+		COM_SetValueCvar ("paused", 0);
 		return;
 	}
 
-	Cvar_SetValue ("paused", !cl_paused->value);
+	COM_SetValueCvar ("paused", !cl_paused->value);
 }
 
 /*
@@ -25158,7 +25027,7 @@ void CL_PingServers_f (void)
 	// send a broadcast packet
 	Com_Printf ("pinging broadcast...\n");
 
-	noudp = Cvar_Get ("noudp", "0", CVAR_NOSET);
+	noudp = COM_GetCvar ("noudp", "0", CVAR_NOSET);
 	if (!noudp->value)
 	{
 		adr.type = NA_BROADCAST;
@@ -25166,7 +25035,7 @@ void CL_PingServers_f (void)
 		Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
 	}
 
-	noipx = Cvar_Get ("noipx", "0", CVAR_NOSET);
+	noipx = COM_GetCvar ("noipx", "0", CVAR_NOSET);
 	if (!noipx->value)
 	{
 		adr.type = NA_BROADCAST_IPX;
@@ -25412,11 +25281,11 @@ void CL_FixUpGender(void)
 		if ((p = strchr(sk, '/')) != NULL)
 			*p = 0;
 		if (Q_stricmp(sk, "male") == 0 || Q_stricmp(sk, "cyborg") == 0)
-			Cvar_Set ("gender", "male");
+			COM_SetCvar ("gender", "male");
 		else if (Q_stricmp(sk, "female") == 0 || Q_stricmp(sk, "crackhor") == 0)
-			Cvar_Set ("gender", "female");
+			COM_SetCvar ("gender", "female");
 		else
-			Cvar_Set ("gender", "none");
+			COM_SetCvar ("gender", "none");
 		gender->modified = false;
 	}
 }
@@ -25758,80 +25627,80 @@ void CL_InitLocal (void)
 
 	CL_InitInput ();
 
-	adr0 = Cvar_Get( "adr0", "", CVAR_ARCHIVE );
-	adr1 = Cvar_Get( "adr1", "", CVAR_ARCHIVE );
-	adr2 = Cvar_Get( "adr2", "", CVAR_ARCHIVE );
-	adr3 = Cvar_Get( "adr3", "", CVAR_ARCHIVE );
-	adr4 = Cvar_Get( "adr4", "", CVAR_ARCHIVE );
-	adr5 = Cvar_Get( "adr5", "", CVAR_ARCHIVE );
-	adr6 = Cvar_Get( "adr6", "", CVAR_ARCHIVE );
-	adr7 = Cvar_Get( "adr7", "", CVAR_ARCHIVE );
-	adr8 = Cvar_Get( "adr8", "", CVAR_ARCHIVE );
+	adr0 = COM_GetCvar( "adr0", "", CVAR_ARCHIVE );
+	adr1 = COM_GetCvar( "adr1", "", CVAR_ARCHIVE );
+	adr2 = COM_GetCvar( "adr2", "", CVAR_ARCHIVE );
+	adr3 = COM_GetCvar( "adr3", "", CVAR_ARCHIVE );
+	adr4 = COM_GetCvar( "adr4", "", CVAR_ARCHIVE );
+	adr5 = COM_GetCvar( "adr5", "", CVAR_ARCHIVE );
+	adr6 = COM_GetCvar( "adr6", "", CVAR_ARCHIVE );
+	adr7 = COM_GetCvar( "adr7", "", CVAR_ARCHIVE );
+	adr8 = COM_GetCvar( "adr8", "", CVAR_ARCHIVE );
 
 //
 // register our variables
 //
-	cl_stereo_separation = Cvar_Get( "cl_stereo_separation", "0.4", CVAR_ARCHIVE );
-	cl_stereo = Cvar_Get( "cl_stereo", "0", 0 );
+	cl_stereo_separation = COM_GetCvar( "cl_stereo_separation", "0.4", CVAR_ARCHIVE );
+	cl_stereo = COM_GetCvar( "cl_stereo", "0", 0 );
 
-	cl_add_blend = Cvar_Get ("cl_blend", "1", 0);
-	cl_add_lights = Cvar_Get ("cl_lights", "1", 0);
-	cl_add_particles = Cvar_Get ("cl_particles", "1", 0);
-	cl_add_entities = Cvar_Get ("cl_entities", "1", 0);
-	cl_gun = Cvar_Get ("cl_gun", "1", 0);
-	cl_footsteps = Cvar_Get ("cl_footsteps", "1", 0);
-	cl_noskins = Cvar_Get ("cl_noskins", "0", 0);
-	cl_autoskins = Cvar_Get ("cl_autoskins", "0", 0);
-	cl_predict = Cvar_Get ("cl_predict", "1", 0);
+	cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
+	cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
+	cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
+	cl_add_entities = COM_GetCvar ("cl_entities", "1", 0);
+	cl_gun = COM_GetCvar ("cl_gun", "1", 0);
+	cl_footsteps = COM_GetCvar ("cl_footsteps", "1", 0);
+	cl_noskins = COM_GetCvar ("cl_noskins", "0", 0);
+	cl_autoskins = COM_GetCvar ("cl_autoskins", "0", 0);
+	cl_predict = COM_GetCvar ("cl_predict", "1", 0);
 //	cl_minfps = Cvar_Get ("cl_minfps", "5", 0);
-	cl_maxfps = Cvar_Get ("cl_maxfps", "90", 0);
+	cl_maxfps = COM_GetCvar ("cl_maxfps", "90", 0);
 
-	cl_upspeed = Cvar_Get ("cl_upspeed", "200", 0);
-	cl_forwardspeed = Cvar_Get ("cl_forwardspeed", "200", 0);
-	cl_sidespeed = Cvar_Get ("cl_sidespeed", "200", 0);
-	cl_yawspeed = Cvar_Get ("cl_yawspeed", "140", 0);
-	cl_pitchspeed = Cvar_Get ("cl_pitchspeed", "150", 0);
-	cl_anglespeedkey = Cvar_Get ("cl_anglespeedkey", "1.5", 0);
+	cl_upspeed = COM_GetCvar ("cl_upspeed", "200", 0);
+	cl_forwardspeed = COM_GetCvar ("cl_forwardspeed", "200", 0);
+	cl_sidespeed = COM_GetCvar ("cl_sidespeed", "200", 0);
+	cl_yawspeed = COM_GetCvar ("cl_yawspeed", "140", 0);
+	cl_pitchspeed = COM_GetCvar ("cl_pitchspeed", "150", 0);
+	cl_anglespeedkey = COM_GetCvar ("cl_anglespeedkey", "1.5", 0);
 
-	cl_run = Cvar_Get ("cl_run", "0", CVAR_ARCHIVE);
-	freelook = Cvar_Get( "freelook", "0", CVAR_ARCHIVE );
-	lookspring = Cvar_Get ("lookspring", "0", CVAR_ARCHIVE);
-	lookstrafe = Cvar_Get ("lookstrafe", "0", CVAR_ARCHIVE);
-	sensitivity = Cvar_Get ("sensitivity", "3", CVAR_ARCHIVE);
+	cl_run = COM_GetCvar ("cl_run", "0", CVAR_ARCHIVE);
+	freelook = COM_GetCvar( "freelook", "0", CVAR_ARCHIVE );
+	lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
+	lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
+	sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
 
-	m_pitch = Cvar_Get ("m_pitch", "0.022", CVAR_ARCHIVE);
-	m_yaw = Cvar_Get ("m_yaw", "0.022", 0);
-	m_forward = Cvar_Get ("m_forward", "1", 0);
-	m_side = Cvar_Get ("m_side", "1", 0);
+	m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
+	m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
+	m_forward = COM_GetCvar ("m_forward", "1", 0);
+	m_side = COM_GetCvar ("m_side", "1", 0);
 
-	cl_shownet = Cvar_Get ("cl_shownet", "0", 0);
-	cl_showmiss = Cvar_Get ("cl_showmiss", "0", 0);
-	cl_showclamp = Cvar_Get ("showclamp", "0", 0);
-	cl_timeout = Cvar_Get ("cl_timeout", "120", 0);
-	cl_paused = Cvar_Get ("paused", "0", 0);
-	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
+	cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
+	cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
+	cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
+	cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
+	cl_paused = COM_GetCvar ("paused", "0", 0);
+	cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
 
-	rcon_client_password = Cvar_Get ("rcon_password", "", 0);
-	rcon_address = Cvar_Get ("rcon_address", "", 0);
+	rcon_client_password = COM_GetCvar ("rcon_password", "", 0);
+	rcon_address = COM_GetCvar ("rcon_address", "", 0);
 
-	cl_lightlevel = Cvar_Get ("r_lightlevel", "0", 0);
+	cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 
 	//
 	// userinfo
 	//
-	info_password = Cvar_Get ("password", "", CVAR_USERINFO);
-	info_spectator = Cvar_Get ("spectator", "0", CVAR_USERINFO);
-	name = Cvar_Get ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
-	skin = Cvar_Get ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
-	rate = Cvar_Get ("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// FIXME
-	msg = Cvar_Get ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
-	hand = Cvar_Get ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
-	fov = Cvar_Get ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
-	gender = Cvar_Get ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
-	gender_auto = Cvar_Get ("gender_auto", "1", CVAR_ARCHIVE);
+	info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
+	info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
+	name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
+	skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
+	rate = COM_GetCvar ("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// FIXME
+	msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
+	hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
+	fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
+	gender = COM_GetCvar ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
+	gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
 	gender->modified = false; // clear this so we know when user sets it manually
 
-	cl_vwep = Cvar_Get ("cl_vwep", "1", CVAR_ARCHIVE);
+	cl_vwep = COM_GetCvar ("cl_vwep", "1", CVAR_ARCHIVE);
 
 
 	//
@@ -25970,7 +25839,7 @@ void CL_FixCvarCheats (void)
 	{
 		while (cheatvars[numcheatvars].name)
 		{
-			cheatvars[numcheatvars].var = Cvar_Get (cheatvars[numcheatvars].name,
+			cheatvars[numcheatvars].var = COM_GetCvar (cheatvars[numcheatvars].name,
 					cheatvars[numcheatvars].value, 0);
 			numcheatvars++;
 		}
@@ -25981,7 +25850,7 @@ void CL_FixCvarCheats (void)
 	{
 		if ( strcmp (var->var->string, var->value) )
 		{
-			Cvar_Set (var->name, var->value);
+			COM_SetCvar (var->name, var->value);
 		}
 	}
 }
@@ -27847,7 +27716,7 @@ void CL_ParseServerData (void)
 
 	// set gamedir
 	if ((*str && (!fs_gamedirvar->string || !*fs_gamedirvar->string || strcmp(fs_gamedirvar->string, str))) || (!*str && (fs_gamedirvar->string || *fs_gamedirvar->string)))
-		Cvar_Set("game", str);
+		COM_SetCvar("game", str);
 
 	// parse player entity number
 	cl.playernum = MSG_ReadShort (&net_message);
@@ -28926,9 +28795,9 @@ static void SCR_CalcVrect (void)
 
 	// bound viewsize
 	if (scr_viewsize->value < 40)
-		Cvar_Set ("viewsize","40");
+		COM_SetCvar ("viewsize","40");
 	if (scr_viewsize->value > 100)
-		Cvar_Set ("viewsize","100");
+		COM_SetCvar ("viewsize","100");
 
 	size = scr_viewsize->value;
 
@@ -28952,7 +28821,7 @@ Keybinding command
 */
 void SCR_SizeUp_f (void)
 {
-	Cvar_SetValue ("viewsize",scr_viewsize->value+10);
+	COM_SetValueCvar ("viewsize",scr_viewsize->value+10);
 }
 
 
@@ -28965,7 +28834,7 @@ Keybinding command
 */
 void SCR_SizeDown_f (void)
 {
-	Cvar_SetValue ("viewsize",scr_viewsize->value-10);
+	COM_SetValueCvar ("viewsize",scr_viewsize->value-10);
 }
 
 /*
@@ -29014,19 +28883,19 @@ SCR_Init
 */
 void SCR_Init (void)
 {
-	scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);
-	scr_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
-	scr_showturtle = Cvar_Get ("scr_showturtle", "0", 0);
-	scr_showpause = Cvar_Get ("scr_showpause", "1", 0);
-	scr_centertime = Cvar_Get ("scr_centertime", "2.5", 0);
-	scr_printspeed = Cvar_Get ("scr_printspeed", "8", 0);
-	scr_netgraph = Cvar_Get ("netgraph", "0", 0);
-	scr_timegraph = Cvar_Get ("timegraph", "0", 0);
-	scr_debuggraph = Cvar_Get ("debuggraph", "0", 0);
-	scr_graphheight = Cvar_Get ("graphheight", "32", 0);
-	scr_graphscale = Cvar_Get ("graphscale", "1", 0);
-	scr_graphshift = Cvar_Get ("graphshift", "0", 0);
-	scr_drawall = Cvar_Get ("scr_drawall", "0", 0);
+	scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
+	scr_conspeed = COM_GetCvar ("scr_conspeed", "3", 0);
+	scr_showturtle = COM_GetCvar ("scr_showturtle", "0", 0);
+	scr_showpause = COM_GetCvar ("scr_showpause", "1", 0);
+	scr_centertime = COM_GetCvar ("scr_centertime", "2.5", 0);
+	scr_printspeed = COM_GetCvar ("scr_printspeed", "8", 0);
+	scr_netgraph = COM_GetCvar ("netgraph", "0", 0);
+	scr_timegraph = COM_GetCvar ("timegraph", "0", 0);
+	scr_debuggraph = COM_GetCvar ("debuggraph", "0", 0);
+	scr_graphheight = COM_GetCvar ("graphheight", "32", 0);
+	scr_graphscale = COM_GetCvar ("graphscale", "1", 0);
+	scr_graphshift = COM_GetCvar ("graphshift", "0", 0);
+	scr_drawall = COM_GetCvar ("scr_drawall", "0", 0);
 
 //
 // register our commands
@@ -29897,9 +29766,9 @@ void SCR_UpdateScreen (void)
 	** brain
 	*/
 	if ( cl_stereo_separation->value > 1.0 )
-		Cvar_SetValue( "cl_stereo_separation", 1.0 );
+		COM_SetValueCvar( "cl_stereo_separation", 1.0 );
 	else if ( cl_stereo_separation->value < 0 )
-		Cvar_SetValue( "cl_stereo_separation", 0.0 );
+		COM_SetValueCvar( "cl_stereo_separation", 0.0 );
 
 	if ( cl_stereo->value )
 	{
@@ -32334,14 +32203,14 @@ void V_Init (void)
 
 	Cmd_AddCommand ("viewpos", V_Viewpos_f);
 
-	crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+	crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
 
-	cl_testblend = Cvar_Get ("cl_testblend", "0", 0);
-	cl_testparticles = Cvar_Get ("cl_testparticles", "0", 0);
-	cl_testentities = Cvar_Get ("cl_testentities", "0", 0);
-	cl_testlights = Cvar_Get ("cl_testlights", "0", 0);
+	cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
+	cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
+	cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
+	cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
 
-	cl_stats = Cvar_Get ("cl_stats", "0", 0);
+	cl_stats = COM_GetCvar ("cl_stats", "0", 0);
 }
 /* ============ end source: client/cl_view.c ============ */
 /* ============ begin source: client/console.c ============ */
@@ -32431,7 +32300,7 @@ void Con_ToggleConsole_f (void)
 	if (cls.key_dest == key_console)
 	{
 		M_ForceMenuOff ();
-		Cvar_Set ("paused", "0");
+		COM_SetCvar ("paused", "0");
 	}
 	else
 	{
@@ -32440,7 +32309,7 @@ void Con_ToggleConsole_f (void)
 
 		if (Cvar_VariableValue ("maxclients") == 1
 			&& Com_ServerState ())
-			Cvar_Set ("paused", "1");
+			COM_SetCvar ("paused", "1");
 	}
 }
 
@@ -32657,7 +32526,7 @@ void Con_Init (void)
 //
 // register our commands
 //
-	con_notifytime = Cvar_Get ("con_notifytime", "3", 0);
+	con_notifytime = COM_GetCvar ("con_notifytime", "3", 0);
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
 	Cmd_AddCommand ("togglechat", Con_ToggleChat_f);
@@ -34101,7 +33970,7 @@ void M_PushMenu ( void (*draw) (void), const char *(*key) (int k) )
 
 	if (Cvar_VariableValue ("maxclients") == 1
 		&& Com_ServerState ())
-		Cvar_Set ("paused", "1");
+		COM_SetCvar ("paused", "1");
 
 	// if this menu is already present, drop back to that level
 	// to avoid stacking menus by hotkeys
@@ -34136,7 +34005,7 @@ void M_ForceMenuOff (void)
 	cls.key_dest = key_game;
 	m_menudepth = 0;
 	Key_ClearStates ();
-	Cvar_Set ("paused", "0");
+	COM_SetCvar ("paused", "0");
 }
 
 void M_PopMenu (void)
@@ -35048,12 +34917,12 @@ static menulist_s		s_options_console_action;
 
 static void CrosshairFunc( void *unused )
 {
-	Cvar_SetValue( "crosshair", s_options_crosshair_box.curvalue );
+	COM_SetValueCvar( "crosshair", s_options_crosshair_box.curvalue );
 }
 
 static void JoystickFunc( void *unused )
 {
-	Cvar_SetValue( "in_joystick", s_options_joystick_box.curvalue );
+	COM_SetValueCvar( "in_joystick", s_options_joystick_box.curvalue );
 }
 
 static void CustomizeControlsFunc( void *unused )
@@ -35063,17 +34932,17 @@ static void CustomizeControlsFunc( void *unused )
 
 static void AlwaysRunFunc( void *unused )
 {
-	Cvar_SetValue( "cl_run", s_options_alwaysrun_box.curvalue );
+	COM_SetValueCvar( "cl_run", s_options_alwaysrun_box.curvalue );
 }
 
 static void FreeLookFunc( void *unused )
 {
-	Cvar_SetValue( "freelook", s_options_freelook_box.curvalue );
+	COM_SetValueCvar( "freelook", s_options_freelook_box.curvalue );
 }
 
 static void MouseSpeedFunc( void *unused )
 {
-	Cvar_SetValue( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
+	COM_SetValueCvar( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
 }
 
 static float ClampCvar( float min, float max, float value )
@@ -35090,24 +34959,24 @@ static void ControlsSetMenuItemValues( void )
 	s_options_quality_list.curvalue			= !Cvar_VariableValue( "s_loadas8bit" );
 	s_options_sensitivity_slider.curvalue	= ( sensitivity->value ) * 2;
 
-	Cvar_SetValue( "cl_run", ClampCvar( 0, 1, cl_run->value ) );
+	COM_SetValueCvar( "cl_run", ClampCvar( 0, 1, cl_run->value ) );
 	s_options_alwaysrun_box.curvalue		= cl_run->value;
 
 	s_options_invertmouse_box.curvalue		= m_pitch->value < 0;
 
-	Cvar_SetValue( "lookspring", ClampCvar( 0, 1, lookspring->value ) );
+	COM_SetValueCvar( "lookspring", ClampCvar( 0, 1, lookspring->value ) );
 	s_options_lookspring_box.curvalue		= lookspring->value;
 
-	Cvar_SetValue( "lookstrafe", ClampCvar( 0, 1, lookstrafe->value ) );
+	COM_SetValueCvar( "lookstrafe", ClampCvar( 0, 1, lookstrafe->value ) );
 	s_options_lookstrafe_box.curvalue		= lookstrafe->value;
 
-	Cvar_SetValue( "freelook", ClampCvar( 0, 1, freelook->value ) );
+	COM_SetValueCvar( "freelook", ClampCvar( 0, 1, freelook->value ) );
 	s_options_freelook_box.curvalue			= freelook->value;
 
-	Cvar_SetValue( "crosshair", ClampCvar( 0, 3, crosshair->value ) );
+	COM_SetValueCvar( "crosshair", ClampCvar( 0, 3, crosshair->value ) );
 	s_options_crosshair_box.curvalue		= crosshair->value;
 
-	Cvar_SetValue( "in_joystick", ClampCvar( 0, 1, in_joystick->value ) );
+	COM_SetValueCvar( "in_joystick", ClampCvar( 0, 1, in_joystick->value ) );
 	s_options_joystick_box.curvalue		= in_joystick->value;
 
 	s_options_noalttab_box.curvalue			= win_noalttab->value;
@@ -35125,32 +34994,32 @@ static void InvertMouseFunc( void *unused )
 {
 	if ( s_options_invertmouse_box.curvalue == 0 )
 	{
-		Cvar_SetValue( "m_pitch", fabs( m_pitch->value ) );
+		COM_SetValueCvar( "m_pitch", fabs( m_pitch->value ) );
 	}
 	else
 	{
-		Cvar_SetValue( "m_pitch", -fabs( m_pitch->value ) );
+		COM_SetValueCvar( "m_pitch", -fabs( m_pitch->value ) );
 	}
 }
 
 static void LookspringFunc( void *unused )
 {
-	Cvar_SetValue( "lookspring", s_options_lookspring_box.curvalue );
+	COM_SetValueCvar( "lookspring", s_options_lookspring_box.curvalue );
 }
 
 static void LookstrafeFunc( void *unused )
 {
-	Cvar_SetValue( "lookstrafe", s_options_lookstrafe_box.curvalue );
+	COM_SetValueCvar( "lookstrafe", s_options_lookstrafe_box.curvalue );
 }
 
 static void UpdateVolumeFunc( void *unused )
 {
-	Cvar_SetValue( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
+	COM_SetValueCvar( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
 }
 
 static void UpdateCDVolumeFunc( void *unused )
 {
-	Cvar_SetValue( "cd_nocd", !s_options_cdvolume_box.curvalue );
+	COM_SetValueCvar( "cd_nocd", !s_options_cdvolume_box.curvalue );
 }
 
 static void ConsoleFunc( void *unused )
@@ -35177,16 +35046,16 @@ static void UpdateSoundQualityFunc( void *unused )
 {
 	if ( s_options_quality_list.curvalue )
 	{
-		Cvar_SetValue( "s_khz", 22 );
-		Cvar_SetValue( "s_loadas8bit", false );
+		COM_SetValueCvar( "s_khz", 22 );
+		COM_SetValueCvar( "s_loadas8bit", false );
 	}
 	else
 	{
-		Cvar_SetValue( "s_khz", 11 );
-		Cvar_SetValue( "s_loadas8bit", true );
+		COM_SetValueCvar( "s_khz", 11 );
+		COM_SetValueCvar( "s_loadas8bit", true );
 	}
 
-	Cvar_SetValue( "s_primary", s_options_compatibility_list.curvalue );
+	COM_SetValueCvar( "s_primary", s_options_compatibility_list.curvalue );
 
 	M_DrawTextBox( 8, 120 - 48, 36, 3 );
 	M_Print( 16 + 16, 120 - 48 + 8,  "Restarting the sound system. This" );
@@ -35233,7 +35102,7 @@ void Options_MenuInit( void )
 		0
 	};
 
-	win_noalttab = Cvar_Get( "win_noalttab", "0", CVAR_ARCHIVE );
+	win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
 
 	/*
 	** configure controls menu and menu items
@@ -35903,10 +35772,10 @@ static void StartGame( void )
 	// disable updates and start the cinematic going
 	cl.servercount = -1;
 	M_ForceMenuOff ();
-	Cvar_SetValue( "deathmatch", 0 );
-	Cvar_SetValue( "coop", 0 );
+	COM_SetValueCvar( "deathmatch", 0 );
+	COM_SetValueCvar( "coop", 0 );
 
-	Cvar_SetValue( "gamerules", 0 );		//PGM
+	COM_SetValueCvar( "gamerules", 0 );		//PGM
 
 	Cbuf_AddText ("loading ; killserver ; wait ; newgame\n");
 	cls.key_dest = key_game;
@@ -35914,19 +35783,19 @@ static void StartGame( void )
 
 static void EasyGameFunc( void *data )
 {
-	Cvar_ForceSet( "skill", "0" );
+	Com_ForceSetCvar( "skill", "0" );
 	StartGame();
 }
 
 static void MediumGameFunc( void *data )
 {
-	Cvar_ForceSet( "skill", "1" );
+	Com_ForceSetCvar( "skill", "1" );
 	StartGame();
 }
 
 static void HardGameFunc( void *data )
 {
-	Cvar_ForceSet( "skill", "2" );
+	Com_ForceSetCvar( "skill", "2" );
 	StartGame();
 }
 
@@ -36447,25 +36316,25 @@ void StartServerActionFunc( void *self )
 	timelimit	= atoi( s_timelimit_field.buffer );
 	fraglimit	= atoi( s_fraglimit_field.buffer );
 
-	Cvar_SetValue( "maxclients", ClampCvar( 0, maxclients, maxclients ) );
-	Cvar_SetValue ("timelimit", ClampCvar( 0, timelimit, timelimit ) );
-	Cvar_SetValue ("fraglimit", ClampCvar( 0, fraglimit, fraglimit ) );
-	Cvar_Set("hostname", s_hostname_field.buffer );
+	COM_SetValueCvar( "maxclients", ClampCvar( 0, maxclients, maxclients ) );
+	COM_SetValueCvar ("timelimit", ClampCvar( 0, timelimit, timelimit ) );
+	COM_SetValueCvar ("fraglimit", ClampCvar( 0, fraglimit, fraglimit ) );
+	COM_SetCvar("hostname", s_hostname_field.buffer );
 //	Cvar_SetValue ("deathmatch", !s_rules_box.curvalue );
 //	Cvar_SetValue ("coop", s_rules_box.curvalue );
 
 //PGM
 	if((s_rules_box.curvalue < 2) || (Developer_searchpath(2) != 2))
 	{
-		Cvar_SetValue ("deathmatch", !s_rules_box.curvalue );
-		Cvar_SetValue ("coop", s_rules_box.curvalue );
-		Cvar_SetValue ("gamerules", 0 );
+		COM_SetValueCvar ("deathmatch", !s_rules_box.curvalue );
+		COM_SetValueCvar ("coop", s_rules_box.curvalue );
+		COM_SetValueCvar ("gamerules", 0 );
 	}
 	else
 	{
-		Cvar_SetValue ("deathmatch", 1 );	// deathmatch is always true for rogue games, right?
-		Cvar_SetValue ("coop", 0 );			// FIXME - this might need to depend on which game we're running
-		Cvar_SetValue ("gamerules", s_rules_box.curvalue );
+		COM_SetValueCvar ("deathmatch", 1 );	// deathmatch is always true for rogue games, right?
+		COM_SetValueCvar ("coop", 0 );			// FIXME - this might need to depend on which game we're running
+		COM_SetValueCvar ("gamerules", s_rules_box.curvalue );
 	}
 //PGM
 
@@ -36910,7 +36779,7 @@ static void DMFlagCallback( void *self )
 	}
 
 setvalue:
-	Cvar_SetValue ("dmflags", flags);
+	COM_SetValueCvar ("dmflags", flags);
 
 	Com_sprintf( dmoptions_statusbar, sizeof( dmoptions_statusbar ), "dmflags = %d", flags );
 
@@ -37164,27 +37033,27 @@ static void DownloadCallback( void *self )
 
 	if (f == &s_allow_download_box)
 	{
-		Cvar_SetValue("allow_download", f->curvalue);
+		COM_SetValueCvar("allow_download", f->curvalue);
 	}
 
 	else if (f == &s_allow_download_maps_box)
 	{
-		Cvar_SetValue("allow_download_maps", f->curvalue);
+		COM_SetValueCvar("allow_download_maps", f->curvalue);
 	}
 
 	else if (f == &s_allow_download_models_box)
 	{
-		Cvar_SetValue("allow_download_models", f->curvalue);
+		COM_SetValueCvar("allow_download_models", f->curvalue);
 	}
 
 	else if (f == &s_allow_download_players_box)
 	{
-		Cvar_SetValue("allow_download_players", f->curvalue);
+		COM_SetValueCvar("allow_download_players", f->curvalue);
 	}
 
 	else if (f == &s_allow_download_sounds_box)
 	{
-		Cvar_SetValue("allow_download_sounds", f->curvalue);
+		COM_SetValueCvar("allow_download_sounds", f->curvalue);
 	}
 }
 
@@ -37300,7 +37169,7 @@ void AddressBook_MenuInit( void )
 
 		Com_sprintf( buffer, sizeof( buffer ), "adr%d", i );
 
-		adr = Cvar_Get( buffer, "", CVAR_ARCHIVE );
+		adr = COM_GetCvar( buffer, "", CVAR_ARCHIVE );
 
 		s_addressbook_fields[i].generic.type = MTYPE_FIELD;
 		s_addressbook_fields[i].generic.name = 0;
@@ -37328,7 +37197,7 @@ const char *AddressBook_MenuKey( int key )
 		for ( index = 0; index < NUM_ADDRESSBOOK_ENTRIES; index++ )
 		{
 			Com_sprintf( buffer, sizeof( buffer ), "adr%d", index );
-			Cvar_Set( buffer, s_addressbook_fields[index].buffer );
+			COM_SetCvar( buffer, s_addressbook_fields[index].buffer );
 		}
 	}
 	return Default_MenuKey( &s_addressbook_menu, key );
@@ -37391,13 +37260,13 @@ void DownloadOptionsFunc( void *self )
 
 static void HandednessCallback( void *unused )
 {
-	Cvar_SetValue( "hand", s_player_handedness_box.curvalue );
+	COM_SetValueCvar( "hand", s_player_handedness_box.curvalue );
 }
 
 static void RateCallback( void *unused )
 {
 	if (s_player_rate_box.curvalue != sizeof(rate_tbl) / sizeof(*rate_tbl) - 1)
-		Cvar_SetValue( "rate", rate_tbl[s_player_rate_box.curvalue] );
+		COM_SetValueCvar( "rate", rate_tbl[s_player_rate_box.curvalue] );
 }
 
 static void ModelCallback( void *unused )
@@ -37615,7 +37484,7 @@ qboolean PlayerConfig_MenuInit( void )
 	int currentdirectoryindex = 0;
 	int currentskinindex = 0;
 
-	cvar_t *hand = Cvar_Get( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
+	cvar_t *hand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
 
 	static const char *handedness[] = { "right", "left", "center", 0 };
 
@@ -37625,7 +37494,7 @@ qboolean PlayerConfig_MenuInit( void )
 		return false;
 
 	if ( hand->value < 0 || hand->value > 2 )
-		Cvar_SetValue( "hand", 0 );
+		COM_SetValueCvar( "hand", 0 );
 
 	strcpy( currentdirectory, skin->string );
 
@@ -37833,13 +37702,13 @@ const char *PlayerConfig_MenuKey (int key)
 	{
 		char scratch[1024];
 
-		Cvar_Set( "name", s_player_name_field.buffer );
+		COM_SetCvar( "name", s_player_name_field.buffer );
 
 		Com_sprintf( scratch, sizeof( scratch ), "%s/%s",
 			s_pmi[s_player_model_box.curvalue].directory,
 			s_pmi[s_player_model_box.curvalue].skindisplaynames[s_player_skin_box.curvalue] );
 
-		Cvar_Set( "skin", scratch );
+		COM_SetCvar( "skin", scratch );
 
 		for ( i = 0; i < s_numplayermodels; i++ )
 		{
@@ -38962,18 +38831,18 @@ void S_Init (void)
 
 	Com_Printf("\n------- sound initialization -------\n");
 
-	cv = Cvar_Get ("s_initsound", "1", 0);
+	cv = COM_GetCvar ("s_initsound", "1", 0);
 	if (!cv->value)
 		Com_Printf ("not initializing.\n");
 	else
 	{
-		s_volume = Cvar_Get ("s_volume", "0.7", CVAR_ARCHIVE);
-		s_khz = Cvar_Get ("s_khz", "11", CVAR_ARCHIVE);
-		s_loadas8bit = Cvar_Get ("s_loadas8bit", "1", CVAR_ARCHIVE);
-		s_mixahead = Cvar_Get ("s_mixahead", "0.2", CVAR_ARCHIVE);
-		s_show = Cvar_Get ("s_show", "0", 0);
-		s_testsound = Cvar_Get ("s_testsound", "0", 0);
-		s_primary = Cvar_Get ("s_primary", "0", CVAR_ARCHIVE);	// win32 specific
+		s_volume = COM_GetCvar ("s_volume", "0.7", CVAR_ARCHIVE);
+		s_khz = COM_GetCvar ("s_khz", "11", CVAR_ARCHIVE);
+		s_loadas8bit = COM_GetCvar ("s_loadas8bit", "1", CVAR_ARCHIVE);
+		s_mixahead = COM_GetCvar ("s_mixahead", "0.2", CVAR_ARCHIVE);
+		s_show = COM_GetCvar ("s_show", "0", 0);
+		s_testsound = COM_GetCvar ("s_testsound", "0", 0);
+		s_primary = COM_GetCvar ("s_primary", "0", CVAR_ARCHIVE);	// win32 specific
 
 		Cmd_AddCommand("play", S_Play);
 		Cmd_AddCommand("stopsound", S_StopAllSounds);
@@ -96419,9 +96288,9 @@ int CDAudio_Init(void)
     MCI_SET_PARMS	mciSetParms;
 	int				n;
 
-	cd_nocd = Cvar_Get ("cd_nocd", "0", CVAR_ARCHIVE );
-	cd_loopcount = Cvar_Get ("cd_loopcount", "4", 0);
-	cd_looptrack = Cvar_Get ("cd_looptrack", "11", 0);
+	cd_nocd = COM_GetCvar ("cd_nocd", "0", CVAR_ARCHIVE );
+	cd_loopcount = COM_GetCvar ("cd_loopcount", "4", 0);
+	cd_looptrack = COM_GetCvar ("cd_looptrack", "11", 0);
 	if ( cd_nocd->value)
 		return -1;
 
@@ -97225,7 +97094,7 @@ void IN_StartupMouse (void)
 {
 	cvar_t		*cv;
 
-	cv = Cvar_Get ("in_initmouse", "1", CVAR_NOSET);
+	cv = COM_GetCvar ("in_initmouse", "1", CVAR_NOSET);
 	if ( !cv->value )
 		return;
 
@@ -97348,33 +97217,33 @@ IN_Init
 void IN_Init (void)
 {
 	// mouse variables
-	m_filter				= Cvar_Get ("m_filter",					"0",		0);
-    in_mouse				= Cvar_Get ("in_mouse",					"1",		CVAR_ARCHIVE);
+	m_filter				= COM_GetCvar ("m_filter",					"0",		0);
+    in_mouse				= COM_GetCvar ("in_mouse",					"1",		CVAR_ARCHIVE);
 
 	// joystick variables
-	in_joystick				= Cvar_Get ("in_joystick",				"0",		CVAR_ARCHIVE);
-	joy_name				= Cvar_Get ("joy_name",					"joystick",	0);
-	joy_advanced			= Cvar_Get ("joy_advanced",				"0",		0);
-	joy_advaxisx			= Cvar_Get ("joy_advaxisx",				"0",		0);
-	joy_advaxisy			= Cvar_Get ("joy_advaxisy",				"0",		0);
-	joy_advaxisz			= Cvar_Get ("joy_advaxisz",				"0",		0);
-	joy_advaxisr			= Cvar_Get ("joy_advaxisr",				"0",		0);
-	joy_advaxisu			= Cvar_Get ("joy_advaxisu",				"0",		0);
-	joy_advaxisv			= Cvar_Get ("joy_advaxisv",				"0",		0);
-	joy_forwardthreshold	= Cvar_Get ("joy_forwardthreshold",		"0.15",		0);
-	joy_sidethreshold		= Cvar_Get ("joy_sidethreshold",		"0.15",		0);
-	joy_upthreshold  		= Cvar_Get ("joy_upthreshold",			"0.15",		0);
-	joy_pitchthreshold		= Cvar_Get ("joy_pitchthreshold",		"0.15",		0);
-	joy_yawthreshold		= Cvar_Get ("joy_yawthreshold",			"0.15",		0);
-	joy_forwardsensitivity	= Cvar_Get ("joy_forwardsensitivity",	"-1",		0);
-	joy_sidesensitivity		= Cvar_Get ("joy_sidesensitivity",		"-1",		0);
-	joy_upsensitivity		= Cvar_Get ("joy_upsensitivity",		"-1",		0);
-	joy_pitchsensitivity	= Cvar_Get ("joy_pitchsensitivity",		"1",		0);
-	joy_yawsensitivity		= Cvar_Get ("joy_yawsensitivity",		"-1",		0);
+	in_joystick				= COM_GetCvar ("in_joystick",				"0",		CVAR_ARCHIVE);
+	joy_name				= COM_GetCvar ("joy_name",					"joystick",	0);
+	joy_advanced			= COM_GetCvar ("joy_advanced",				"0",		0);
+	joy_advaxisx			= COM_GetCvar ("joy_advaxisx",				"0",		0);
+	joy_advaxisy			= COM_GetCvar ("joy_advaxisy",				"0",		0);
+	joy_advaxisz			= COM_GetCvar ("joy_advaxisz",				"0",		0);
+	joy_advaxisr			= COM_GetCvar ("joy_advaxisr",				"0",		0);
+	joy_advaxisu			= COM_GetCvar ("joy_advaxisu",				"0",		0);
+	joy_advaxisv			= COM_GetCvar ("joy_advaxisv",				"0",		0);
+	joy_forwardthreshold	= COM_GetCvar ("joy_forwardthreshold",		"0.15",		0);
+	joy_sidethreshold		= COM_GetCvar ("joy_sidethreshold",		"0.15",		0);
+	joy_upthreshold  		= COM_GetCvar ("joy_upthreshold",			"0.15",		0);
+	joy_pitchthreshold		= COM_GetCvar ("joy_pitchthreshold",		"0.15",		0);
+	joy_yawthreshold		= COM_GetCvar ("joy_yawthreshold",			"0.15",		0);
+	joy_forwardsensitivity	= COM_GetCvar ("joy_forwardsensitivity",	"-1",		0);
+	joy_sidesensitivity		= COM_GetCvar ("joy_sidesensitivity",		"-1",		0);
+	joy_upsensitivity		= COM_GetCvar ("joy_upsensitivity",		"-1",		0);
+	joy_pitchsensitivity	= COM_GetCvar ("joy_pitchsensitivity",		"1",		0);
+	joy_yawsensitivity		= COM_GetCvar ("joy_yawsensitivity",		"-1",		0);
 
 	// centering
-	v_centermove			= Cvar_Get ("v_centermove",				"0.15",		0);
-	v_centerspeed			= Cvar_Get ("v_centerspeed",			"500",		0);
+	v_centermove			= COM_GetCvar ("v_centermove",				"0.15",		0);
+	v_centerspeed			= COM_GetCvar ("v_centerspeed",			"500",		0);
 
 	Cmd_AddCommand ("+mlook", IN_MLookDown);
 	Cmd_AddCommand ("-mlook", IN_MLookUp);
@@ -97496,7 +97365,7 @@ void IN_StartupJoystick (void)
 	joy_avail = false;
 
 	// abort startup if user requests no joystick
-	cv = Cvar_Get ("in_initjoy", "1", CVAR_NOSET);
+	cv = COM_GetCvar ("in_initjoy", "1", CVAR_NOSET);
 	if ( !cv->value )
 		return;
 
@@ -98427,19 +98296,19 @@ void NET_OpenIP (void)
 	int		port;
 	int		dedicated;
 
-	ip = Cvar_Get ("ip", "localhost", CVAR_NOSET);
+	ip = COM_GetCvar ("ip", "localhost", CVAR_NOSET);
 
 	dedicated = Cvar_VariableValue ("dedicated");
 
 	if (!ip_sockets[NS_SERVER])
 	{
-		port = Cvar_Get("ip_hostport", "0", CVAR_NOSET)->value;
+		port = COM_GetCvar("ip_hostport", "0", CVAR_NOSET)->value;
 		if (!port)
 		{
-			port = Cvar_Get("hostport", "0", CVAR_NOSET)->value;
+			port = COM_GetCvar("hostport", "0", CVAR_NOSET)->value;
 			if (!port)
 			{
-				port = Cvar_Get("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
+				port = COM_GetCvar("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
 			}
 		}
 		ip_sockets[NS_SERVER] = NET_IPSocket (ip->string, port);
@@ -98454,10 +98323,10 @@ void NET_OpenIP (void)
 
 	if (!ip_sockets[NS_CLIENT])
 	{
-		port = Cvar_Get("ip_clientport", "0", CVAR_NOSET)->value;
+		port = COM_GetCvar("ip_clientport", "0", CVAR_NOSET)->value;
 		if (!port)
 		{
-			port = Cvar_Get("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
+			port = COM_GetCvar("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
 			if (!port)
 				port = PORT_ANY;
 		}
@@ -98535,13 +98404,13 @@ void NET_OpenIPX (void)
 
 	if (!ipx_sockets[NS_SERVER])
 	{
-		port = Cvar_Get("ipx_hostport", "0", CVAR_NOSET)->value;
+		port = COM_GetCvar("ipx_hostport", "0", CVAR_NOSET)->value;
 		if (!port)
 		{
-			port = Cvar_Get("hostport", "0", CVAR_NOSET)->value;
+			port = COM_GetCvar("hostport", "0", CVAR_NOSET)->value;
 			if (!port)
 			{
-				port = Cvar_Get("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
+				port = COM_GetCvar("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
 			}
 		}
 		ipx_sockets[NS_SERVER] = NET_IPXSocket (port);
@@ -98553,10 +98422,10 @@ void NET_OpenIPX (void)
 
 	if (!ipx_sockets[NS_CLIENT])
 	{
-		port = Cvar_Get("ipx_clientport", "0", CVAR_NOSET)->value;
+		port = COM_GetCvar("ipx_clientport", "0", CVAR_NOSET)->value;
 		if (!port)
 		{
-			port = Cvar_Get("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
+			port = COM_GetCvar("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
 			if (!port)
 				port = PORT_ANY;
 		}
@@ -98657,10 +98526,10 @@ void NET_Init (void)
 
 	Com_Printf("Winsock Initialized\n");
 
-	noudp = Cvar_Get ("noudp", "0", CVAR_NOSET);
-	noipx = Cvar_Get ("noipx", "0", CVAR_NOSET);
+	noudp = COM_GetCvar ("noudp", "0", CVAR_NOSET);
+	noipx = COM_GetCvar ("noipx", "0", CVAR_NOSET);
 
-	net_shownet = Cvar_Get ("net_shownet", "0", 0);
+	net_shownet = COM_GetCvar ("net_shownet", "0", 0);
 }
 
 
@@ -99551,7 +99420,7 @@ int SNDDMA_Init(void)
 
 	memset ((void *)&dma, 0, sizeof (dma));
 
-	s_wavonly = Cvar_Get ("s_wavonly", "0", 0);
+	s_wavonly = COM_GetCvar ("s_wavonly", "0", 0);
 
 	dsound_init = wav_init = 0;
 
@@ -100542,6 +100411,7 @@ DLL GLUE
 ==========================================================================
 */
 
+#define PRINT_ALERT			2
 #define	MAXPRINTMSG	4096
 void VID_Printf (int print_level, char *fmt, ...)
 {
@@ -100800,8 +100670,8 @@ LONG WINAPI MainWndProc (
 				style = GetWindowLong( hWnd, GWL_STYLE );
 				AdjustWindowRect( &r, style, FALSE );
 
-				Cvar_SetValue( "vid_xpos", xPos + r.left);
-				Cvar_SetValue( "vid_ypos", yPos + r.top);
+				COM_SetValueCvar( "vid_xpos", xPos + r.left);
+				COM_SetValueCvar( "vid_ypos", yPos + r.top);
 				vid_xpos->modified = false;
 				vid_ypos->modified = false;
 				if (ActiveApp)
@@ -100846,7 +100716,7 @@ LONG WINAPI MainWndProc (
 		{
 			if ( vid_fullscreen )
 			{
-				Cvar_SetValue( "vid_fullscreen", !vid_fullscreen->value );
+				COM_SetValueCvar( "vid_fullscreen", !vid_fullscreen->value );
 			}
 			return 0;
 		}
@@ -100997,9 +100867,9 @@ qboolean VID_LoadRefresh( char *name )
 	ri.FS_LoadFile = FS_LoadFile;
 	ri.FS_FreeFile = FS_FreeFile;
 	ri.FS_Gamedir = FS_Gamedir;
-	ri.Cvar_Get = Cvar_Get;
-	ri.Cvar_Set = Cvar_Set;
-	ri.Cvar_SetValue = Cvar_SetValue;
+	ri.Cvar_Get = COM_GetCvar;
+	ri.Cvar_Set = COM_SetCvar;
+	ri.Cvar_SetValue = COM_SetValueCvar;
 	ri.Vid_GetModeInfo = VID_GetModeInfo;
 	ri.Vid_MenuInit = VID_MenuInit;
 	ri.Vid_NewWindow = VID_NewWindow;
@@ -101084,7 +100954,7 @@ void VID_CheckChanges (void)
 		{
 			if ( strcmp (vid_ref->string, "soft") == 0 )
 				Com_Error (ERR_FATAL, "Couldn't fall back to software refresh!");
-			Cvar_Set( "vid_ref", "soft" );
+			COM_SetCvar( "vid_ref", "soft" );
 
 			/*
 			** drop the console if we fail to load a refresh
@@ -101118,12 +100988,12 @@ VID_Init
 void VID_Init (void)
 {
 	/* Create the video variables so we know how to start the graphics drivers */
-	vid_ref = Cvar_Get ("vid_ref", "soft", CVAR_ARCHIVE);
-	vid_xpos = Cvar_Get ("vid_xpos", "3", CVAR_ARCHIVE);
-	vid_ypos = Cvar_Get ("vid_ypos", "22", CVAR_ARCHIVE);
-	vid_fullscreen = Cvar_Get ("vid_fullscreen", "0", CVAR_ARCHIVE);
-	vid_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
-	win_noalttab = Cvar_Get( "win_noalttab", "0", CVAR_ARCHIVE );
+	vid_ref = COM_GetCvar ("vid_ref", "soft", CVAR_ARCHIVE);
+	vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
+	vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
+	vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
+	vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
+	win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
 
 	/* Add some console commands that we want to handle */
 	Cmd_AddCommand ("vid_restart", VID_Restart_f);
@@ -101262,7 +101132,7 @@ static void ScreenSizeCallback( void *s )
 {
 	menuslider_s *slider = ( menuslider_s * ) s;
 
-	Cvar_SetValue( "viewsize", slider->curvalue * 10 );
+	COM_SetValueCvar( "viewsize", slider->curvalue * 10 );
 }
 
 static void BrightnessCallback( void *s )
@@ -101278,7 +101148,7 @@ static void BrightnessCallback( void *s )
 	{
 		float gamma = ( 0.8 - ( slider->curvalue/10.0 - 0.5 ) ) + 0.5;
 
-		Cvar_SetValue( "vid_gamma", gamma );
+		COM_SetValueCvar( "vid_gamma", gamma );
 	}
 }
 
@@ -101303,35 +101173,35 @@ static void ApplyChanges( void *unused )
 	*/
 	gamma = ( 0.8 - ( s_brightness_slider[s_current_menu_index].curvalue/10.0 - 0.5 ) ) + 0.5;
 
-	Cvar_SetValue( "vid_gamma", gamma );
-	Cvar_SetValue( "sw_stipplealpha", s_stipple_box.curvalue );
-	Cvar_SetValue( "gl_picmip", 3 - s_tq_slider.curvalue );
-	Cvar_SetValue( "vid_fullscreen", s_fs_box[s_current_menu_index].curvalue );
-	Cvar_SetValue( "gl_ext_palettedtexture", s_paletted_texture_box.curvalue );
-	Cvar_SetValue( "gl_finish", s_finish_box.curvalue );
-	Cvar_SetValue( "sw_mode", s_mode_list[SOFTWARE_MENU].curvalue );
-	Cvar_SetValue( "gl_mode", s_mode_list[OPENGL_MENU].curvalue );
+	COM_SetValueCvar( "vid_gamma", gamma );
+	COM_SetValueCvar( "sw_stipplealpha", s_stipple_box.curvalue );
+	COM_SetValueCvar( "gl_picmip", 3 - s_tq_slider.curvalue );
+	COM_SetValueCvar( "vid_fullscreen", s_fs_box[s_current_menu_index].curvalue );
+	COM_SetValueCvar( "gl_ext_palettedtexture", s_paletted_texture_box.curvalue );
+	COM_SetValueCvar( "gl_finish", s_finish_box.curvalue );
+	COM_SetValueCvar( "sw_mode", s_mode_list[SOFTWARE_MENU].curvalue );
+	COM_SetValueCvar( "gl_mode", s_mode_list[OPENGL_MENU].curvalue );
 
 	switch ( s_ref_list[s_current_menu_index].curvalue )
 	{
 	case REF_SOFT:
-		Cvar_Set( "vid_ref", "soft" );
+		COM_SetCvar( "vid_ref", "soft" );
 		break;
 	case REF_OPENGL:
-		Cvar_Set( "vid_ref", "gl" );
-		Cvar_Set( "gl_driver", "opengl32" );
+		COM_SetCvar( "vid_ref", "gl" );
+		COM_SetCvar( "gl_driver", "opengl32" );
 		break;
 	case REF_3DFX:
-		Cvar_Set( "vid_ref", "gl" );
-		Cvar_Set( "gl_driver", "3dfxgl" );
+		COM_SetCvar( "vid_ref", "gl" );
+		COM_SetCvar( "gl_driver", "3dfxgl" );
 		break;
 	case REF_POWERVR:
-		Cvar_Set( "vid_ref", "gl" );
-		Cvar_Set( "gl_driver", "pvrgl" );
+		COM_SetCvar( "vid_ref", "gl" );
+		COM_SetCvar( "gl_driver", "pvrgl" );
 		break;
 	case REF_VERITE:
-		Cvar_Set( "vid_ref", "gl" );
-		Cvar_Set( "gl_driver", "veritegl" );
+		COM_SetCvar( "vid_ref", "gl" );
+		COM_SetCvar( "gl_driver", "veritegl" );
 		break;
 	}
 
@@ -101412,26 +101282,26 @@ void VID_MenuInit( void )
 	int i;
 
 	if ( !gl_driver )
-		gl_driver = Cvar_Get( "gl_driver", "opengl32", 0 );
+		gl_driver = COM_GetCvar( "gl_driver", "opengl32", 0 );
 	if ( !gl_picmip )
-		gl_picmip = Cvar_Get( "gl_picmip", "0", 0 );
+		gl_picmip = COM_GetCvar( "gl_picmip", "0", 0 );
 	if ( !gl_mode )
-		gl_mode = Cvar_Get( "gl_mode", "3", 0 );
+		gl_mode = COM_GetCvar( "gl_mode", "3", 0 );
 	if ( !sw_mode )
-		sw_mode = Cvar_Get( "sw_mode", "0", 0 );
+		sw_mode = COM_GetCvar( "sw_mode", "0", 0 );
 	if ( !gl_ext_palettedtexture )
-		gl_ext_palettedtexture = Cvar_Get( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
+		gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
 	if ( !gl_finish )
-		gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE );
+		gl_finish = COM_GetCvar( "gl_finish", "0", CVAR_ARCHIVE );
 
 	if ( !sw_stipplealpha )
-		sw_stipplealpha = Cvar_Get( "sw_stipplealpha", "0", CVAR_ARCHIVE );
+		sw_stipplealpha = COM_GetCvar( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 
 	s_mode_list[SOFTWARE_MENU].curvalue = sw_mode->value;
 	s_mode_list[OPENGL_MENU].curvalue = gl_mode->value;
 
 	if ( !scr_viewsize )
-		scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);
+		scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
 
 	s_screensize_slider[SOFTWARE_MENU].curvalue = scr_viewsize->value/10;
 	s_screensize_slider[OPENGL_MENU].curvalue = scr_viewsize->value/10;
