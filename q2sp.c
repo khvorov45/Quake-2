@@ -2095,8 +2095,6 @@ static void COM_SetValueCvar(char *var_name, float value) {
 	COM_SetCvar (var_name, val);
 }
 
-void		Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush));
-void		Com_EndRedirect (void);
 void 		Com_DPrintf (char *fmt, ...);
 void 		Com_Error (int code, char *fmt, ...);
 void 		Com_Quit (void);
@@ -7972,28 +7970,6 @@ CLIENT / SERVER interactions
 
 ============================================================================
 */
-
-void Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush))
-{
-	if (!target || !buffer || !buffersize || !flush)
-		return;
-	rd_target = target;
-	rd_buffer = buffer;
-	rd_buffersize = buffersize;
-	rd_flush = flush;
-
-	*rd_buffer = 0;
-}
-
-void Com_EndRedirect (void)
-{
-	rd_flush(rd_target, rd_buffer);
-
-	rd_target = 0;
-	rd_buffer = NULL;
-	rd_buffersize = 0;
-	rd_flush = NULL;
-}
 
 /*
 ================
@@ -14679,11 +14655,6 @@ Responds with all the info that qplug or qspy can see
 void SVC_Status (void)
 {
 	Netchan_OutOfBandPrint (NS_SERVER, net_from, "print\n%s", SV_StatusString());
-#if 0
-	Com_BeginRedirect (RD_PACKET, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);
-	Com_Printf (SV_StatusString());
-	Com_EndRedirect ();
-#endif
 }
 
 /*
@@ -14974,7 +14945,14 @@ void SVC_RemoteCommand (void)
 	else
 		Com_Printf ("Rcon from %s:\n%s\n", NET_AdrToString (net_from), net_message.data+4);
 
-	Com_BeginRedirect (RD_PACKET, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);
+	// NOTE: Begin redirect
+	{
+		rd_target = RD_PACKET;
+		rd_buffer = sv_outputbuf;
+		rd_buffersize = SV_OUTPUTBUF_LENGTH;
+		rd_flush = SV_FlushRedirect;
+		*rd_buffer = 0;
+	}
 
 	if (!Rcon_Validate ())
 	{
@@ -14993,7 +14971,14 @@ void SVC_RemoteCommand (void)
 		Cmd_ExecuteString (remaining);
 	}
 
-	Com_EndRedirect ();
+	// NOTE: End redirect
+	{
+		rd_flush(rd_target, rd_buffer);
+		rd_target = 0;
+		rd_buffer = NULL;
+		rd_buffersize = 0;
+		rd_flush = NULL;
+	}
 }
 
 /*
