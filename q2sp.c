@@ -1429,8 +1429,6 @@ static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
 static char	*Sys_FindNext(unsigned musthave, unsigned canthave);
 static void	Sys_FindClose();
 
-static void FS_InitFilesystem();
-
 static char* FS_Gamedir();
 static void FS_SetGamedir(char* dir);
 
@@ -5438,7 +5436,6 @@ static int time_after_game;
 static int time_before_ref;
 static int time_after_ref;
 
-void Qcommon_Init(int argc, char **argv);
 void Qcommon_Frame(int msec);
 void Qcommon_Shutdown();
 
@@ -8113,109 +8110,6 @@ void Com_Error_f (void)
 	Com_Error (ERR_FATAL, "%s", Cmd_Argv(1));
 }
 
-
-/*
-=================
-Qcommon_Init
-=================
-*/
-void Qcommon_Init (int argc, char **argv)
-{
-	char	*s;
-
-	if (setjmp (abortframe) )
-		Sys_Error ("Error during initialization");
-
-	z_chain.next = z_chain.prev = &z_chain;
-
-	// prepare enough of the subsystems to handle
-	// cvar and command buffer management
-	COM_InitArgv (argc, argv);
-
-	Swap_Init ();
-
-	// NOTE: Cbuf: allocates an initial text buffer that will grow as needed
-	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
-
-	// register our commands
-	{
-		Cmd_AddCommand("cmdlist", Cmd_List_f);
-		Cmd_AddCommand("exec", Cmd_Exec_f);
-		Cmd_AddCommand("echo", Cmd_Echo_f);
-		Cmd_AddCommand("alias", Cmd_Alias_f);
-		Cmd_AddCommand("wait",  Cmd_Wait_f);
-		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
-		Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
-	}
-
-	Key_Init ();
-
-	// we need to add the early commands twice, because
-	// a basedir or cddir needs to be set before execing
-	// config files, but we want other parms to override
-	// the settings of the config files
-	Cbuf_AddEarlyCommands (false);
-	Cmd_ExecuteCbuf ();
-
-	FS_InitFilesystem ();
-
-	Cbuf_AddText ("exec default.cfg\n");
-	Cbuf_AddText ("exec config.cfg\n");
-
-	Cbuf_AddEarlyCommands (true);
-	Cmd_ExecuteCbuf ();
-
-	//
-	// init commands and vars
-	//
-    Cmd_AddCommand ("error", Com_Error_f);
-
-	host_speeds = COM_GetCvar ("host_speeds", "0", 0);
-	log_stats = COM_GetCvar ("log_stats", "0", 0);
-	developer = COM_GetCvar ("developer", "0", 0);
-	timescale = COM_GetCvar ("timescale", "1", 0);
-	fixedtime = COM_GetCvar ("fixedtime", "0", 0);
-	logfile_active = COM_GetCvar ("logfile", "0", 0);
-	showtrace = COM_GetCvar ("showtrace", "0", 0);
-#ifdef DEDICATED_ONLY
-	dedicated = Cvar_Get ("dedicated", "1", CVAR_NOSET);
-#else
-	dedicated = COM_GetCvar ("dedicated", "0", CVAR_NOSET);
-#endif
-
-	s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
-	COM_GetCvar ("version", s, CVAR_SERVERINFO|CVAR_NOSET);
-
-
-	if (dedicated->value)
-		Cmd_AddCommand ("quit", Com_Quit);
-
-	Sys_Init ();
-
-	NET_Init ();
-	Netchan_Init ();
-
-	SV_Init ();
-	CL_Init ();
-
-	// add + commands from command line
-	if (!Cbuf_AddLateCommands ())
-	{	// if the user didn't give any commands, run default action
-		if (!dedicated->value)
-			Cbuf_AddText ("d1\n");
-		else
-			Cbuf_AddText ("dedicated_start\n");
-		Cmd_ExecuteCbuf ();
-	}
-	else
-	{	// the user asked for something explicit
-		// so drop the loading plaque
-		SCR_EndLoadingPlaque ();
-	}
-
-	Com_Printf ("====== Quake2 Initialized ======\n\n");
-}
-
 /*
 =================
 Qcommon_Frame
@@ -9204,47 +9098,6 @@ char *FS_NextPath (char *prevpath)
 	}
 
 	return NULL;
-}
-
-
-/*
-================
-FS_InitFilesystem
-================
-*/
-void FS_InitFilesystem (void)
-{
-	Cmd_AddCommand ("path", FS_Path_f);
-	Cmd_AddCommand ("link", FS_Link_f);
-	Cmd_AddCommand ("dir", FS_Dir_f );
-
-	//
-	// basedir <path>
-	// allows the game to run from outside the data tree
-	//
-	fs_basedir = COM_GetCvar ("basedir", ".", CVAR_NOSET);
-
-	//
-	// cddir <path>
-	// Logically concatenates the cddir after the basedir for
-	// allows the game to run from outside the data tree
-	//
-	fs_cddir = COM_GetCvar ("cddir", "", CVAR_NOSET);
-	if (fs_cddir->string[0])
-		FS_AddGameDirectory (va("%s/"BASEDIRNAME, fs_cddir->string) );
-
-	//
-	// start up with baseq2 by default
-	//
-	FS_AddGameDirectory (va("%s/"BASEDIRNAME, fs_basedir->string) );
-
-	// any set gamedirs will be freed up to here
-	fs_base_searchpaths = fs_searchpaths;
-
-	// check for game override
-	fs_gamedirvar = COM_GetCvar ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
-	if (fs_gamedirvar->string[0])
-		FS_SetGamedir (fs_gamedirvar->string);
 }
 
 
@@ -17801,7 +17654,6 @@ extern	int chat_bufferlen;
 extern	qboolean	chat_team;
 
 void Key_Event (int key, qboolean down, unsigned time);
-void Key_Init (void);
 void Key_WriteBindings (FILE *f);
 void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
@@ -32707,12 +32559,6 @@ void Key_Bindlist_f (void)
 			Com_Printf ("%s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
 
-
-/*
-===================
-Key_Init
-===================
-*/
 void Key_Init (void)
 {
 	int		i;
@@ -92411,12 +92257,6 @@ void	Draw_TileClear (int x, int y, int w, int h, char *name);
 void	Draw_Fill (int x, int y, int w, int h, int c);
 void	Draw_FadeScreen (void);
 
-/*
-@@@@@@@@@@@@@@@@@@@@@
-GetRefAPI
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
 refexport_t GetRefAPI (refimport_t rimp )
 {
 	refexport_t	re;
@@ -99402,9 +99242,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Structure containing functions exported from refresh DLL
 refexport_t	re;
 
-// the GL renderer is statically linked in by the unity build (gl_rmain.c)
-extern refexport_t GetRefAPI( refimport_t rimp );
-
 cvar_t *win_noalttab;
 
 #ifndef WM_MOUSEWHEEL
@@ -105392,49 +105229,231 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		argv[0] = "exe";
 
 		while (*lpCmdLine && (argc < MAX_NUM_ARGVS)) {
-			while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
+			while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126))) {
 				lpCmdLine++;
+			}
 
-			if (*lpCmdLine)
-			{
+			if (*lpCmdLine) {
 				argv[argc] = lpCmdLine;
 				argc++;
 
-				while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
+				while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126))) {
 					lpCmdLine++;
+				}
 
-				if (*lpCmdLine)
-				{
+				if (*lpCmdLine) {
 					*lpCmdLine = 0;
 					lpCmdLine++;
 				}
-
 			}
 		}
-
 	}
 
-	// if we find the CD, add a +set cddir xxx command line
+	// NOTE: Init
 	{
-		char* cddir = Sys_ScanForCD();
-		if (cddir && argc < MAX_NUM_ARGVS - 3) {
-			// don't override a cddir on the command line
-			int i = 0;
-			for (i = 0; i < argc; i++) {
-				if (!strcmp(argv[i], "cddir")) {
-					break;
+		if (setjmp(abortframe)) {
+			Sys_Error("Error during initialization");
+		}
+
+		z_chain.next = z_chain.prev = &z_chain;
+
+		// NOTE: Init COM argc/argv
+		{
+			assert(argc <= MAX_NUM_ARGVS);
+			com_argc = argc;
+			for (int i = 0; i < argc; i++) {
+				if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
+					com_argv[i] = "";
+				} else {
+					com_argv[i] = argv[i];
 				}
 			}
-			if (i == argc) {
-				argv[argc++] = "+set";
-				argv[argc++] = "cddir";
-				argv[argc++] = cddir;
+		}
+
+		Swap_Init();
+
+		// NOTE: Cbuf: allocates an initial text buffer that will grow as needed
+		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+
+		Cmd_AddCommand("cmdlist", Cmd_List_f);
+		Cmd_AddCommand("exec", Cmd_Exec_f);
+		Cmd_AddCommand("echo", Cmd_Echo_f);
+		Cmd_AddCommand("alias", Cmd_Alias_f);
+		Cmd_AddCommand("wait",  Cmd_Wait_f);
+		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
+		Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
+
+		// NOTE: Key Init;
+		{
+			for (int i = 0; i < 32; i++) {
+				key_lines[i][0] = ']';
+				key_lines[i][1] = 0;
+			}
+			key_linepos = 1;
+
+			// init ascii characters in console mode
+			for (int i = 32; i < 128; i++) {
+				consolekeys[i] = true;
+			}
+
+			consolekeys[K_ENTER] = true;
+			consolekeys[K_KP_ENTER] = true;
+			consolekeys[K_TAB] = true;
+			consolekeys[K_LEFTARROW] = true;
+			consolekeys[K_KP_LEFTARROW] = true;
+			consolekeys[K_RIGHTARROW] = true;
+			consolekeys[K_KP_RIGHTARROW] = true;
+			consolekeys[K_UPARROW] = true;
+			consolekeys[K_KP_UPARROW] = true;
+			consolekeys[K_DOWNARROW] = true;
+			consolekeys[K_KP_DOWNARROW] = true;
+			consolekeys[K_BACKSPACE] = true;
+			consolekeys[K_HOME] = true;
+			consolekeys[K_KP_HOME] = true;
+			consolekeys[K_END] = true;
+			consolekeys[K_KP_END] = true;
+			consolekeys[K_PGUP] = true;
+			consolekeys[K_KP_PGUP] = true;
+			consolekeys[K_PGDN] = true;
+			consolekeys[K_KP_PGDN] = true;
+			consolekeys[K_SHIFT] = true;
+			consolekeys[K_INS] = true;
+			consolekeys[K_KP_INS] = true;
+			consolekeys[K_KP_DEL] = true;
+			consolekeys[K_KP_SLASH] = true;
+			consolekeys[K_KP_PLUS] = true;
+			consolekeys[K_KP_MINUS] = true;
+			consolekeys[K_KP_5] = true;
+
+			consolekeys['`'] = false;
+			consolekeys['~'] = false;
+
+			for (int i = 0; i < 256; i++) {
+				keyshift[i] = i;
+			}
+			for (int i = 'a'; i <= 'z'; i++) {
+				keyshift[i] = i - 'a' + 'A';
+			}
+
+			keyshift['1'] = '!';
+			keyshift['2'] = '@';
+			keyshift['3'] = '#';
+			keyshift['4'] = '$';
+			keyshift['5'] = '%';
+			keyshift['6'] = '^';
+			keyshift['7'] = '&';
+			keyshift['8'] = '*';
+			keyshift['9'] = '(';
+			keyshift['0'] = ')';
+			keyshift['-'] = '_';
+			keyshift['='] = '+';
+			keyshift[','] = '<';
+			keyshift['.'] = '>';
+			keyshift['/'] = '?';
+			keyshift[';'] = ':';
+			keyshift['\''] = '"';
+			keyshift['['] = '{';
+			keyshift[']'] = '}';
+			keyshift['`'] = '~';
+			keyshift['\\'] = '|';
+
+			menubound[K_ESCAPE] = true;
+			for (int i = 0; i < 12; i++) {
+				menubound[K_F1+i] = true;
+			}
+
+			Cmd_AddCommand("bind", Key_Bind_f);
+			Cmd_AddCommand("unbind", Key_Unbind_f);
+			Cmd_AddCommand("unbindall", Key_Unbindall_f);
+			Cmd_AddCommand("bindlist", Key_Bindlist_f);
+		}
+
+		// we need to add the early commands twice, because a basedir or cddir needs to be set before execing
+		// config files, but we want other parms to override the settings of the config files
+		Cbuf_AddEarlyCommands(false);
+		Cmd_ExecuteCbuf();
+
+		// NOTE: Init Filesystem
+		{
+			Cmd_AddCommand("path", FS_Path_f);
+			Cmd_AddCommand("link", FS_Link_f);
+			Cmd_AddCommand("dir", FS_Dir_f );
+
+			// basedir <path>
+			// allows the game to run from outside the data tree
+			fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
+
+			// cddir <path>
+			// Logically concatenates the cddir after the basedir for
+			// allows the game to run from outside the data tree
+			fs_cddir = COM_GetCvar("cddir", "", CVAR_NOSET);
+			if (fs_cddir->string[0]) {
+				FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_cddir->string) );
+			}
+
+			// start up with baseq2 by default
+			FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
+
+			// any set gamedirs will be freed up to here
+			fs_base_searchpaths = fs_searchpaths;
+
+			// check for game override
+			fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+			if (fs_gamedirvar->string[0]) {
+				FS_SetGamedir(fs_gamedirvar->string);
 			}
 		}
+
+		Cbuf_AddText("exec default.cfg\n");
+		Cbuf_AddText("exec config.cfg\n");
+
+		Cbuf_AddEarlyCommands(true);
+		Cmd_ExecuteCbuf();
+
+		Cmd_AddCommand("error", Com_Error_f);
+
+		host_speeds = COM_GetCvar("host_speeds", "0", 0);
+		log_stats = COM_GetCvar("log_stats", "0", 0);
+		developer = COM_GetCvar("developer", "0", 0);
+		timescale = COM_GetCvar("timescale", "1", 0);
+		fixedtime = COM_GetCvar("fixedtime", "0", 0);
+		logfile_active = COM_GetCvar("logfile", "0", 0);
+		showtrace = COM_GetCvar("showtrace", "0", 0);
+		dedicated = COM_GetCvar("dedicated", "0", CVAR_NOSET);
+
+		char* s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
+		COM_GetCvar("version", s, CVAR_SERVERINFO|CVAR_NOSET);
+
+		if (dedicated->value) {
+			Cmd_AddCommand ("quit", Com_Quit);
+		}
+
+		Sys_Init();
+
+		NET_Init();
+		Netchan_Init();
+
+		SV_Init();
+		CL_Init();
+
+		// add + commands from command line
+		if (!Cbuf_AddLateCommands()) {
+			// if the user didn't give any commands, run default action
+			if (!dedicated->value) {
+				Cbuf_AddText ("d1\n");
+			} else {
+				Cbuf_AddText ("dedicated_start\n");
+			}
+			Cmd_ExecuteCbuf();
+		} else {
+			// the user asked for something explicit so drop the loading plaque
+			SCR_EndLoadingPlaque();
+		}
+
+		Com_Printf ("====== Quake2 Initialized ======\n\n");
 	}
 
-	Qcommon_Init(argc, argv);
-
+	// NOTE: Mainloop
 	for (int oldtime = Sys_Milliseconds();;) {
 
 		// if at a full screen console, don't update unless needed
