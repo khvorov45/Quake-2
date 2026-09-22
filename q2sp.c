@@ -5442,7 +5442,6 @@ void Qcommon_Shutdown();
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
 
-void Sys_Init(void);
 void Sys_AppActivate (void);
 
 void Sys_UnloadGame (void);
@@ -98925,63 +98924,6 @@ char *Sys_ScanForCD (void) {
 
 //================================================================
 
-
-/*
-================
-Sys_Init
-================
-*/
-void Sys_Init (void)
-{
-	OSVERSIONINFO	vinfo;
-
-#if 0
-	// allocate a named semaphore on the client so the
-	// front end can tell if it is alive
-
-	// mutex will fail if semephore already exists
-    qwclsemaphore = CreateMutex(
-        NULL,         /* Security attributes */
-        0,            /* owner       */
-        "qwcl"); /* Semaphore name      */
-	if (!qwclsemaphore)
-		Sys_Error ("QWCL is already running on this system");
-	CloseHandle (qwclsemaphore);
-
-    qwclsemaphore = CreateSemaphore(
-        NULL,         /* Security attributes */
-        0,            /* Initial count       */
-        1,            /* Maximum count       */
-        "qwcl"); /* Semaphore name      */
-#endif
-
-	timeBeginPeriod( 1 );
-
-	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-
-	if (!GetVersionEx (&vinfo))
-		Sys_Error ("Couldn't get OS info");
-
-	if (vinfo.dwMajorVersion < 4)
-		Sys_Error ("Quake2 requires windows version 4 or greater");
-	if (vinfo.dwPlatformId == VER_PLATFORM_WIN32s)
-		Sys_Error ("Quake2 doesn't run on Win32s");
-	else if ( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-		s_win95 = true;
-
-	if (dedicated->value)
-	{
-		if (!AllocConsole ())
-			Sys_Error ("Couldn't create dedicated server console");
-		hinput = GetStdHandle (STD_INPUT_HANDLE);
-		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-
-		// let QHOST hook in
-		InitConProc (argc, argv);
-	}
-}
-
-
 static char	console_text[256];
 static int	console_textlen;
 
@@ -99274,7 +99216,6 @@ extern	unsigned	sys_msg_time;
 /*
 ** WIN32 helper functions
 */
-extern qboolean s_win95;
 
 static void WIN_DisableAltTab( void )
 {
@@ -105420,14 +105361,31 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		showtrace = COM_GetCvar("showtrace", "0", 0);
 		dedicated = COM_GetCvar("dedicated", "0", CVAR_NOSET);
 
-		char* s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
-		COM_GetCvar("version", s, CVAR_SERVERINFO|CVAR_NOSET);
-
-		if (dedicated->value) {
-			Cmd_AddCommand ("quit", Com_Quit);
+		{
+			char* s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
+			COM_GetCvar("version", s, CVAR_SERVERINFO|CVAR_NOSET);
 		}
 
-		Sys_Init();
+		// NOTE: Sys Init
+		{
+			timeBeginPeriod(1);
+			OSVERSIONINFO vinfo = {};
+			vinfo.dwOSVersionInfoSize = sizeof(vinfo);
+
+			if (!GetVersionEx(&vinfo)) {
+				Sys_Error("Couldn't get OS info");
+			}
+
+			if (vinfo.dwMajorVersion < 4) {
+				Sys_Error("Quake2 requires windows version 4 or greater");
+			}
+
+			if (vinfo.dwPlatformId == VER_PLATFORM_WIN32s) {
+				Sys_Error("Quake2 doesn't run on Win32s");
+			} else if (vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
+				s_win95 = true;
+			}
+		}
 
 		NET_Init();
 		Netchan_Init();
