@@ -1580,7 +1580,6 @@ netadr_t	net_from;
 sizebuf_t	net_message;
 byte		net_message_buffer[MAX_MSGLEN];
 
-void		NET_Init (void);
 void		NET_Shutdown (void);
 
 void		NET_Config (qboolean multiplayer);
@@ -1595,7 +1594,6 @@ char		*NET_AdrToString (netadr_t a);
 qboolean	NET_StringToAdr (char *s, netadr_t *a);
 void		NET_Sleep(int msec);
 
-void Netchan_Init (void);
 void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
 
 qboolean Netchan_NeedReliable (netchan_t *chan);
@@ -9454,24 +9452,6 @@ such as during the connection stage while waiting for the client to load,
 then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
-
-/*
-===============
-Netchan_Init
-
-===============
-*/
-void Netchan_Init (void)
-{
-	int		port;
-
-	// pick a port value that should be nice and random
-	port = Sys_Milliseconds() & 0xffff;
-
-	showpackets = COM_GetCvar ("showpackets", "0", 0);
-	showdrop = COM_GetCvar ("showdrop", "0", 0);
-	qport = COM_GetCvar ("qport", va("%i", port), CVAR_NOSET);
-}
 
 /*
 ===============
@@ -97565,29 +97545,6 @@ static WSADATA		winsockdata;
 
 /*
 ====================
-NET_Init
-====================
-*/
-void NET_Init (void)
-{
-	int		r;
-
-	r = WSAStartup (MAKEWORD(1, 1), &winsockdata);
-
-	if (r)
-		Com_Error (ERR_FATAL,"Winsock initialization failed.");
-
-	Com_Printf("Winsock Initialized\n");
-
-	noudp = COM_GetCvar ("noudp", "0", CVAR_NOSET);
-	noipx = COM_GetCvar ("noipx", "0", CVAR_NOSET);
-
-	net_shownet = COM_GetCvar ("net_shownet", "0", 0);
-}
-
-
-/*
-====================
 NET_Shutdown
 ====================
 */
@@ -105376,8 +105333,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-		NET_Init();
-		Netchan_Init();
+		// NOTE: NET Init
+		{
+			int WSAStartup_result = WSAStartup(MAKEWORD(1, 1), &winsockdata);
+			assert(!WSAStartup_result);
+			Com_Printf("Winsock Initialized\n");
+			noudp = COM_GetCvar("noudp", "0", CVAR_NOSET);
+			noipx = COM_GetCvar("noipx", "0", CVAR_NOSET);
+			net_shownet = COM_GetCvar("net_shownet", "0", 0);
+		}
+
+		// NOTE: Netchan Init
+		{
+			showpackets = COM_GetCvar("showpackets", "0", 0);
+			showdrop = COM_GetCvar("showdrop", "0", 0);
+
+			// pick a port value that should be nice and random
+			int port = Sys_Milliseconds() & 0xffff;
+			qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
+		}
 
 		SV_Init();
 		CL_Init();
