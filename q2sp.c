@@ -8332,7 +8332,6 @@ typedef struct pack_s
 
 char	fs_gamedir[MAX_OSPATH];
 cvar_t	*fs_basedir;
-cvar_t	*fs_cddir;
 cvar_t	*fs_gamedirvar;
 
 typedef struct filelink_s
@@ -8895,8 +8894,6 @@ void FS_SetGamedir (char *dir)
 	else
 	{
 		COM_FullSetCvar ("gamedir", dir, CVAR_SERVERINFO|CVAR_NOSET);
-		if (fs_cddir->string[0])
-			FS_AddGameDirectory (va("%s/%s", fs_cddir->string, dir) );
 		FS_AddGameDirectory (va("%s/%s", fs_basedir->string, dir) );
 	}
 }
@@ -105155,7 +105152,7 @@ void GLimp_LogNewFrame( void )
 
 #pragma warning (default : 4113 4133 4047 )
 
-int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	// previous instances do not exist in Win32
 	if (hPrevInstance) {
 		return 0;
@@ -105322,14 +105319,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			// basedir <path>
 			// allows the game to run from outside the data tree
 			fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
-
-			// cddir <path>
-			// Logically concatenates the cddir after the basedir for
-			// allows the game to run from outside the data tree
-			fs_cddir = COM_GetCvar("cddir", "", CVAR_NOSET);
-			if (fs_cddir->string[0]) {
-				FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_cddir->string) );
-			}
 
 			// start up with baseq2 by default
 			FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
