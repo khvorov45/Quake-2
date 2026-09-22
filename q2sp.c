@@ -345,6 +345,18 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 }
 
 //
+// SECTION Random numbers
+//
+
+static float frand() {
+	return (rand()&32767)* (1.0/32767);
+}
+
+static float crand() {
+	return (rand()&32767)* (2.0/32767) - 1;
+}
+
+//
 // SECTION CRC
 //
 
@@ -4010,17 +4022,21 @@ static vec3_t monster_flash_offset[] = {
 // SECTION CM (collision model)
 //
 
-typedef struct cmodel_s {
-	vec3_t	mins, maxs;
-	vec3_t	origin; // for sounds or lights
-	int		headnode;
-} cmodel_t;
+#define	MAX_ENT_CLUSTERS	16
 
-typedef struct csurface_s {
-	char	name[16];
-	int		flags;
-	int		value;
-} csurface_t;
+// link_t is only used for entity area links now
+typedef struct link_s {
+	struct link_s* prev;
+	struct link_s* next;
+} link_t;
+
+// edict->solid values
+typedef enum {
+	SOLID_NOT,		// no interaction with other objects
+	SOLID_TRIGGER,	// only touch when inside, after moving
+	SOLID_BBOX,		// touch on edge
+	SOLID_BSP		// bsp clip, touch on edge
+} solid_t;
 
 // !!! if this is changed, it must be changed in asm code too !!!
 typedef struct cplane_s {
@@ -4030,6 +4046,272 @@ typedef struct cplane_s {
 	byte	signbits;	// signx + (signy<<1) + (signz<<1)
 	byte	pad[2];
 } cplane_t;
+
+typedef struct csurface_s {
+	char	name[16];
+	int		flags;
+	int		value;
+} csurface_t;
+
+typedef struct edict_s edict_t;
+typedef struct gitem_s {
+	char		*classname;	// spawning name
+	qboolean	(*pickup)(edict_t *ent, edict_t *other);
+	void		(*use)(edict_t *ent, struct gitem_s *item);
+	void		(*drop)(edict_t *ent, struct gitem_s *item);
+	void		(*weaponthink)(edict_t *ent);
+	char		*pickup_sound;
+	char		*world_model;
+	int			world_model_flags;
+	char		*view_model;
+
+	// client side info
+	char		*icon;
+	char		*pickup_name;	// for printing on pickup
+	int			count_width;		// number of digits to display by icon
+
+	int			quantity;		// for ammo how much, for weapons how much is used per shot
+	char		*ammo;			// for weapons
+	int			flags;			// IT_* flags
+
+	int			weapmodel;		// weapon model index (for weapons)
+
+	void		*info;
+	int			tag;
+
+	char		*precaches;		// string of all models, sounds, and images this item will use
+} gitem_t;
+
+typedef struct {
+	// fixed data
+	vec3_t		start_origin;
+	vec3_t		start_angles;
+	vec3_t		end_origin;
+	vec3_t		end_angles;
+
+	int			sound_start;
+	int			sound_middle;
+	int			sound_end;
+
+	float		accel;
+	float		speed;
+	float		decel;
+	float		distance;
+
+	float		wait;
+
+	// state data
+	int			state;
+	vec3_t		dir;
+	float		current_speed;
+	float		move_speed;
+	float		next_speed;
+	float		remaining_distance;
+	float		decel_distance;
+	void		(*endfunc)(edict_t *);
+} moveinfo_t;
+
+typedef struct
+{
+	void	(*aifunc)(edict_t *self, float dist);
+	float	dist;
+	void	(*thinkfunc)(edict_t *self);
+} mframe_t;
+
+typedef struct
+{
+	int			firstframe;
+	int			lastframe;
+	mframe_t	*frame;
+	void		(*endfunc)(edict_t *self);
+} mmove_t;
+
+typedef struct {
+	mmove_t		*currentmove;
+	int			aiflags;
+	int			nextframe;
+	float		scale;
+
+	void		(*stand)(edict_t *self);
+	void		(*idle)(edict_t *self);
+	void		(*search)(edict_t *self);
+	void		(*walk)(edict_t *self);
+	void		(*run)(edict_t *self);
+	void		(*dodge)(edict_t *self, edict_t *other, float eta);
+	void		(*attack)(edict_t *self);
+	void		(*melee)(edict_t *self);
+	void		(*sight)(edict_t *self, edict_t *other);
+	qboolean	(*checkattack)(edict_t *self);
+
+	float		pausetime;
+	float		attack_finished;
+
+	vec3_t		saved_goal;
+	float		search_time;
+	float		trail_time;
+	vec3_t		last_sighting;
+	int			attack_state;
+	int			lefty;
+	float		idle_time;
+	int			linkcount;
+
+	int			power_armor_type;
+	int			power_armor_power;
+} monsterinfo_t;
+
+struct edict_s {
+	entity_state_t	s;
+	struct gclient_s	*client;	// NULL if not a player
+									// the server expects the first part
+									// of gclient_s to be a player_state_t
+									// but the rest of it is opaque
+
+	qboolean	inuse;
+	int			linkcount;
+
+	// FIXME: move these fields to a server private sv_entity_t
+	link_t		area;				// linked to a division node or leaf
+
+	int			num_clusters;		// if -1, use headnode instead
+	int			clusternums[MAX_ENT_CLUSTERS];
+	int			headnode;			// unused if num_clusters != -1
+	int			areanum, areanum2;
+
+	//================================
+
+	int			svflags;
+	vec3_t		mins, maxs;
+	vec3_t		absmin, absmax, size;
+	solid_t		solid;
+	int			clipmask;
+	struct edict_s		*owner;
+
+
+	// DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
+	// EXPECTS THE FIELDS IN THAT ORDER!
+
+	//================================
+	int			movetype;
+	int			flags;
+
+	char		*model;
+	float		freetime;			// sv.time when the object was freed
+
+	//
+	// only used locally in game, not by server
+	//
+	char		*message;
+	char		*classname;
+	int			spawnflags;
+
+	float		timestamp;
+
+	float		angle;			// set in qe3, -1 = up, -2 = down
+	char		*target;
+	char		*targetname;
+	char		*killtarget;
+	char		*team;
+	char		*pathtarget;
+	char		*deathtarget;
+	char		*combattarget;
+	struct edict_s		*target_ent;
+
+	float		speed, accel, decel;
+	vec3_t		movedir;
+	vec3_t		pos1, pos2;
+
+	vec3_t		velocity;
+	vec3_t		avelocity;
+	int			mass;
+	float		air_finished;
+	float		gravity;		// per entity gravity multiplier (1.0 is normal)
+								// use for lowgrav artifact, flares
+
+	struct edict_s		*goalentity;
+	struct edict_s		*movetarget;
+	float		yaw_speed;
+	float		ideal_yaw;
+
+	float		nextthink;
+	void		(*prethink) (struct edict_s *ent);
+	void		(*think)(struct edict_s *self);
+	void		(*blocked)(struct edict_s *self, struct edict_s *other);	//move to moveinfo?
+	void		(*touch)(struct edict_s *self, struct edict_s *other, cplane_t *plane, csurface_t *surf);
+	void		(*use)(struct edict_s *self, struct edict_s *other, struct edict_s *activator);
+	void		(*pain)(struct edict_s *self, struct edict_s *other, float kick, int damage);
+	void		(*die)(struct edict_s *self, struct edict_s *inflictor, struct edict_s *attacker, int damage, vec3_t point);
+
+	float		touch_debounce_time;		// are all these legit?  do we need more/less of them?
+	float		pain_debounce_time;
+	float		damage_debounce_time;
+	float		fly_sound_debounce_time;	//move to clientinfo
+	float		last_move_time;
+
+	int			health;
+	int			max_health;
+	int			gib_health;
+	int			deadflag;
+	qboolean	show_hostile;
+
+	float		powerarmor_time;
+
+	char		*map;			// target_changelevel
+
+	int			viewheight;		// height above origin where eyesight is determined
+	int			takedamage;
+	int			dmg;
+	int			radius_dmg;
+	float		dmg_radius;
+	int			sounds;			//make this a spawntemp var?
+	int			count;
+
+	struct edict_s		*chain;
+	struct edict_s		*enemy;
+	struct edict_s		*oldenemy;
+	struct edict_s		*activator;
+	struct edict_s		*groundentity;
+	int			groundentity_linkcount;
+	struct edict_s		*teamchain;
+	struct edict_s		*teammaster;
+
+	struct edict_s		*mynoise;		// can go in client only
+	struct edict_s		*mynoise2;
+
+	int			noise_index;
+	int			noise_index2;
+	float		volume;
+	float		attenuation;
+
+	// timing variables
+	float		wait;
+	float		delay;			// before firing targets
+	float		random;
+
+	float		teleport_time;
+
+	int			watertype;
+	int			waterlevel;
+
+	vec3_t		move_origin;
+	vec3_t		move_angles;
+
+	// move this to clientinfo?
+	int			light_level;
+
+	int			style;			// also used as areaportal number
+
+	gitem_t		*item;			// for bonus items
+
+	// common data blocks
+	moveinfo_t		moveinfo;
+	monsterinfo_t	monsterinfo;
+};
+
+typedef struct cmodel_s {
+	vec3_t	mins, maxs;
+	vec3_t	origin; // for sounds or lights
+	int		headnode;
+} cmodel_t;
 
 // a trace is returned when a box is swept through the world
 typedef struct {
@@ -4619,24 +4901,10 @@ void		CM_WritePortalState (FILE *f);
 void		CM_ReadPortalState (FILE *f);
 
 //
-// SECTION Mess
+// SECTION pm (player movement)
 //
 
-//
-// per-level limits
-//
-#define	MAX_CLIENTS			256		// absolute limit
-#define	MAX_LIGHTSTYLES		256
-#define	MAX_MODELS			256		// these are sent over the net as bytes
-#define	MAX_SOUNDS			256		// so they cannot be blindly increased
-#define	MAX_IMAGES			256
-#define	MAX_ITEMS			256
-#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
-
-// gi.BoxEdicts() can return a list of either solid or trigger entities
-// FIXME: eliminate AREA_ distinction?
-#define	AREA_SOLID		1
-#define	AREA_TRIGGERS	2
+#define	MAXTOUCH	32
 
 // pmove_state_t is the information necessary for client side movement
 // prediction
@@ -4649,15 +4917,6 @@ typedef enum {
 	PM_GIB,		// different bounding box
 	PM_FREEZE
 } pmtype_t;
-
-// pmove->pm_flags
-#define	PMF_DUCKED			1
-#define	PMF_JUMP_HELD		2
-#define	PMF_ON_GROUND		4
-#define	PMF_TIME_WATERJUMP	8	// pm_time is waterjump
-#define	PMF_TIME_LAND		16	// pm_time is time before rejump
-#define	PMF_TIME_TELEPORT	32	// pm_time is non-moving time
-#define PMF_NO_PREDICTION	64	// temporarily disables prediction (used for grappling hook)
 
 // this structure needs to be communicated bit-accurate
 // from the server to the client to guarantee that
@@ -4674,12 +4933,6 @@ typedef struct {
 	short		delta_angles[3];	// add to command angles to get view direction changed by spawns, rotating objects, and teleporters
 } pmove_state_t;
 
-// button bits
-#define	BUTTON_ATTACK		1
-#define	BUTTON_USE			2
-#define	BUTTON_ANY			128			// any key whatsoever
-
-#define	MAXTOUCH	32
 typedef struct {
 	// state (in / out)
 	pmove_state_t	s;
@@ -4705,6 +4958,53 @@ typedef struct {
 	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
 	int		(*pointcontents) (vec3_t point);
 } pmove_t;
+
+// movement parameters
+static float pm_stopspeed = 100;
+static float pm_maxspeed = 300;
+static float pm_duckspeed = 100;
+static float pm_accelerate = 10;
+static float pm_airaccelerate = 0;
+static float pm_wateraccelerate = 10;
+static float pm_friction = 6;
+static float pm_waterfriction = 1;
+static float pm_waterspeed = 400;
+
+void Pmove (pmove_t *pmove);
+
+//
+// SECTION Mess
+//
+
+//
+// per-level limits
+//
+#define	MAX_CLIENTS			256		// absolute limit
+#define	MAX_LIGHTSTYLES		256
+#define	MAX_MODELS			256		// these are sent over the net as bytes
+#define	MAX_SOUNDS			256		// so they cannot be blindly increased
+#define	MAX_IMAGES			256
+#define	MAX_ITEMS			256
+#define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
+
+// gi.BoxEdicts() can return a list of either solid or trigger entities
+// FIXME: eliminate AREA_ distinction?
+#define	AREA_SOLID		1
+#define	AREA_TRIGGERS	2
+
+// pmove->pm_flags
+#define	PMF_DUCKED			1
+#define	PMF_JUMP_HELD		2
+#define	PMF_ON_GROUND		4
+#define	PMF_TIME_WATERJUMP	8	// pm_time is waterjump
+#define	PMF_TIME_LAND		16	// pm_time is time before rejump
+#define	PMF_TIME_TELEPORT	32	// pm_time is non-moving time
+#define PMF_NO_PREDICTION	64	// temporarily disables prediction (used for grappling hook)
+
+// button bits
+#define	BUTTON_ATTACK		1
+#define	BUTTON_USE			2
+#define	BUTTON_ANY			128			// any key whatsoever
 
 // entity_state_t->effects
 // Effects are things handled on the client side (lights, particles, frame animations)
@@ -4797,73 +5097,12 @@ typedef struct {
 #define	MZ_NUKE4			38
 #define	MZ_NUKE8			39
 
+#define	GAME_API_VERSION	3
 
-// temp entity events
-//
-// Temp entity events are for things that happen
-// at a location seperate from any existing entity.
-// Temporary entity messages are explicitly constructed
-// and broadcast.
-typedef enum {
-	TE_GUNSHOT,
-	TE_BLOOD,
-	TE_BLASTER,
-	TE_RAILTRAIL,
-	TE_SHOTGUN,
-	TE_EXPLOSION1,
-	TE_EXPLOSION2,
-	TE_ROCKET_EXPLOSION,
-	TE_GRENADE_EXPLOSION,
-	TE_SPARKS,
-	TE_SPLASH,
-	TE_BUBBLETRAIL,
-	TE_SCREEN_SPARKS,
-	TE_SHIELD_SPARKS,
-	TE_BULLET_SPARKS,
-	TE_LASER_SPARKS,
-	TE_PARASITE_ATTACK,
-	TE_ROCKET_EXPLOSION_WATER,
-	TE_GRENADE_EXPLOSION_WATER,
-	TE_MEDIC_CABLE_ATTACK,
-	TE_BFG_EXPLOSION,
-	TE_BFG_BIGEXPLOSION,
-	TE_BOSSTPORT,			// used as '22' in a map, so DON'T RENUMBER!!!
-	TE_BFG_LASER,
-	TE_GRAPPLE_CABLE,
-	TE_WELDING_SPARKS,
-	TE_GREENBLOOD,
-	TE_BLUEHYPERBLASTER,
-	TE_PLASMA_EXPLOSION,
-	TE_TUNNEL_SPARKS,
-
-	//ROGUE
-	TE_BLASTER2,
-	TE_RAILTRAIL2,
-	TE_FLAME,
-	TE_LIGHTNING,
-	TE_DEBUGTRAIL,
-	TE_PLAIN_EXPLOSION,
-	TE_FLASHLIGHT,
-	TE_FORCEWALL,
-	TE_HEATBEAM,
-	TE_MONSTER_HEATBEAM,
-	TE_STEAM,
-	TE_BUBBLETRAIL2,
-	TE_MOREBLOOD,
-	TE_HEATBEAM_SPARKS,
-	TE_HEATBEAM_STEAM,
-	TE_CHAINFIST_SMOKE,
-	TE_ELECTRIC_SPARKS,
-	TE_TRACKER_EXPLOSION,
-	TE_TELEPORT_EFFECT,
-	TE_DBALL_GOAL,
-	TE_WIDOWBEAMOUT,
-	TE_NUKEBLAST,
-	TE_WIDOWSPLASH,
-	TE_EXPLOSION1_BIG,
-	TE_EXPLOSION1_NP,
-	TE_FLECHETTE
-} temp_event_t;
+// edict->svflags
+#define	SVF_NOCLIENT			0x00000001	// don't send entity to clients, even if it has effects
+#define	SVF_DEADMONSTER			0x00000002	// treat as CONTENTS_DEADMONSTER for collision
+#define	SVF_MONSTER				0x00000004	// treat as CONTENTS_MONSTER for collision
 
 #define SPLASH_UNKNOWN		0
 #define SPLASH_SPARKS		1
@@ -4991,6 +5230,129 @@ typedef enum {
 #define CS_GENERAL			(CS_PLAYERSKINS+MAX_CLIENTS)
 #define	MAX_CONFIGSTRINGS	(CS_GENERAL+MAX_GENERAL)
 
+// PGM
+#define VIDREF_GL		1
+#define VIDREF_SOFT		2
+#define VIDREF_OTHER	3
+
+#define	VERSION		3.19
+#define	BASEDIRNAME	"baseq2"
+#define BUILDSTRING "Win32 DEBUG"
+#define	CPUSTRING	"x86"
+
+#define	PROTOCOL_VERSION	34
+
+#define	PORT_MASTER	27900
+#define	PORT_CLIENT	27901
+#define	PORT_SERVER	27910
+
+#define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered must be power of two
+#define	UPDATE_MASK		(UPDATE_BACKUP-1)
+
+#define	PS_M_TYPE			(1<<0)
+#define	PS_M_ORIGIN			(1<<1)
+#define	PS_M_VELOCITY		(1<<2)
+#define	PS_M_TIME			(1<<3)
+#define	PS_M_FLAGS			(1<<4)
+#define	PS_M_GRAVITY		(1<<5)
+#define	PS_M_DELTA_ANGLES	(1<<6)
+
+#define	PS_VIEWOFFSET		(1<<7)
+#define	PS_VIEWANGLES		(1<<8)
+#define	PS_KICKANGLES		(1<<9)
+#define	PS_BLEND			(1<<10)
+#define	PS_FOV				(1<<11)
+#define	PS_WEAPONINDEX		(1<<12)
+#define	PS_WEAPONFRAME		(1<<13)
+#define	PS_RDFLAGS			(1<<14)
+
+// a sound without an ent or pos will be a local only sound
+#define	SND_VOLUME		(1<<0)		// a byte
+#define	SND_ATTENUATION	(1<<1)		// a byte
+#define	SND_POS			(1<<2)		// three coordinates
+#define	SND_ENT			(1<<3)		// a short 0-2: channel, 3-12: entity
+#define	SND_OFFSET		(1<<4)		// a byte, msec offset from frame start
+
+#define DEFAULT_SOUND_PACKET_VOLUME	1.0
+#define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
+
+#define	PORT_ANY	-1
+
+#define	PACKET_HEADER	10			// two ints and a short
+
+#define	ERR_FATAL	0		// exit the entire game with a popup window
+#define	ERR_DROP	1		// print to console and disconnect from game
+
+#define	PRINT_ALL		0
+#define PRINT_DEVELOPER	1	// only print when "developer 1"
+
+// temp entity events
+//
+// Temp entity events are for things that happen
+// at a location seperate from any existing entity.
+// Temporary entity messages are explicitly constructed
+// and broadcast.
+typedef enum {
+	TE_GUNSHOT,
+	TE_BLOOD,
+	TE_BLASTER,
+	TE_RAILTRAIL,
+	TE_SHOTGUN,
+	TE_EXPLOSION1,
+	TE_EXPLOSION2,
+	TE_ROCKET_EXPLOSION,
+	TE_GRENADE_EXPLOSION,
+	TE_SPARKS,
+	TE_SPLASH,
+	TE_BUBBLETRAIL,
+	TE_SCREEN_SPARKS,
+	TE_SHIELD_SPARKS,
+	TE_BULLET_SPARKS,
+	TE_LASER_SPARKS,
+	TE_PARASITE_ATTACK,
+	TE_ROCKET_EXPLOSION_WATER,
+	TE_GRENADE_EXPLOSION_WATER,
+	TE_MEDIC_CABLE_ATTACK,
+	TE_BFG_EXPLOSION,
+	TE_BFG_BIGEXPLOSION,
+	TE_BOSSTPORT,			// used as '22' in a map, so DON'T RENUMBER!!!
+	TE_BFG_LASER,
+	TE_GRAPPLE_CABLE,
+	TE_WELDING_SPARKS,
+	TE_GREENBLOOD,
+	TE_BLUEHYPERBLASTER,
+	TE_PLASMA_EXPLOSION,
+	TE_TUNNEL_SPARKS,
+
+	//ROGUE
+	TE_BLASTER2,
+	TE_RAILTRAIL2,
+	TE_FLAME,
+	TE_LIGHTNING,
+	TE_DEBUGTRAIL,
+	TE_PLAIN_EXPLOSION,
+	TE_FLASHLIGHT,
+	TE_FORCEWALL,
+	TE_HEATBEAM,
+	TE_MONSTER_HEATBEAM,
+	TE_STEAM,
+	TE_BUBBLETRAIL2,
+	TE_MOREBLOOD,
+	TE_HEATBEAM_SPARKS,
+	TE_HEATBEAM_STEAM,
+	TE_CHAINFIST_SMOKE,
+	TE_ELECTRIC_SPARKS,
+	TE_TRACKER_EXPLOSION,
+	TE_TELEPORT_EFFECT,
+	TE_DBALL_GOAL,
+	TE_WIDOWBEAMOUT,
+	TE_NUKEBLAST,
+	TE_WIDOWSPLASH,
+	TE_EXPLOSION1_BIG,
+	TE_EXPLOSION1_NP,
+	TE_FLECHETTE
+} temp_event_t;
+
 // entity_state_t->event values
 // ertity events are for effects that take place reletive
 // to an existing entities origin.  Very network efficient.
@@ -5027,28 +5389,6 @@ typedef struct {
 	short		stats[MAX_STATS];		// fast status bar updates
 } player_state_t;
 
-
-// PGM
-#define VIDREF_GL		1
-#define VIDREF_SOFT		2
-#define VIDREF_OTHER	3
-
-static int vidref_val;
-
-#define	VERSION		3.19
-#define	BASEDIRNAME	"baseq2"
-#define BUILDSTRING "Win32 DEBUG"
-#define	CPUSTRING	"x86"
-
-#define	PROTOCOL_VERSION	34
-
-#define	PORT_MASTER	27900
-#define	PORT_CLIENT	27901
-#define	PORT_SERVER	27910
-
-#define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered must be power of two
-#define	UPDATE_MASK		(UPDATE_BACKUP-1)
-
 // server to client
 enum svc_ops_e {
 	svc_bad,
@@ -5078,136 +5418,46 @@ enum svc_ops_e {
 	svc_frame
 };
 
-#define	PS_M_TYPE			(1<<0)
-#define	PS_M_ORIGIN			(1<<1)
-#define	PS_M_VELOCITY		(1<<2)
-#define	PS_M_TIME			(1<<3)
-#define	PS_M_FLAGS			(1<<4)
-#define	PS_M_GRAVITY		(1<<5)
-#define	PS_M_DELTA_ANGLES	(1<<6)
+static int vidref_val;
 
-#define	PS_VIEWOFFSET		(1<<7)
-#define	PS_VIEWANGLES		(1<<8)
-#define	PS_KICKANGLES		(1<<9)
-#define	PS_BLEND			(1<<10)
-#define	PS_FOV				(1<<11)
-#define	PS_WEAPONINDEX		(1<<12)
-#define	PS_WEAPONFRAME		(1<<13)
-#define	PS_RDFLAGS			(1<<14)
+static int realtime;
 
-// a sound without an ent or pos will be a local only sound
-#define	SND_VOLUME		(1<<0)		// a byte
-#define	SND_ATTENUATION	(1<<1)		// a byte
-#define	SND_POS			(1<<2)		// three coordinates
-#define	SND_ENT			(1<<3)		// a short 0-2: channel, 3-12: entity
-#define	SND_OFFSET		(1<<4)		// a byte, msec offset from frame start
+static FILE* log_stats_file;
 
-#define DEFAULT_SOUND_PACKET_VOLUME	1.0
-#define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
-
-#define	PORT_ANY	-1
-
-#define	PACKET_HEADER	10			// two ints and a short
-
-//
-// SECTION ???
-//
-
-/*
-==============================================================
-
-PLAYER MOVEMENT CODE
-
-Common between server and client so prediction matches
-
-==============================================================
-*/
-
-extern float pm_airaccelerate;
-
-void Pmove (pmove_t *pmove);
-
-/*
-==============================================================
-
-FILESYSTEM
-
-==============================================================
-*/
-
-
-/*
-==============================================================
-
-MISC
-
-==============================================================
-*/
-
-
-#define	ERR_FATAL	0		// exit the entire game with a popup window
-#define	ERR_DROP	1		// print to console and disconnect from game
-#define	ERR_QUIT	2		// not an error, just a normal exit
-
-#define	PRINT_ALL		0
-#define PRINT_DEVELOPER	1	// only print when "developer 1"
-
-float	frand(void);	// 0 ti 1
-float	crand(void);	// -1 to 1
-
-extern	cvar_t	*developer;
-extern	cvar_t	*dedicated;
-extern	cvar_t	*host_speeds;
-extern	cvar_t	*log_stats;
-
-extern	FILE *log_stats_file;
+static cvar_t* host_speeds;
+static cvar_t* log_stats;
+static cvar_t* developer;
+static cvar_t* timescale;
+static cvar_t* fixedtime;
+static cvar_t* showtrace;
+static cvar_t* dedicated;
 
 // host_speeds times
-extern	int		time_before_game;
-extern	int		time_after_game;
-extern	int		time_before_ref;
-extern	int		time_after_ref;
+static int time_before_game;
+static int time_after_game;
+static int time_before_ref;
+static int time_after_ref;
 
-void Qcommon_Init (int argc, char **argv);
-void Qcommon_Frame (int msec);
-void Qcommon_Shutdown (void);
-
+void Qcommon_Init(int argc, char **argv);
+void Qcommon_Frame(int msec);
+void Qcommon_Shutdown();
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
 
+void Sys_Init(void);
+void Sys_AppActivate (void);
 
-/*
-==============================================================
+void Sys_UnloadGame (void);
 
-NON-PORTABLE SYSTEM SERVICES
-
-==============================================================
-*/
-
-void	Sys_Init (void);
-
-void	Sys_AppActivate (void);
-
-void	Sys_UnloadGame (void);
-void	*Sys_GetGameAPI (void *parms);
 // loads the game dll and calls the api init function
+void	*Sys_GetGameAPI (void *parms);
 
-char	*Sys_ConsoleInput (void);
-
-void	Sys_SendKeyEvents (void);
-void	Sys_Error (char *error, ...);
-void	Sys_Quit (void);
-char	*Sys_GetClipboardData( void );
-void	Sys_CopyProtect (void);
-
-/*
-==============================================================
-
-CLIENT / SERVER SYSTEMS
-
-==============================================================
-*/
+char* Sys_ConsoleInput (void);
+void Sys_SendKeyEvents (void);
+void Sys_Error (char *error, ...);
+void Sys_Quit (void);
+char* Sys_GetClipboardData( void );
 
 void CL_Init (void);
 void CL_Drop (void);
@@ -5220,156 +5470,147 @@ void SV_Init (void);
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
 void SV_Frame (int msec);
 
-/* ============ end inlined header: qcommon/qcommon.h ============ */
-/* ============ begin inlined header: game/g_local.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
+//
+// SECTION ???
+//
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+// client data that stays across multiple level loads
+typedef struct {
+	char		userinfo[MAX_INFO_STRING];
+	char		netname[16];
+	int			hand;
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	qboolean	connected;			// a loadgame will leave valid entities that
+									// just don't have a connection yet
 
-See the GNU General Public License for more details.
+	// values saved and restored from edicts when changing levels
+	int			health;
+	int			max_health;
+	int			savedFlags;
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+	int			selected_item;
+	int			inventory[MAX_ITEMS];
 
-*/
-#ifndef G_LOCAL_H
-#define G_LOCAL_H
+	// ammo capacities
+	int			max_bullets;
+	int			max_shells;
+	int			max_rockets;
+	int			max_grenades;
+	int			max_cells;
+	int			max_slugs;
 
-// g_local.h -- local definitions for game module
+	gitem_t		*weapon;
+	gitem_t		*lastweapon;
 
-/* already inlined above: game/q_shared.h */
+	int			power_cubes;	// used for tracking the cubes in coop games
+	int			score;			// for calculating total unit score in coop games
 
-// define GAME_INCLUDE so that game.h does not define the
-// short, server-visible gclient_t and edict_t structures,
-// because we define the full size ones in this file
-#define	GAME_INCLUDE
-/* ============ begin inlined header: game/game.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
+	int			game_helpchanged;
+	int			helpchanged;
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+	qboolean	spectator;			// client is a spectator
+} client_persistant_t;
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// client data that stays across deathmatch respawns
+typedef struct {
+	client_persistant_t	coop_respawn;	// what to set client->pers to on a respawn
+	int			enterframe;			// level.framenum the client entered the game
+	int			score;				// frags, etc
+	vec3_t		cmd_angles;			// angles sent over in the last command
 
-See the GNU General Public License for more details.
+	qboolean	spectator;			// client is a spectator
+} client_respawn_t;
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+typedef enum {
+	WEAPON_READY,
+	WEAPON_ACTIVATING,
+	WEAPON_DROPPING,
+	WEAPON_FIRING
+} weaponstate_t;
 
-*/
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-#ifndef GAME_H
-#define GAME_H
-
-// game.h -- game dll information visible to server
-
-#define	GAME_API_VERSION	3
-
-// edict->svflags
-
-#define	SVF_NOCLIENT			0x00000001	// don't send entity to clients, even if it has effects
-#define	SVF_DEADMONSTER			0x00000002	// treat as CONTENTS_DEADMONSTER for collision
-#define	SVF_MONSTER				0x00000004	// treat as CONTENTS_MONSTER for collision
-
-// edict->solid values
-
-typedef enum
-{
-SOLID_NOT,			// no interaction with other objects
-SOLID_TRIGGER,		// only touch when inside, after moving
-SOLID_BBOX,			// touch on edge
-SOLID_BSP			// bsp clip, touch on edge
-} solid_t;
-
-//===============================================================
-
-// link_t is only used for entity area links now
-typedef struct link_s
-{
-	struct link_s	*prev, *next;
-} link_t;
-
-#define	MAX_ENT_CLUSTERS	16
-
-
-typedef struct edict_s edict_t;
-typedef struct gclient_s gclient_t;
-
-
-#ifndef GAME_INCLUDE
-
-struct gclient_s
-{
-	player_state_t	ps;		// communicated by server to clients
+// this structure is cleared on each PutClientInServer(), except for 'client->pers'
+typedef struct gclient_s {
+	// known to server
+	player_state_t	ps;				// communicated by server to clients
 	int				ping;
-	// the game dll can add anything it wants after
-	// this point in the structure
-};
 
+	// private to game
+	client_persistant_t	pers;
+	client_respawn_t	resp;
+	pmove_state_t		old_pmove;	// for detecting out-of-pmove changes
 
-struct edict_s
-{
-	entity_state_t	s;
-	struct gclient_s	*client;
-	qboolean	inuse;
-	int			linkcount;
+	qboolean	showscores;			// set layout stat
+	qboolean	showinventory;		// set layout stat
+	qboolean	showhelp;
+	qboolean	showhelpicon;
 
-	// FIXME: move these fields to a server private sv_entity_t
-	link_t		area;				// linked to a division node or leaf
+	int			ammo_index;
 
-	int			num_clusters;		// if -1, use headnode instead
-	int			clusternums[MAX_ENT_CLUSTERS];
-	int			headnode;			// unused if num_clusters != -1
-	int			areanum, areanum2;
+	int			buttons;
+	int			oldbuttons;
+	int			latched_buttons;
 
-	//================================
+	qboolean	weapon_thunk;
 
-	int			svflags;			// SVF_NOCLIENT, SVF_DEADMONSTER, SVF_MONSTER, etc
-	vec3_t		mins, maxs;
-	vec3_t		absmin, absmax, size;
-	solid_t		solid;
-	int			clipmask;
-	edict_t		*owner;
+	gitem_t		*newweapon;
 
-	// the game dll can add anything it wants after
-	// this point in the structure
-};
+	// sum up damage over an entire frame, so
+	// shotgun blasts give a single big kick
+	int			damage_armor;		// damage absorbed by armor
+	int			damage_parmor;		// damage absorbed by power armor
+	int			damage_blood;		// damage taken out of health
+	int			damage_knockback;	// impact damage
+	vec3_t		damage_from;		// origin for vector calculation
 
-#endif		// GAME_INCLUDE
+	float		killer_yaw;			// when dead, look at killer
+
+	weaponstate_t	weaponstate;
+	vec3_t		kick_angles;	// weapon kicks
+	vec3_t		kick_origin;
+	float		v_dmg_roll, v_dmg_pitch, v_dmg_time;	// damage kicks
+	float		fall_time, fall_value;		// for view drop on fall
+	float		damage_alpha;
+	float		bonus_alpha;
+	vec3_t		damage_blend;
+	vec3_t		v_angle;			// aiming direction
+	float		bobtime;			// so off-ground doesn't change it
+	vec3_t		oldviewangles;
+	vec3_t		oldvelocity;
+
+	float		next_drown_time;
+	int			old_waterlevel;
+	int			breather_sound;
+
+	int			machinegun_shots;	// for weapon raising
+
+	// animation vars
+	int			anim_end;
+	int			anim_priority;
+	qboolean	anim_duck;
+	qboolean	anim_run;
+
+	// powerup timers
+	float		quad_framenum;
+	float		invincible_framenum;
+	float		breather_framenum;
+	float		enviro_framenum;
+
+	qboolean	grenade_blew_up;
+	float		grenade_time;
+	int			silencer_shots;
+	int			weapon_sound;
+
+	float		pickup_msg_time;
+
+	float		flood_locktill;		// locked from talking
+	float		flood_when[10];		// when messages were said
+	int			flood_whenhead;		// head pointer for when said
+
+	float		respawn_time;		// can respawn when time > this
+
+	edict_t		*chase_target;		// player we are chasing
+	qboolean	update_chase;		// need to update chase info?
+} gclient_t;
 
 //===============================================================
 
@@ -5521,9 +5762,6 @@ typedef struct
 
 game_export_t *GetGameApi (game_import_t *import);
 
-#endif	// GAME_H
-/* ============ end inlined header: game/game.h ============ */
-
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
 
@@ -5535,12 +5773,9 @@ game_export_t *GetGameApi (game_import_t *import);
 #define	svc_inventory		5
 #define	svc_stufftext		11
 
-//==================================================================
-
 // view pitching times
 #define DAMAGE_TIME		0.5
 #define	FALL_TIME		0.3
-
 
 // edict->spawnflags
 // these are set with checkboxes on each entity in the map editor
@@ -5566,35 +5801,23 @@ game_export_t *GetGameApi (game_import_t *import);
 #define FL_POWER_ARMOR			0x00001000	// power armor (if any) is active
 #define FL_RESPAWN				0x80000000	// used for item respawning
 
-
 #define	FRAMETIME		0.1
 
 // memory tags to allow dynamic memory to be cleaned up
 #define	TAG_GAME	765		// clear when unloading the dll
 #define	TAG_LEVEL	766		// clear when loading a new level
 
-
 #define MELEE_DISTANCE	80
 
 #define BODY_QUEUE_SIZE		8
 
-typedef enum
-{
+typedef enum {
 	DAMAGE_NO,
 	DAMAGE_YES,			// will take damage if hit
 	DAMAGE_AIM			// auto targeting recognizes this
 } damage_t;
 
-typedef enum
-{
-	WEAPON_READY,
-	WEAPON_ACTIVATING,
-	WEAPON_DROPPING,
-	WEAPON_FIRING
-} weaponstate_t;
-
-typedef enum
-{
+typedef enum {
 	AMMO_BULLETS,
 	AMMO_SHELLS,
 	AMMO_ROCKETS,
@@ -5602,7 +5825,6 @@ typedef enum
 	AMMO_CELLS,
 	AMMO_SLUGS
 } ammo_t;
-
 
 //deadflag
 #define DEAD_NO					0
@@ -5660,7 +5882,6 @@ typedef enum
 #define LEFT_HANDED				1
 #define CENTER_HANDED			2
 
-
 // game.serverflags values
 #define SFL_CROSS_TRIGGER_1		0x00000001
 #define SFL_CROSS_TRIGGER_2		0x00000002
@@ -5672,12 +5893,10 @@ typedef enum
 #define SFL_CROSS_TRIGGER_8		0x00000080
 #define SFL_CROSS_TRIGGER_MASK	0x000000ff
 
-
 // noise types for PlayerNoise
 #define PNOISE_SELF				0
 #define PNOISE_WEAPON			1
 #define PNOISE_IMPACT			2
-
 
 // edict->movetype values
 typedef enum
@@ -5695,17 +5914,13 @@ MOVETYPE_FLYMISSILE,	// extra size to monsters
 MOVETYPE_BOUNCE
 } movetype_t;
 
-
-
-typedef struct
-{
+typedef struct {
 	int		base_count;
 	int		max_count;
 	float	normal_protection;
 	float	energy_protection;
 	int		armor;
 } gitem_armor_t;
-
 
 // gitem_t->flags
 #define	IT_WEAPON		1		// use makes active weapon
@@ -5728,75 +5943,11 @@ typedef struct
 #define WEAP_RAILGUN			10
 #define WEAP_BFG				11
 
-typedef struct gitem_s
-{
-	char		*classname;	// spawning name
-	qboolean	(*pickup)(struct edict_s *ent, struct edict_s *other);
-	void		(*use)(struct edict_s *ent, struct gitem_s *item);
-	void		(*drop)(struct edict_s *ent, struct gitem_s *item);
-	void		(*weaponthink)(struct edict_s *ent);
-	char		*pickup_sound;
-	char		*world_model;
-	int			world_model_flags;
-	char		*view_model;
-
-	// client side info
-	char		*icon;
-	char		*pickup_name;	// for printing on pickup
-	int			count_width;		// number of digits to display by icon
-
-	int			quantity;		// for ammo how much, for weapons how much is used per shot
-	char		*ammo;			// for weapons
-	int			flags;			// IT_* flags
-
-	int			weapmodel;		// weapon model index (for weapons)
-
-	void		*info;
-	int			tag;
-
-	char		*precaches;		// string of all models, sounds, and images this item will use
-} gitem_t;
-
-
-
-//
-// this structure is left intact through an entire game
-// it should be initialized at dll load time, and read/written to
-// the server.ssv file for savegames
-//
-typedef struct
-{
-	char		helpmessage1[512];
-	char		helpmessage2[512];
-	int			helpchanged;	// flash F1 icon if non 0, play sound
-								// and increment only if 1, 2, or 3
-
-	gclient_t	*clients;		// [maxclients]
-
-	// can't store spawnpoint in level, because
-	// it would get overwritten by the savegame restore
-	char		spawnpoint[512];	// needed for coop respawns
-
-	// store latched cvars here that we want to get at often
-	int			maxclients;
-	int			maxentities;
-
-	// cross level triggers
-	int			serverflags;
-
-	// items
-	int			num_items;
-
-	qboolean	autosaved;
-} game_locals_t;
-
-
 //
 // this structure is cleared as each map is entered
 // it is read/written to the level.sav file for savegames
 //
-typedef struct
-{
+typedef struct {
 	int			framenum;
 	float		time;
 
@@ -5837,12 +5988,10 @@ typedef struct
 	int			power_cubes;		// ugly necessity for coop
 } level_locals_t;
 
-
 // spawn_temp_t is only used to hold entity field values that
 // can be set from the editor, but aren't actualy present
 // in edict_t during gameplay
-typedef struct
-{
+typedef struct {
 	// world vars
 	char		*sky;
 	float		skyrotate;
@@ -5863,102 +6012,48 @@ typedef struct
 	float		maxpitch;
 } spawn_temp_t;
 
+// this structure is left intact through an entire game
+// it should be initialized at dll load time, and read/written to
+// the server.ssv file for savegames
+static struct {
+	char		helpmessage1[512];
+	char		helpmessage2[512];
+	int			helpchanged;	// flash F1 icon if non 0, play sound
+								// and increment only if 1, 2, or 3
 
-typedef struct
-{
-	// fixed data
-	vec3_t		start_origin;
-	vec3_t		start_angles;
-	vec3_t		end_origin;
-	vec3_t		end_angles;
+	gclient_t	*clients;		// [maxclients]
 
-	int			sound_start;
-	int			sound_middle;
-	int			sound_end;
+	// can't store spawnpoint in level, because
+	// it would get overwritten by the savegame restore
+	char		spawnpoint[512];	// needed for coop respawns
 
-	float		accel;
-	float		speed;
-	float		decel;
-	float		distance;
+	// store latched cvars here that we want to get at often
+	int			maxclients;
+	int			maxentities;
 
-	float		wait;
+	// cross level triggers
+	int			serverflags;
 
-	// state data
-	int			state;
-	vec3_t		dir;
-	float		current_speed;
-	float		move_speed;
-	float		next_speed;
-	float		remaining_distance;
-	float		decel_distance;
-	void		(*endfunc)(edict_t *);
-} moveinfo_t;
+	// items
+	int			num_items;
 
+	qboolean	autosaved;
+} game;
 
-typedef struct
-{
-	void	(*aifunc)(edict_t *self, float dist);
-	float	dist;
-	void	(*thinkfunc)(edict_t *self);
-} mframe_t;
+static level_locals_t	level;
+static game_import_t	gi;
+static game_export_t	globals;
+static spawn_temp_t		st;
 
-typedef struct
-{
-	int			firstframe;
-	int			lastframe;
-	mframe_t	*frame;
-	void		(*endfunc)(edict_t *self);
-} mmove_t;
+static int sm_meat_index;
+static int snd_fry;
+static int meansOfDeath;
 
-typedef struct
-{
-	mmove_t		*currentmove;
-	int			aiflags;
-	int			nextframe;
-	float		scale;
-
-	void		(*stand)(edict_t *self);
-	void		(*idle)(edict_t *self);
-	void		(*search)(edict_t *self);
-	void		(*walk)(edict_t *self);
-	void		(*run)(edict_t *self);
-	void		(*dodge)(edict_t *self, edict_t *other, float eta);
-	void		(*attack)(edict_t *self);
-	void		(*melee)(edict_t *self);
-	void		(*sight)(edict_t *self, edict_t *other);
-	qboolean	(*checkattack)(edict_t *self);
-
-	float		pausetime;
-	float		attack_finished;
-
-	vec3_t		saved_goal;
-	float		search_time;
-	float		trail_time;
-	vec3_t		last_sighting;
-	int			attack_state;
-	int			lefty;
-	float		idle_time;
-	int			linkcount;
-
-	int			power_armor_type;
-	int			power_armor_power;
-} monsterinfo_t;
-
-
-
-extern	game_locals_t	game;
-extern	level_locals_t	level;
-extern	game_import_t	gi;
-extern	game_export_t	globals;
-extern	spawn_temp_t	st;
-
-extern	int	sm_meat_index;
-extern	int	snd_fry;
-
-extern	int	jacket_armor_index;
-extern	int	combat_armor_index;
-extern	int	body_armor_index;
-
+static int	jacket_armor_index;
+static int	combat_armor_index;
+static int	body_armor_index;
+static int	power_screen_index;
+static int	power_shield_index;
 
 // means of death
 #define MOD_UNKNOWN			0
@@ -5997,10 +6092,7 @@ extern	int	body_armor_index;
 #define MOD_TARGET_BLASTER	33
 #define MOD_FRIENDLY_FIRE	0x8000000
 
-extern	int	meansOfDeath;
-
-
-extern	edict_t			*g_edicts;
+static edict_t* g_edicts;
 
 #define	FOFS(x) (int)&(((edict_t *)0)->x)
 #define	STOFS(x) (int)&(((spawn_temp_t *)0)->x)
@@ -6010,42 +6102,43 @@ extern	edict_t			*g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-extern	cvar_t	*maxentities;
-extern	cvar_t	*deathmatch;
-extern	cvar_t	*coop;
-extern	cvar_t	*dmflags;
-extern	cvar_t	*skill;
-extern	cvar_t	*fraglimit;
-extern	cvar_t	*timelimit;
-extern	cvar_t	*password;
-extern	cvar_t	*spectator_password;
-extern	cvar_t	*g_select_empty;
-extern	cvar_t	*dedicated;
+static cvar_t* deathmatch;
+static cvar_t* coop;
+static cvar_t* dmflags;
+static cvar_t* skill;
+static cvar_t* fraglimit;
+static cvar_t* timelimit;
+static cvar_t* password;
+static cvar_t* spectator_password;
+static cvar_t* maxclients;
+static cvar_t* maxspectators;
+static cvar_t* maxentities;
+static cvar_t* g_select_empty;
 
-extern	cvar_t	*filterban;
+static cvar_t* filterban;
 
-extern	cvar_t	*sv_gravity;
-extern	cvar_t	*sv_maxvelocity;
+static cvar_t* sv_maxvelocity;
+static cvar_t* sv_gravity;
 
-extern	cvar_t	*gun_x, *gun_y, *gun_z;
-extern	cvar_t	*sv_rollspeed;
-extern	cvar_t	*sv_rollangle;
+static cvar_t* sv_rollspeed;
+static cvar_t* sv_rollangle;
+static cvar_t* gun_x;
+static cvar_t* gun_y;
+static cvar_t* gun_z;
 
-extern	cvar_t	*run_pitch;
-extern	cvar_t	*run_roll;
-extern	cvar_t	*bob_up;
-extern	cvar_t	*bob_pitch;
-extern	cvar_t	*bob_roll;
+static cvar_t* run_pitch;
+static cvar_t* run_roll;
+static cvar_t* bob_up;
+static cvar_t* bob_pitch;
+static cvar_t* bob_roll;
 
-extern	cvar_t	*sv_cheats;
-extern	cvar_t	*maxclients;
-extern	cvar_t	*maxspectators;
+static cvar_t* sv_cheats;
 
-extern	cvar_t	*flood_msgs;
-extern	cvar_t	*flood_persecond;
-extern	cvar_t	*flood_waitdelay;
+static cvar_t* flood_msgs;
+static cvar_t* flood_persecond;
+static cvar_t* flood_waitdelay;
 
-extern	cvar_t	*sv_maplist;
+static cvar_t* sv_maplist;
 
 #define world	(&g_edicts[0])
 
@@ -6319,294 +6412,6 @@ void GetChaseTarget(edict_t *ent);
 #define	ANIM_ATTACK		4
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
-
-
-// client data that stays across multiple level loads
-typedef struct
-{
-	char		userinfo[MAX_INFO_STRING];
-	char		netname[16];
-	int			hand;
-
-	qboolean	connected;			// a loadgame will leave valid entities that
-									// just don't have a connection yet
-
-	// values saved and restored from edicts when changing levels
-	int			health;
-	int			max_health;
-	int			savedFlags;
-
-	int			selected_item;
-	int			inventory[MAX_ITEMS];
-
-	// ammo capacities
-	int			max_bullets;
-	int			max_shells;
-	int			max_rockets;
-	int			max_grenades;
-	int			max_cells;
-	int			max_slugs;
-
-	gitem_t		*weapon;
-	gitem_t		*lastweapon;
-
-	int			power_cubes;	// used for tracking the cubes in coop games
-	int			score;			// for calculating total unit score in coop games
-
-	int			game_helpchanged;
-	int			helpchanged;
-
-	qboolean	spectator;			// client is a spectator
-} client_persistant_t;
-
-// client data that stays across deathmatch respawns
-typedef struct
-{
-	client_persistant_t	coop_respawn;	// what to set client->pers to on a respawn
-	int			enterframe;			// level.framenum the client entered the game
-	int			score;				// frags, etc
-	vec3_t		cmd_angles;			// angles sent over in the last command
-
-	qboolean	spectator;			// client is a spectator
-} client_respawn_t;
-
-// this structure is cleared on each PutClientInServer(),
-// except for 'client->pers'
-struct gclient_s
-{
-	// known to server
-	player_state_t	ps;				// communicated by server to clients
-	int				ping;
-
-	// private to game
-	client_persistant_t	pers;
-	client_respawn_t	resp;
-	pmove_state_t		old_pmove;	// for detecting out-of-pmove changes
-
-	qboolean	showscores;			// set layout stat
-	qboolean	showinventory;		// set layout stat
-	qboolean	showhelp;
-	qboolean	showhelpicon;
-
-	int			ammo_index;
-
-	int			buttons;
-	int			oldbuttons;
-	int			latched_buttons;
-
-	qboolean	weapon_thunk;
-
-	gitem_t		*newweapon;
-
-	// sum up damage over an entire frame, so
-	// shotgun blasts give a single big kick
-	int			damage_armor;		// damage absorbed by armor
-	int			damage_parmor;		// damage absorbed by power armor
-	int			damage_blood;		// damage taken out of health
-	int			damage_knockback;	// impact damage
-	vec3_t		damage_from;		// origin for vector calculation
-
-	float		killer_yaw;			// when dead, look at killer
-
-	weaponstate_t	weaponstate;
-	vec3_t		kick_angles;	// weapon kicks
-	vec3_t		kick_origin;
-	float		v_dmg_roll, v_dmg_pitch, v_dmg_time;	// damage kicks
-	float		fall_time, fall_value;		// for view drop on fall
-	float		damage_alpha;
-	float		bonus_alpha;
-	vec3_t		damage_blend;
-	vec3_t		v_angle;			// aiming direction
-	float		bobtime;			// so off-ground doesn't change it
-	vec3_t		oldviewangles;
-	vec3_t		oldvelocity;
-
-	float		next_drown_time;
-	int			old_waterlevel;
-	int			breather_sound;
-
-	int			machinegun_shots;	// for weapon raising
-
-	// animation vars
-	int			anim_end;
-	int			anim_priority;
-	qboolean	anim_duck;
-	qboolean	anim_run;
-
-	// powerup timers
-	float		quad_framenum;
-	float		invincible_framenum;
-	float		breather_framenum;
-	float		enviro_framenum;
-
-	qboolean	grenade_blew_up;
-	float		grenade_time;
-	int			silencer_shots;
-	int			weapon_sound;
-
-	float		pickup_msg_time;
-
-	float		flood_locktill;		// locked from talking
-	float		flood_when[10];		// when messages were said
-	int			flood_whenhead;		// head pointer for when said
-
-	float		respawn_time;		// can respawn when time > this
-
-	edict_t		*chase_target;		// player we are chasing
-	qboolean	update_chase;		// need to update chase info?
-};
-
-
-struct edict_s
-{
-	entity_state_t	s;
-	struct gclient_s	*client;	// NULL if not a player
-									// the server expects the first part
-									// of gclient_s to be a player_state_t
-									// but the rest of it is opaque
-
-	qboolean	inuse;
-	int			linkcount;
-
-	// FIXME: move these fields to a server private sv_entity_t
-	link_t		area;				// linked to a division node or leaf
-
-	int			num_clusters;		// if -1, use headnode instead
-	int			clusternums[MAX_ENT_CLUSTERS];
-	int			headnode;			// unused if num_clusters != -1
-	int			areanum, areanum2;
-
-	//================================
-
-	int			svflags;
-	vec3_t		mins, maxs;
-	vec3_t		absmin, absmax, size;
-	solid_t		solid;
-	int			clipmask;
-	edict_t		*owner;
-
-
-	// DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
-	// EXPECTS THE FIELDS IN THAT ORDER!
-
-	//================================
-	int			movetype;
-	int			flags;
-
-	char		*model;
-	float		freetime;			// sv.time when the object was freed
-
-	//
-	// only used locally in game, not by server
-	//
-	char		*message;
-	char		*classname;
-	int			spawnflags;
-
-	float		timestamp;
-
-	float		angle;			// set in qe3, -1 = up, -2 = down
-	char		*target;
-	char		*targetname;
-	char		*killtarget;
-	char		*team;
-	char		*pathtarget;
-	char		*deathtarget;
-	char		*combattarget;
-	edict_t		*target_ent;
-
-	float		speed, accel, decel;
-	vec3_t		movedir;
-	vec3_t		pos1, pos2;
-
-	vec3_t		velocity;
-	vec3_t		avelocity;
-	int			mass;
-	float		air_finished;
-	float		gravity;		// per entity gravity multiplier (1.0 is normal)
-								// use for lowgrav artifact, flares
-
-	edict_t		*goalentity;
-	edict_t		*movetarget;
-	float		yaw_speed;
-	float		ideal_yaw;
-
-	float		nextthink;
-	void		(*prethink) (edict_t *ent);
-	void		(*think)(edict_t *self);
-	void		(*blocked)(edict_t *self, edict_t *other);	//move to moveinfo?
-	void		(*touch)(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf);
-	void		(*use)(edict_t *self, edict_t *other, edict_t *activator);
-	void		(*pain)(edict_t *self, edict_t *other, float kick, int damage);
-	void		(*die)(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
-
-	float		touch_debounce_time;		// are all these legit?  do we need more/less of them?
-	float		pain_debounce_time;
-	float		damage_debounce_time;
-	float		fly_sound_debounce_time;	//move to clientinfo
-	float		last_move_time;
-
-	int			health;
-	int			max_health;
-	int			gib_health;
-	int			deadflag;
-	qboolean	show_hostile;
-
-	float		powerarmor_time;
-
-	char		*map;			// target_changelevel
-
-	int			viewheight;		// height above origin where eyesight is determined
-	int			takedamage;
-	int			dmg;
-	int			radius_dmg;
-	float		dmg_radius;
-	int			sounds;			//make this a spawntemp var?
-	int			count;
-
-	edict_t		*chain;
-	edict_t		*enemy;
-	edict_t		*oldenemy;
-	edict_t		*activator;
-	edict_t		*groundentity;
-	int			groundentity_linkcount;
-	edict_t		*teamchain;
-	edict_t		*teammaster;
-
-	edict_t		*mynoise;		// can go in client only
-	edict_t		*mynoise2;
-
-	int			noise_index;
-	int			noise_index2;
-	float		volume;
-	float		attenuation;
-
-	// timing variables
-	float		wait;
-	float		delay;			// before firing targets
-	float		random;
-
-	float		teleport_time;
-
-	int			watertype;
-	int			waterlevel;
-
-	vec3_t		move_origin;
-	vec3_t		move_angles;
-
-	// move this to clientinfo?
-	int			light_level;
-
-	int			style;			// also used as areaportal number
-
-	gitem_t		*item;			// for bonus items
-
-	// common data blocks
-	moveinfo_t		moveinfo;
-	monsterinfo_t	monsterinfo;
-};
-
-#endif	// G_LOCAL_H
 
 /* ============ end inlined header: game/g_local.h ============ */
 
@@ -7941,27 +7746,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* already inlined above: qcommon/qcommon.h */
 #include <setjmp.h>
 
-
-int		realtime;
-
-jmp_buf abortframe;		// an ERR_DROP occured, exit the entire frame
-
-
-FILE	*log_stats_file;
-
-cvar_t	*host_speeds;
-cvar_t	*log_stats;
-cvar_t	*developer;
-cvar_t	*timescale;
-cvar_t	*fixedtime;
-cvar_t	*showtrace;
-cvar_t	*dedicated;
-
-// host_speeds times
-int		time_before_game;
-int		time_after_game;
-int		time_before_ref;
-int		time_after_ref;
+jmp_buf abortframe; // an ERR_DROP occured, exit the entire frame
 
 /*
 ============================================================================
@@ -8311,16 +8096,6 @@ byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
 }
 
 //========================================================
-
-float	frand(void)
-{
-	return (rand()&32767)* (1.0/32767);
-}
-
-float	crand(void)
-{
-	return (rand()&32767)* (2.0/32767) - 1;
-}
 
 void Key_Init (void);
 void SCR_EndLoadingPlaque (void);
@@ -10185,17 +9960,6 @@ typedef struct
 pmove_t		*pm;
 pml_t		pml;
 
-
-// movement parameters
-float	pm_stopspeed = 100;
-float	pm_maxspeed = 300;
-float	pm_duckspeed = 100;
-float	pm_accelerate = 10;
-float	pm_airaccelerate = 0;
-float	pm_wateraccelerate = 10;
-float	pm_friction = 6;
-float	pm_waterfriction = 1;
-float	pm_waterspeed = 400;
 
 /*
 
@@ -14370,18 +14134,10 @@ void SV_InitGame (void)
 	{
 		if (maxclients->value <= 1 || maxclients->value > 4)
 			COM_FullSetCvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-#ifdef COPYPROTECT
-		if (!sv.attractloop && !dedicated->value)
-			Sys_CopyProtect ();
-#endif
 	}
 	else	// non-deathmatch, non-coop is one player
 	{
 		COM_FullSetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-#ifdef COPYPROTECT
-		if (!sv.attractloop)
-			Sys_CopyProtect ();
-#endif
 	}
 
 	svs.spawncount = rand();
@@ -14504,29 +14260,6 @@ void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame)
 
 	SV_BroadcastCommand ("reconnect\n");
 }
-/* ============ end source: server/sv_init.c ============ */
-/* ============ begin source: server/sv_main.c ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-/* already inlined above: server/server.h */
 
 netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
@@ -14552,7 +14285,6 @@ cvar_t *sv_airaccelerate;
 
 cvar_t	*sv_noreload;			// don't reload level state when reentering
 
-cvar_t	*maxclients;			// FIXME: rename sv_maxclients
 cvar_t	*sv_showclamp;
 
 cvar_t	*hostname;
@@ -14561,10 +14293,6 @@ cvar_t	*public_server;			// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
 void Master_Shutdown (void);
-
-
-//============================================================================
-
 
 /*
 =====================
@@ -45393,12 +45121,6 @@ gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
 gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 
-static int	jacket_armor_index;
-static int	combat_armor_index;
-static int	body_armor_index;
-static int	power_screen_index;
-static int	power_shield_index;
-
 #define HEALTH_IGNORE_MAX	1
 #define HEALTH_TIMED		2
 
@@ -47590,57 +47312,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 /* already inlined above: game/g_local.h */
-
-game_locals_t	game;
-level_locals_t	level;
-game_import_t	gi;
-game_export_t	globals;
-spawn_temp_t	st;
-
-int	sm_meat_index;
-int	snd_fry;
-int meansOfDeath;
-
-edict_t		*g_edicts;
-
-cvar_t	*deathmatch;
-cvar_t	*coop;
-cvar_t	*dmflags;
-cvar_t	*skill;
-cvar_t	*fraglimit;
-cvar_t	*timelimit;
-cvar_t	*password;
-cvar_t	*spectator_password;
-cvar_t	*maxclients;
-cvar_t	*maxspectators;
-cvar_t	*maxentities;
-cvar_t	*g_select_empty;
-cvar_t	*dedicated;
-
-cvar_t	*filterban;
-
-cvar_t	*sv_maxvelocity;
-cvar_t	*sv_gravity;
-
-cvar_t	*sv_rollspeed;
-cvar_t	*sv_rollangle;
-cvar_t	*gun_x;
-cvar_t	*gun_y;
-cvar_t	*gun_z;
-
-cvar_t	*run_pitch;
-cvar_t	*run_roll;
-cvar_t	*bob_up;
-cvar_t	*bob_pitch;
-cvar_t	*bob_roll;
-
-cvar_t	*sv_cheats;
-
-cvar_t	*flood_msgs;
-cvar_t	*flood_persecond;
-cvar_t	*flood_waitdelay;
-
-cvar_t	*sv_maplist;
 
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
@@ -96424,8 +96095,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define	WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_CAPTION|WS_VISIBLE)
 
-extern	HINSTANCE	global_hInstance;
-
 extern LPDIRECTSOUND pDS;
 extern LPDIRECTSOUNDBUFFER pDSBuf;
 
@@ -99375,18 +99044,9 @@ void WinError (void)
 
 //================================================================
 
-
-/*
-================
-Sys_ScanForCD
-
-================
-*/
-char *Sys_ScanForCD (void)
-{
+char *Sys_ScanForCD (void) {
 	static char	cddir[MAX_OSPATH];
 	static qboolean	done;
-#ifndef DEMO
 	char		drive[4];
 	FILE		*f;
 	char		test[MAX_QPATH];
@@ -99418,30 +99078,11 @@ char *Sys_ScanForCD (void)
 				return cddir;
 		}
 	}
-#endif
 
 	cddir[0] = 0;
 
 	return NULL;
 }
-
-/*
-================
-Sys_CopyProtect
-
-================
-*/
-void	Sys_CopyProtect (void)
-{
-#ifndef DEMO
-	char	*cddir;
-
-	cddir = Sys_ScanForCD();
-	if (!cddir[0])
-		Com_Error (ERR_FATAL, "You must have the Quake2 CD in the drive to play.");
-#endif
-}
-
 
 //================================================================
 
@@ -99730,120 +99371,6 @@ void *Sys_GetGameAPI (void *parms)
 
 //=======================================================================
 
-
-/*
-==================
-ParseCommandLine
-
-==================
-*/
-void ParseCommandLine (LPSTR lpCmdLine)
-{
-	argc = 1;
-	argv[0] = "exe";
-
-	while (*lpCmdLine && (argc < MAX_NUM_ARGVS))
-	{
-		while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
-			lpCmdLine++;
-
-		if (*lpCmdLine)
-		{
-			argv[argc] = lpCmdLine;
-			argc++;
-
-			while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
-				lpCmdLine++;
-
-			if (*lpCmdLine)
-			{
-				*lpCmdLine = 0;
-				lpCmdLine++;
-			}
-
-		}
-	}
-
-}
-
-/*
-==================
-WinMain
-
-==================
-*/
-HINSTANCE	global_hInstance;
-
-int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-    MSG				msg;
-	int				time, oldtime, newtime;
-	char			*cddir;
-
-	/* previous instances do not exist in Win32 */
-	if (hPrevInstance)
-		return 0;
-
-	global_hInstance = hInstance;
-
-	ParseCommandLine (lpCmdLine);
-
-	// if we find the CD, add a +set cddir xxx command line
-	cddir = Sys_ScanForCD ();
-	if (cddir && argc < MAX_NUM_ARGVS - 3)
-	{
-		int		i;
-
-		// don't override a cddir on the command line
-		for (i=0 ; i<argc ; i++)
-			if (!strcmp(argv[i], "cddir"))
-				break;
-		if (i == argc)
-		{
-			argv[argc++] = "+set";
-			argv[argc++] = "cddir";
-			argv[argc++] = cddir;
-		}
-	}
-
-	Qcommon_Init (argc, argv);
-	oldtime = Sys_Milliseconds ();
-
-    /* main window message loop */
-	while (1)
-	{
-		// if at a full screen console, don't update unless needed
-		if (Minimized || (dedicated && dedicated->value) )
-		{
-			Sleep (1);
-		}
-
-		while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (!GetMessage (&msg, NULL, 0, 0))
-				Com_Quit ();
-			sys_msg_time = msg.time;
-			TranslateMessage (&msg);
-   			DispatchMessage (&msg);
-		}
-
-		do
-		{
-			newtime = Sys_Milliseconds ();
-			time = newtime - oldtime;
-		} while (time < 1);
-//			Con_Printf ("time:%5.2f - %5.2f = %5.2f\n", newtime, oldtime, time);
-
-		//	_controlfp( ~( _EM_ZERODIVIDE /*| _EM_INVALID*/ ), _MCW_EM );
-		_controlfp( _PC_24, _MCW_PC );
-		Qcommon_Frame (time);
-
-		oldtime = newtime;
-	}
-
-	// never gets here
-    return TRUE;
-}
 /* ============ end source: win32/sys_win.c ============ */
 /* ============ begin source: win32/vid_dll.c ============ */
 /*
@@ -100390,13 +99917,8 @@ void VID_FreeReflib (void)
 	reflib_active  = false;
 }
 
-/*
-==============
-VID_LoadRefresh
-==============
-*/
-qboolean VID_LoadRefresh( char *name )
-{
+static HINSTANCE global_hInstance;
+qboolean VID_LoadRefresh( char *name ) {
 	refimport_t	ri;
 
 	if ( reflib_active )
@@ -105849,7 +105371,6 @@ void GLimp_EnableLogging( qboolean enable )
 	}
 }
 
-
 void GLimp_LogNewFrame( void )
 {
 	fprintf( glw_state.log_fp, "*** R_BeginFrame ***\n" );
@@ -105857,6 +105378,92 @@ void GLimp_LogNewFrame( void )
 
 #pragma warning (default : 4113 4133 4047 )
 
+int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	// previous instances do not exist in Win32
+	if (hPrevInstance) {
+		return 0;
+	}
 
+	global_hInstance = hInstance;
 
-/* ============ end source: win32/qgl_win.c ============ */
+	// NOTE: Parse command line
+	{
+		argc = 1;
+		argv[0] = "exe";
+
+		while (*lpCmdLine && (argc < MAX_NUM_ARGVS)) {
+			while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
+				lpCmdLine++;
+
+			if (*lpCmdLine)
+			{
+				argv[argc] = lpCmdLine;
+				argc++;
+
+				while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
+					lpCmdLine++;
+
+				if (*lpCmdLine)
+				{
+					*lpCmdLine = 0;
+					lpCmdLine++;
+				}
+
+			}
+		}
+
+	}
+
+	// if we find the CD, add a +set cddir xxx command line
+	{
+		char* cddir = Sys_ScanForCD();
+		if (cddir && argc < MAX_NUM_ARGVS - 3) {
+			// don't override a cddir on the command line
+			int i = 0;
+			for (i = 0; i < argc; i++) {
+				if (!strcmp(argv[i], "cddir")) {
+					break;
+				}
+			}
+			if (i == argc) {
+				argv[argc++] = "+set";
+				argv[argc++] = "cddir";
+				argv[argc++] = cddir;
+			}
+		}
+	}
+
+	Qcommon_Init(argc, argv);
+
+	for (int oldtime = Sys_Milliseconds();;) {
+
+		// if at a full screen console, don't update unless needed
+		if (Minimized || (dedicated && dedicated->value)) {
+			Sleep (1);
+		}
+
+		for (MSG msg = {}; PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);) {
+			if (!GetMessage(&msg, NULL, 0, 0)) {
+				Com_Quit ();
+			}
+			sys_msg_time = msg.time;
+			TranslateMessage(&msg);
+   			DispatchMessage(&msg);
+		}
+
+		int delta_time = 0;
+		{
+			int newtime = 0;
+			while (delta_time < 1) {
+				newtime = Sys_Milliseconds();
+				delta_time = newtime - oldtime;
+			}
+			oldtime = newtime;
+		}
+
+		Qcommon_Frame(delta_time);
+	}
+
+	// never gets here
+    return TRUE;
+}
