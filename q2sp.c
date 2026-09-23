@@ -22,85 +22,15 @@ typedef enum {false, true}	qboolean;
 // SECTION Byte order
 //
 
-qboolean bigendien;
-
-// can't just use function pointers, or dll linkage can
-// mess up when qcommon is included in multiple places
-short	(*_BigShort) (short l);
-short	(*_LittleShort) (short l);
-int		(*_BigLong) (int l);
-int		(*_LittleLong) (int l);
-float	(*_BigFloat) (float l);
-float	(*_LittleFloat) (float l);
-
-static short	BigShort(short l){return _BigShort(l);}
-static short	LittleShort(short l) {return _LittleShort(l);}
-static int		BigLong (int l) {return _BigLong(l);}
-static int		LittleLong (int l) {return _LittleLong(l);}
-static float	BigFloat (float l) {return _BigFloat(l);}
-static float	LittleFloat (float l) {return _LittleFloat(l);}
-
-static short ShortSwap(short l) {
+static short BigShort(short l){
 	byte b1 = l&255;
 	byte b2 = (l>>8)&255;
 	return (b1<<8) + b2;
 }
 
-static short ShortNoSwap (short l) {
-	return l;
-}
-
-static int LongSwap (int l) {
-	byte b1 = l&255;
-	byte b2 = (l>>8)&255;
-	byte b3 = (l>>16)&255;
-	byte b4 = (l>>24)&255;
-	return ((int)b1<<24) + ((int)b2<<16) + ((int)b3<<8) + b4;
-}
-
-static int LongNoSwap(int l) {
-	return l;
-}
-
-static float FloatSwap(float f) {
-	union {
-		float	f;
-		byte	b[4];
-	} dat1, dat2;
-	dat1.f = f;
-	dat2.b[0] = dat1.b[3];
-	dat2.b[1] = dat1.b[2];
-	dat2.b[2] = dat1.b[1];
-	dat2.b[3] = dat1.b[0];
-	return dat2.f;
-}
-
-static float FloatNoSwap (float f) {
-	return f;
-}
-
-static void Swap_Init() {
-	byte swaptest[2] = {1,0};
-
-	// set the byte swapping variables in a portable manner
-	if (*(short *)swaptest == 1) {
-		bigendien = false;
-		_BigShort = ShortSwap;
-		_LittleShort = ShortNoSwap;
-		_BigLong = LongSwap;
-		_LittleLong = LongNoSwap;
-		_BigFloat = FloatSwap;
-		_LittleFloat = FloatNoSwap;
-	} else {
-		bigendien = true;
-		_BigShort = ShortNoSwap;
-		_LittleShort = ShortSwap;
-		_BigLong = LongNoSwap;
-		_LittleLong = LongSwap;
-		_BigFloat = FloatNoSwap;
-		_LittleFloat = FloatSwap;
-	}
-}
+static short LittleShort(short l) {return l;}
+static int LittleLong(int l) {return l;}
+static float LittleFloat(float l) {return l;}
 
 //
 // SECTION Math
@@ -91625,46 +91555,6 @@ void	Draw_TileClear (int x, int y, int w, int h, char *name);
 void	Draw_Fill (int x, int y, int w, int h, int c);
 void	Draw_FadeScreen (void);
 
-refexport_t GetRefAPI (refimport_t rimp )
-{
-	ri = rimp;
-
-	refexport_t	re;
-	re.api_version = API_VERSION;
-
-	re.BeginRegistration = R_BeginRegistration;
-	re.RegisterModel = R_RegisterModel;
-	re.RegisterSkin = R_RegisterSkin;
-	re.RegisterPic = Draw_FindPic;
-	re.SetSky = R_SetSky;
-	re.EndRegistration = R_EndRegistration;
-
-	re.RenderFrame = R_RenderFrame;
-
-	re.DrawGetPicSize = Draw_GetPicSize;
-	re.DrawPic = Draw_Pic;
-	re.DrawStretchPic = Draw_StretchPic;
-	re.DrawChar = Draw_Char;
-	re.DrawTileClear = Draw_TileClear;
-	re.DrawFill = Draw_Fill;
-	re.DrawFadeScreen= Draw_FadeScreen;
-
-	re.DrawStretchRaw = Draw_StretchRaw;
-
-	re.Init = R_Init;
-	re.Shutdown = R_Shutdown;
-
-	re.CinematicSetPalette = R_SetPalette;
-	re.BeginFrame = R_BeginFrame;
-	re.EndFrame = GLimp_EndFrame;
-
-	re.AppActivate = GLimp_AppActivate;
-
-	Swap_Init ();
-
-	return re;
-}
-
 /* ============ end source: ref_gl/gl_rmain.c ============ */
 /* ============ begin source: ref_gl/gl_rmisc.c ============ */
 /*
@@ -98356,13 +98246,10 @@ void VID_FreeReflib (void)
 }
 
 static HINSTANCE global_hInstance;
-qboolean VID_LoadRefresh( char *name ) {
-	refimport_t	ri;
-
-	if ( reflib_active )
-	{
+static qboolean VID_LoadRefresh(char* name) {
+	if (reflib_active) {
 		re.Shutdown();
-		VID_FreeReflib ();
+		VID_FreeReflib();
 	}
 
 	Com_Printf( "------- Loading %s -------\n", name );
@@ -98383,36 +98270,51 @@ qboolean VID_LoadRefresh( char *name ) {
 	ri.Vid_MenuInit = VID_MenuInit;
 	ri.Vid_NewWindow = VID_NewWindow;
 
-	re = GetRefAPI( ri );
+	re = (refexport_t){
+		.api_version = API_VERSION,
+		.BeginRegistration = R_BeginRegistration,
+		.RegisterModel = R_RegisterModel,
+		.RegisterSkin = R_RegisterSkin,
+		.RegisterPic = Draw_FindPic,
+		.SetSky = R_SetSky,
+		.EndRegistration = R_EndRegistration,
+		.RenderFrame = R_RenderFrame,
+		.DrawGetPicSize = Draw_GetPicSize,
+		.DrawPic = Draw_Pic,
+		.DrawStretchPic = Draw_StretchPic,
+		.DrawChar = Draw_Char,
+		.DrawTileClear = Draw_TileClear,
+		.DrawFill = Draw_Fill,
+		.DrawFadeScreen= Draw_FadeScreen,
+		.DrawStretchRaw = Draw_StretchRaw,
+		.Init = R_Init,
+		.Shutdown = R_Shutdown,
+		.CinematicSetPalette = R_SetPalette,
+		.BeginFrame = R_BeginFrame,
+		.EndFrame = GLimp_EndFrame,
+		.AppActivate = GLimp_AppActivate,
+	};
 
-	if (re.api_version != API_VERSION)
-	{
-		VID_FreeReflib ();
-		Com_Error (ERR_FATAL, "%s has incompatible api_version", name);
+	if (re.api_version != API_VERSION) {
+		VID_FreeReflib();
+		Com_Error(ERR_FATAL, "%s has incompatible api_version", name);
 	}
 
-	if ( re.Init( global_hInstance, MainWndProc ) == -1 )
-	{
+	if (re.Init(global_hInstance, MainWndProc) == -1) {
 		re.Shutdown();
-		VID_FreeReflib ();
+		VID_FreeReflib();
 		return false;
 	}
 
 	Com_Printf( "------------------------------------\n");
 	reflib_active = true;
 
-//======
-//PGM
 	vidref_val = VIDREF_OTHER;
-	if(vid_ref)
-	{
-		if(!strcmp (vid_ref->string, "gl"))
+	if (vid_ref) {
+		if(!strcmp(vid_ref->string, "gl")) {
 			vidref_val = VIDREF_GL;
-		else if(!strcmp(vid_ref->string, "soft"))
-			vidref_val = VIDREF_SOFT;
+		}
 	}
-//PGM
-//======
 
 	return true;
 }
@@ -103822,7 +103724,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		}
 
-		Swap_Init();
+		// NOTE: Swap init
+		{
+			byte swaptest[2] = {1,0};
+			qboolean little_endian = *(short*)swaptest == 1;
+			assert(little_endian);
+		}
 
 		// NOTE: Cbuf: allocates an initial text buffer that will grow as needed
 		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
