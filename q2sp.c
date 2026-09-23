@@ -1413,7 +1413,6 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 
 static int curtime;		// time returned by last Sys_Milliseconds
 
-static void Sys_ConsoleOutput(char *string);
 static int Sys_Milliseconds(void);
 static void Sys_Mkdir(char *path);
 static void Sys_Error(char *error, ...);
@@ -1592,7 +1591,6 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
 qboolean	NET_IsLocalAddress (netadr_t adr);
 char		*NET_AdrToString (netadr_t a);
 qboolean	NET_StringToAdr (char *s, netadr_t *a);
-void		NET_Sleep(int msec);
 
 void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
 
@@ -1828,9 +1826,6 @@ static void Com_Printf(char *fmt, ...) {
 	}
 
 	Con_Print(msg);
-
-	// also echo to debugging console
-	Sys_ConsoleOutput(msg);
 
 	// logfile
 	if (logfile_active && logfile_active->value) {
@@ -5426,7 +5421,6 @@ static cvar_t* developer;
 static cvar_t* timescale;
 static cvar_t* fixedtime;
 static cvar_t* showtrace;
-static cvar_t* dedicated;
 
 // host_speeds times
 static int time_before_game;
@@ -5447,7 +5441,6 @@ void Sys_UnloadGame (void);
 // loads the game dll and calls the api init function
 void	*Sys_GetGameAPI (void *parms);
 
-char* Sys_ConsoleInput (void);
 void Sys_SendKeyEvents (void);
 void Sys_Error (char *error, ...);
 void Sys_Quit (void);
@@ -8162,12 +8155,6 @@ void Qcommon_Frame (int msec)
 		c_pointcontents = 0;
 	}
 
-	do
-	{
-		s = Sys_ConsoleInput ();
-		if (s)
-			Cbuf_AddText (va("%s\n",s));
-	} while (s);
 	Cmd_ExecuteCbuf ();
 
 	if (host_speeds->value)
@@ -8877,8 +8864,7 @@ void FS_SetGamedir (char *dir)
 	//
 	// flush all data, so it will be forced to reload
 	//
-	if (dedicated && !dedicated->value)
-		Cbuf_AddText ("vid_restart\nsnd_restart\n");
+	Cbuf_AddText ("vid_restart\nsnd_restart\n");
 
 	Com_sprintf (fs_gamedir, sizeof(fs_gamedir), "%s/%s", fs_basedir->string, dir);
 
@@ -11336,7 +11322,6 @@ void SV_SendServerinfo (client_t *client);
 void SV_UserinfoChanged (client_t *cl);
 
 
-void Master_Heartbeat (void);
 void Master_Packet (void);
 
 //
@@ -11467,57 +11452,11 @@ These commands can only be entered from stdin or by a remote operator datagram
 ===============================================================================
 */
 
-/*
-====================
-SV_SetMaster_f
-
-Specify a list of master servers
-====================
-*/
-void SV_SetMaster_f (void)
-{
-	int		i, slot;
-
-	// only dedicated servers send heartbeats
-	if (!dedicated->value)
-	{
-		Com_Printf ("Only dedicated servers use masters.\n");
-		return;
-	}
-
-	// make sure the server is listed public
-	COM_SetCvar ("public", "1");
-
-	for (i=1 ; i<MAX_MASTERS ; i++)
-		memset (&master_adr[i], 0, sizeof(master_adr[i]));
-
-	slot = 1;		// slot 0 will always contain the id master
-	for (i=1 ; i<cmd_argc ; i++)
-	{
-		if (slot == MAX_MASTERS)
-			break;
-
-		if (!NET_StringToAdr (Cmd_Argv(i), &master_adr[i]))
-		{
-			Com_Printf ("Bad address: %s\n", Cmd_Argv(i));
-			continue;
-		}
-		if (master_adr[slot].port == 0)
-			master_adr[slot].port = BigShort (PORT_MASTER);
-
-		Com_Printf ("Master server at %s\n", NET_AdrToString (master_adr[slot]));
-
-		Com_Printf ("Sending a ping.\n");
-
-		Netchan_OutOfBandPrint (NS_SERVER, master_adr[slot], "ping");
-
-		slot++;
-	}
-
-	svs.last_heartbeat = -9999999;
+// Specify a list of master servers
+static void SV_SetMaster_f() {
+	Com_Printf("Only dedicated servers use masters.\n");
+	return;
 }
-
-
 
 /*
 ==================
@@ -11977,10 +11916,9 @@ void SV_GameMap_f (void)
 	strncpy (svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
 
 	// copy off the level to the autosave slot
-	if (!dedicated->value)
 	{
-		SV_WriteServerFile (true);
-		SV_CopySaveGame ("current", "save0");
+		SV_WriteServerFile(true);
+		SV_CopySaveGame("current", "save0");
 	}
 }
 
@@ -13909,14 +13847,6 @@ void SV_InitGame (void)
 		COM_FullSetCvar ("coop", "0",  CVAR_SERVERINFO | CVAR_LATCH);
 	}
 
-	// dedicated servers are can't be single player and are usually DM
-	// so unless they explicity set coop, force it to deathmatch
-	if (dedicated->value)
-	{
-		if (!Cvar_VariableValue ("coop"))
-			COM_FullSetCvar ("deathmatch", "1",  CVAR_SERVERINFO | CVAR_LATCH);
-	}
-
 	// init clients
 	if (Cvar_VariableValue ("deathmatch"))
 	{
@@ -14086,8 +14016,6 @@ cvar_t	*hostname;
 cvar_t	*public_server;			// should heartbeats be sent
 
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
-
-void Master_Shutdown (void);
 
 /*
 =====================
@@ -14826,7 +14754,6 @@ void SV_Frame (int msec)
 				Com_Printf ("sv lowclamp\n");
 			svs.realtime = sv.time - 100;
 		}
-		NET_Sleep(sv.time - svs.realtime);
 		return;
 	}
 
@@ -14845,84 +14772,12 @@ void SV_Frame (int msec)
 	// save the entire world state if recording a serverdemo
 	SV_RecordDemoMessage ();
 
-	// send a heartbeat to the master if needed
-	Master_Heartbeat ();
-
 	// clear teleport flags, etc for next frame
 	SV_PrepWorldFrame ();
 
 }
 
 //============================================================================
-
-/*
-================
-Master_Heartbeat
-
-Send a message to the master every few minutes to
-let it know we are alive, and log information
-================
-*/
-#define	HEARTBEAT_SECONDS	300
-void Master_Heartbeat (void)
-{
-	char		*string;
-	int			i;
-
-
-	if (!dedicated->value)
-		return;		// only dedicated servers send heartbeats
-
-	if (!public_server->value)
-		return;		// a private dedicated game
-
-	// check for time wraparound
-	if (svs.last_heartbeat > svs.realtime)
-		svs.last_heartbeat = svs.realtime;
-
-	if (svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS*1000)
-		return;		// not time to send yet
-
-	svs.last_heartbeat = svs.realtime;
-
-	// send the same string that we would give for a status OOB command
-	string = SV_StatusString();
-
-	// send to group master
-	for (i=0 ; i<MAX_MASTERS ; i++)
-		if (master_adr[i].port)
-		{
-			Com_Printf ("Sending heartbeat to %s\n", NET_AdrToString (master_adr[i]));
-			Netchan_OutOfBandPrint (NS_SERVER, master_adr[i], "heartbeat\n%s", string);
-		}
-}
-
-/*
-=================
-Master_Shutdown
-
-Informs all masters that this server is going down
-=================
-*/
-void Master_Shutdown (void)
-{
-	int			i;
-
-	if (!dedicated->value)
-		return;		// only dedicated servers send heartbeats
-
-	if (!public_server->value)
-		return;		// a private dedicated game
-
-	// send to group master
-	for (i=0 ; i<MAX_MASTERS ; i++)
-		if (master_adr[i].port)
-		{
-			if (i > 0)
-				Com_Printf ("Sending heartbeat to %s\n", NET_AdrToString (master_adr[i]));
-			Netchan_OutOfBandPrint (NS_SERVER, master_adr[i], "shutdown");
-		}
-}
 
 //============================================================================
 
@@ -15029,7 +14884,6 @@ void SV_Shutdown (char *finalmsg, qboolean reconnect)
 	if (svs.clients)
 		SV_FinalMessage (finalmsg, reconnect);
 
-	Master_Shutdown ();
 	SV_ShutdownGameProgs ();
 
 	// free current level
@@ -15150,7 +15004,6 @@ void SV_BroadcastPrintf (int level, char *fmt, ...)
 	va_end (argptr);
 
 	// echo to console
-	if (dedicated->value)
 	{
 		char	copy[1024];
 		int		i;
@@ -24841,9 +24694,6 @@ void CL_Frame (int msec)
 {
 	static int	extratime;
 	static int  lasttimecalled;
-
-	if (dedicated->value)
-		return;
 
 	extratime += msec;
 
@@ -41856,9 +41706,6 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 		cl->flood_when[cl->flood_whenhead] = level.time;
 	}
 
-	if (dedicated->value)
-		gi.cprintf(NULL, PRINT_CHAT, "%s", text);
-
 	for (j = 1; j <= game.maxclients; j++)
 	{
 		other = &g_edicts[j];
@@ -50921,9 +50768,6 @@ void InitGame (void)
 	sv_rollangle = gi.cvar ("sv_rollangle", "2", 0);
 	sv_maxvelocity = gi.cvar ("sv_maxvelocity", "2000", 0);
 	sv_gravity = gi.cvar ("sv_gravity", "800", 0);
-
-	// noset vars
-	dedicated = gi.cvar ("dedicated", "0", CVAR_NOSET);
 
 	// latched vars
 	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
@@ -96808,10 +96652,7 @@ qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_messag
 
 			if (err == WSAEWOULDBLOCK)
 				continue;
-			if (dedicated->value)	// let dedicated servers continue after errors
-				Com_Printf ("NET_GetPacket: %s", NET_ErrorString());
-			else
-				Com_Error (ERR_DROP, "NET_GetPacket: %s", NET_ErrorString());
+			Com_Error (ERR_DROP, "NET_GetPacket: %s", NET_ErrorString());
 			continue;
 		}
 
@@ -96886,20 +96727,13 @@ void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
 		if ((err == WSAEADDRNOTAVAIL) && ((to.type == NA_BROADCAST) || (to.type == NA_BROADCAST_IPX)))
 			return;
 
-		if (dedicated->value)	// let dedicated servers continue after errors
+		if (err == WSAEADDRNOTAVAIL)
 		{
-			Com_Printf ("NET_SendPacket ERROR: %s\n", NET_ErrorString());
+			Com_DPrintf ("NET_SendPacket Warning: %s : %s\n", NET_ErrorString(), NET_AdrToString (to));
 		}
 		else
 		{
-			if (err == WSAEADDRNOTAVAIL)
-			{
-				Com_DPrintf ("NET_SendPacket Warning: %s : %s\n", NET_ErrorString(), NET_AdrToString (to));
-			}
-			else
-			{
-				Com_Error (ERR_DROP, "NET_SendPacket ERROR: %s\n", NET_ErrorString());
-			}
+			Com_Error (ERR_DROP, "NET_SendPacket ERROR: %s\n", NET_ErrorString());
 		}
 	}
 }
@@ -96975,11 +96809,8 @@ void NET_OpenIP (void)
 {
 	cvar_t	*ip;
 	int		port;
-	int		dedicated;
 
 	ip = COM_GetCvar ("ip", "localhost", CVAR_NOSET);
-
-	dedicated = Cvar_VariableValue ("dedicated");
 
 	if (!ip_sockets[NS_SERVER])
 	{
@@ -96993,14 +96824,7 @@ void NET_OpenIP (void)
 			}
 		}
 		ip_sockets[NS_SERVER] = NET_IPSocket (ip->string, port);
-		if (!ip_sockets[NS_SERVER] && dedicated)
-			Com_Error (ERR_FATAL, "Couldn't allocate dedicated server IP port");
 	}
-
-
-	// dedicated servers don't need client ports
-	if (dedicated)
-		return;
 
 	if (!ip_sockets[NS_CLIENT])
 	{
@@ -97079,9 +96903,6 @@ NET_OpenIPX
 void NET_OpenIPX (void)
 {
 	int		port;
-	int		dedicated;
-
-	dedicated = Cvar_VariableValue ("dedicated");
 
 	if (!ipx_sockets[NS_SERVER])
 	{
@@ -97096,10 +96917,6 @@ void NET_OpenIPX (void)
 		}
 		ipx_sockets[NS_SERVER] = NET_IPXSocket (port);
 	}
-
-	// dedicated servers don't need client ports
-	if (dedicated)
-		return;
 
 	if (!ipx_sockets[NS_CLIENT])
 	{
@@ -97157,33 +96974,6 @@ void	NET_Config (qboolean multiplayer)
 		if (! noipx->value)
 			NET_OpenIPX ();
 	}
-}
-
-// sleeps msec or until net socket is ready
-void NET_Sleep(int msec)
-{
-    struct timeval timeout;
-	fd_set	fdset;
-	extern cvar_t *dedicated;
-	int i;
-
-	if (!dedicated || !dedicated->value)
-		return; // we're not a server, just run full speed
-
-	FD_ZERO(&fdset);
-	i = 0;
-	if (ip_sockets[NS_SERVER]) {
-		FD_SET(ip_sockets[NS_SERVER], &fdset); // network socket
-		i = ip_sockets[NS_SERVER];
-	}
-	if (ipx_sockets[NS_SERVER]) {
-		FD_SET(ipx_sockets[NS_SERVER], &fdset); // network socket
-		if (ipx_sockets[NS_SERVER] > i)
-			i = ipx_sockets[NS_SERVER];
-	}
-	timeout.tv_sec = msec/1000;
-	timeout.tv_usec = (msec%1000)*1000;
-	select(i+1, &fdset, NULL, NULL, &timeout);
 }
 
 //===================================================================
@@ -98451,8 +98241,6 @@ void Sys_Quit (void)
 	CL_Shutdown();
 	Qcommon_Shutdown ();
 	CloseHandle (qwclsemaphore);
-	if (dedicated && dedicated->value)
-		FreeConsole ();
 
 // shut down QHOST hooks if necessary
 	DeinitConProc ();
@@ -98528,115 +98316,6 @@ char *Sys_ScanForCD (void) {
 
 static char	console_text[256];
 static int	console_textlen;
-
-/*
-================
-Sys_ConsoleInput
-================
-*/
-char *Sys_ConsoleInput (void)
-{
-	INPUT_RECORD	recs[1024];
-	int		dummy;
-	int		ch, numread, numevents;
-
-	if (!dedicated || !dedicated->value)
-		return NULL;
-
-
-	for ( ;; )
-	{
-		if (!GetNumberOfConsoleInputEvents (hinput, &numevents))
-			Sys_Error ("Error getting # of console events");
-
-		if (numevents <= 0)
-			break;
-
-		if (!ReadConsoleInput(hinput, recs, 1, &numread))
-			Sys_Error ("Error reading console input");
-
-		if (numread != 1)
-			Sys_Error ("Couldn't read console input");
-
-		if (recs[0].EventType == KEY_EVENT)
-		{
-			if (!recs[0].Event.KeyEvent.bKeyDown)
-			{
-				ch = recs[0].Event.KeyEvent.uChar.AsciiChar;
-
-				switch (ch)
-				{
-					case '\r':
-						WriteFile(houtput, "\r\n", 2, &dummy, NULL);
-
-						if (console_textlen)
-						{
-							console_text[console_textlen] = 0;
-							console_textlen = 0;
-							return console_text;
-						}
-						break;
-
-					case '\b':
-						if (console_textlen)
-						{
-							console_textlen--;
-							WriteFile(houtput, "\b \b", 3, &dummy, NULL);
-						}
-						break;
-
-					default:
-						if (ch >= ' ')
-						{
-							if (console_textlen < sizeof(console_text)-2)
-							{
-								WriteFile(houtput, &ch, 1, &dummy, NULL);
-								console_text[console_textlen] = ch;
-								console_textlen++;
-							}
-						}
-
-						break;
-
-				}
-			}
-		}
-	}
-
-	return NULL;
-}
-
-
-/*
-================
-Sys_ConsoleOutput
-
-Print text to the dedicated console
-================
-*/
-void Sys_ConsoleOutput (char *string)
-{
-	int		dummy;
-	char	text[256];
-
-	if (!dedicated || !dedicated->value)
-		return;
-
-	if (console_textlen)
-	{
-		text[0] = '\r';
-		memset(&text[1], ' ', console_textlen);
-		text[console_textlen+1] = '\r';
-		text[console_textlen+2] = 0;
-		WriteFile(houtput, text, console_textlen+2, &dummy, NULL);
-	}
-
-	WriteFile(houtput, string, strlen(string), &dummy, NULL);
-
-	if (console_textlen)
-		WriteFile(houtput, console_text, console_textlen, &dummy, NULL);
-}
-
 
 /*
 ================
@@ -104904,7 +104583,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		fixedtime = COM_GetCvar("fixedtime", "0", 0);
 		logfile_active = COM_GetCvar("logfile", "0", 0);
 		showtrace = COM_GetCvar("showtrace", "0", 0);
-		dedicated = COM_GetCvar("dedicated", "0", CVAR_NOSET);
 
 		{
 			char* s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
@@ -105134,7 +104812,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	for (int oldtime = Sys_Milliseconds();;) {
 
 		// if at a full screen console, don't update unless needed
-		if (Minimized || (dedicated && dedicated->value)) {
+		if (Minimized) {
 			Sleep(1);
 		}
 
