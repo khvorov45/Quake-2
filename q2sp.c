@@ -5453,14 +5453,12 @@ void Sys_Error (char *error, ...);
 void Sys_Quit (void);
 char* Sys_GetClipboardData( void );
 
-void CL_Init (void);
 void CL_Drop (void);
 void CL_Shutdown (void);
 void CL_Frame (int msec);
 
 void SCR_BeginLoadingPlaque (void);
 
-void SV_Init (void);
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
 void SV_Frame (int msec);
 
@@ -11333,7 +11331,6 @@ int SV_ImageIndex (char *name);
 void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
 
 void SV_ExecuteUserCommand (char *s);
-void SV_InitOperatorCommands (void);
 
 void SV_SendServerinfo (client_t *client);
 void SV_UserinfoChanged (client_t *cl);
@@ -12457,37 +12454,6 @@ void SV_ServerCommand_f (void)
 
 //===========================================================
 
-/*
-==================
-SV_InitOperatorCommands
-==================
-*/
-void SV_InitOperatorCommands (void)
-{
-	Cmd_AddCommand ("heartbeat", SV_Heartbeat_f);
-	Cmd_AddCommand ("kick", SV_Kick_f);
-	Cmd_AddCommand ("status", SV_Status_f);
-	Cmd_AddCommand ("serverinfo", SV_Serverinfo_f);
-	Cmd_AddCommand ("dumpuser", SV_DumpUser_f);
-
-	Cmd_AddCommand ("map", SV_Map_f);
-	Cmd_AddCommand ("demomap", SV_DemoMap_f);
-	Cmd_AddCommand ("gamemap", SV_GameMap_f);
-	Cmd_AddCommand ("setmaster", SV_SetMaster_f);
-
-	if ( dedicated->value )
-		Cmd_AddCommand ("say", SV_ConSay_f);
-
-	Cmd_AddCommand ("serverrecord", SV_ServerRecord_f);
-	Cmd_AddCommand ("serverstop", SV_ServerStop_f);
-
-	Cmd_AddCommand ("save", SV_Savegame_f);
-	Cmd_AddCommand ("load", SV_Loadgame_f);
-
-	Cmd_AddCommand ("killserver", SV_KillServer_f);
-
-	Cmd_AddCommand ("sv", SV_ServerCommand_f);
-}
 
 /* ============ end source: server/sv_ccmds.c ============ */
 /* ============ begin source: server/sv_ents.c ============ */
@@ -15010,51 +14976,6 @@ void SV_UserinfoChanged (client_t *cl)
 //============================================================================
 
 /*
-===============
-SV_Init
-
-Only called at quake2.exe startup, not for each game
-===============
-*/
-void SV_Init (void)
-{
-	SV_InitOperatorCommands	();
-
-	rcon_password = COM_GetCvar ("rcon_password", "", 0);
-	COM_GetCvar ("skill", "1", 0);
-	COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
-	COM_GetCvar ("coop", "0", CVAR_LATCH);
-	COM_GetCvar ("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
-	COM_GetCvar ("fraglimit", "0", CVAR_SERVERINFO);
-	COM_GetCvar ("timelimit", "0", CVAR_SERVERINFO);
-	COM_GetCvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
-	COM_GetCvar ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
-	maxclients = COM_GetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-	hostname = COM_GetCvar ("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
-	timeout = COM_GetCvar ("timeout", "125", 0);
-	zombietime = COM_GetCvar ("zombietime", "2", 0);
-	sv_showclamp = COM_GetCvar ("showclamp", "0", 0);
-	sv_paused = COM_GetCvar ("paused", "0", 0);
-	sv_timedemo = COM_GetCvar ("timedemo", "0", 0);
-	sv_enforcetime = COM_GetCvar ("sv_enforcetime", "0", 0);
-	allow_download = COM_GetCvar ("allow_download", "0", CVAR_ARCHIVE);
-	allow_download_players  = COM_GetCvar ("allow_download_players", "0", CVAR_ARCHIVE);
-	allow_download_models = COM_GetCvar ("allow_download_models", "1", CVAR_ARCHIVE);
-	allow_download_sounds = COM_GetCvar ("allow_download_sounds", "1", CVAR_ARCHIVE);
-	allow_download_maps	  = COM_GetCvar ("allow_download_maps", "1", CVAR_ARCHIVE);
-
-	sv_noreload = COM_GetCvar ("sv_noreload", "0", 0);
-
-	sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
-
-	public_server = COM_GetCvar ("public", "0", 0);
-
-	sv_reconnect_limit = COM_GetCvar ("sv_reconnect_limit", "3", CVAR_ARCHIVE);
-
-	SZ_Init (&net_message, net_message_buffer, sizeof(net_message_buffer));
-}
-
-/*
 ==================
 SV_FinalMessage
 
@@ -17334,9 +17255,7 @@ typedef struct
 extern	viddef_t	viddef;				// global video state
 
 // Video module initialisation etc
-void	VID_Init (void);
 void	VID_Shutdown (void);
-void	VID_CheckChanges (void);
 
 void	VID_MenuInit( void );
 void	VID_MenuDraw( void );
@@ -17364,7 +17283,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // screen.h
 
-void	SCR_Init (void);
 
 void	SCR_UpdateScreen (void);
 
@@ -17429,7 +17347,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 struct sfx_s;
 
-void S_Init (void);
 void S_Shutdown (void);
 
 // if origin is NULL, the sound will be dynamically sourced from the entity
@@ -17663,8 +17580,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 void Con_DrawCharacter (int cx, int line, int num);
 
-void Con_CheckResize (void);
-void Con_Init (void);
 void Con_DrawConsole (float frac);
 void Con_Print (char *txt);
 void Con_CenteredPrint (char *text);
@@ -17694,11 +17609,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-int		CDAudio_Init(void);
-void	CDAudio_Shutdown(void);
 void	CDAudio_Play(int track, qboolean looping);
 void	CDAudio_Stop(void);
-void	CDAudio_Update(void);
 void	CDAudio_Activate (qboolean active);
 /* ============ end inlined header: client/cdaudio.h ============ */
 
@@ -18054,8 +17966,6 @@ void CL_ParseLayout (void);
 //
 extern	refexport_t	re;		// interface to refresh .dll
 
-void CL_Init (void);
-
 void CL_FixUpGender(void);
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);
@@ -18120,7 +18030,6 @@ void CL_Download_f (void);
 extern	int			gun_frame;
 extern	struct model_s	*gun_model;
 
-void V_Init (void);
 void V_RenderView( float stereo_separation );
 void V_AddEntity (entity_t *ent);
 void V_AddParticle (vec3_t org, int color, float alpha);
@@ -18159,7 +18068,6 @@ void CL_TrapParticles (entity_t *ent);
 //
 // menus
 //
-void M_Init (void);
 void M_Keydown (int key);
 void M_Draw (void);
 void M_Menu_Main_f (void);
@@ -24350,19 +24258,12 @@ void CL_Userinfo_f (void)
 	Info_Print (Info_Cvar_User());
 }
 
-/*
-=================
-CL_Snd_Restart_f
-
-Restart the sound subsystem so it can pick up
-new parameters and flush all sounds
-=================
-*/
-void CL_Snd_Restart_f (void)
-{
-	S_Shutdown ();
-	S_Init ();
-	CL_RegisterSounds ();
+static void S_Init();
+// Restart the sound subsystem so it can pick up new parameters and flush all sounds
+static void CL_Snd_Restart_f() {
+	S_Shutdown();
+	S_Init();
+	CL_RegisterSounds();
 }
 
 int precache_check; // for autodownload of precache items
@@ -24935,13 +24836,7 @@ void CL_SendCommand (void)
 	CL_CheckForResend ();
 }
 
-
-/*
-==================
-CL_Frame
-
-==================
-*/
+void VID_CheckChanges();
 void CL_Frame (int msec)
 {
 	static int	extratime;
@@ -25005,8 +24900,6 @@ void CL_Frame (int msec)
 	// update audio
 	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
 
-	CDAudio_Update();
-
 	// advance local effects for next frame
 	CL_RunDLights ();
 	CL_RunLightStyles ();
@@ -25040,46 +24933,6 @@ void CL_Frame (int msec)
 
 //============================================================================
 
-/*
-====================
-CL_Init
-====================
-*/
-void CL_Init (void)
-{
-	if (dedicated->value)
-		return;		// nothing running on the client
-
-	// all archived variables will now be loaded
-
-	Con_Init ();
-#if defined __linux__ || defined __sgi
-	S_Init ();
-	VID_Init ();
-#else
-	VID_Init ();
-	S_Init ();	// sound must be initialized after window is created
-#endif
-
-	V_Init ();
-
-	net_message.data = net_message_buffer;
-	net_message.maxsize = sizeof(net_message_buffer);
-
-	M_Init ();
-
-	SCR_Init ();
-	cls.disable_screen = true;	// don't draw yet
-
-	CDAudio_Init ();
-	CL_InitLocal ();
-	IN_Init ();
-
-//	Cbuf_AddText ("exec autoexec.cfg\n");
-	FS_ExecAutoexec ();
-	Cmd_ExecuteCbuf ();
-
-}
 
 
 /*
@@ -25103,7 +24956,6 @@ void CL_Shutdown(void)
 
 	CL_WriteConfiguration ();
 
-	CDAudio_Shutdown ();
 	S_Shutdown();
 	IN_Shutdown ();
 	VID_Shutdown();
@@ -27927,39 +27779,6 @@ void SCR_Sky_f (void)
 
 //============================================================================
 
-/*
-==================
-SCR_Init
-==================
-*/
-void SCR_Init (void)
-{
-	scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
-	scr_conspeed = COM_GetCvar ("scr_conspeed", "3", 0);
-	scr_showturtle = COM_GetCvar ("scr_showturtle", "0", 0);
-	scr_showpause = COM_GetCvar ("scr_showpause", "1", 0);
-	scr_centertime = COM_GetCvar ("scr_centertime", "2.5", 0);
-	scr_printspeed = COM_GetCvar ("scr_printspeed", "8", 0);
-	scr_netgraph = COM_GetCvar ("netgraph", "0", 0);
-	scr_timegraph = COM_GetCvar ("timegraph", "0", 0);
-	scr_debuggraph = COM_GetCvar ("debuggraph", "0", 0);
-	scr_graphheight = COM_GetCvar ("graphheight", "32", 0);
-	scr_graphscale = COM_GetCvar ("graphscale", "1", 0);
-	scr_graphshift = COM_GetCvar ("graphshift", "0", 0);
-	scr_drawall = COM_GetCvar ("scr_drawall", "0", 0);
-
-//
-// register our commands
-//
-	Cmd_AddCommand ("timerefresh",SCR_TimeRefresh_f);
-	Cmd_AddCommand ("loading",SCR_Loading_f);
-	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
-	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
-	Cmd_AddCommand ("sky",SCR_Sky_f);
-
-	scr_initialized = true;
-}
-
 
 /*
 ==============
@@ -28044,11 +27863,7 @@ void SCR_RunConsole (void)
 
 }
 
-/*
-==================
-SCR_DrawConsole
-==================
-*/
+void Con_CheckResize (void);
 void SCR_DrawConsole (void)
 {
 	Con_CheckResize ();
@@ -31241,28 +31056,6 @@ void V_Viewpos_f (void)
 		(int)cl.refdef.viewangles[YAW]);
 }
 
-/*
-=============
-V_Init
-=============
-*/
-void V_Init (void)
-{
-	Cmd_AddCommand ("gun_next", V_Gun_Next_f);
-	Cmd_AddCommand ("gun_prev", V_Gun_Prev_f);
-	Cmd_AddCommand ("gun_model", V_Gun_Model_f);
-
-	Cmd_AddCommand ("viewpos", V_Viewpos_f);
-
-	crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
-
-	cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
-	cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
-	cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
-	cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
-
-	cl_stats = COM_GetCvar ("cl_stats", "0", 0);
-}
 /* ============ end source: client/cl_view.c ============ */
 /* ============ begin source: client/console.c ============ */
 /*
@@ -31500,13 +31293,7 @@ void Con_MessageMode2_f (void)
 	cls.key_dest = key_message;
 }
 
-/*
-================
-Con_CheckResize
-
-If the line width has changed, reformat the buffer.
-================
-*/
+// If the line width has changed, reformat the buffer.
 void Con_CheckResize (void)
 {
 	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
@@ -31558,34 +31345,6 @@ void Con_CheckResize (void)
 
 	con.current = con.totallines - 1;
 	con.display = con.current;
-}
-
-
-/*
-================
-Con_Init
-================
-*/
-void Con_Init (void)
-{
-	con.linewidth = -1;
-
-	Con_CheckResize ();
-
-	Com_Printf ("Console initialized.\n");
-
-//
-// register our commands
-//
-	con_notifytime = COM_GetCvar ("con_notifytime", "3", 0);
-
-	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
-	Cmd_AddCommand ("togglechat", Con_ToggleChat_f);
-	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
-	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
-	Cmd_AddCommand ("clear", Con_Clear_f);
-	Cmd_AddCommand ("condump", Con_Dump_f);
-	con.initialized = true;
 }
 
 /*
@@ -36907,32 +36666,6 @@ void M_Menu_Quit_f (void)
 
 /*
 =================
-M_Init
-=================
-*/
-void M_Init (void)
-{
-	Cmd_AddCommand ("menu_main", M_Menu_Main_f);
-	Cmd_AddCommand ("menu_game", M_Menu_Game_f);
-		Cmd_AddCommand ("menu_loadgame", M_Menu_LoadGame_f);
-		Cmd_AddCommand ("menu_savegame", M_Menu_SaveGame_f);
-		Cmd_AddCommand ("menu_joinserver", M_Menu_JoinServer_f);
-			Cmd_AddCommand ("menu_addressbook", M_Menu_AddressBook_f);
-		Cmd_AddCommand ("menu_startserver", M_Menu_StartServer_f);
-			Cmd_AddCommand ("menu_dmoptions", M_Menu_DMOptions_f);
-		Cmd_AddCommand ("menu_playerconfig", M_Menu_PlayerConfig_f);
-			Cmd_AddCommand ("menu_downloadoptions", M_Menu_DownloadOptions_f);
-		Cmd_AddCommand ("menu_credits", M_Menu_Credits_f );
-	Cmd_AddCommand ("menu_multiplayer", M_Menu_Multiplayer_f );
-	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
-	Cmd_AddCommand ("menu_options", M_Menu_Options_f);
-		Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
-	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
-}
-
-
-/*
-=================
 M_Draw
 =================
 */
@@ -37912,15 +37645,7 @@ void S_SoundInfo_f(void)
     Com_Printf("0x%x dma buffer\n", dma.buffer);
 }
 
-
-
-/*
-================
-S_Init
-================
-*/
-void S_Init (void)
-{
+static void S_Init() {
 	cvar_t	*cv;
 
 	Com_Printf("\n------- sound initialization -------\n");
@@ -95299,83 +95024,6 @@ LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 
-void CDAudio_Update(void)
-{
-	if ( cd_nocd->value != !enabled )
-	{
-		if ( cd_nocd->value )
-		{
-			CDAudio_Stop();
-			enabled = false;
-		}
-		else
-		{
-			enabled = true;
-			CDAudio_Resume ();
-		}
-	}
-}
-
-int CDAudio_Init(void)
-{
-	DWORD	dwReturn;
-	MCI_OPEN_PARMS	mciOpenParms;
-    MCI_SET_PARMS	mciSetParms;
-	int				n;
-
-	cd_nocd = COM_GetCvar ("cd_nocd", "0", CVAR_ARCHIVE );
-	cd_loopcount = COM_GetCvar ("cd_loopcount", "4", 0);
-	cd_looptrack = COM_GetCvar ("cd_looptrack", "11", 0);
-	if ( cd_nocd->value)
-		return -1;
-
-	mciOpenParms.lpstrDeviceType = "cdaudio";
-	if ((dwReturn = mciSendCommand(0, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_SHAREABLE, (DWORD_PTR) (LPVOID) &mciOpenParms)))
-	{
-		Com_Printf("CDAudio_Init: MCI_OPEN failed (%i)\n", dwReturn);
-		return -1;
-	}
-	wDeviceID = mciOpenParms.wDeviceID;
-
-    // Set the time format to track/minute/second/frame (TMSF).
-    mciSetParms.dwTimeFormat = MCI_FORMAT_TMSF;
-    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_TIME_FORMAT, (DWORD_PTR)(LPVOID) &mciSetParms)))
-    {
-		Com_Printf("MCI_SET_TIME_FORMAT failed (%i)\n", dwReturn);
-        mciSendCommand(wDeviceID, MCI_CLOSE, 0, (DWORD_PTR)NULL);
-		return -1;
-    }
-
-	for (n = 0; n < 100; n++)
-		remap[n] = n;
-	initialized = true;
-	enabled = true;
-
-	if (CDAudio_GetAudioDiskInfo())
-	{
-//		Com_Printf("CDAudio_Init: No CD in player.\n");
-		cdValid = false;
-		enabled = false;
-	}
-
-	Cmd_AddCommand ("cd", CD_f);
-
-	Com_Printf("CD Audio Initialized\n");
-
-	return 0;
-}
-
-
-void CDAudio_Shutdown(void)
-{
-	if (!initialized)
-		return;
-	CDAudio_Stop();
-	if (mciSendCommand(wDeviceID, MCI_CLOSE, MCI_WAIT, (DWORD_PTR)NULL))
-		Com_DPrintf("CDAudio_Shutdown: MCI_CLOSE failed\n");
-}
-
-
 /*
 ===========
 CDAudio_Activate
@@ -99710,15 +99358,9 @@ qboolean VID_LoadRefresh( char *name ) {
 	return true;
 }
 
-/*
-============
-VID_CheckChanges
-
-This function gets called once just before drawing each frame, and it's sole purpose in life
-is to check to see if any of the video mode parameters have changed, and if they have to
-update the rendering DLL and/or video mode to match.
-============
-*/
+// This function gets called once just before drawing each frame, and it's sole purpose in life
+// is to check to see if any of the video mode parameters have changed, and if they have to
+// update the rendering DLL and/or video mode to match.
 void VID_CheckChanges (void)
 {
 	char name[100];
@@ -99780,49 +99422,6 @@ void VID_CheckChanges (void)
 		vid_xpos->modified = false;
 		vid_ypos->modified = false;
 	}
-}
-
-/*
-============
-VID_Init
-============
-*/
-void VID_Init (void)
-{
-	/* Create the video variables so we know how to start the graphics drivers */
-	vid_ref = COM_GetCvar ("vid_ref", "soft", CVAR_ARCHIVE);
-	vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
-	vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
-	vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
-	vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
-	win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
-
-	/* Add some console commands that we want to handle */
-	Cmd_AddCommand ("vid_restart", VID_Restart_f);
-	Cmd_AddCommand ("vid_front", VID_Front_f);
-
-	/*
-	** this is a gross hack but necessary to clamp the mode for 3Dfx
-	*/
-#if 0
-	{
-		cvar_t *gl_driver = Cvar_Get( "gl_driver", "opengl32", 0 );
-		cvar_t *gl_mode = Cvar_Get( "gl_mode", "3", 0 );
-
-		if ( stricmp( gl_driver->string, "3dfxgl" ) == 0 )
-		{
-			Cvar_SetValue( "gl_mode", 3 );
-			viddef.width  = 640;
-			viddef.height = 480;
-		}
-	}
-#endif
-
-	/* Disable the 3Dfx splash screen */
-	putenv("FX_GLIDE_NO_SPLASH=0");
-
-	/* Start the graphics mode and load refresh DLL */
-	VID_CheckChanges();
 }
 
 /*
@@ -105353,17 +104952,175 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
 		}
 
-		SV_Init();
-		CL_Init();
+		// NOTE: Server init
+		{
+
+			// NOTE: Init operator commands
+			{
+				Cmd_AddCommand("heartbeat", SV_Heartbeat_f);
+				Cmd_AddCommand("kick", SV_Kick_f);
+				Cmd_AddCommand("status", SV_Status_f);
+				Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
+				Cmd_AddCommand("dumpuser", SV_DumpUser_f);
+				Cmd_AddCommand("map", SV_Map_f);
+				Cmd_AddCommand("demomap", SV_DemoMap_f);
+				Cmd_AddCommand("gamemap", SV_GameMap_f);
+				Cmd_AddCommand("setmaster", SV_SetMaster_f);
+				Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
+				Cmd_AddCommand("serverstop", SV_ServerStop_f);
+				Cmd_AddCommand("save", SV_Savegame_f);
+				Cmd_AddCommand("load", SV_Loadgame_f);
+				Cmd_AddCommand("killserver", SV_KillServer_f);
+				Cmd_AddCommand("sv", SV_ServerCommand_f);
+			}
+
+			rcon_password = COM_GetCvar("rcon_password", "", 0);
+			maxclients = COM_GetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
+			hostname = COM_GetCvar ("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
+			timeout = COM_GetCvar ("timeout", "125", 0);
+			zombietime = COM_GetCvar ("zombietime", "2", 0);
+			sv_showclamp = COM_GetCvar ("showclamp", "0", 0);
+			sv_paused = COM_GetCvar ("paused", "0", 0);
+			sv_timedemo = COM_GetCvar ("timedemo", "0", 0);
+			sv_enforcetime = COM_GetCvar ("sv_enforcetime", "0", 0);
+			allow_download = COM_GetCvar ("allow_download", "0", CVAR_ARCHIVE);
+			allow_download_players  = COM_GetCvar ("allow_download_players", "0", CVAR_ARCHIVE);
+			allow_download_models = COM_GetCvar ("allow_download_models", "1", CVAR_ARCHIVE);
+			allow_download_sounds = COM_GetCvar ("allow_download_sounds", "1", CVAR_ARCHIVE);
+			allow_download_maps	  = COM_GetCvar ("allow_download_maps", "1", CVAR_ARCHIVE);
+			sv_noreload = COM_GetCvar ("sv_noreload", "0", 0);
+			sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
+			public_server = COM_GetCvar ("public", "0", 0);
+			sv_reconnect_limit = COM_GetCvar ("sv_reconnect_limit", "3", CVAR_ARCHIVE);
+
+			COM_GetCvar("skill", "1", 0);
+			COM_GetCvar("deathmatch", "0", CVAR_LATCH);
+			COM_GetCvar("coop", "0", CVAR_LATCH);
+			COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
+			COM_GetCvar("fraglimit", "0", CVAR_SERVERINFO);
+			COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
+			COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
+			COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
+
+			SZ_Init (&net_message, net_message_buffer, sizeof(net_message_buffer));
+		}
+
+		// NOTE: client init
+		{
+			// NOTE: Console init
+			// all archived variables will now be loaded
+			{
+				con.linewidth = -1;
+				Con_CheckResize();
+				Com_Printf("Console initialized.\n");
+
+				con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
+				Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
+				Cmd_AddCommand("togglechat", Con_ToggleChat_f);
+				Cmd_AddCommand("messagemode", Con_MessageMode_f);
+				Cmd_AddCommand("messagemode2", Con_MessageMode2_f);
+				Cmd_AddCommand("clear", Con_Clear_f);
+				Cmd_AddCommand("condump", Con_Dump_f);
+
+				con.initialized = true;
+			}
+
+			// NOTE: Video init
+			{
+				// Create the video variables so we know how to start the graphics drivers
+				vid_ref = COM_GetCvar ("vid_ref", "soft", CVAR_ARCHIVE);
+				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
+				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
+				vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
+				vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
+				win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
+
+				Cmd_AddCommand("vid_restart", VID_Restart_f);
+				Cmd_AddCommand("vid_front", VID_Front_f);
+
+				// Start the graphics mode and load refresh DLL
+				VID_CheckChanges();
+			}
+
+			// sound must be initialized after window is created
+			S_Init();
+
+			// NOTE: View init
+			{
+				Cmd_AddCommand("gun_next", V_Gun_Next_f);
+				Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
+				Cmd_AddCommand("gun_model", V_Gun_Model_f);
+				Cmd_AddCommand ("viewpos", V_Viewpos_f);
+
+				crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
+				cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
+				cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
+				cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
+				cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
+				cl_stats = COM_GetCvar ("cl_stats", "0", 0);
+			}
+
+			net_message.data = net_message_buffer;
+			net_message.maxsize = sizeof(net_message_buffer);
+
+			// NOTE: Menu init
+			{
+				Cmd_AddCommand("menu_main", M_Menu_Main_f);
+				Cmd_AddCommand("menu_game", M_Menu_Game_f);
+				Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
+				Cmd_AddCommand("menu_savegame", M_Menu_SaveGame_f);
+				Cmd_AddCommand("menu_joinserver", M_Menu_JoinServer_f);
+				Cmd_AddCommand("menu_addressbook", M_Menu_AddressBook_f);
+				Cmd_AddCommand("menu_startserver", M_Menu_StartServer_f);
+				Cmd_AddCommand("menu_dmoptions", M_Menu_DMOptions_f);
+				Cmd_AddCommand("menu_playerconfig", M_Menu_PlayerConfig_f);
+				Cmd_AddCommand("menu_downloadoptions", M_Menu_DownloadOptions_f);
+				Cmd_AddCommand("menu_credits", M_Menu_Credits_f );
+				Cmd_AddCommand("menu_multiplayer", M_Menu_Multiplayer_f );
+				Cmd_AddCommand("menu_video", M_Menu_Video_f);
+				Cmd_AddCommand("menu_options", M_Menu_Options_f);
+				Cmd_AddCommand("menu_keys", M_Menu_Keys_f);
+				Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
+			}
+
+			// NOTE: Screen init
+			{
+				scr_viewsize = COM_GetCvar("viewsize", "100", CVAR_ARCHIVE);
+				scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
+				scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
+				scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
+				scr_centertime = COM_GetCvar("scr_centertime", "2.5", 0);
+				scr_printspeed = COM_GetCvar("scr_printspeed", "8", 0);
+				scr_netgraph = COM_GetCvar("netgraph", "0", 0);
+				scr_timegraph = COM_GetCvar("timegraph", "0", 0);
+				scr_debuggraph = COM_GetCvar("debuggraph", "0", 0);
+				scr_graphheight = COM_GetCvar("graphheight", "32", 0);
+				scr_graphscale = COM_GetCvar("graphscale", "1", 0);
+				scr_graphshift = COM_GetCvar("graphshift", "0", 0);
+				scr_drawall = COM_GetCvar("scr_drawall", "0", 0);
+
+				Cmd_AddCommand("timerefresh",SCR_TimeRefresh_f);
+				Cmd_AddCommand("loading",SCR_Loading_f);
+				Cmd_AddCommand("sizeup",SCR_SizeUp_f);
+				Cmd_AddCommand("sizedown",SCR_SizeDown_f);
+				Cmd_AddCommand("sky",SCR_Sky_f);
+
+				scr_initialized = true;
+			}
+
+			cls.disable_screen = true; // don't draw yet
+
+			CL_InitLocal ();
+			IN_Init ();
+
+			FS_ExecAutoexec();
+			Cmd_ExecuteCbuf();
+		}
 
 		// add + commands from command line
 		if (!Cbuf_AddLateCommands()) {
 			// if the user didn't give any commands, run default action
-			if (!dedicated->value) {
-				Cbuf_AddText ("d1\n");
-			} else {
-				Cbuf_AddText ("dedicated_start\n");
-			}
+			Cbuf_AddText("d1\n");
 			Cmd_ExecuteCbuf();
 		} else {
 			// the user asked for something explicit so drop the loading plaque
@@ -105378,7 +105135,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// if at a full screen console, don't update unless needed
 		if (Minimized || (dedicated && dedicated->value)) {
-			Sleep (1);
+			Sleep(1);
 		}
 
 		for (MSG msg = {}; PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);) {
