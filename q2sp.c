@@ -7816,19 +7816,10 @@ void Com_Error (int code, char *fmt, ...)
 	Sys_Error ("%s", msg);
 }
 
-
-/*
-=============
-Com_Quit
-
-Both client and server can use this, and it will
-do the apropriate things.
-=============
-*/
-void Com_Quit (void)
-{
-	SV_Shutdown ("Server quit\n", false);
-	CL_Shutdown ();
+// Both client and server can use this, and it will do the apropriate things.
+void Com_Quit (void) {
+	SV_Shutdown("Server quit\n", false);
+	CL_Shutdown();
 
 	if (logfile)
 	{
@@ -8081,9 +8072,6 @@ byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
 }
 
 //========================================================
-
-void Key_Init (void);
-void SCR_EndLoadingPlaque (void);
 
 /*
 =============
@@ -8589,7 +8577,7 @@ FS_ReadFile
 Properly handles partial reads
 =================
 */
-void CDAudio_Stop(void);
+
 #define	MAX_READ	0x10000		// read in blocks of 64k
 void FS_Read (void *buffer, int len, FILE *f)
 {
@@ -8615,7 +8603,6 @@ void FS_Read (void *buffer, int len, FILE *f)
 			if (!tries)
 			{
 				tries = 1;
-				CDAudio_Stop();
 			}
 			else
 				Com_Error (ERR_FATAL, "FS_Read: 0 bytes read");
@@ -17143,7 +17130,7 @@ void	SCR_SizeUp (void);
 void	SCR_SizeDown (void);
 void	SCR_CenterPrint (char *str);
 void	SCR_BeginLoadingPlaque (void);
-void	SCR_EndLoadingPlaque (void);
+
 
 void	SCR_DebugGraph (float value, int color);
 
@@ -17440,32 +17427,7 @@ void Con_Clear_f (void);
 void Con_DrawNotify (void);
 void Con_ClearNotify (void);
 void Con_ToggleConsole_f (void);
-/* ============ end inlined header: client/console.h ============ */
-/* ============ begin inlined header: client/cdaudio.h ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-void	CDAudio_Play(int track, qboolean looping);
-void	CDAudio_Stop(void);
-void	CDAudio_Activate (qboolean active);
-/* ============ end inlined header: client/cdaudio.h ============ */
 
 //=============================================================================
 
@@ -18490,21 +18452,17 @@ qboolean SCR_DrawCinematic (void)
 	return true;
 }
 
-/*
-==================
-SCR_PlayCinematic
+static void SCR_EndLoadingPlaque() {
+	cls.disable_screen = 0;
+	Con_ClearNotify();
+}
 
-==================
-*/
 void SCR_PlayCinematic (char *arg)
 {
 	int		width, height;
 	byte	*palette;
 	char	name[MAX_OSPATH], *dot;
 	int		old_khz;
-
-	// make sure CD isn't playing music
-	CDAudio_Stop();
 
 	cl.cinematicframe = 0;
 	dot = strstr (arg, ".");
@@ -23630,52 +23588,40 @@ void CL_ClearState (void)
 
 }
 
-/*
-=====================
-CL_Disconnect
-
-Goes from a connected state to full screen console state
-Sends a disconnect message to the server
-This is also called on Com_Error, so it shouldn't cause any errors
-=====================
-*/
-void CL_Disconnect (void)
-{
-	byte	final[32];
-
-	if (cls.state == ca_disconnected)
+// Goes from a connected state to full screen console state
+// Sends a disconnect message to the server
+// This is also called on Com_Error, so it shouldn't cause any errors
+void CL_Disconnect() {
+	if (cls.state == ca_disconnected) {
 		return;
+	}
 
-	if (cl_timedemo && cl_timedemo->value)
-	{
-		int	time;
-
-		time = Sys_Milliseconds () - cl.timedemo_start;
+	if (cl_timedemo && cl_timedemo->value) {
+		int time = Sys_Milliseconds() - cl.timedemo_start;
 		if (time > 0)
 			Com_Printf ("%i frames, %3.1f seconds: %3.1f fps\n", cl.timedemo_frames,
 			time/1000.0, cl.timedemo_frames*1000.0 / time);
 	}
 
-	VectorClear (cl.refdef.blend);
+	VectorClear(cl.refdef.blend);
 	re.CinematicSetPalette(NULL);
 
-	M_ForceMenuOff ();
-
+	M_ForceMenuOff();
 	cls.connect_time = 0;
-
-	SCR_StopCinematic ();
-
-	if (cls.demorecording)
-		CL_Stop_f ();
+	SCR_StopCinematic();
+	if (cls.demorecording) {
+		CL_Stop_f();
+	}
 
 	// send a disconnect message to the server
+	char final[32] = {};
 	final[0] = clc_stringcmd;
-	strcpy ((char *)final+1, "disconnect");
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
+	strcpy((char *)final+1, "disconnect");
+	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
 
-	CL_ClearState ();
+	CL_ClearState();
 
 	// stop download
 	if (cls.download) {
@@ -23686,11 +23632,9 @@ void CL_Disconnect (void)
 	cls.state = ca_disconnected;
 }
 
-void CL_Disconnect_f (void)
-{
-	Com_Error (ERR_DROP, "Disconnected from server");
+static void CL_Disconnect_f() {
+	Com_Error(ERR_DROP, "Disconnected from server");
 }
-
 
 /*
 ====================
@@ -26670,15 +26614,9 @@ void CL_ParseConfigString (void)
 
 	// do something apropriate
 
-	if (i >= CS_LIGHTS && i < CS_LIGHTS+MAX_LIGHTSTYLES)
+	if (i >= CS_LIGHTS && i < CS_LIGHTS+MAX_LIGHTSTYLES) {
 		CL_SetLightstyle (i - CS_LIGHTS);
-	else if (i == CS_CDTRACK)
-	{
-		if (cl.refresh_prepped)
-			CDAudio_Play (atoi(cl.configstrings[CS_CDTRACK]), true);
-	}
-	else if (i >= CS_MODELS && i < CS_MODELS+MAX_MODELS)
-	{
+	} else if (i >= CS_MODELS && i < CS_MODELS+MAX_MODELS) {
 		if (cl.refresh_prepped)
 		{
 			cl.model_draw[i-CS_MODELS] = re.RegisterModel (cl.configstrings[i]);
@@ -27753,7 +27691,6 @@ void SCR_BeginLoadingPlaque (void)
 {
 	S_StopAllSounds ();
 	cl.sound_prepped = false;		// don't play ambients
-	CDAudio_Stop ();
 	if (cls.disable_screen)
 		return;
 	if (developer->value)
@@ -27769,17 +27706,6 @@ void SCR_BeginLoadingPlaque (void)
 	SCR_UpdateScreen ();
 	cls.disable_screen = Sys_Milliseconds ();
 	cls.disable_servercount = cl.servercount;
-}
-
-/*
-================
-SCR_EndLoadingPlaque
-================
-*/
-void SCR_EndLoadingPlaque (void)
-{
-	cls.disable_screen = 0;
-	Con_ClearNotify ();
 }
 
 /*
@@ -30696,9 +30622,6 @@ void CL_PrepRefresh (void)
 	SCR_UpdateScreen ();
 	cl.refresh_prepped = true;
 	cl.force_refdef = true;	// make sure we have a valid refdef
-
-	// start the cd track
-	CDAudio_Play (atoi(cl.configstrings[CS_CDTRACK]), true);
 }
 
 /*
@@ -32142,93 +32065,6 @@ void Key_Bindlist_f (void)
 	for (i=0 ; i<256 ; i++)
 		if (keybindings[i] && keybindings[i][0])
 			Com_Printf ("%s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
-}
-
-void Key_Init (void)
-{
-	int		i;
-
-	for (i=0 ; i<32 ; i++)
-	{
-		key_lines[i][0] = ']';
-		key_lines[i][1] = 0;
-	}
-	key_linepos = 1;
-
-//
-// init ascii characters in console mode
-//
-	for (i=32 ; i<128 ; i++)
-		consolekeys[i] = true;
-	consolekeys[K_ENTER] = true;
-	consolekeys[K_KP_ENTER] = true;
-	consolekeys[K_TAB] = true;
-	consolekeys[K_LEFTARROW] = true;
-	consolekeys[K_KP_LEFTARROW] = true;
-	consolekeys[K_RIGHTARROW] = true;
-	consolekeys[K_KP_RIGHTARROW] = true;
-	consolekeys[K_UPARROW] = true;
-	consolekeys[K_KP_UPARROW] = true;
-	consolekeys[K_DOWNARROW] = true;
-	consolekeys[K_KP_DOWNARROW] = true;
-	consolekeys[K_BACKSPACE] = true;
-	consolekeys[K_HOME] = true;
-	consolekeys[K_KP_HOME] = true;
-	consolekeys[K_END] = true;
-	consolekeys[K_KP_END] = true;
-	consolekeys[K_PGUP] = true;
-	consolekeys[K_KP_PGUP] = true;
-	consolekeys[K_PGDN] = true;
-	consolekeys[K_KP_PGDN] = true;
-	consolekeys[K_SHIFT] = true;
-	consolekeys[K_INS] = true;
-	consolekeys[K_KP_INS] = true;
-	consolekeys[K_KP_DEL] = true;
-	consolekeys[K_KP_SLASH] = true;
-	consolekeys[K_KP_PLUS] = true;
-	consolekeys[K_KP_MINUS] = true;
-	consolekeys[K_KP_5] = true;
-
-	consolekeys['`'] = false;
-	consolekeys['~'] = false;
-
-	for (i=0 ; i<256 ; i++)
-		keyshift[i] = i;
-	for (i='a' ; i<='z' ; i++)
-		keyshift[i] = i - 'a' + 'A';
-	keyshift['1'] = '!';
-	keyshift['2'] = '@';
-	keyshift['3'] = '#';
-	keyshift['4'] = '$';
-	keyshift['5'] = '%';
-	keyshift['6'] = '^';
-	keyshift['7'] = '&';
-	keyshift['8'] = '*';
-	keyshift['9'] = '(';
-	keyshift['0'] = ')';
-	keyshift['-'] = '_';
-	keyshift['='] = '+';
-	keyshift[','] = '<';
-	keyshift['.'] = '>';
-	keyshift['/'] = '?';
-	keyshift[';'] = ':';
-	keyshift['\''] = '"';
-	keyshift['['] = '{';
-	keyshift[']'] = '}';
-	keyshift['`'] = '~';
-	keyshift['\\'] = '|';
-
-	menubound[K_ESCAPE] = true;
-	for (i=0 ; i<12 ; i++)
-		menubound[K_F1+i] = true;
-
-//
-// register our functions
-//
-	Cmd_AddCommand ("bind",Key_Bind_f);
-	Cmd_AddCommand ("unbind",Key_Unbind_f);
-	Cmd_AddCommand ("unbindall",Key_Unbindall_f);
-	Cmd_AddCommand ("bindlist",Key_Bindlist_f);
 }
 
 /*
@@ -33720,11 +33556,6 @@ static void UpdateVolumeFunc( void *unused )
 	COM_SetValueCvar( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
 }
 
-static void UpdateCDVolumeFunc( void *unused )
-{
-	COM_SetValueCvar( "cd_nocd", !s_options_cdvolume_box.curvalue );
-}
-
 static void ConsoleFunc( void *unused )
 {
 	/*
@@ -33822,14 +33653,6 @@ void Options_MenuInit( void )
 	s_options_sfxvolume_slider.minvalue		= 0;
 	s_options_sfxvolume_slider.maxvalue		= 10;
 	s_options_sfxvolume_slider.curvalue		= Cvar_VariableValue( "s_volume" ) * 10;
-
-	s_options_cdvolume_box.generic.type	= MTYPE_SPINCONTROL;
-	s_options_cdvolume_box.generic.x		= 0;
-	s_options_cdvolume_box.generic.y		= 10;
-	s_options_cdvolume_box.generic.name	= "CD music";
-	s_options_cdvolume_box.generic.callback	= UpdateCDVolumeFunc;
-	s_options_cdvolume_box.itemnames		= cd_music_items;
-	s_options_cdvolume_box.curvalue 		= !Cvar_VariableValue("cd_nocd");
 
 	s_options_quality_list.generic.type	= MTYPE_SPINCONTROL;
 	s_options_quality_list.generic.x		= 0;
@@ -91804,10 +91627,9 @@ void	Draw_FadeScreen (void);
 
 refexport_t GetRefAPI (refimport_t rimp )
 {
-	refexport_t	re;
-
 	ri = rimp;
 
+	refexport_t	re;
 	re.api_version = API_VERSION;
 
 	re.BeginRegistration = R_BeginRegistration;
@@ -94452,439 +94274,6 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 }
 /* ============ end source: ref_gl/gl_warp.c ============ */
 
-/* Win32 platform glue */
-/* ============ begin source: win32/cd_win.c ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-// Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
-// rights reserved.
-
-/* already inlined above: client/client.h */
-
-extern	HWND	cl_hwnd;
-
-static qboolean cdValid = false;
-static qboolean	playing = false;
-static qboolean	wasPlaying = false;
-static qboolean	initialized = false;
-static qboolean	enabled = false;
-static qboolean playLooping = false;
-static byte 	remap[100];
-static byte		playTrack;
-static byte		maxTrack;
-
-cvar_t *cd_nocd;
-cvar_t *cd_loopcount;
-cvar_t *cd_looptrack;
-
-UINT	wDeviceID;
-int		loopcounter;
-
-
-void CDAudio_Pause(void);
-
-static void CDAudio_Eject(void)
-{
-	DWORD	dwReturn;
-
-    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_OPEN, (DWORD_PTR)NULL)))
-		Com_DPrintf("MCI_SET_DOOR_OPEN failed (%i)\n", dwReturn);
-}
-
-
-static void CDAudio_CloseDoor(void)
-{
-	DWORD	dwReturn;
-
-    if ((dwReturn = mciSendCommand(wDeviceID, MCI_SET, MCI_SET_DOOR_CLOSED, (DWORD_PTR)NULL)))
-		Com_DPrintf("MCI_SET_DOOR_CLOSED failed (%i)\n", dwReturn);
-}
-
-
-static int CDAudio_GetAudioDiskInfo(void)
-{
-	DWORD				dwReturn;
-	MCI_STATUS_PARMS	mciStatusParms;
-
-
-	cdValid = false;
-
-	mciStatusParms.dwItem = MCI_STATUS_READY;
-    dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD_PTR) (LPVOID) &mciStatusParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("CDAudio: drive ready test - get status failed\n");
-		return -1;
-	}
-	if (!mciStatusParms.dwReturn)
-	{
-		Com_DPrintf("CDAudio: drive not ready\n");
-		return -1;
-	}
-
-	mciStatusParms.dwItem = MCI_STATUS_NUMBER_OF_TRACKS;
-    dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD_PTR) (LPVOID) &mciStatusParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("CDAudio: get tracks - status failed\n");
-		return -1;
-	}
-	if (mciStatusParms.dwReturn < 1)
-	{
-		Com_DPrintf("CDAudio: no music tracks\n");
-		return -1;
-	}
-
-	cdValid = true;
-	maxTrack = mciStatusParms.dwReturn;
-
-	return 0;
-}
-
-
-
-void CDAudio_Play2(int track, qboolean looping)
-{
-	DWORD				dwReturn;
-    MCI_PLAY_PARMS		mciPlayParms;
-	MCI_STATUS_PARMS	mciStatusParms;
-
-	if (!enabled)
-		return;
-
-	if (!cdValid)
-	{
-		CDAudio_GetAudioDiskInfo();
-		if (!cdValid)
-			return;
-	}
-
-	track = remap[track];
-
-	if (track < 1 || track > maxTrack)
-	{
-		CDAudio_Stop();
-		return;
-	}
-
-	// don't try to play a non-audio track
-	mciStatusParms.dwItem = MCI_CDA_STATUS_TYPE_TRACK;
-	mciStatusParms.dwTrack = track;
-    dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_TRACK | MCI_WAIT, (DWORD_PTR) (LPVOID) &mciStatusParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("MCI_STATUS failed (%i)\n", dwReturn);
-		return;
-	}
-	if (mciStatusParms.dwReturn != MCI_CDA_TRACK_AUDIO)
-	{
-		Com_Printf("CDAudio: track %i is not audio\n", track);
-		return;
-	}
-
-	// get the length of the track to be played
-	mciStatusParms.dwItem = MCI_STATUS_LENGTH;
-	mciStatusParms.dwTrack = track;
-    dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_TRACK | MCI_WAIT, (DWORD_PTR) (LPVOID) &mciStatusParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("MCI_STATUS failed (%i)\n", dwReturn);
-		return;
-	}
-
-	if (playing)
-	{
-		if (playTrack == track)
-			return;
-		CDAudio_Stop();
-	}
-
-    mciPlayParms.dwFrom = MCI_MAKE_TMSF(track, 0, 0, 0);
-	mciPlayParms.dwTo = (mciStatusParms.dwReturn << 8) | track;
-    mciPlayParms.dwCallback = (DWORD)cl_hwnd;
-    dwReturn = mciSendCommand(wDeviceID, MCI_PLAY, MCI_NOTIFY | MCI_FROM | MCI_TO, (DWORD_PTR)(LPVOID) &mciPlayParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("CDAudio: MCI_PLAY failed (%i)\n", dwReturn);
-		return;
-	}
-
-	playLooping = looping;
-	playTrack = track;
-	playing = true;
-
-	if ( Cvar_VariableValue( "cd_nocd" ) )
-		CDAudio_Pause ();
-}
-
-
-void CDAudio_Play(int track, qboolean looping)
-{
-	// set a loop counter so that this track will change to the
-	// looptrack later
-	loopcounter = 0;
-	CDAudio_Play2(track, looping);
-}
-
-void CDAudio_Stop(void)
-{
-	DWORD	dwReturn;
-
-	if (!enabled)
-		return;
-
-	if (!playing)
-		return;
-
-    if ((dwReturn = mciSendCommand(wDeviceID, MCI_STOP, 0, (DWORD_PTR)NULL)))
-		Com_DPrintf("MCI_STOP failed (%i)", dwReturn);
-
-	wasPlaying = false;
-	playing = false;
-}
-
-
-void CDAudio_Pause(void)
-{
-	DWORD				dwReturn;
-	MCI_GENERIC_PARMS	mciGenericParms;
-
-	if (!enabled)
-		return;
-
-	if (!playing)
-		return;
-
-	mciGenericParms.dwCallback = (DWORD)cl_hwnd;
-    if ((dwReturn = mciSendCommand(wDeviceID, MCI_PAUSE, 0, (DWORD_PTR)(LPVOID) &mciGenericParms)))
-		Com_DPrintf("MCI_PAUSE failed (%i)", dwReturn);
-
-	wasPlaying = playing;
-	playing = false;
-}
-
-
-void CDAudio_Resume(void)
-{
-	DWORD			dwReturn;
-    MCI_PLAY_PARMS	mciPlayParms;
-
-	if (!enabled)
-		return;
-
-	if (!cdValid)
-		return;
-
-	if (!wasPlaying)
-		return;
-
-    mciPlayParms.dwFrom = MCI_MAKE_TMSF(playTrack, 0, 0, 0);
-    mciPlayParms.dwTo = MCI_MAKE_TMSF(playTrack + 1, 0, 0, 0);
-    mciPlayParms.dwCallback = (DWORD)cl_hwnd;
-    dwReturn = mciSendCommand(wDeviceID, MCI_PLAY, MCI_TO | MCI_NOTIFY, (DWORD_PTR)(LPVOID) &mciPlayParms);
-	if (dwReturn)
-	{
-		Com_DPrintf("CDAudio: MCI_PLAY failed (%i)\n", dwReturn);
-		return;
-	}
-	playing = true;
-}
-
-
-static void CD_f (void)
-{
-	char	*command;
-	int		ret;
-	int		n;
-
-	if (cmd_argc < 2)
-		return;
-
-	command = Cmd_Argv (1);
-
-	if (Q_strcasecmp(command, "on") == 0)
-	{
-		enabled = true;
-		return;
-	}
-
-	if (Q_strcasecmp(command, "off") == 0)
-	{
-		if (playing)
-			CDAudio_Stop();
-		enabled = false;
-		return;
-	}
-
-	if (Q_strcasecmp(command, "reset") == 0)
-	{
-		enabled = true;
-		if (playing)
-			CDAudio_Stop();
-		for (n = 0; n < 100; n++)
-			remap[n] = n;
-		CDAudio_GetAudioDiskInfo();
-		return;
-	}
-
-	if (Q_strcasecmp(command, "remap") == 0)
-	{
-		ret = cmd_argc - 2;
-		if (ret <= 0)
-		{
-			for (n = 1; n < 100; n++)
-				if (remap[n] != n)
-					Com_Printf("  %u -> %u\n", n, remap[n]);
-			return;
-		}
-		for (n = 1; n <= ret; n++)
-			remap[n] = atoi(Cmd_Argv (n+1));
-		return;
-	}
-
-	if (Q_strcasecmp(command, "close") == 0)
-	{
-		CDAudio_CloseDoor();
-		return;
-	}
-
-	if (!cdValid)
-	{
-		CDAudio_GetAudioDiskInfo();
-		if (!cdValid)
-		{
-			Com_Printf("No CD in player.\n");
-			return;
-		}
-	}
-
-	if (Q_strcasecmp(command, "play") == 0)
-	{
-		CDAudio_Play(atoi(Cmd_Argv (2)), false);
-		return;
-	}
-
-	if (Q_strcasecmp(command, "loop") == 0)
-	{
-		CDAudio_Play(atoi(Cmd_Argv (2)), true);
-		return;
-	}
-
-	if (Q_strcasecmp(command, "stop") == 0)
-	{
-		CDAudio_Stop();
-		return;
-	}
-
-	if (Q_strcasecmp(command, "pause") == 0)
-	{
-		CDAudio_Pause();
-		return;
-	}
-
-	if (Q_strcasecmp(command, "resume") == 0)
-	{
-		CDAudio_Resume();
-		return;
-	}
-
-	if (Q_strcasecmp(command, "eject") == 0)
-	{
-		if (playing)
-			CDAudio_Stop();
-		CDAudio_Eject();
-		cdValid = false;
-		return;
-	}
-
-	if (Q_strcasecmp(command, "info") == 0)
-	{
-		Com_Printf("%u tracks\n", maxTrack);
-		if (playing)
-			Com_Printf("Currently %s track %u\n", playLooping ? "looping" : "playing", playTrack);
-		else if (wasPlaying)
-			Com_Printf("Paused %s track %u\n", playLooping ? "looping" : "playing", playTrack);
-		return;
-	}
-}
-
-
-LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	if (lParam != wDeviceID)
-		return 1;
-
-	switch (wParam)
-	{
-		case MCI_NOTIFY_SUCCESSFUL:
-			if (playing)
-			{
-				playing = false;
-				if (playLooping)
-				{
-					// if the track has played the given number of times,
-					// go to the ambient track
-					if (++loopcounter >= cd_loopcount->value)
-						CDAudio_Play2(cd_looptrack->value, true);
-					else
-						CDAudio_Play2(playTrack, true);
-				}
-			}
-			break;
-
-		case MCI_NOTIFY_ABORTED:
-		case MCI_NOTIFY_SUPERSEDED:
-			break;
-
-		case MCI_NOTIFY_FAILURE:
-			Com_DPrintf("MCI_NOTIFY_FAILURE\n");
-			CDAudio_Stop ();
-			cdValid = false;
-			break;
-
-		default:
-			Com_DPrintf("Unexpected MM_MCINOTIFY type (%i)\n", wParam);
-			return 1;
-	}
-
-	return 0;
-}
-
-
-/*
-===========
-CDAudio_Activate
-
-Called when the main window gains or loses focus.
-The window have been destroyed and recreated
-between a deactivate and an activate.
-===========
-*/
-void CDAudio_Activate (qboolean active)
-{
-	if (active)
-		CDAudio_Resume ();
-	else
-		CDAudio_Pause ();
-}
-/* ============ end source: win32/cd_win.c ============ */
 /* ============ begin source: win32/conproc.c ============ */
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
@@ -98685,7 +98074,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	if (!ActiveApp)
 	{
 		IN_Activate (false);
-		CDAudio_Activate (false);
 		S_Activate (false);
 
 		if ( win_noalttab->value )
@@ -98696,7 +98084,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	else
 	{
 		IN_Activate (true);
-		CDAudio_Activate (true);
 		S_Activate (true);
 		if ( win_noalttab->value )
 		{
@@ -98862,13 +98249,6 @@ LONG WINAPI MainWndProc (
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 		Key_Event( MapKey( lParam ), false, sys_msg_time);
-		break;
-
-	case MM_MCINOTIFY:
-		{
-			LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-			CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
-		}
 		break;
 
 	default:	// pass all unhandled messages to DefWindowProc
@@ -104818,7 +104198,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		for (MSG msg = {}; PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);) {
 			if (!GetMessage(&msg, NULL, 0, 0)) {
-				Com_Quit ();
+				Com_Quit();
 			}
 			sys_msg_time = msg.time;
 			TranslateMessage(&msg);
