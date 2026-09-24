@@ -17024,7 +17024,6 @@ typedef struct
 extern	viddef_t	viddef;				// global video state
 
 // Video module initialisation etc
-void	VID_Shutdown (void);
 
 void	VID_MenuInit( void );
 void	VID_MenuDraw( void );
@@ -24656,34 +24655,35 @@ void CL_Frame (int msec)
 
 //============================================================================
 
+static qboolean reflib_active = 0;
 
+static void VID_FreeReflib() {
+	// statically linked renderer — nothing to FreeLibrary
+	memset(&re, 0, sizeof(re));
+	reflib_active  = false;
+}
 
-/*
-===============
-CL_Shutdown
-
-FIXME: this is a callback from Sys_Quit and Com_Error.  It would be better
-to run quit through here before the final handoff to the sys code.
-===============
-*/
-void CL_Shutdown(void)
-{
+// FIXME: this is a callback from Sys_Quit and Com_Error.  It would be better
+// to run quit through here before the final handoff to the sys code.
+static void CL_Shutdown() {
 	static qboolean isdown = false;
 
-	if (isdown)
-	{
+	if (isdown) {
 		printf ("recursive shutdown\n");
 		return;
 	}
 	isdown = true;
 
-	CL_WriteConfiguration ();
+	CL_WriteConfiguration();
 
 	S_Shutdown();
-	IN_Shutdown ();
-	VID_Shutdown();
-}
+	IN_Shutdown();
 
+	if (reflib_active) {
+		re.Shutdown();
+		VID_FreeReflib();
+	}
+}
 
 /* ============ end source: client/cl_main.c ============ */
 /* ============ begin source: client/cl_newfx.c ============ */
@@ -97753,7 +97753,7 @@ cvar_t		*vid_fullscreen;
 // Global variables used internally by this module
 viddef_t	viddef;				// global video state; used by other modules
 HINSTANCE	reflib_library;		// Handle to refresh DLL
-qboolean	reflib_active = 0;
+
 
 HWND        cl_hwnd;            // Main window handle for life of program
 
@@ -98219,202 +98219,118 @@ void VID_UpdateWindowPosAndSize( int x, int y )
 	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );
 }
 
-/*
-** VID_NewWindow
-*/
-void VID_NewWindow ( int width, int height)
-{
+void VID_NewWindow( int width, int height) {
 	viddef.width  = width;
 	viddef.height = height;
 
 	cl.force_refdef = true;		// can't use a paused refdef
 }
 
-void VID_FreeReflib (void)
-{
-	// statically linked renderer — nothing to FreeLibrary
-	memset (&re, 0, sizeof(re));
-	reflib_active  = false;
-}
-
 static HINSTANCE global_hInstance;
-static qboolean VID_LoadRefresh(char* name) {
-	if (reflib_active) {
-		re.Shutdown();
-		VID_FreeReflib();
-	}
-
-	Com_Printf( "------- Loading %s -------\n", name );
-
-	ri.Cmd_AddCommand = Cmd_AddCommand;
-	ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
-	ri.Cmd_Argc = Cmd_Argc;
-	ri.Cmd_Argv = Cmd_Argv;
-	ri.Con_Printf = VID_Printf;
-	ri.Sys_Error = VID_Error;
-	ri.FS_LoadFile = FS_LoadFile;
-	ri.FS_FreeFile = FS_FreeFile;
-	ri.FS_Gamedir = FS_Gamedir;
-	ri.Cvar_Get = COM_GetCvar;
-	ri.Cvar_Set = COM_SetCvar;
-	ri.Cvar_SetValue = COM_SetValueCvar;
-	ri.Vid_GetModeInfo = VID_GetModeInfo;
-	ri.Vid_MenuInit = VID_MenuInit;
-	ri.Vid_NewWindow = VID_NewWindow;
-
-	re = (refexport_t){
-		.api_version = API_VERSION,
-		.BeginRegistration = R_BeginRegistration,
-		.RegisterModel = R_RegisterModel,
-		.RegisterSkin = R_RegisterSkin,
-		.RegisterPic = Draw_FindPic,
-		.SetSky = R_SetSky,
-		.EndRegistration = R_EndRegistration,
-		.RenderFrame = R_RenderFrame,
-		.DrawGetPicSize = Draw_GetPicSize,
-		.DrawPic = Draw_Pic,
-		.DrawStretchPic = Draw_StretchPic,
-		.DrawChar = Draw_Char,
-		.DrawTileClear = Draw_TileClear,
-		.DrawFill = Draw_Fill,
-		.DrawFadeScreen= Draw_FadeScreen,
-		.DrawStretchRaw = Draw_StretchRaw,
-		.Init = R_Init,
-		.Shutdown = R_Shutdown,
-		.CinematicSetPalette = R_SetPalette,
-		.BeginFrame = R_BeginFrame,
-		.EndFrame = GLimp_EndFrame,
-		.AppActivate = GLimp_AppActivate,
-	};
-
-	if (re.api_version != API_VERSION) {
-		VID_FreeReflib();
-		Com_Error(ERR_FATAL, "%s has incompatible api_version", name);
-	}
-
-	if (re.Init(global_hInstance, MainWndProc) == -1) {
-		re.Shutdown();
-		VID_FreeReflib();
-		return false;
-	}
-
-	Com_Printf( "------------------------------------\n");
-	reflib_active = true;
-
-	vidref_val = VIDREF_OTHER;
-	if (vid_ref) {
-		if(!strcmp(vid_ref->string, "gl")) {
-			vidref_val = VIDREF_GL;
-		}
-	}
-
-	return true;
-}
 
 // This function gets called once just before drawing each frame, and it's sole purpose in life
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
-void VID_CheckChanges (void)
-{
-	char name[100];
-
-	if ( win_noalttab->modified )
-	{
-		if ( win_noalttab->value )
-		{
+static void VID_CheckChanges() {
+	if (win_noalttab->modified) {
+		if (win_noalttab->value) {
 			WIN_DisableAltTab();
-		}
-		else
-		{
+		} else {
 			WIN_EnableAltTab();
 		}
 		win_noalttab->modified = false;
 	}
 
-	if ( vid_ref->modified )
-	{
-		cl.force_refdef = true;		// can't use a paused refdef
+	if (vid_ref->modified) {
+		cl.force_refdef = true; // can't use a paused refdef
 		S_StopAllSounds();
 	}
-	while (vid_ref->modified)
-	{
-		/*
-		** refresh has changed
-		*/
+
+	while (vid_ref->modified) {
+		// refresh has changed
 		vid_ref->modified = false;
 		vid_fullscreen->modified = true;
 		cl.refresh_prepped = false;
 		cls.disable_screen = true;
 
-		Com_sprintf( name, sizeof(name), "ref_%s.dll", vid_ref->string );
-		if ( !VID_LoadRefresh( name ) )
 		{
-			if ( strcmp (vid_ref->string, "soft") == 0 )
-				Com_Error (ERR_FATAL, "Couldn't fall back to software refresh!");
-			COM_SetCvar( "vid_ref", "soft" );
+			if (reflib_active) {
+				re.Shutdown();
+				VID_FreeReflib();
+			}
 
-			/*
-			** drop the console if we fail to load a refresh
-			*/
-			if ( cls.key_dest != key_console )
-			{
-				Con_ToggleConsole_f();
+			ri.Cmd_AddCommand = Cmd_AddCommand;
+			ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
+			ri.Cmd_Argc = Cmd_Argc;
+			ri.Cmd_Argv = Cmd_Argv;
+			ri.Con_Printf = VID_Printf;
+			ri.Sys_Error = VID_Error;
+			ri.FS_LoadFile = FS_LoadFile;
+			ri.FS_FreeFile = FS_FreeFile;
+			ri.FS_Gamedir = FS_Gamedir;
+			ri.Cvar_Get = COM_GetCvar;
+			ri.Cvar_Set = COM_SetCvar;
+			ri.Cvar_SetValue = COM_SetValueCvar;
+			ri.Vid_GetModeInfo = VID_GetModeInfo;
+			ri.Vid_MenuInit = VID_MenuInit;
+			ri.Vid_NewWindow = VID_NewWindow;
+
+			re = (refexport_t){
+				.api_version = API_VERSION,
+				.BeginRegistration = R_BeginRegistration,
+				.RegisterModel = R_RegisterModel,
+				.RegisterSkin = R_RegisterSkin,
+				.RegisterPic = Draw_FindPic,
+				.SetSky = R_SetSky,
+				.EndRegistration = R_EndRegistration,
+				.RenderFrame = R_RenderFrame,
+				.DrawGetPicSize = Draw_GetPicSize,
+				.DrawPic = Draw_Pic,
+				.DrawStretchPic = Draw_StretchPic,
+				.DrawChar = Draw_Char,
+				.DrawTileClear = Draw_TileClear,
+				.DrawFill = Draw_Fill,
+				.DrawFadeScreen= Draw_FadeScreen,
+				.DrawStretchRaw = Draw_StretchRaw,
+				.Init = R_Init,
+				.Shutdown = R_Shutdown,
+				.CinematicSetPalette = R_SetPalette,
+				.BeginFrame = R_BeginFrame,
+				.EndFrame = GLimp_EndFrame,
+				.AppActivate = GLimp_AppActivate,
+			};
+
+			assert(re.api_version == API_VERSION);
+
+			int init_result = re.Init(global_hInstance, MainWndProc);
+			assert(init_result != -1);
+
+			reflib_active = true;
+
+			vidref_val = VIDREF_OTHER;
+			if (vid_ref) {
+				if(!strcmp(vid_ref->string, "gl")) {
+					vidref_val = VIDREF_GL;
+				}
 			}
 		}
+
 		cls.disable_screen = false;
 	}
 
-	/*
-	** update our window position
-	*/
-	if ( vid_xpos->modified || vid_ypos->modified )
-	{
-		if (!vid_fullscreen->value)
+	// update our window position
+	if (vid_xpos->modified || vid_ypos->modified) {
+		if (!vid_fullscreen->value) {
 			VID_UpdateWindowPosAndSize( vid_xpos->value, vid_ypos->value );
+		}
 
 		vid_xpos->modified = false;
 		vid_ypos->modified = false;
 	}
 }
 
-/*
-============
-VID_Shutdown
-============
-*/
-void VID_Shutdown (void)
-{
-	if ( reflib_active )
-	{
-		re.Shutdown ();
-		VID_FreeReflib ();
-	}
-}
-
-
 /* ============ end source: win32/vid_dll.c ============ */
 /* ============ begin source: win32/vid_menu.c ============ */
-/*
-Copyright (C) 1997-2001 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-/* already inlined above: client/client.h */
-/* already inlined above: client/qmenu.h */
 
 #define REF_SOFT	0
 #define REF_OPENGL	1
