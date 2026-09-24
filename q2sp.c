@@ -2,6 +2,12 @@
 // SECTION Init
 //
 
+#define _CRT_SECURE_NO_WARNINGS 1
+#pragma comment(lib, "winmm")
+#pragma comment(lib, "wsock32.lib")
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "gdi32.lib")
+
 #include <assert.h>
 #include <ctype.h>
 #include <math.h>
@@ -8728,9 +8734,9 @@ char **FS_ListFiles( char *findname, int *numfiles, unsigned musthave, unsigned 
 	{
 		if ( s[strlen(s)-1] != '.' )
 		{
-			list[nfiles] = strdup( s );
+			list[nfiles] = _strdup( s );
 #ifdef _WIN32
-			strlwr( list[nfiles] );
+			_strlwr( list[nfiles] );
 #endif
 			nfiles++;
 		}
@@ -22651,7 +22657,7 @@ void CL_Setenv_f( void )
 			strcat( buffer, " " );
 		}
 
-		putenv( buffer );
+		_putenv( buffer );
 	}
 	else if ( argc == 2 )
 	{
@@ -34065,7 +34071,7 @@ void StartServer_MenuInit( void )
 	else
 	{
 #ifdef _WIN32
-		length = filelength( fileno( fp  ) );
+		length = _filelength(_fileno( fp  ));
 #else
 		fseek(fp, 0, SEEK_END);
 		length = ftell(fp);
@@ -35071,7 +35077,7 @@ static qboolean PlayerConfig_ScanDirectories( void )
 					if ( strrchr( scratch, '.' ) )
 						*strrchr( scratch, '.' ) = 0;
 
-					skinnames[s] = strdup( scratch );
+					skinnames[s] = _strdup( scratch );
 					s++;
 				}
 			}
@@ -45542,7 +45548,7 @@ void EndDMLevel (void)
 
 	// see if it's in the map list
 	if (*sv_maplist->string) {
-		s = strdup(sv_maplist->string);
+		s = _strdup(sv_maplist->string);
 		f = NULL;
 		t = strtok(s, seps);
 		while (t != NULL) {
@@ -50595,16 +50601,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	}
 
 	gi.dprintf ("%i entities inhibited\n", inhibit);
-
-#ifdef DEBUG
-	i = 1;
-	ent = EDICT_NUM(i);
-	while (i < globals.num_edicts) {
-		if (ent->inuse != 0 || ent->inuse != 1)
-			Com_DPrintf("Invalid entity %d\n", i);
-		i++, ent++;
-	}
-#endif
 
 	G_FindTeams ();
 
@@ -88724,10 +88720,10 @@ int R_Init( void *hinstance, void *hWnd )
 	ri.Con_Printf (PRINT_ALL, "GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 
 	strcpy( renderer_buffer, gl_config.renderer_string );
-	strlwr( renderer_buffer );
+	_strlwr( renderer_buffer );
 
 	strcpy( vendor_buffer, gl_config.vendor_string );
-	strlwr( vendor_buffer );
+	_strlwr( vendor_buffer );
 
 	if ( strstr( renderer_buffer, "voodoo" ) )
 	{
@@ -88807,7 +88803,7 @@ int R_Init( void *hinstance, void *hWnd )
 	/*
 	** grab extensions
 	*/
-#ifdef WIN32
+#ifdef _WIN32
 	if ( strstr( gl_config.extensions_string, "GL_EXT_compiled_vertex_array" ) ||
 		 strstr( gl_config.extensions_string, "GL_SGI_compiled_vertex_array" ) )
 	{
@@ -88973,9 +88969,9 @@ static void R_BeginFrame(float camera_separation) {
 
 			g = 2.00 * ( 0.8 - ( vid_gamma->value - 0.5 ) ) + 1.0F;
 			Com_sprintf( envbuffer, sizeof(envbuffer), "SSTV2_GAMMA=%f", g );
-			putenv( envbuffer );
+			_putenv( envbuffer );
 			Com_sprintf( envbuffer, sizeof(envbuffer), "SST_GAMMA=%f", g );
-			putenv( envbuffer );
+			_putenv( envbuffer );
 		}
 	}
 
@@ -93489,7 +93485,7 @@ int NET_IPSocket (char *net_interface, int port)
 		return 0;
 	}
 
-	if (!net_interface || !net_interface[0] || !stricmp(net_interface, "localhost"))
+	if (!net_interface || !net_interface[0] || !_stricmp(net_interface, "localhost"))
 		address.sin_addr.s_addr = INADDR_ANY;
 	else
 		NET_StringToSockaddr (net_interface, (struct sockaddr *)&address);
@@ -95131,10 +95127,6 @@ static qboolean s_alttab_disabled;
 
 extern	unsigned	sys_msg_time;
 
-/*
-** WIN32 helper functions
-*/
-
 static void WIN_DisableAltTab( void )
 {
 	if ( s_alttab_disabled )
@@ -95747,8 +95739,8 @@ static void ApplyChanges( void *unused ) {
 	COM_SetCvar("vid_ref", "gl");
 	COM_SetCvar("gl_driver", "opengl32");
 
-	assert(stricmp(vid_ref->string, "gl" ) == 0);
-	assert(stricmp(gl_driver->string, "opengl32" ) == 0);
+	assert(_stricmp(vid_ref->string, "gl" ) == 0);
+	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
 
 	vid_ref->modified = vid_gamma->modified || gl_driver->modified;
 
@@ -95991,7 +95983,7 @@ static qboolean VerifyDriver( void )
 	char buffer[1024];
 
 	strcpy( buffer, (char*)qglGetString( GL_RENDERER ) );
-	strlwr( buffer );
+	_strlwr( buffer );
 	if ( strcmp( buffer, "gdi generic" ) == 0 )
 		if ( !glw_state.mcd_accelerated )
 			return false;
@@ -96274,53 +96266,12 @@ void GLimp_Shutdown( void )
 }
 
 
-/*
-** GLimp_Init
-**
-** This routine is responsible for initializing the OS specific portions
-** of OpenGL.  Under Win32 this means dealing with the pixelformats and
-** doing the wgl interface stuff.
-*/
-qboolean GLimp_Init( void *hinstance, void *wndproc )
-{
-#define OSR2_BUILD_NUMBER 1111
-
-	OSVERSIONINFO	vinfo;
-
-	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-
+// This routine is responsible for initializing the OS specific portions of OpenGL.
+// Under Win32 this means dealing with the pixelformats and doing the wgl interface stuff.
+qboolean GLimp_Init(void* hinstance, void* wndproc) {
 	glw_state.allowdisplaydepthchange = false;
-
-	if ( GetVersionEx( &vinfo) )
-	{
-		if ( vinfo.dwMajorVersion > 4 )
-		{
-			glw_state.allowdisplaydepthchange = true;
-		}
-		else if ( vinfo.dwMajorVersion == 4 )
-		{
-			if ( vinfo.dwPlatformId == VER_PLATFORM_WIN32_NT )
-			{
-				glw_state.allowdisplaydepthchange = true;
-			}
-			else if ( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-			{
-				if ( LOWORD( vinfo.dwBuildNumber ) >= OSR2_BUILD_NUMBER )
-				{
-					glw_state.allowdisplaydepthchange = true;
-				}
-			}
-		}
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "GLimp_Init() - GetVersionEx failed\n" );
-		return false;
-	}
-
-	glw_state.hInstance = ( HINSTANCE ) hinstance;
+	glw_state.hInstance = (HINSTANCE)hinstance;
 	glw_state.wndproc = wndproc;
-
 	return true;
 }
 
@@ -96528,7 +96479,7 @@ void GLimp_EndFrame (void)
 	err = qglGetError();
 	assert( err == GL_NO_ERROR );
 
-	if ( stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0 )
+	if ( _stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0 )
 	{
 		if ( !qwglSwapBuffers( glw_state.hDC ) )
 			ri.Sys_Error( ERR_FATAL, "GLimp_EndFrame() - SwapBuffers() failed!\n" );
@@ -99541,9 +99492,9 @@ static qboolean QGL_Init( const char *dllname ) {
 
 		g = 2.00 * ( 0.8 - ( vid_gamma->value - 0.5 ) ) + 1.0F;
 		Com_sprintf( envbuffer, sizeof(envbuffer), "SSTV2_GAMMA=%f", g );
-		putenv( envbuffer );
+		_putenv( envbuffer );
 		Com_sprintf( envbuffer, sizeof(envbuffer), "SST_GAMMA=%f", g );
-		putenv( envbuffer );
+		_putenv( envbuffer );
 	}
 
 	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllname ) ) == 0 )
@@ -100838,26 +100789,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			COM_GetCvar("version", s, CVAR_SERVERINFO|CVAR_NOSET);
 		}
 
-		// NOTE: Sys Init
-		{
-			timeBeginPeriod(1);
-			OSVERSIONINFO vinfo = {};
-			vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-
-			if (!GetVersionEx(&vinfo)) {
-				Sys_Error("Couldn't get OS info");
-			}
-
-			if (vinfo.dwMajorVersion < 4) {
-				Sys_Error("Quake2 requires windows version 4 or greater");
-			}
-
-			if (vinfo.dwPlatformId == VER_PLATFORM_WIN32s) {
-				Sys_Error("Quake2 doesn't run on Win32s");
-			} else if (vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
-				s_win95 = true;
-			}
-		}
+		timeBeginPeriod(1);
 
 		// NOTE: NET Init
 		{
