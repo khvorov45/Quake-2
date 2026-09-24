@@ -12218,7 +12218,7 @@ void SV_ServerRecord_f (void)
 	//
 	// write a single giant fake message with all the startup info
 	//
-	SZ_Init (&buf, buf_data, sizeof(buf_data));
+	SZ_Init (&buf, (byte*)buf_data, sizeof(buf_data));
 
 	//
 	// serverdata needs to go over for all types of servers
@@ -16617,13 +16617,12 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 		trace.fraction < clip->trace.fraction)
 		{
 			trace.ent = touch;
-		 	if (clip->trace.startsolid)
-			{
+		 	if (clip->trace.startsolid) {
 				clip->trace = trace;
 				clip->trace.startsolid = true;
-			}
-			else
+			} else {
 				clip->trace = trace;
+			}
 		}
 		else if (trace.startsolid)
 			clip->trace.startsolid = true;
@@ -18369,7 +18368,7 @@ qboolean SCR_DrawCinematic (void)
 
 	if (!cl.cinematicpalette_active)
 	{
-		re.CinematicSetPalette(cl.cinematicpalette);
+		re.CinematicSetPalette((unsigned char*)cl.cinematicpalette);
 		cl.cinematicpalette_active = true;
 	}
 
@@ -18450,7 +18449,7 @@ void SCR_PlayCinematic (char *arg)
 	if (old_khz != cin.s_rate/1000)
 	{
 		cin.restart_sound = true;
-		COM_SetValueCvar ("s_khz", cin.s_rate/1000);
+		COM_SetValueCvar ("s_khz", (float)cin.s_rate / 1000.0f);
 		CL_Snd_Restart_f ();
 		COM_SetValueCvar ("s_khz", old_khz);
 	}
@@ -18875,7 +18874,7 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 
 	while (1)
 	{
-		newnum = CL_ParseEntityBits (&bits);
+		newnum = CL_ParseEntityBits ((unsigned*)&bits);
 		if (newnum >= MAX_EDICTS)
 			Com_Error (ERR_DROP,"CL_ParsePacketEntities: bad number:%i", newnum);
 
@@ -19309,7 +19308,7 @@ void CL_AddPacketEntities (frame_t *frame)
 	unsigned int		effects, renderfx;
 
 	// bonus items rotate at a fixed rate
-	autorotate = anglemod(cl.time/10);
+	autorotate = anglemod((float)cl.time / 10.0f);
 
 	// brush models can auto animate their frames
 	autoanim = 2*cl.time/1000;
@@ -19462,7 +19461,7 @@ void CL_AddPacketEntities (frame_t *frame)
 		else if (effects & EF_SPINNINGLIGHTS)
 		{
 			ent.angles[0] = 0;
-			ent.angles[1] = anglemod(cl.time/2) + s1->angles[1];
+			ent.angles[1] = anglemod((float)cl.time / 2.0f) + s1->angles[1];
 			ent.angles[2] = 180;
 			{
 				vec3_t forward;
@@ -23150,7 +23149,7 @@ void CL_Record_f (void)
 	//
 	// write out messages to hold the startup information
 	//
-	SZ_Init (&buf, buf_data, sizeof(buf_data));
+	SZ_Init (&buf, (byte*)buf_data, sizeof(buf_data));
 
 	// send the serverdata
 	MSG_WriteByte (&buf, svc_serverdata);
@@ -25472,7 +25471,7 @@ void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int color, int count, int m
 		VectorMA (p->vel, d, u, p->vel);
 
 		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY/2;
+		p->accel[2] = -(float)PARTICLE_GRAVITY/2.0f;
 		p->alpha = 1.0;
 
 		p->alphavel = -1.0 / (0.5 + frand()*0.3);
@@ -25518,7 +25517,7 @@ void CL_ParticleSteamEffect2 (cl_sustain_t *self)
 		VectorMA (p->vel, d, u, p->vel);
 
 		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY/2;
+		p->accel[2] = -(float)PARTICLE_GRAVITY/2.0f;
 		p->alpha = 1.0;
 
 		p->alphavel = -1.0 / (0.5 + frand()*0.3);
@@ -26380,7 +26379,7 @@ void CL_ParseBaseline (void)
 
 	memset (&nullstate, 0, sizeof(nullstate));
 
-	newnum = CL_ParseEntityBits (&bits);
+	newnum = CL_ParseEntityBits((unsigned int*)&bits);
 	es = &cl_entities[newnum].baseline;
 	CL_ParseDelta (&nullstate, es, newnum, bits);
 }
@@ -26601,20 +26600,23 @@ void CL_ParseStartSoundPacket(void)
 	flags = MSG_ReadByte (&net_message);
 	sound_num = MSG_ReadByte (&net_message);
 
-    if (flags & SND_VOLUME)
+    if (flags & SND_VOLUME) {
 		volume = MSG_ReadByte (&net_message) / 255.0;
-	else
+	} else {
 		volume = DEFAULT_SOUND_PACKET_VOLUME;
+	}
 
-    if (flags & SND_ATTENUATION)
+    if (flags & SND_ATTENUATION) {
 		attenuation = MSG_ReadByte (&net_message) / 64.0;
-	else
+	} else {
 		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
+	}
 
-    if (flags & SND_OFFSET)
+    if (flags & SND_OFFSET) {
 		ofs = MSG_ReadByte (&net_message) / 1000.0;
-	else
+	} else {
 		ofs = 0;
+	}
 
 	if (flags & SND_ENT)
 	{	// entity reletive
@@ -26943,13 +26945,12 @@ void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 		trace.fraction < tr->fraction)
 		{
 			trace.ent = (struct edict_s *)ent;
-		 	if (tr->startsolid)
-			{
+		 	if (tr->startsolid) {
 				*tr = trace;
 				tr->startsolid = true;
-			}
-			else
+			} else {
 				*tr = trace;
+			}
 		}
 		else if (trace.startsolid)
 			tr->startsolid = true;
@@ -30046,13 +30047,11 @@ CL_AddExplosions
 */
 void CL_AddExplosions (void)
 {
-	entity_t	*ent;
+	entity_t	*ent = 0;
 	int			i;
 	explosion_t	*ex;
 	float		frac;
 	int			f;
-
-	memset (&ent, 0, sizeof(ent));
 
 	for (i=0, ex=cl_explosions ; i< MAX_EXPLOSIONS ; i++, ex++)
 	{
@@ -30394,7 +30393,7 @@ void V_TestEntities (void)
 		ent = &r_entities[i];
 
 		r = 64 * ( (i%4) - 1.5 );
-		f = 64 * (i/4) + 128;
+		f = 64.0f * ((float)i/4.0f) + 128.0f;
 
 		for (j=0 ; j<3 ; j++)
 			ent->origin[j] = cl.refdef.vieworg[j] + cl.v_forward[j]*f +
@@ -30426,7 +30425,7 @@ void V_TestLights (void)
 		dl = &r_dlights[i];
 
 		r = 64 * ( (i%4) - 1.5 );
-		f = 64 * (i/4) + 128;
+		f = 64.0f * ((float)i/4.0f) + 128.0f;
 
 		for (j=0 ; j<3 ; j++)
 			dl->origin[j] = cl.refdef.vieworg[j] + cl.v_forward[j]*f +
@@ -36138,7 +36137,7 @@ void PlayerConfig_MenuDraw( void )
 
 		Menu_Draw( &s_player_config_menu );
 
-		M_DrawTextBox( ( refdef.x ) * ( 320.0F / viddef.width ) - 8, ( viddef.height / 2 ) * ( 240.0F / viddef.height) - 77, refdef.width / 8, refdef.height / 8 );
+		M_DrawTextBox( ( refdef.x ) * ( 320.0F / viddef.width ) - 8, ( (float)viddef.height / 2.0f ) * ( 240.0F / viddef.height) - 77, refdef.width / 8, refdef.height / 8 );
 		refdef.height += 4;
 
 		re.RenderFrame( &refdef );
@@ -38581,7 +38580,7 @@ void FindNextChunk(char *name)
 //			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
 		data_p -= 8;
 		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
-		if (!strncmp(data_p, name, 4))
+		if (!strncmp((char*)data_p, name, 4))
 			return;
 	}
 }
@@ -38631,7 +38630,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 
 // find "RIFF" chunk
 	FindChunk("RIFF");
-	if (!(data_p && !strncmp(data_p+8, "WAVE", 4)))
+	if (!(data_p && !strncmp((char*)data_p+8, "WAVE", 4)))
 	{
 		Com_Printf("Missing RIFF/WAVE chunks\n");
 		return info;
@@ -38672,7 +38671,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 		FindNextChunk ("LIST");
 		if (data_p)
 		{
-			if (!strncmp (data_p + 28, "mark", 4))
+			if (!strncmp ((char*)data_p + 28, "mark", 4))
 			{	// this is not a proper parse, but it works with cooledit...
 				data_p += 24;
 				i = GetLittleLong ();	// samples in loop
@@ -39036,7 +39035,7 @@ void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 
 	lscale = snd_scaletable[ ch->leftvol >> 3];
 	rscale = snd_scaletable[ ch->rightvol >> 3];
-	sfx = (signed char *)sc->data + ch->pos;
+	sfx = (unsigned char *)sc->data + ch->pos;
 
 	samp = &paintbuffer[offset];
 
@@ -47696,7 +47695,7 @@ void barrel_explode (edict_t *self)
 	ThrowDebris (self, "models/objects/debris3/tris.md2", spd, org);
 
 	// a bunch of little chunks
-	spd = 2 * self->dmg / 200;
+	spd = 2.0f * (float)self->dmg / 200.0f;
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
@@ -50252,7 +50251,7 @@ void SV_Physics_Step (edict_t *ent)
 	{
 		speed = fabs(ent->velocity[2]);
 		control = speed < sv_stopspeed ? sv_stopspeed : speed;
-		friction = sv_friction/3;
+		friction = (float)sv_friction/3.0f;
 		newspeed = speed - (FRAMETIME * control * friction);
 		if (newspeed < 0)
 			newspeed = 0;
@@ -55450,7 +55449,7 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 	rocket->s.modelindex = gi.modelindex ("models/objects/rocket/tris.md2");
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
-	rocket->nextthink = level.time + 8000/speed;
+	rocket->nextthink = (float)level.time + 8000.0f/(float)speed;
 	rocket->think = G_FreeEdict;
 	rocket->dmg = damage;
 	rocket->radius_dmg = radius_damage;
@@ -55712,7 +55711,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 	bfg->s.modelindex = gi.modelindex ("sprites/s_bfg1.sp2");
 	bfg->owner = self;
 	bfg->touch = bfg_touch;
-	bfg->nextthink = level.time + 8000/speed;
+	bfg->nextthink = (float)level.time + 8000.0f/(float)speed;
 	bfg->think = G_FreeEdict;
 	bfg->radius_dmg = damage;
 	bfg->dmg_radius = damage_radius;
@@ -60925,14 +60924,10 @@ void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
 	{
 		if (damage <= 150)
 		{
-			if (random() <= 0.45)
-			{
+			if (random() <= 0.45) {
 				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
-			}
-		else
-			if (random() <= 0.35)
-			{
+			} else if (random() <= 0.35) {
 				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			}
@@ -86849,7 +86844,7 @@ void GL_FreeUnusedImages (void)
 		if (image->type == it_pic)
 			continue;		// don't free pics
 		// free it
-		qglDeleteTextures (1, &image->texnum);
+		qglDeleteTextures (1, (GLuint*)&image->texnum);
 		memset (image, 0, sizeof(*image));
 	}
 }
@@ -86970,7 +86965,7 @@ void	GL_ShutdownImages (void)
 		if (!image->registration_sequence)
 			continue;		// free image_t slot
 		// free it
-		qglDeleteTextures (1, &image->texnum);
+		qglDeleteTextures (1, (GLuint*)&image->texnum);
 		memset (image, 0, sizeof(*image));
 	}
 }
@@ -90683,10 +90678,10 @@ void R_SetupGL (void)
 	//
 	// set up viewport
 	//
-	x = floor(r_newrefdef.x * vid.width / vid.width);
-	x2 = ceil((r_newrefdef.x + r_newrefdef.width) * vid.width / vid.width);
-	y = floor(vid.height - r_newrefdef.y * vid.height / vid.height);
-	y2 = ceil(vid.height - (r_newrefdef.y + r_newrefdef.height) * vid.height / vid.height);
+	x = floor((float)r_newrefdef.x * (float)vid.width / (float)vid.width);
+	x2 = ceil((float)((float)r_newrefdef.x + (float)r_newrefdef.width) * (float)vid.width / (float)vid.width);
+	y = floor((float)vid.height - (float)r_newrefdef.y * (float)vid.height / (float)vid.height);
+	y2 = ceil((float)vid.height - (float)((float)r_newrefdef.y + (float)r_newrefdef.height) * (float)vid.height / (float)vid.height);
 
 	w = x2 - x;
 	h = y - y2;
@@ -91002,7 +90997,7 @@ qboolean R_SetMode (void)
 	vid_fullscreen->modified = false;
 	gl_mode->modified = false;
 
-	if ( ( err = GLimp_SetMode( &vid.width, &vid.height, gl_mode->value, fullscreen ) ) == rserr_ok )
+	if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_mode->value, fullscreen ) ) == rserr_ok )
 	{
 		gl_state.prev_mode = gl_mode->value;
 	}
@@ -91013,7 +91008,7 @@ qboolean R_SetMode (void)
 			ri.Cvar_SetValue( "vid_fullscreen", 0);
 			vid_fullscreen->modified = false;
 			ri.Con_Printf( PRINT_ALL, "ref_gl::R_SetMode() - fullscreen unavailable in this mode\n" );
-			if ( ( err = GLimp_SetMode( &vid.width, &vid.height, gl_mode->value, false ) ) == rserr_ok )
+			if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_mode->value, false ) ) == rserr_ok )
 				return true;
 		}
 		else if ( err == rserr_invalid_mode )
@@ -91024,7 +91019,7 @@ qboolean R_SetMode (void)
 		}
 
 		// try setting it back to something safe
-		if ( ( err = GLimp_SetMode( &vid.width, &vid.height, gl_state.prev_mode, false ) ) != rserr_ok )
+		if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_state.prev_mode, false ) ) != rserr_ok )
 		{
 			ri.Con_Printf( PRINT_ALL, "ref_gl::R_SetMode() - could not revert to safe mode\n" );
 			return false;
@@ -91088,13 +91083,13 @@ int R_Init( void *hinstance, void *hWnd )
 	/*
 	** get our various GL strings
 	*/
-	gl_config.vendor_string = qglGetString (GL_VENDOR);
+	gl_config.vendor_string = (char*)qglGetString (GL_VENDOR);
 	ri.Con_Printf (PRINT_ALL, "GL_VENDOR: %s\n", gl_config.vendor_string );
-	gl_config.renderer_string = qglGetString (GL_RENDERER);
+	gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
 	ri.Con_Printf (PRINT_ALL, "GL_RENDERER: %s\n", gl_config.renderer_string );
-	gl_config.version_string = qglGetString (GL_VERSION);
+	gl_config.version_string = (char*)qglGetString (GL_VERSION);
 	ri.Con_Printf (PRINT_ALL, "GL_VERSION: %s\n", gl_config.version_string );
-	gl_config.extensions_string = qglGetString (GL_EXTENSIONS);
+	gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
 	ri.Con_Printf (PRINT_ALL, "GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 
 	strcpy( renderer_buffer, gl_config.renderer_string );
@@ -91498,7 +91493,7 @@ void R_DrawBeam( entity_t *e )
 		return;
 
 	PerpendicularVector( perpvec, normalized_direction );
-	VectorScale( perpvec, e->frame / 2, perpvec );
+	VectorScale( perpvec, (float)e->frame / 2.0f, perpvec );
 
 	for ( i = 0; i < 6; i++ )
 	{
@@ -94570,8 +94565,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
     info.srWindow.Top = 0;
     info.srWindow.Bottom = cy - 1;
 
-	if (cy < info.dwSize.Y)
-	{
+	if (cy < info.dwSize.Y) {
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
 
@@ -94579,9 +94573,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
-    }
-    else if (cy > info.dwSize.Y)
-    {
+    } else if (cy > info.dwSize.Y) {
 		info.dwSize.Y = cy;
 
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
@@ -95923,7 +95915,7 @@ qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_messag
 			continue;
 
 		fromlen = sizeof(from);
-		ret = recvfrom (net_socket, net_message->data, net_message->maxsize
+		ret = recvfrom (net_socket, (char*)net_message->data, net_message->maxsize
 			, 0, (struct sockaddr *)&from, &fromlen);
 		if (ret == -1)
 		{
@@ -98972,7 +98964,7 @@ static qboolean VerifyDriver( void )
 {
 	char buffer[1024];
 
-	strcpy( buffer, qglGetString( GL_RENDERER ) );
+	strcpy( buffer, (char*)qglGetString( GL_RENDERER ) );
 	strlwr( buffer );
 	if ( strcmp( buffer, "gdi generic" ) == 0 )
 		if ( !glw_state.mcd_accelerated )
