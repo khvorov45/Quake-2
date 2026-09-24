@@ -7929,7 +7929,6 @@ Qcommon_Frame
 */
 void Qcommon_Frame (int msec)
 {
-	char	*s;
 	int		time_before, time_between, time_after;
 
 	if (setjmp (abortframe) )
@@ -32739,12 +32738,6 @@ static void UpdateSoundQualityFunc( void *unused )
 
 void Options_MenuInit( void )
 {
-	static const char *cd_music_items[] =
-	{
-		"disabled",
-		"enabled",
-		0
-	};
 	static const char *quality_items[] =
 	{
 		"low", "high", 0
@@ -55063,53 +55056,52 @@ char *actor_names[MAX_ACTOR_NAMES] =
 	"Bitterman"
 };
 
+static mframe_t actor_frames_stand[] = {
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-mframe_t actor_frames_stand [] =
-{
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
+
 mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
 
 void actor_stand (edict_t *self)
@@ -55121,21 +55113,20 @@ void actor_stand (edict_t *self)
 		self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
 }
 
-
-mframe_t actor_frames_walk [] =
-{
-	ai_walk, 0,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 10, NULL,
-	ai_walk, 3,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 7,  NULL,
-	ai_walk, 10, NULL,
-	ai_walk, 1,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL
+static mframe_t actor_frames_walk[] = {
+	{ai_walk, 0,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 3,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 7,  NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 1,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
 };
+
 mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
 
 void actor_walk (edict_t *self)
@@ -55143,22 +55134,21 @@ void actor_walk (edict_t *self)
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
 
-
-mframe_t actor_frames_run [] =
-{
-	ai_run, 4,  NULL,
-	ai_run, 15, NULL,
-	ai_run, 15, NULL,
-	ai_run, 8,  NULL,
-	ai_run, 20, NULL,
-	ai_run, 15, NULL,
-	ai_run, 8,  NULL,
-	ai_run, 17, NULL,
-	ai_run, 12, NULL,
-	ai_run, -2, NULL,
-	ai_run, -2, NULL,
-	ai_run, -1, NULL
+static mframe_t actor_frames_run[] = {
+	{ai_run, 4,  NULL},
+	{ai_run, 15, NULL},
+	{ai_run, 15, NULL},
+	{ai_run, 8,  NULL},
+	{ai_run, 20, NULL},
+	{ai_run, 15, NULL},
+	{ai_run, 8,  NULL},
+	{ai_run, 17, NULL},
+	{ai_run, 12, NULL},
+	{ai_run, -2, NULL},
+	{ai_run, -2, NULL},
+	{ai_run, -1, NULL},
 };
+
 mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
 
 void actor_run (edict_t *self)
@@ -55182,19 +55172,18 @@ void actor_run (edict_t *self)
 }
 
 
-mframe_t actor_frames_pain1 [] =
-{
-	ai_move, -5, NULL,
-	ai_move, 4,  NULL,
-	ai_move, 1,  NULL
+static mframe_t actor_frames_pain1 [] = {
+	{ai_move, -5, NULL},
+	{ai_move, 4,  NULL},
+	{ai_move, 1,  NULL},
 };
+
 mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
 
-mframe_t actor_frames_pain2 [] =
-{
-	ai_move, -4, NULL,
-	ai_move, 4,  NULL,
-	ai_move, 0,  NULL
+static mframe_t actor_frames_pain2[] = {
+	{ai_move, -4, NULL},
+	{ai_move, 4,  NULL},
+	{ai_move, 0,  NULL},
 };
 mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
 
