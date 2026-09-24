@@ -4,3 +4,4 @@ MATILDA.md
 debug
 *.rdbg
 .clangd
+build.bat
