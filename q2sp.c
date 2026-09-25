@@ -18,6 +18,7 @@
 #include <time.h>
 
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
+#define UNUSED(x) ((x)=(x))
 
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
@@ -1232,7 +1233,7 @@ static char* MSG_ReadString(sizebuf_t* msg_read) {
 		}
 		string[l] = c;
 		l++;
-	} while (l < sizeof(string) - 1);
+	} while (l < (int)sizeof(string) - 1);
 
 	string[l] = 0;
 	return string;
@@ -1249,7 +1250,7 @@ static char* MSG_ReadStringLine(sizebuf_t* msg_read) {
 		}
 		string[l] = c;
 		l++;
-	} while (l < sizeof(string) - 1);
+	} while (l < (int)sizeof(string) - 1);
 
 	string[l] = 0;
 	return string;
@@ -1736,7 +1737,7 @@ static void Com_Printf(char *fmt, ...) {
 	va_end(argptr);
 
 	if (rd_target) {
-		if ((strlen(msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
+		if ((int)(strlen(msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
 			rd_flush(rd_target, rd_buffer);
 			*rd_buffer = 0;
 		}
@@ -2188,7 +2189,7 @@ static int 				alias_count;	// for detecting runaway loops
 static int Cmd_Argc() {return cmd_argc;}
 
 static char* Cmd_Argv(int arg) {
-	if ((unsigned)arg >= cmd_argc) {
+	if (arg >= cmd_argc) {
 		return "";
 	}
 	return cmd_argv[arg];
@@ -3949,7 +3950,7 @@ typedef struct csurface_s {
 typedef struct edict_s edict_t;
 typedef struct gitem_s {
 	char		*classname;	// spawning name
-	qboolean	(*pickup)(edict_t *ent, edict_t *other);
+	qboolean	(*pickup)(edict_t *ent, edict_t* other);
 	void		(*use)(edict_t *ent, struct gitem_s *item);
 	void		(*drop)(edict_t *ent, struct gitem_s *item);
 	void		(*weaponthink)(edict_t *ent);
@@ -4006,9 +4007,9 @@ typedef struct {
 
 typedef struct
 {
-	void	(*aifunc)(edict_t *self, float dist);
+	void	(*aifunc)(edict_t* self, float dist);
 	float	dist;
-	void	(*thinkfunc)(edict_t *self);
+	void	(*thinkfunc)(edict_t* self);
 } mframe_t;
 
 typedef struct
@@ -4016,7 +4017,7 @@ typedef struct
 	int			firstframe;
 	int			lastframe;
 	mframe_t	*frame;
-	void		(*endfunc)(edict_t *self);
+	void		(*endfunc)(edict_t* self);
 } mmove_t;
 
 typedef struct {
@@ -4025,16 +4026,16 @@ typedef struct {
 	int			nextframe;
 	float		scale;
 
-	void		(*stand)(edict_t *self);
-	void		(*idle)(edict_t *self);
-	void		(*search)(edict_t *self);
-	void		(*walk)(edict_t *self);
-	void		(*run)(edict_t *self);
-	void		(*dodge)(edict_t *self, edict_t *other, float eta);
-	void		(*attack)(edict_t *self);
-	void		(*melee)(edict_t *self);
-	void		(*sight)(edict_t *self, edict_t *other);
-	qboolean	(*checkattack)(edict_t *self);
+	void		(*stand)(edict_t* self);
+	void		(*idle)(edict_t* self);
+	void		(*search)(edict_t* self);
+	void		(*walk)(edict_t* self);
+	void		(*run)(edict_t* self);
+	void		(*dodge)(edict_t* self, edict_t* other, float eta);
+	void		(*attack)(edict_t* self);
+	void		(*melee)(edict_t* self);
+	void		(*sight)(edict_t* self, edict_t* other);
+	qboolean	(*checkattack)(edict_t* self);
 
 	float		pausetime;
 	float		attack_finished;
@@ -4129,7 +4130,7 @@ struct edict_s {
 	void		(*prethink) (struct edict_s *ent);
 	void		(*think)(struct edict_s *self);
 	void		(*blocked)(struct edict_s *self, struct edict_s *other);	//move to moveinfo?
-	void		(*touch)(struct edict_s *self, struct edict_s *other, cplane_t *plane, csurface_t *surf);
+	void		(*touch)(struct edict_s *self, struct edict_s *other, cplane_t* plane, csurface_t *surf);
 	void		(*use)(struct edict_s *self, struct edict_s *other, struct edict_s *activator);
 	void		(*pain)(struct edict_s *self, struct edict_s *other, float kick, int damage);
 	void		(*die)(struct edict_s *self, struct edict_s *inflictor, struct edict_s *attacker, int damage, vec3_t point);
@@ -4714,7 +4715,7 @@ static cmodel_t* CM_LoadMap(char* name, qboolean clientload, unsigned* checksum)
 	*checksum = last_checksum;
 
 	dheader_t header = *(dheader_t*)buf;
-	for (int i = 0; i < sizeof(dheader_t) / 4; i++) {
+	for (int i = 0; i < (int)sizeof(dheader_t) / 4; i++) {
 		((int *)&header)[i] = LittleLong ( ((int *)&header)[i]);
 	}
 
@@ -6095,7 +6096,7 @@ int ArmorIndex (edict_t *ent);
 int PowerArmorType (edict_t *ent);
 gitem_t	*GetItemByIndex (int index);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
-void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
+void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf);
 
 //
 // g_utils.c
@@ -6105,7 +6106,7 @@ void	G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t righ
 edict_t *G_Find (edict_t *from, int fieldofs, char *match);
 edict_t *findradius (edict_t *from, vec3_t org, float rad);
 edict_t *G_PickTarget (char *targetname);
-void	G_UseTargets (edict_t *ent, edict_t *activator);
+void	G_UseTargets (edict_t *ent, edict_t* activator);
 void	G_SetMovedir (vec3_t angles, vec3_t movedir);
 
 void	G_InitEdict (edict_t *e);
@@ -6125,9 +6126,9 @@ void vectoangles (vec3_t vec, vec3_t angles);
 // g_combat.c
 //
 qboolean OnSameTeam (edict_t *ent1, edict_t *ent2);
-qboolean CanDamage (edict_t *targ, edict_t *inflictor);
-void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
-void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod);
+qboolean CanDamage (edict_t *targ, edict_t* inflictor);
+void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
+void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod);
 
 // damage flags
 #define DAMAGE_RADIUS			0x00000001	// damage was indirect
@@ -6148,64 +6149,64 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 //
 // g_monster.c
 //
-void monster_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype);
-void monster_fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype);
-void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect);
-void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype);
-void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype);
-void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype);
-void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype);
+void monster_fire_bullet (edict_t* self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype);
+void monster_fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype);
+void monster_fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect);
+void monster_fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype);
+void monster_fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype);
+void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype);
+void monster_fire_bfg (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype);
 void M_droptofloor (edict_t *ent);
-void monster_think (edict_t *self);
-void walkmonster_start (edict_t *self);
-void swimmonster_start (edict_t *self);
-void flymonster_start (edict_t *self);
-void AttackFinished (edict_t *self, float time);
-void monster_death_use (edict_t *self);
+void monster_think (edict_t* self);
+void walkmonster_start (edict_t* self);
+void swimmonster_start (edict_t* self);
+void flymonster_start (edict_t* self);
+void AttackFinished (edict_t* self, float time);
+void monster_death_use (edict_t* self);
 void M_CatagorizePosition (edict_t *ent);
-qboolean M_CheckAttack (edict_t *self);
-void M_FlyCheck (edict_t *self);
+qboolean M_CheckAttack (edict_t* self);
+void M_FlyCheck (edict_t* self);
 void M_CheckGround (edict_t *ent);
 
 //
 // g_misc.c
 //
-void ThrowHead (edict_t *self, char *gibname, int damage, int type);
-void ThrowClientHead (edict_t *self, int damage);
-void ThrowGib (edict_t *self, char *gibname, int damage, int type);
-void BecomeExplosion1(edict_t *self);
+void ThrowHead (edict_t* self, char *gibname, int damage, int type);
+void ThrowClientHead (edict_t* self, int damage);
+void ThrowGib (edict_t* self, char *gibname, int damage, int type);
+void BecomeExplosion1(edict_t* self);
 
 //
 // g_ai.c
 //
 void AI_SetSightClient (void);
 
-void ai_stand (edict_t *self, float dist);
-void ai_move (edict_t *self, float dist);
-void ai_walk (edict_t *self, float dist);
-void ai_turn (edict_t *self, float dist);
-void ai_run (edict_t *self, float dist);
-void ai_charge (edict_t *self, float dist);
-int range (edict_t *self, edict_t *other);
+void ai_stand (edict_t* self, float dist);
+void ai_move (edict_t* self, float dist);
+void ai_walk (edict_t* self, float dist);
+void ai_turn (edict_t* self, float dist);
+void ai_run (edict_t* self, float dist);
+void ai_charge (edict_t* self, float dist);
+int range (edict_t* self, edict_t* other);
 
-void FoundTarget (edict_t *self);
-qboolean infront (edict_t *self, edict_t *other);
-qboolean visible (edict_t *self, edict_t *other);
-qboolean FacingIdeal(edict_t *self);
+void FoundTarget (edict_t* self);
+qboolean infront (edict_t* self, edict_t* other);
+qboolean visible (edict_t* self, edict_t* other);
+qboolean FacingIdeal(edict_t* self);
 
 //
 // g_weapon.c
 //
-void ThrowDebris (edict_t *self, char *modelname, float speed, vec3_t origin);
-qboolean fire_hit (edict_t *self, vec3_t aim, int damage, int kick);
-void fire_bullet (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
-void fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
-void fire_blaster (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, qboolean hyper);
-void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius);
-void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held);
-void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
-void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick);
-void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
+void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin);
+qboolean fire_hit (edict_t* self, vec3_t aim, int damage, int kick);
+void fire_bullet (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
+void fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
+void fire_blaster (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, qboolean hyper);
+void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius);
+void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held);
+void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
+void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick);
+void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
 
 //
 // g_ptrail.c
@@ -6213,8 +6214,8 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 void PlayerTrail_Init (void);
 void PlayerTrail_Add (vec3_t spot);
 void PlayerTrail_New (vec3_t spot);
-edict_t *PlayerTrail_PickFirst (edict_t *self);
-edict_t *PlayerTrail_PickNext (edict_t *self);
+edict_t *PlayerTrail_PickFirst (edict_t* self);
+edict_t *PlayerTrail_PickNext (edict_t* self);
 edict_t	*PlayerTrail_LastSpot (void);
 
 //
@@ -6231,8 +6232,8 @@ void ClientBeginServerFrame (edict_t *ent);
 //
 // g_player.c
 //
-void player_pain (edict_t *self, edict_t *other, float kick, int damage);
-void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
+void player_pain (edict_t* self, edict_t* other, float kick, int damage);
+void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
 //
 // g_svcmds.c
@@ -7709,62 +7710,6 @@ just cleared malloc with counters now...
 
 //============================================================================
 
-
-/*
-====================
-COM_BlockSequenceCheckByte
-
-For proxy protecting
-
-// THIS IS MASSIVELY BROKEN!  CHALLENGE MAY BE NEGATIVE
-// DON'T USE THIS FUNCTION!!!!!
-
-====================
-*/
-byte	COM_BlockSequenceCheckByte (byte *base, int length, int sequence, int challenge)
-{
-	Sys_Error("COM_BlockSequenceCheckByte called\n");
-
-#if 0
-	int		checksum;
-	byte	buf[68];
-	byte	*p;
-	float temp;
-	byte c;
-
-	temp = bytedirs[(sequence/3) % NUMVERTEXNORMALS][sequence % 3];
-	temp = LittleFloat(temp);
-	p = ((byte *)&temp);
-
-	if (length > 60)
-		length = 60;
-	memcpy (buf, base, length);
-
-	buf[length] = (sequence & 0xff) ^ p[0];
-	buf[length+1] = p[1];
-	buf[length+2] = ((sequence>>8) & 0xff) ^ p[2];
-	buf[length+3] = p[3];
-
-	temp = bytedirs[((sequence+challenge)/3) % NUMVERTEXNORMALS][(sequence+challenge) % 3];
-	temp = LittleFloat(temp);
-	p = ((byte *)&temp);
-
-	buf[length+4] = (sequence & 0xff) ^ p[3];
-	buf[length+5] = (challenge & 0xff) ^ p[2];
-	buf[length+6] = ((sequence>>8) & 0xff) ^ p[1];
-	buf[length+7] = ((challenge >> 7) & 0xff) ^ p[0];
-
-	length += 8;
-
-	checksum = LittleLong(Com_BlockChecksum (buf, length));
-
-	checksum &= 0xff;
-
-	return checksum;
-#endif
-	return 0;
-}
-
 static byte chktbl[1024] = {
 0x84, 0x47, 0x51, 0xc1, 0x93, 0x22, 0x21, 0x24, 0x2f, 0x66, 0x60, 0x4d, 0xb0, 0x7c, 0xda,
 0x88, 0x54, 0x15, 0x2b, 0xc6, 0x6c, 0x89, 0xc5, 0x9d, 0x48, 0xee, 0xe6, 0x8a, 0xb5, 0xf4,
@@ -8141,37 +8086,16 @@ void FS_FCloseFile (FILE *f)
 	fclose (f);
 }
 
-
-// RAFAEL
-/*
-	Developer_searchpath
-*/
-int	Developer_searchpath (int who)
-{
-
-	// PMM - warning removal
-//	char	*start;
-	searchpath_t	*search;
-
-	for (search = fs_searchpaths ; search ; search = search->next)
-	{
-		if (strstr (search->filename, "xatrix"))
+static int Developer_searchpath() {
+	for (searchpath_t* search = fs_searchpaths; search; search = search->next) {
+		if (strstr(search->filename, "xatrix")) {
 			return 1;
-
-		if (strstr (search->filename, "rogue"))
+		}
+		if (strstr(search->filename, "rogue")) {
 			return 2;
-/*
-		start = strchr (search->filename, ch);
-
-		if (start == NULL)
-			continue;
-
-		if (strcmp (start ,"xatrix") == 0)
-			return (1);
-*/
+		}
 	}
-	return (0);
-
+	return 0;
 }
 
 
@@ -9386,10 +9310,8 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 				, reliable_ack);
 	}
 
-//
-// discard stale or duplicated packets
-//
-	if (sequence <= chan->incoming_sequence)
+	// discard stale or duplicated packets
+	if ((int)sequence <= chan->incoming_sequence)
 	{
 		if (showdrop->value)
 			Com_Printf ("%s:Out of order packet %i at %i\n"
@@ -9412,16 +9334,11 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 			, sequence);
 	}
 
-//
-// if the current outgoing reliable message has been acknowledged
-// clear the buffer to make way for the next
-//
-	if (reliable_ack == chan->reliable_sequence)
+	// if the current outgoing reliable message has been acknowledged clear the buffer to make way for the next
+	if ((int)reliable_ack == chan->reliable_sequence)
 		chan->reliable_length = 0;	// it has been received
 
-//
-// if this message contains a reliable message, bump incoming_reliable_sequence
-//
+	// if this message contains a reliable message, bump incoming_reliable_sequence
 	chan->incoming_sequence = sequence;
 	chan->incoming_acknowledged = sequence_ack;
 	chan->incoming_reliable_acknowledged = reliable_ack;
@@ -9430,9 +9347,7 @@ qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 		chan->incoming_reliable_sequence ^= 1;
 	}
 
-//
-// the message can now be read from the current message pointer
-//
+	// the message can now be read from the current message pointer
 	chan->last_received = curtime;
 
 	return true;
@@ -13695,7 +13610,7 @@ char	*SV_StatusString (void)
 			Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n",
 				cl->edict->client->ps.stats[STAT_FRAGS], cl->ping, cl->name);
 			playerLength = strlen(player);
-			if (statusLength + playerLength >= sizeof(status) )
+			if (statusLength + playerLength >= (int)sizeof(status) )
 				break;		// can't hold any more
 			strcpy (status + statusLength, player);
 			statusLength += playerLength;
@@ -14315,7 +14230,7 @@ void SV_RunGameFrame (void)
 		ge->RunFrame ();
 
 		// never get more than one tic behind
-		if (sv.time < svs.realtime)
+		if ((int)sv.time < svs.realtime)
 		{
 			if (sv_showclamp->value)
 				Com_Printf ("sv highclamp\n");
@@ -14354,7 +14269,7 @@ void SV_Frame (int msec)
 	SV_ReadPackets ();
 
 	// move autonomous things around if enough time has passed
-	if (!sv_timedemo->value && svs.realtime < sv.time)
+	if (!sv_timedemo->value && svs.realtime < (int)sv.time)
 	{
 		// never let the time get too far off
 		if (sv.time - svs.realtime > 100)
@@ -14402,7 +14317,6 @@ into a more C freindly form.
 void SV_UserinfoChanged (client_t *cl)
 {
 	char	*val;
-	int		i;
 
 	// call prog code to allow overrides
 	ge->ClientUserinfoChanged (cl->edict, cl->userinfo);
@@ -14410,7 +14324,8 @@ void SV_UserinfoChanged (client_t *cl)
 	// name for C code
 	strncpy (cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name)-1);
 	// mask off high bit
-	for (i=0 ; i<sizeof(cl->name) ; i++)
+	int i = 0;
+	for (; i < (int)sizeof(cl->name) ; i++)
 		cl->name[i] &= 127;
 
 	// rate command
@@ -17128,7 +17043,6 @@ void CL_DebugTrail (vec3_t start, vec3_t end);
 void CL_SmokeTrail (vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
 void CL_Flashlight (int ent, vec3_t pos);
 void CL_ForceWall (vec3_t start, vec3_t end, int color);
-void CL_FlameEffects (centity_t *ent, vec3_t origin);
 void CL_GenericParticleEffect (vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
 void CL_BubbleTrail2 (vec3_t start, vec3_t end, int dist);
 void CL_Heatbeam (vec3_t start, vec3_t end);
@@ -17744,7 +17658,7 @@ byte *SCR_ReadNextFrame (void)
 	// decompress the next frame
 	FS_Read (&size, 4, cl.cinematic_file);
 	size = LittleLong(size);
-	if (size > sizeof(compressed) || size < 1)
+	if (size > (int)sizeof(compressed) || size < 1)
 		Com_Error (ERR_DROP, "Bad compressed frame size");
 	FS_Read (compressed, size, cl.cinematic_file);
 
@@ -22551,7 +22465,7 @@ void CL_Record_f (void)
 	{
 		if (cl.configstrings[i][0])
 		{
-			if (buf.cursize + strlen (cl.configstrings[i]) + 32 > buf.maxsize)
+			if (buf.cursize + (int)strlen(cl.configstrings[i]) + 32 > buf.maxsize)
 			{	// write it out
 				len = LittleLong (buf.cursize);
 				fwrite (&len, 4, 1, cls.demofile);
@@ -23590,7 +23504,7 @@ void CL_RequestNextDownload (void)
 
 		CM_LoadMap (cl.configstrings[CS_MODELS+1], true, &map_checksum);
 
-		if (map_checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {
+		if ((int)map_checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {
 			Com_Error (ERR_DROP, "Local map version differs from server: %i != '%s'\n",
 				map_checksum, cl.configstrings[CS_MAPCHECKSUM]);
 			return;
@@ -23864,26 +23778,25 @@ CL_FixCvarCheats
 ==================
 */
 
-typedef struct
-{
+typedef struct {
 	char	*name;
 	char	*value;
 	cvar_t	*var;
 } cheatvar_t;
 
-cheatvar_t	cheatvars[] = {
-	{"timescale", "1"},
-	{"timedemo", "0"},
-	{"r_drawworld", "1"},
-	{"cl_testlights", "0"},
-	{"r_fullbright", "0"},
-	{"r_drawflat", "0"},
-	{"paused", "0"},
-	{"fixedtime", "0"},
-	{"sw_draworder", "0"},
-	{"gl_lightmap", "0"},
-	{"gl_saturatelighting", "0"},
-	{NULL, NULL}
+static cheatvar_t cheatvars[] = {
+	{"timescale", "1", 0},
+	{"timedemo", "0", 0},
+	{"r_drawworld", "1", 0},
+	{"cl_testlights", "0", 0},
+	{"r_fullbright", "0", 0},
+	{"r_drawflat", "0", 0},
+	{"paused", "0", 0},
+	{"fixedtime", "0", 0},
+	{"sw_draworder", "0", 0},
+	{"gl_lightmap", "0", 0},
+	{"gl_saturatelighting", "0", 0},
+	{NULL, NULL, 0},
 };
 
 int		numcheatvars;
@@ -24332,66 +24245,6 @@ void CL_ForceWall (vec3_t start, vec3_t end, int color)
 		VectorAdd (move, vec, move);
 	}
 }
-
-void CL_FlameEffects (centity_t *ent, vec3_t origin)
-{
-	int			n, count;
-	int			j;
-	cparticle_t	*p;
-
-	count = rand() & 0xF;
-
-	for(n=0;n<count;n++)
-	{
-		if (!free_particles)
-			return;
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
-		VectorClear (p->accel);
-		p->time = cl.time;
-
-		p->alpha = 1.0;
-		p->alphavel = -1.0 / (1+frand()*0.2);
-		p->color = 226 + (rand() % 4);
-		for (j=0 ; j<3 ; j++)
-		{
-			p->org[j] = origin[j] + crand()*5;
-			p->vel[j] = crand()*5;
-		}
-		p->vel[2] = crand() * -10;
-		p->accel[2] = -PARTICLE_GRAVITY;
-	}
-
-	count = rand() & 0x7;
-
-	for(n=0;n<count;n++)
-	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-		VectorClear (p->accel);
-
-		p->time = cl.time;
-
-		p->alpha = 1.0;
-		p->alphavel = -1.0 / (1+frand()*0.5);
-		p->color = 0 + (rand() % 4);
-		for (j=0 ; j<3 ; j++)
-		{
-			p->org[j] = origin[j] + crand()*3;
-		}
-		p->vel[2] = 20 + crand()*5;
-	}
-
-}
-
 
 /*
 ===============
@@ -30512,7 +30365,7 @@ void Con_DrawConsole (float frac)
 		x = con.linewidth - ((con.linewidth * 7) / 40);
 		y = x - strlen(text) - 8;
 		i = con.linewidth/3;
-		if (strlen(text) > i) {
+		if ((int)strlen(text) > i) {
 			y = x - i - 11;
 			strncpy(dlbar, text, i);
 			dlbar[i] = 0;
@@ -30540,7 +30393,7 @@ void Con_DrawConsole (float frac)
 
 		// draw it
 		y = con.vislines-12;
-		for (i = 0; i < strlen(dlbar); i++)
+		for (i = 0; i < (int)strlen(dlbar); i++)
 			re.DrawChar ( (i+1)<<3, y, dlbar[i]);
 	}
 //ZOID
@@ -31625,7 +31478,7 @@ static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
 	}
 
 	if (i == m_menudepth) {
-		assert(m_menudepth >= 0 && m_menudepth < carray_count(m_layers));
+		assert(m_menudepth >= 0 && m_menudepth < (int)carray_count(m_layers));
 
 		m_layers[m_menudepth].draw = m_drawfunc;
 		m_layers[m_menudepth].key = m_keyfunc;
@@ -32032,19 +31885,19 @@ static void Multiplayer_MenuDraw (void)
 	Menu_Draw( &s_multiplayer_menu );
 }
 
-static void PlayerSetupFunc( void *unused )
-{
+static void PlayerSetupFunc(void* unused) {
+	UNUSED(unused);
 	M_Menu_PlayerConfig_f();
 }
 
-static void JoinNetworkServerFunc( void *unused )
-{
+static void JoinNetworkServerFunc(void* unused) {
+	UNUSED(unused);
 	M_Menu_JoinServer_f();
 }
 
-static void StartNetworkServerFunc( void *unused )
-{
-	M_Menu_StartServer_f ();
+static void StartNetworkServerFunc(void* unused) {
+	UNUSED(unused);
+	M_Menu_StartServer_f();
 }
 
 void Multiplayer_MenuInit( void )
@@ -32555,33 +32408,39 @@ static menulist_s		s_options_quality_list;
 static menulist_s		s_options_compatibility_list;
 static menulist_s		s_options_console_action;
 
-static void CrosshairFunc( void *unused )
+static void CrosshairFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "crosshair", s_options_crosshair_box.curvalue );
 }
 
-static void JoystickFunc( void *unused )
+static void JoystickFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "in_joystick", s_options_joystick_box.curvalue );
 }
 
-static void CustomizeControlsFunc( void *unused )
+static void CustomizeControlsFunc(void* unused)
 {
+	UNUSED(unused);
 	M_Menu_Keys_f();
 }
 
-static void AlwaysRunFunc( void *unused )
+static void AlwaysRunFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "cl_run", s_options_alwaysrun_box.curvalue );
 }
 
-static void FreeLookFunc( void *unused )
+static void FreeLookFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "freelook", s_options_freelook_box.curvalue );
 }
 
-static void MouseSpeedFunc( void *unused )
+static void MouseSpeedFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
 }
 
@@ -32622,16 +32481,18 @@ static void ControlsSetMenuItemValues( void )
 	s_options_noalttab_box.curvalue			= win_noalttab->value;
 }
 
-static void ControlsResetDefaultsFunc( void *unused )
+static void ControlsResetDefaultsFunc(void* unused)
 {
+	UNUSED(unused);
 	Cbuf_AddText ("exec default.cfg\n");
 	Cmd_ExecuteCbuf();
 
 	ControlsSetMenuItemValues();
 }
 
-static void InvertMouseFunc( void *unused )
+static void InvertMouseFunc(void* unused)
 {
+	UNUSED(unused);
 	if ( s_options_invertmouse_box.curvalue == 0 )
 	{
 		COM_SetValueCvar( "m_pitch", fabs( m_pitch->value ) );
@@ -32642,23 +32503,27 @@ static void InvertMouseFunc( void *unused )
 	}
 }
 
-static void LookspringFunc( void *unused )
+static void LookspringFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "lookspring", s_options_lookspring_box.curvalue );
 }
 
-static void LookstrafeFunc( void *unused )
+static void LookstrafeFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "lookstrafe", s_options_lookstrafe_box.curvalue );
 }
 
-static void UpdateVolumeFunc( void *unused )
+static void UpdateVolumeFunc(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
 }
 
-static void ConsoleFunc( void *unused )
+static void ConsoleFunc(void* unused)
 {
+	UNUSED(unused);
 	/*
 	** the proper way to do this is probably to have ToggleConsole_f accept a parameter
 	*/
@@ -32677,8 +32542,9 @@ static void ConsoleFunc( void *unused )
 	cls.key_dest = key_console;
 }
 
-static void UpdateSoundQualityFunc( void *unused )
+static void UpdateSoundQualityFunc(void* unused)
 {
+	UNUSED(unused);
 	if ( s_options_quality_list.curvalue )
 	{
 		COM_SetValueCvar( "s_khz", 22 );
@@ -33346,7 +33212,7 @@ void M_Menu_Credits_f( void )
 	}
 	else
 	{
-		isdeveloper = Developer_searchpath (1);
+		isdeveloper = Developer_searchpath();
 
 		if (isdeveloper == 1)			// xatrix
 			credits = xatcredits;
@@ -33396,40 +33262,40 @@ static void StartGame( void )
 	cls.key_dest = key_game;
 }
 
-static void EasyGameFunc( void *data )
-{
+static void EasyGameFunc(void* data) {
+	UNUSED(data);
 	Com_ForceSetCvar( "skill", "0" );
 	StartGame();
 }
 
-static void MediumGameFunc( void *data )
-{
+static void MediumGameFunc(void* data) {
+	UNUSED(data);
 	Com_ForceSetCvar( "skill", "1" );
 	StartGame();
 }
 
-static void HardGameFunc( void *data )
-{
+static void HardGameFunc(void* data) {
+	UNUSED(data);
 	Com_ForceSetCvar( "skill", "2" );
 	StartGame();
 }
 
-static void LoadGameFunc( void *unused )
-{
+static void LoadGameFunc(void* unused) {
+	UNUSED(unused);
 	M_Menu_LoadGame_f ();
 }
 
-static void SaveGameFunc( void *unused )
-{
+static void SaveGameFunc(void* unused) {
+	UNUSED(unused);
 	M_Menu_SaveGame_f();
 }
 
-static void CreditsFunc( void *unused ) {
+static void CreditsFunc(void* unused) {
+	UNUSED(unused);
 	M_Menu_Credits_f();
 }
 
-void Game_MenuInit( void )
-{
+static void Game_MenuInit() {
 	s_game_menu.x = viddef.width * 0.50;
 	s_game_menu.nitems = 0;
 
@@ -33748,13 +33614,9 @@ void JoinServerFunc( void *self )
 	M_ForceMenuOff ();
 }
 
-void AddressBookFunc( void *self )
-{
+static void AddressBookFunc(void* self) {
+	UNUSED(self);
 	M_Menu_AddressBook_f();
-}
-
-void NullCursorDraw( void *self )
-{
 }
 
 void SearchLocalGames( void )
@@ -33777,8 +33639,8 @@ void SearchLocalGames( void )
 	CL_PingServers_f();
 }
 
-void SearchLocalGamesFunc( void *self )
-{
+static void SearchLocalGamesFunc(void *self) {
+	UNUSED(self);
 	SearchLocalGames();
 }
 
@@ -33872,15 +33734,16 @@ static menufield_s	s_hostname_field;
 static menulist_s	s_startmap_list;
 static menulist_s	s_rules_box;
 
-void DMOptionsFunc( void *self )
-{
+static void DMOptionsFunc(void* self) {
+	UNUSED(self);
 	if (s_rules_box.curvalue == 1)
 		return;
 	M_Menu_DMOptions_f();
 }
 
-void RulesChangeFunc ( void *self )
-{
+static void RulesChangeFunc(void* self) {
+	UNUSED(self);
+
 	// DM
 	if (s_rules_box.curvalue == 0)
 	{
@@ -33894,30 +33757,22 @@ void RulesChangeFunc ( void *self )
 			strcpy( s_maxclients_field.buffer, "4" );
 		s_startserver_dmoptions_action.generic.statusbar = "N/A for cooperative";
 	}
-//=====
-//PGM
+
+	//PGM
 	// ROGUE GAMES
-	else if(Developer_searchpath(2) == 2)
+	else if (Developer_searchpath() == 2)
 	{
 		if (s_rules_box.curvalue == 2)			// tag
 		{
 			s_maxclients_field.generic.statusbar = NULL;
 			s_startserver_dmoptions_action.generic.statusbar = NULL;
 		}
-/*
-		else if(s_rules_box.curvalue == 3)		// deathball
-		{
-			s_maxclients_field.generic.statusbar = NULL;
-			s_startserver_dmoptions_action.generic.statusbar = NULL;
-		}
-*/
 	}
-//PGM
-//=====
 }
 
-void StartServerActionFunc( void *self )
-{
+static void StartServerActionFunc(void* self) {
+	UNUSED(self);
+
 	char	startmap[1024];
 	int		timelimit;
 	int		fraglimit;
@@ -33938,7 +33793,7 @@ void StartServerActionFunc( void *self )
 //	Cvar_SetValue ("coop", s_rules_box.curvalue );
 
 //PGM
-	if((s_rules_box.curvalue < 2) || (Developer_searchpath(2) != 2))
+	if((s_rules_box.curvalue < 2) || (Developer_searchpath() != 2))
 	{
 		COM_SetValueCvar ("deathmatch", !s_rules_box.curvalue );
 		COM_SetValueCvar ("coop", s_rules_box.curvalue );
@@ -34101,7 +33956,7 @@ void StartServer_MenuInit( void )
 	s_rules_box.generic.name	= "rules";
 
 //PGM - rogue games only available with rogue DLL.
-	if(Developer_searchpath(2) == 2)
+	if(Developer_searchpath() == 2)
 		s_rules_box.itemnames = dm_coop_names_rogue;
 	else
 		s_rules_box.itemnames = dm_coop_names;
@@ -34362,7 +34217,7 @@ static void DMFlagCallback( void *self )
 
 //=======
 //ROGUE
-	else if (Developer_searchpath(2) == 2)
+	else if (Developer_searchpath() == 2)
 	{
 		if ( f == &s_no_mines_box)
 		{
@@ -34536,7 +34391,7 @@ void DMOptions_MenuInit( void )
 
 //============
 //ROGUE
-	if(Developer_searchpath(2) == 2)
+	if(Developer_searchpath() == 2)
 	{
 		s_no_mines_box.generic.type = MTYPE_SPINCONTROL;
 		s_no_mines_box.generic.x	= 0;
@@ -34592,7 +34447,7 @@ void DMOptions_MenuInit( void )
 
 //=======
 //ROGUE
-	if(Developer_searchpath(2) == 2)
+	if(Developer_searchpath() == 2)
 	{
 		Menu_AddItem( &s_dmoptions_menu, &s_no_mines_box );
 		Menu_AddItem( &s_dmoptions_menu, &s_no_nukes_box );
@@ -34867,24 +34722,27 @@ static int rate_tbl[] = { 2500, 3200, 5000, 10000, 25000, 0 };
 static const char *rate_names[] = { "28.8 Modem", "33.6 Modem", "Single ISDN",
 	"Dual ISDN/Cable", "T1/LAN", "User defined", 0 };
 
-void DownloadOptionsFunc( void *self )
-{
+static void DownloadOptionsFunc(void* self) {
+	UNUSED(self);
 	M_Menu_DownloadOptions_f();
 }
 
-static void HandednessCallback( void *unused )
+static void HandednessCallback(void* unused)
 {
+	UNUSED(unused);
 	COM_SetValueCvar( "hand", s_player_handedness_box.curvalue );
 }
 
-static void RateCallback( void *unused )
+static void RateCallback(void* unused)
 {
-	if (s_player_rate_box.curvalue != sizeof(rate_tbl) / sizeof(*rate_tbl) - 1)
+	UNUSED(unused);
+	if (s_player_rate_box.curvalue != carray_count(rate_tbl) - 1)
 		COM_SetValueCvar( "rate", rate_tbl[s_player_rate_box.curvalue] );
 }
 
-static void ModelCallback( void *unused )
+static void ModelCallback(void* unused)
 {
+	UNUSED(unused);
 	s_player_skin_box.itemnames = (const char**)s_pmi[s_player_model_box.curvalue].skindisplaynames;
 	s_player_skin_box.curvalue = 0;
 }
@@ -35206,7 +35064,7 @@ qboolean PlayerConfig_MenuInit( void )
 	s_player_handedness_box.curvalue = Cvar_VariableValue( "hand" );
 	s_player_handedness_box.itemnames = handedness;
 
-	for (i = 0; i < sizeof(rate_tbl) / sizeof(*rate_tbl) - 1; i++)
+	for (i = 0; i < (int)carray_count(rate_tbl) - 1; i++)
 		if (Cvar_VariableValue("rate") == rate_tbl[i])
 			break;
 
@@ -36216,7 +36074,6 @@ void	SNDDMA_Submit(void);
 #define	MAX_CHANNELS			32
 extern	channel_t   channels[MAX_CHANNELS];
 
-extern	int		paintedtime;
 extern	int		s_rawend;
 extern	vec3_t	listener_origin;
 extern	vec3_t	listener_forward;
@@ -37367,7 +37224,7 @@ void S_Update_(void)
 	endtime = (endtime + dma.submission_chunk-1)
 		& ~(dma.submission_chunk-1);
 	samps = dma.samples >> (dma.channels-1);
-	if (endtime - soundtime > samps)
+	if ((int)(endtime - soundtime) > samps)
 		endtime = soundtime + samps;
 
 	S_PaintChannels (endtime);
@@ -37962,13 +37819,13 @@ void S_PaintChannels(int endtime)
 			ps = s_pendingplays.next;
 			if (ps == &s_pendingplays)
 				break;	// no more pending sounds
-			if (ps->begin <= paintedtime)
+			if ((int)ps->begin <= paintedtime)
 			{
 				S_IssuePlaysound (ps);
 				continue;
 			}
 
-			if (ps->begin < end)
+			if ((int)ps->begin < end)
 				end = ps->begin;		// stop here
 			break;
 		}
@@ -38145,10 +38002,10 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 
 /* already inlined above: game/g_local.h */
 
-qboolean FindTarget (edict_t *self);
+qboolean FindTarget (edict_t* self);
 extern cvar_t	*maxclients;
 
-qboolean ai_checkattack (edict_t *self, float dist);
+static qboolean ai_checkattack(edict_t* self);
 
 qboolean	enemy_vis;
 qboolean	enemy_infront;
@@ -38213,7 +38070,7 @@ Move the specified distance at current facing.
 This replaces the QC functions: ai_forward, ai_back, ai_pain, and ai_painforward
 ==============
 */
-void ai_move (edict_t *self, float dist)
+void ai_move (edict_t* self, float dist)
 {
 	M_walkmove (self, self->s.angles[YAW], dist);
 }
@@ -38227,7 +38084,7 @@ Used for standing around and looking for players
 Distance is for slight position adjustments needed by the animations
 ==============
 */
-void ai_stand (edict_t *self, float dist)
+void ai_stand (edict_t* self, float dist)
 {
 	vec3_t	v;
 
@@ -38246,7 +38103,7 @@ void ai_stand (edict_t *self, float dist)
 				self->monsterinfo.run (self);
 			}
 			M_ChangeYaw (self);
-			ai_checkattack(self, 0);
+			ai_checkattack(self);
 		}
 		else
 			FindTarget (self);
@@ -38284,7 +38141,7 @@ ai_walk
 The monster is walking it's beat
 =============
 */
-void ai_walk (edict_t *self, float dist)
+void ai_walk (edict_t* self, float dist)
 {
 	M_MoveToGoal (self, dist);
 
@@ -38315,7 +38172,7 @@ Turns towards target and advances
 Use this call with a distnace of 0 to replace ai_face
 ==============
 */
-void ai_charge (edict_t *self, float dist)
+void ai_charge (edict_t* self, float dist)
 {
 	vec3_t	v;
 
@@ -38336,7 +38193,7 @@ don't move, but turn towards ideal_yaw
 Distance is for slight position adjustments needed by the animations
 =============
 */
-void ai_turn (edict_t *self, float dist)
+void ai_turn (edict_t* self, float dist)
 {
 	if (dist)
 		M_walkmove (self, self->s.angles[YAW], dist);
@@ -38385,7 +38242,7 @@ returns the range catagorization of an entity reletive to self
 3	only triggered by damage
 =============
 */
-int range (edict_t *self, edict_t *other)
+int range (edict_t* self, edict_t* other)
 {
 	vec3_t	v;
 	float	len;
@@ -38408,7 +38265,7 @@ visible
 returns 1 if the entity is visible to self, even if not infront ()
 =============
 */
-qboolean visible (edict_t *self, edict_t *other)
+qboolean visible (edict_t* self, edict_t* other)
 {
 	vec3_t	spot1;
 	vec3_t	spot2;
@@ -38433,7 +38290,7 @@ infront
 returns 1 if the entity is in front (in sight) of self
 =============
 */
-qboolean infront (edict_t *self, edict_t *other)
+qboolean infront (edict_t* self, edict_t* other)
 {
 	vec3_t	vec;
 	float	dot;
@@ -38452,7 +38309,7 @@ qboolean infront (edict_t *self, edict_t *other)
 
 //============================================================================
 
-void HuntTarget (edict_t *self)
+void HuntTarget (edict_t* self)
 {
 	vec3_t	vec;
 
@@ -38468,7 +38325,7 @@ void HuntTarget (edict_t *self)
 		AttackFinished (self, 1);
 }
 
-void FoundTarget (edict_t *self)
+void FoundTarget (edict_t* self)
 {
 	// let other monsters see this monster for a while
 	if (self->enemy->client)
@@ -38528,7 +38385,7 @@ checked each frame.  This means multi player games will have slightly
 slower noticing monsters.
 ============
 */
-qboolean FindTarget (edict_t *self)
+qboolean FindTarget (edict_t* self)
 {
 	edict_t		*client;
 	qboolean	heardit;
@@ -38715,7 +38572,7 @@ FacingIdeal
 
 ============
 */
-qboolean FacingIdeal(edict_t *self)
+qboolean FacingIdeal(edict_t* self)
 {
 	float	delta;
 
@@ -38728,7 +38585,7 @@ qboolean FacingIdeal(edict_t *self)
 
 //=============================================================================
 
-qboolean M_CheckAttack (edict_t *self)
+qboolean M_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	float	chance;
@@ -38824,7 +38681,7 @@ ai_run_melee
 Turn and close until within an angle to launch a melee attack
 =============
 */
-void ai_run_melee(edict_t *self)
+void ai_run_melee(edict_t* self)
 {
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
@@ -38844,7 +38701,7 @@ ai_run_missile
 Turn in place until within an angle to launch a missile attack
 =============
 */
-void ai_run_missile(edict_t *self)
+void ai_run_missile(edict_t* self)
 {
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
@@ -38864,7 +38721,7 @@ ai_run_slide
 Strafe sideways, but stay at aproximately the same range
 =============
 */
-void ai_run_slide(edict_t *self, float distance)
+void ai_run_slide(edict_t* self, float distance)
 {
 	float	ofs;
 
@@ -38883,17 +38740,8 @@ void ai_run_slide(edict_t *self, float distance)
 	M_walkmove (self, self->ideal_yaw - ofs, distance);
 }
 
-
-/*
-=============
-ai_checkattack
-
-Decides if we're going to attack or do something else
-used by ai_run and ai_stand
-=============
-*/
-qboolean ai_checkattack (edict_t *self, float dist)
-{
+// Decides if we're going to attack or do something else used by ai_run and ai_stand
+static qboolean ai_checkattack(edict_t* self) {
 	vec3_t		temp;
 	qboolean	hesDeadJim;
 
@@ -38988,20 +38836,13 @@ qboolean ai_checkattack (edict_t *self, float dist)
 
 	self->show_hostile = level.time + 1;		// wake up other monsters
 
-// check knowledge of enemy
+	// check knowledge of enemy
 	enemy_vis = visible(self, self->enemy);
 	if (enemy_vis)
 	{
 		self->monsterinfo.search_time = level.time + 5;
 		VectorCopy (self->enemy->s.origin, self->monsterinfo.last_sighting);
 	}
-
-// look for other coop players here
-//	if (coop && self->monsterinfo.search_time < level.time)
-//	{
-//		if (FindTarget (self))
-//			return true;
-//	}
 
 	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
@@ -39037,7 +38878,7 @@ ai_run
 The monster has an enemy it is trying to kill
 =============
 */
-void ai_run (edict_t *self, float dist)
+void ai_run (edict_t* self, float dist)
 {
 	vec3_t		v;
 	edict_t		*tempgoal;
@@ -39073,7 +38914,7 @@ void ai_run (edict_t *self, float dist)
 			return;
 	}
 
-	if (ai_checkattack (self, dist))
+	if (ai_checkattack(self))
 		return;
 
 	if (self->monsterinfo.attack_state == AS_SLIDING)
@@ -39386,7 +39227,7 @@ void ChasePrev(edict_t *ent)
 void GetChaseTarget(edict_t *ent)
 {
 	int i;
-	edict_t *other;
+	edict_t* other;
 
 	for (i = 1; i <= maxclients->value; i++) {
 		other = g_edicts + i;
@@ -40595,7 +40436,7 @@ Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-qboolean CanDamage (edict_t *targ, edict_t *inflictor)
+qboolean CanDamage (edict_t *targ, edict_t* inflictor)
 {
 	vec3_t	dest;
 	trace_t	trace;
@@ -40655,7 +40496,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 Killed
 ============
 */
-void Killed (edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void Killed (edict_t *targ, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	if (targ->health < -999)
 		targ->health = -999;
@@ -40858,7 +40699,7 @@ static int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, in
 	return save;
 }
 
-void M_ReactToDamage (edict_t *targ, edict_t *attacker)
+void M_ReactToDamage (edict_t *targ, edict_t* attacker)
 {
 	if (!(attacker->client) && !(attacker->svflags & SVF_MONSTER))
 		return;
@@ -40933,14 +40774,15 @@ void M_ReactToDamage (edict_t *targ, edict_t *attacker)
 	}
 }
 
-qboolean CheckTeamDamage (edict_t *targ, edict_t *attacker)
-{
-		//FIXME make the next line real and uncomment this block
-		// if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
+static qboolean CheckTeamDamage(edict_t *targ, edict_t* attacker) {
+	// FIXME make the next line real and uncomment this block
+	// if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
+	UNUSED(targ);
+	UNUSED(attacker);
 	return false;
 }
 
-void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
+void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
 {
 	gclient_t	*client;
 	int			take;
@@ -41110,7 +40952,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 T_RadiusDamage
 ============
 */
-void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod)
+void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod)
 {
 	float	points;
 	edict_t	*ent = NULL;
@@ -41530,7 +41372,7 @@ void plat_go_up (edict_t *ent)
 	Move_Calc (ent, ent->moveinfo.start_origin, plat_hit_top);
 }
 
-void plat_blocked (edict_t *self, edict_t *other)
+void plat_blocked (edict_t* self, edict_t* other)
 {
 	if (!(other->svflags & SVF_MONSTER) && (!other->client) )
 	{
@@ -41550,17 +41392,19 @@ void plat_blocked (edict_t *self, edict_t *other)
 		plat_go_up (self);
 }
 
-
-void Use_Plat (edict_t *ent, edict_t *other, edict_t *activator)
-{
-	if (ent->think)
-		return;		// already down
-	plat_go_down (ent);
+static void Use_Plat (edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+	if (ent->think) {
+		return; // already down
+	}
+	plat_go_down(ent);
 }
 
+static void Touch_Plat_Center(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf) {
+	UNUSED(plane);
+	UNUSED(surf);
 
-void Touch_Plat_Center (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
 	if (!other->client)
 		return;
 
@@ -41718,19 +41562,23 @@ REVERSE will cause the it to rotate in the opposite direction.
 STOP mean it will stop moving instead of pushing entities
 */
 
-void rotating_blocked (edict_t *self, edict_t *other)
+void rotating_blocked (edict_t* self, edict_t* other)
 {
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-void rotating_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
-	if (self->avelocity[0] || self->avelocity[1] || self->avelocity[2])
-		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
+static void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+	if (self->avelocity[0] || self->avelocity[1] || self->avelocity[2]) {
+		T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
+	}
 }
 
-void rotating_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void rotating_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (!VectorCompare (self->avelocity, vec3_origin))
 	{
 		self->s.sound = 0;
@@ -41815,14 +41663,14 @@ When a button is touched, it moves some distance in the direction of it's angle,
 5) in-out
 */
 
-void button_done (edict_t *self)
+void button_done (edict_t* self)
 {
 	self->moveinfo.state = STATE_BOTTOM;
 	self->s.effects &= ~EF_ANIM23;
 	self->s.effects |= EF_ANIM01;
 }
 
-void button_return (edict_t *self)
+void button_return (edict_t* self)
 {
 	self->moveinfo.state = STATE_DOWN;
 
@@ -41834,7 +41682,7 @@ void button_return (edict_t *self)
 		self->takedamage = DAMAGE_YES;
 }
 
-void button_wait (edict_t *self)
+void button_wait (edict_t* self)
 {
 	self->moveinfo.state = STATE_TOP;
 	self->s.effects &= ~EF_ANIM01;
@@ -41849,7 +41697,7 @@ void button_wait (edict_t *self)
 	}
 }
 
-void button_fire (edict_t *self)
+void button_fire (edict_t* self)
 {
 	if (self->moveinfo.state == STATE_UP || self->moveinfo.state == STATE_TOP)
 		return;
@@ -41860,14 +41708,16 @@ void button_fire (edict_t *self)
 	Move_Calc (self, self->moveinfo.end_origin, button_wait);
 }
 
-void button_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void button_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
 	self->activator = activator;
 	button_fire (self);
 }
 
-void button_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
+static void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (!other->client)
 		return;
 
@@ -41878,8 +41728,11 @@ void button_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *s
 	button_fire (self);
 }
 
-void button_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
-{
+static void button_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(damage);
+	UNUSED(point);
+
 	self->activator = attacker;
 	self->health = self->max_health;
 	self->takedamage = DAMAGE_NO;
@@ -41975,7 +41828,7 @@ NOMONSTER	monsters will not trigger this door
 4)	heavy
 */
 
-void door_use_areaportals (edict_t *self, qboolean open)
+void door_use_areaportals (edict_t* self, qboolean open)
 {
 	edict_t	*t = NULL;
 
@@ -41991,9 +41844,9 @@ void door_use_areaportals (edict_t *self, qboolean open)
 	}
 }
 
-void door_go_down (edict_t *self);
+void door_go_down (edict_t* self);
 
-void door_hit_top (edict_t *self)
+void door_hit_top (edict_t* self)
 {
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
@@ -42011,7 +41864,7 @@ void door_hit_top (edict_t *self)
 	}
 }
 
-void door_hit_bottom (edict_t *self)
+void door_hit_bottom (edict_t* self)
 {
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
@@ -42023,7 +41876,7 @@ void door_hit_bottom (edict_t *self)
 	door_use_areaportals (self, false);
 }
 
-void door_go_down (edict_t *self)
+void door_go_down (edict_t* self)
 {
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
@@ -42044,7 +41897,7 @@ void door_go_down (edict_t *self)
 		AngleMove_Calc (self, door_hit_bottom);
 }
 
-void door_go_up (edict_t *self, edict_t *activator)
+void door_go_up (edict_t* self, edict_t* activator)
 {
 	if (self->moveinfo.state == STATE_UP)
 		return;		// already going up
@@ -42072,8 +41925,9 @@ void door_go_up (edict_t *self, edict_t *activator)
 	door_use_areaportals (self, true);
 }
 
-void door_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void door_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	edict_t	*ent;
 
 	if (self->flags & FL_TEAMSLAVE)
@@ -42103,8 +41957,10 @@ void door_use (edict_t *self, edict_t *other, edict_t *activator)
 	}
 };
 
-void Touch_DoorTrigger (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
+static void Touch_DoorTrigger(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (other->health <= 0)
 		return;
 
@@ -42121,7 +41977,7 @@ void Touch_DoorTrigger (edict_t *self, edict_t *other, cplane_t *plane, csurface
 	door_use (self->owner, other, other);
 }
 
-void Think_CalcMoveSpeed (edict_t *self)
+void Think_CalcMoveSpeed (edict_t* self)
 {
 	edict_t	*ent;
 	float	min;
@@ -42199,7 +42055,7 @@ void Think_SpawnDoorTrigger (edict_t *ent)
 	Think_CalcMoveSpeed (ent);
 }
 
-void door_blocked  (edict_t *self, edict_t *other)
+void door_blocked  (edict_t* self, edict_t* other)
 {
 	edict_t	*ent;
 
@@ -42236,8 +42092,11 @@ void door_blocked  (edict_t *self, edict_t *other)
 	}
 }
 
-void door_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
-{
+static void door_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(damage);
+	UNUSED(point);
+
 	edict_t	*ent;
 
 	for (ent = self->teammaster ; ent ; ent = ent->teamchain)
@@ -42248,8 +42107,10 @@ void door_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 	door_use (self->teammaster, attacker, attacker);
 }
 
-void door_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
+static void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (!other->client)
 		return;
 
@@ -42501,7 +42362,7 @@ START_OPEN causes the water to move to its destination when spawned and operate 
 2)	lava
 */
 
-void SP_func_water (edict_t *self)
+void SP_func_water (edict_t* self)
 {
 	vec3_t	abs_movedir;
 
@@ -42582,9 +42443,9 @@ dmg		default	2
 noise	looping sound to play when the train is in motion
 
 */
-void train_next (edict_t *self);
+void train_next (edict_t* self);
 
-void train_blocked (edict_t *self, edict_t *other)
+void train_blocked (edict_t* self, edict_t* other)
 {
 	if (!(other->svflags & SVF_MONSTER) && (!other->client) )
 	{
@@ -42605,7 +42466,7 @@ void train_blocked (edict_t *self, edict_t *other)
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-void train_wait (edict_t *self)
+void train_wait (edict_t* self)
 {
 	if (self->target_ent->pathtarget)
 	{
@@ -42652,7 +42513,7 @@ void train_wait (edict_t *self)
 
 }
 
-void train_next (edict_t *self)
+void train_next (edict_t* self)
 {
 	edict_t		*ent;
 	vec3_t		dest;
@@ -42709,7 +42570,7 @@ again:
 	self->spawnflags |= TRAIN_START_ON;
 }
 
-void train_resume (edict_t *self)
+void train_resume (edict_t* self)
 {
 	edict_t	*ent;
 	vec3_t	dest;
@@ -42724,7 +42585,7 @@ void train_resume (edict_t *self)
 	self->spawnflags |= TRAIN_START_ON;
 }
 
-void func_train_find (edict_t *self)
+void func_train_find (edict_t* self)
 {
 	edict_t *ent;
 
@@ -42756,8 +42617,9 @@ void func_train_find (edict_t *self)
 	}
 }
 
-void train_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void train_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	self->activator = activator;
 
 	if (self->spawnflags & TRAIN_START_ON)
@@ -42777,7 +42639,7 @@ void train_use (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-void SP_func_train (edict_t *self)
+void SP_func_train (edict_t* self)
 {
 	self->movetype = MOVETYPE_PUSH;
 
@@ -42819,11 +42681,10 @@ void SP_func_train (edict_t *self)
 	}
 }
 
+// QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8)
+static void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(activator);
 
-/*QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8)
-*/
-void trigger_elevator_use (edict_t *self, edict_t *other, edict_t *activator)
-{
 	edict_t *target;
 
 	if (self->movetarget->nextthink)
@@ -42849,7 +42710,7 @@ void trigger_elevator_use (edict_t *self, edict_t *other, edict_t *activator)
 	train_resume (self->movetarget);
 }
 
-void trigger_elevator_init (edict_t *self)
+void trigger_elevator_init (edict_t* self)
 {
 	if (!self->target)
 	{
@@ -42873,7 +42734,7 @@ void trigger_elevator_init (edict_t *self)
 
 }
 
-void SP_trigger_elevator (edict_t *self)
+void SP_trigger_elevator (edict_t* self)
 {
 	self->think = trigger_elevator_init;
 	self->nextthink = level.time + FRAMETIME;
@@ -42894,14 +42755,15 @@ so, the basic time between firing is a random time between
 
 These can used but not touched.
 */
-void func_timer_think (edict_t *self)
-{
+
+static void func_timer_think(edict_t* self) {
 	G_UseTargets (self, self->activator);
 	self->nextthink = level.time + self->wait + crandom() * self->random;
 }
 
-void func_timer_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void func_timer_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	self->activator = activator;
 
 	// if on, turn it off
@@ -42918,7 +42780,7 @@ void func_timer_use (edict_t *self, edict_t *other, edict_t *activator)
 		func_timer_think (self);
 }
 
-void SP_func_timer (edict_t *self)
+void SP_func_timer (edict_t* self)
 {
 	if (!self->wait)
 		self->wait = 1.0;
@@ -42948,8 +42810,10 @@ The brush should be have a surface with at least one current content enabled.
 speed	default 100
 */
 
-void func_conveyor_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void func_conveyor_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (self->spawnflags & 1)
 	{
 		self->speed = 0;
@@ -42965,7 +42829,7 @@ void func_conveyor_use (edict_t *self, edict_t *other, edict_t *activator)
 		self->count = 0;
 }
 
-void SP_func_conveyor (edict_t *self)
+void SP_func_conveyor (edict_t* self)
 {
 	if (!self->speed)
 		self->speed = 100;
@@ -43001,16 +42865,18 @@ always_shoot	door is shootebale even if targeted
 #define SECRET_1ST_LEFT		2
 #define SECRET_1ST_DOWN		4
 
-void door_secret_move1 (edict_t *self);
-void door_secret_move2 (edict_t *self);
-void door_secret_move3 (edict_t *self);
-void door_secret_move4 (edict_t *self);
-void door_secret_move5 (edict_t *self);
-void door_secret_move6 (edict_t *self);
-void door_secret_done (edict_t *self);
+void door_secret_move1 (edict_t* self);
+void door_secret_move2 (edict_t* self);
+void door_secret_move3 (edict_t* self);
+void door_secret_move4 (edict_t* self);
+void door_secret_move5 (edict_t* self);
+void door_secret_move6 (edict_t* self);
+void door_secret_done (edict_t* self);
 
-void door_secret_use (edict_t *self, edict_t *other, edict_t *activator)
-{
+static void door_secret_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	// make sure we're not already moving
 	if (!VectorCompare(self->s.origin, vec3_origin))
 		return;
@@ -43019,18 +42885,18 @@ void door_secret_use (edict_t *self, edict_t *other, edict_t *activator)
 	door_use_areaportals (self, true);
 }
 
-void door_secret_move1 (edict_t *self)
+void door_secret_move1 (edict_t* self)
 {
 	self->nextthink = level.time + 1.0;
 	self->think = door_secret_move2;
 }
 
-void door_secret_move2 (edict_t *self)
+void door_secret_move2 (edict_t* self)
 {
 	Move_Calc (self, self->pos2, door_secret_move3);
 }
 
-void door_secret_move3 (edict_t *self)
+void door_secret_move3 (edict_t* self)
 {
 	if (self->wait == -1)
 		return;
@@ -43038,23 +42904,23 @@ void door_secret_move3 (edict_t *self)
 	self->think = door_secret_move4;
 }
 
-void door_secret_move4 (edict_t *self)
+void door_secret_move4 (edict_t* self)
 {
 	Move_Calc (self, self->pos1, door_secret_move5);
 }
 
-void door_secret_move5 (edict_t *self)
+void door_secret_move5 (edict_t* self)
 {
 	self->nextthink = level.time + 1.0;
 	self->think = door_secret_move6;
 }
 
-void door_secret_move6 (edict_t *self)
+void door_secret_move6 (edict_t* self)
 {
 	Move_Calc (self, vec3_origin, door_secret_done);
 }
 
-void door_secret_done (edict_t *self)
+void door_secret_done (edict_t* self)
 {
 	if (!(self->targetname) || (self->spawnflags & SECRET_ALWAYS_SHOOT))
 	{
@@ -43064,7 +42930,7 @@ void door_secret_done (edict_t *self)
 	door_use_areaportals (self, false);
 }
 
-void door_secret_blocked  (edict_t *self, edict_t *other)
+void door_secret_blocked  (edict_t* self, edict_t* other)
 {
 	if (!(other->svflags & SVF_MONSTER) && (!other->client) )
 	{
@@ -43083,8 +42949,11 @@ void door_secret_blocked  (edict_t *self, edict_t *other)
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-void door_secret_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
-{
+static void door_secret_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(damage);
+	UNUSED(point);
+
 	self->takedamage = DAMAGE_NO;
 	door_secret_use (self, attacker, attacker);
 }
@@ -43158,11 +43027,12 @@ void SP_func_door_secret (edict_t *ent)
 
 
 /*QUAKED func_killbox (1 0 0) ?
-Kills everything inside when fired, irrespective of protection.
-*/
-void use_killbox (edict_t *self, edict_t *other, edict_t *activator)
-{
-	KillBox (self);
+Kills everything inside when fired, irrespective of protection.*/
+static void use_killbox(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
+	KillBox(self);
 }
 
 void SP_func_killbox (edict_t *ent)
@@ -43178,7 +43048,7 @@ void SP_func_killbox (edict_t *ent)
 /* already inlined above: game/g_local.h */
 
 
-qboolean	Pickup_Weapon (edict_t *ent, edict_t *other);
+qboolean	Pickup_Weapon (edict_t *ent, edict_t* other);
 void		Use_Weapon (edict_t *ent, gitem_t *inv);
 void		Drop_Weapon (edict_t *ent, gitem_t *inv);
 
@@ -43308,7 +43178,7 @@ void SetRespawn (edict_t *ent, float delay)
 
 //======================================================================
 
-qboolean Pickup_Powerup (edict_t *ent, edict_t *other)
+qboolean Pickup_Powerup (edict_t *ent, edict_t* other)
 {
 	int		quantity;
 
@@ -43346,7 +43216,7 @@ void Drop_General (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Adrenaline (edict_t *ent, edict_t *other)
+qboolean Pickup_Adrenaline (edict_t *ent, edict_t* other)
 {
 	if (!deathmatch->value)
 		other->max_health += 1;
@@ -43360,7 +43230,7 @@ qboolean Pickup_Adrenaline (edict_t *ent, edict_t *other)
 	return true;
 }
 
-qboolean Pickup_AncientHead (edict_t *ent, edict_t *other)
+qboolean Pickup_AncientHead (edict_t *ent, edict_t* other)
 {
 	other->max_health += 2;
 
@@ -43370,7 +43240,7 @@ qboolean Pickup_AncientHead (edict_t *ent, edict_t *other)
 	return true;
 }
 
-qboolean Pickup_Bandolier (edict_t *ent, edict_t *other)
+qboolean Pickup_Bandolier (edict_t *ent, edict_t* other)
 {
 	gitem_t	*item;
 	int		index;
@@ -43408,7 +43278,7 @@ qboolean Pickup_Bandolier (edict_t *ent, edict_t *other)
 	return true;
 }
 
-qboolean Pickup_Pack (edict_t *ent, edict_t *other)
+qboolean Pickup_Pack (edict_t *ent, edict_t* other)
 {
 	gitem_t	*item;
 	int		index;
@@ -43571,7 +43441,7 @@ void	Use_Silencer (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Key (edict_t *ent, edict_t *other)
+qboolean Pickup_Key (edict_t *ent, edict_t* other)
 {
 	if (coop->value)
 	{
@@ -43632,7 +43502,7 @@ qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count)
 	return true;
 }
 
-qboolean Pickup_Ammo (edict_t *ent, edict_t *other)
+qboolean Pickup_Ammo (edict_t *ent, edict_t* other)
 {
 	int			oldcount;
 	int			count;
@@ -43690,7 +43560,7 @@ void Drop_Ammo (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-void MegaHealth_think (edict_t *self)
+void MegaHealth_think (edict_t* self)
 {
 	if (self->owner->health > self->owner->max_health)
 	{
@@ -43705,7 +43575,7 @@ void MegaHealth_think (edict_t *self)
 		G_FreeEdict (self);
 }
 
-qboolean Pickup_Health (edict_t *ent, edict_t *other)
+qboolean Pickup_Health (edict_t *ent, edict_t* other)
 {
 	if (!(ent->style & HEALTH_IGNORE_MAX))
 		if (other->health >= other->max_health)
@@ -43756,7 +43626,7 @@ int ArmorIndex (edict_t *ent)
 	return 0;
 }
 
-qboolean Pickup_Armor (edict_t *ent, edict_t *other)
+qboolean Pickup_Armor (edict_t *ent, edict_t* other)
 {
 	int				old_armor_index;
 	gitem_armor_t	*oldinfo;
@@ -43854,8 +43724,9 @@ int PowerArmorType (edict_t *ent)
 	return POWER_ARMOR_NONE;
 }
 
-void Use_PowerArmor (edict_t *ent, gitem_t *item)
-{
+static void Use_PowerArmor(edict_t *ent, gitem_t *item) {
+	UNUSED(item);
+
 	int		index;
 
 	if (ent->flags & FL_POWER_ARMOR)
@@ -43876,7 +43747,7 @@ void Use_PowerArmor (edict_t *ent, gitem_t *item)
 	}
 }
 
-qboolean Pickup_PowerArmor (edict_t *ent, edict_t *other)
+qboolean Pickup_PowerArmor (edict_t *ent, edict_t* other)
 {
 	int		quantity;
 
@@ -43903,15 +43774,10 @@ void Drop_PowerArmor (edict_t *ent, gitem_t *item)
 	Drop_General (ent, item);
 }
 
-//======================================================================
+static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf) {
+	UNUSED(plane);
+	UNUSED(surf);
 
-/*
-===============
-Touch_Item
-===============
-*/
-void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
-{
 	qboolean	taken;
 
 	if (!other->client)
@@ -43974,7 +43840,7 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 
 //======================================================================
 
-static void drop_temp_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (other == ent->owner)
 		return;
@@ -44041,8 +43907,10 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 	return dropped;
 }
 
-void Use_Item (edict_t *ent, edict_t *other, edict_t *activator)
-{
+static void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	ent->svflags &= ~SVF_NOCLIENT;
 	ent->use = NULL;
 
@@ -44283,18 +44151,12 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-gitem_t	itemlist[] =
-{
-	{
-		NULL
-	},	// leave index 0 alone
+static gitem_t itemlist[] = {
+	{},	// leave index 0 alone
 
-	//
 	// ARMOR
-	//
 
-/*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_armor_body",
 		Pickup_Armor,
@@ -44304,20 +44166,19 @@ gitem_t	itemlist[] =
 		"misc/ar1_pkup.wav",
 		"models/items/armor/body/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_bodyarmor",
-/* pickup */	"Body Armor",
-/* width */		3,
+		"i_bodyarmor",
+		"Body Armor",
+		3,
 		0,
 		NULL,
 		IT_ARMOR,
 		0,
 		&bodyarmor_info,
 		ARMOR_BODY,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_armor_combat (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_armor_combat (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_armor_combat",
 		Pickup_Armor,
@@ -44327,20 +44188,19 @@ gitem_t	itemlist[] =
 		"misc/ar1_pkup.wav",
 		"models/items/armor/combat/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_combatarmor",
-/* pickup */	"Combat Armor",
-/* width */		3,
+		"i_combatarmor",
+		"Combat Armor",
+		3,
 		0,
 		NULL,
 		IT_ARMOR,
 		0,
 		&combatarmor_info,
 		ARMOR_COMBAT,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_armor_jacket (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_armor_jacket (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_armor_jacket",
 		Pickup_Armor,
@@ -44350,20 +44210,19 @@ gitem_t	itemlist[] =
 		"misc/ar1_pkup.wav",
 		"models/items/armor/jacket/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_jacketarmor",
-/* pickup */	"Jacket Armor",
-/* width */		3,
+		"i_jacketarmor",
+		"Jacket Armor",
+		3,
 		0,
 		NULL,
 		IT_ARMOR,
 		0,
 		&jacketarmor_info,
 		ARMOR_JACKET,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_armor_shard (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_armor_shard (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_armor_shard",
 		Pickup_Armor,
@@ -44373,21 +44232,20 @@ gitem_t	itemlist[] =
 		"misc/ar2_pkup.wav",
 		"models/items/armor/shard/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_jacketarmor",
-/* pickup */	"Armor Shard",
-/* width */		3,
+		"i_jacketarmor",
+		"Armor Shard",
+		3,
 		0,
 		NULL,
 		IT_ARMOR,
 		0,
 		NULL,
 		ARMOR_SHARD,
-/* precache */ ""
+		""
 	},
 
 
-/*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_power_screen",
 		Pickup_PowerArmor,
@@ -44397,20 +44255,19 @@ gitem_t	itemlist[] =
 		"misc/ar3_pkup.wav",
 		"models/items/armor/screen/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_powerscreen",
-/* pickup */	"Power Screen",
-/* width */		0,
+		"i_powerscreen",
+		"Power Screen",
+		0,
 		60,
 		NULL,
 		IT_ARMOR,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_power_shield (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_power_shield (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_power_shield",
 		Pickup_PowerArmor,
@@ -44420,26 +44277,21 @@ gitem_t	itemlist[] =
 		"misc/ar3_pkup.wav",
 		"models/items/armor/shield/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_powershield",
-/* pickup */	"Power Shield",
-/* width */		0,
+		"i_powershield",
+		"Power Shield",
+		0,
 		60,
 		NULL,
 		IT_ARMOR,
 		0,
 		NULL,
 		0,
-/* precache */ "misc/power2.wav misc/power1.wav"
+		"misc/power2.wav misc/power1.wav"
 	},
 
-
-	//
 	// WEAPONS
-	//
 
-/* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
-always owned, never in the world
-*/
+	// weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16) always owned, never in the world
 	{
 		"weapon_blaster",
 		NULL,
@@ -44449,8 +44301,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		NULL, 0,
 		"models/weapons/v_blast/tris.md2",
-/* icon */		"w_blaster",
-/* pickup */	"Blaster",
+		"w_blaster",
+		"Blaster",
 		0,
 		0,
 		NULL,
@@ -44458,11 +44310,10 @@ always owned, never in the world
 		WEAP_BLASTER,
 		NULL,
 		0,
-/* precache */ "weapons/blastf1a.wav misc/lasfly.wav"
+		"weapons/blastf1a.wav misc/lasfly.wav"
 	},
 
-/*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_shotgun",
 		Pickup_Weapon,
@@ -44472,8 +44323,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_shotg/tris.md2", EF_ROTATE,
 		"models/weapons/v_shotg/tris.md2",
-/* icon */		"w_shotgun",
-/* pickup */	"Shotgun",
+		"w_shotgun",
+		"Shotgun",
 		0,
 		1,
 		"Shells",
@@ -44481,11 +44332,10 @@ always owned, never in the world
 		WEAP_SHOTGUN,
 		NULL,
 		0,
-/* precache */ "weapons/shotgf1b.wav weapons/shotgr1b.wav"
+		"weapons/shotgf1b.wav weapons/shotgr1b.wav"
 	},
 
-/*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_supershotgun",
 		Pickup_Weapon,
@@ -44495,8 +44345,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_shotg2/tris.md2", EF_ROTATE,
 		"models/weapons/v_shotg2/tris.md2",
-/* icon */		"w_sshotgun",
-/* pickup */	"Super Shotgun",
+		"w_sshotgun",
+		"Super Shotgun",
 		0,
 		2,
 		"Shells",
@@ -44504,11 +44354,10 @@ always owned, never in the world
 		WEAP_SUPERSHOTGUN,
 		NULL,
 		0,
-/* precache */ "weapons/sshotf1b.wav"
+		"weapons/sshotf1b.wav"
 	},
 
-/*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_machinegun",
 		Pickup_Weapon,
@@ -44518,8 +44367,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_machn/tris.md2", EF_ROTATE,
 		"models/weapons/v_machn/tris.md2",
-/* icon */		"w_machinegun",
-/* pickup */	"Machinegun",
+		"w_machinegun",
+		"Machinegun",
 		0,
 		1,
 		"Bullets",
@@ -44527,11 +44376,10 @@ always owned, never in the world
 		WEAP_MACHINEGUN,
 		NULL,
 		0,
-/* precache */ "weapons/machgf1b.wav weapons/machgf2b.wav weapons/machgf3b.wav weapons/machgf4b.wav weapons/machgf5b.wav"
+		"weapons/machgf1b.wav weapons/machgf2b.wav weapons/machgf3b.wav weapons/machgf4b.wav weapons/machgf5b.wav"
 	},
 
-/*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_chaingun",
 		Pickup_Weapon,
@@ -44541,8 +44389,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_chain/tris.md2", EF_ROTATE,
 		"models/weapons/v_chain/tris.md2",
-/* icon */		"w_chaingun",
-/* pickup */	"Chaingun",
+		"w_chaingun",
+		"Chaingun",
 		0,
 		1,
 		"Bullets",
@@ -44550,11 +44398,10 @@ always owned, never in the world
 		WEAP_CHAINGUN,
 		NULL,
 		0,
-/* precache */ "weapons/chngnu1a.wav weapons/chngnl1a.wav weapons/machgf3b.wav` weapons/chngnd1a.wav"
+		"weapons/chngnu1a.wav weapons/chngnl1a.wav weapons/machgf3b.wav` weapons/chngnd1a.wav"
 	},
 
-/*QUAKED ammo_grenades (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_grenades (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_grenades",
 		Pickup_Ammo,
@@ -44564,20 +44411,19 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/grenades/medium/tris.md2", 0,
 		"models/weapons/v_handgr/tris.md2",
-/* icon */		"a_grenades",
-/* pickup */	"Grenades",
-/* width */		3,
+		"a_grenades",
+		"Grenades",
+		3,
 		5,
 		"grenades",
 		IT_AMMO|IT_WEAPON,
 		WEAP_GRENADES,
 		NULL,
 		AMMO_GRENADES,
-/* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
+		"weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
 	},
 
-/*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_grenadelauncher",
 		Pickup_Weapon,
@@ -44587,8 +44433,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_launch/tris.md2", EF_ROTATE,
 		"models/weapons/v_launch/tris.md2",
-/* icon */		"w_glauncher",
-/* pickup */	"Grenade Launcher",
+		"w_glauncher",
+		"Grenade Launcher",
 		0,
 		1,
 		"Grenades",
@@ -44596,11 +44442,10 @@ always owned, never in the world
 		WEAP_GRENADELAUNCHER,
 		NULL,
 		0,
-/* precache */ "models/objects/grenade/tris.md2 weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav"
+		"models/objects/grenade/tris.md2 weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav"
 	},
 
-/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_rocketlauncher",
 		Pickup_Weapon,
@@ -44610,8 +44455,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_rocket/tris.md2", EF_ROTATE,
 		"models/weapons/v_rocket/tris.md2",
-/* icon */		"w_rlauncher",
-/* pickup */	"Rocket Launcher",
+		"w_rlauncher",
+		"Rocket Launcher",
 		0,
 		1,
 		"Rockets",
@@ -44619,11 +44464,10 @@ always owned, never in the world
 		WEAP_ROCKETLAUNCHER,
 		NULL,
 		0,
-/* precache */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
+		"models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
 	},
 
-/*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_hyperblaster",
 		Pickup_Weapon,
@@ -44633,8 +44477,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_hyperb/tris.md2", EF_ROTATE,
 		"models/weapons/v_hyperb/tris.md2",
-/* icon */		"w_hyperblaster",
-/* pickup */	"HyperBlaster",
+		"w_hyperblaster",
+		"HyperBlaster",
 		0,
 		1,
 		"Cells",
@@ -44642,11 +44486,10 @@ always owned, never in the world
 		WEAP_HYPERBLASTER,
 		NULL,
 		0,
-/* precache */ "weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
+		"weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
 	},
 
-/*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_railgun",
 		Pickup_Weapon,
@@ -44656,8 +44499,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_rail/tris.md2", EF_ROTATE,
 		"models/weapons/v_rail/tris.md2",
-/* icon */		"w_railgun",
-/* pickup */	"Railgun",
+		"w_railgun",
+		"Railgun",
 		0,
 		1,
 		"Slugs",
@@ -44665,11 +44508,10 @@ always owned, never in the world
 		WEAP_RAILGUN,
 		NULL,
 		0,
-/* precache */ "weapons/rg_hum.wav"
+		"weapons/rg_hum.wav"
 	},
 
-/*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"weapon_bfg",
 		Pickup_Weapon,
@@ -44679,8 +44521,8 @@ always owned, never in the world
 		"misc/w_pkup.wav",
 		"models/weapons/g_bfg/tris.md2", EF_ROTATE,
 		"models/weapons/v_bfg/tris.md2",
-/* icon */		"w_bfg",
-/* pickup */	"BFG10K",
+		"w_bfg",
+		"BFG10K",
 		0,
 		50,
 		"Cells",
@@ -44688,15 +44530,12 @@ always owned, never in the world
 		WEAP_BFG,
 		NULL,
 		0,
-/* precache */ "sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
+		"sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
 	},
 
-	//
 	// AMMO ITEMS
-	//
 
-/*QUAKED ammo_shells (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_shells (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_shells",
 		Pickup_Ammo,
@@ -44706,20 +44545,19 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/shells/medium/tris.md2", 0,
 		NULL,
-/* icon */		"a_shells",
-/* pickup */	"Shells",
-/* width */		3,
+		"a_shells",
+		"Shells",
+		3,
 		10,
 		NULL,
 		IT_AMMO,
 		0,
 		NULL,
 		AMMO_SHELLS,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED ammo_bullets (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_bullets (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_bullets",
 		Pickup_Ammo,
@@ -44729,20 +44567,19 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/bullets/medium/tris.md2", 0,
 		NULL,
-/* icon */		"a_bullets",
-/* pickup */	"Bullets",
-/* width */		3,
+		"a_bullets",
+		"Bullets",
+		3,
 		50,
 		NULL,
 		IT_AMMO,
 		0,
 		NULL,
 		AMMO_BULLETS,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED ammo_cells (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_cells (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_cells",
 		Pickup_Ammo,
@@ -44752,20 +44589,19 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/cells/medium/tris.md2", 0,
 		NULL,
-/* icon */		"a_cells",
-/* pickup */	"Cells",
-/* width */		3,
+		"a_cells",
+		"Cells",
+		3,
 		50,
 		NULL,
 		IT_AMMO,
 		0,
 		NULL,
 		AMMO_CELLS,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED ammo_rockets (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_rockets (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_rockets",
 		Pickup_Ammo,
@@ -44775,20 +44611,19 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/rockets/medium/tris.md2", 0,
 		NULL,
-/* icon */		"a_rockets",
-/* pickup */	"Rockets",
-/* width */		3,
+		"a_rockets",
+		"Rockets",
+		3,
 		5,
 		NULL,
 		IT_AMMO,
 		0,
 		NULL,
 		AMMO_ROCKETS,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED ammo_slugs (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED ammo_slugs (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"ammo_slugs",
 		Pickup_Ammo,
@@ -44798,24 +44633,21 @@ always owned, never in the world
 		"misc/am_pkup.wav",
 		"models/items/ammo/slugs/medium/tris.md2", 0,
 		NULL,
-/* icon */		"a_slugs",
-/* pickup */	"Slugs",
-/* width */		3,
+		"a_slugs",
+		"Slugs",
+		3,
 		10,
 		NULL,
 		IT_AMMO,
 		0,
 		NULL,
 		AMMO_SLUGS,
-/* precache */ ""
+		""
 	},
 
-
-	//
 	// POWERUP ITEMS
-	//
-/*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+
+	/*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_quad",
 		Pickup_Powerup,
@@ -44825,20 +44657,19 @@ always owned, never in the world
 		"items/pkup.wav",
 		"models/items/quaddama/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_quad",
-/* pickup */	"Quad Damage",
-/* width */		2,
+		"p_quad",
+		"Quad Damage",
+		2,
 		60,
 		NULL,
 		IT_POWERUP,
 		0,
 		NULL,
 		0,
-/* precache */ "items/damage.wav items/damage2.wav items/damage3.wav"
+		"items/damage.wav items/damage2.wav items/damage3.wav"
 	},
 
-/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_invulnerability",
 		Pickup_Powerup,
@@ -44848,20 +44679,19 @@ always owned, never in the world
 		"items/pkup.wav",
 		"models/items/invulner/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_invulnerability",
-/* pickup */	"Invulnerability",
-/* width */		2,
+		"p_invulnerability",
+		"Invulnerability",
+		2,
 		300,
 		NULL,
 		IT_POWERUP,
 		0,
 		NULL,
 		0,
-/* precache */ "items/protect.wav items/protect2.wav items/protect4.wav"
+		"items/protect.wav items/protect2.wav items/protect4.wav"
 	},
 
-/*QUAKED item_silencer (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_silencer (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_silencer",
 		Pickup_Powerup,
@@ -44871,20 +44701,19 @@ always owned, never in the world
 		"items/pkup.wav",
 		"models/items/silencer/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_silencer",
-/* pickup */	"Silencer",
-/* width */		2,
+		"p_silencer",
+		"Silencer",
+		2,
 		60,
 		NULL,
 		IT_POWERUP,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_breather (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_breather (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_breather",
 		Pickup_Powerup,
@@ -44894,20 +44723,19 @@ always owned, never in the world
 		"items/pkup.wav",
 		"models/items/breather/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_rebreather",
-/* pickup */	"Rebreather",
-/* width */		2,
+		"p_rebreather",
+		"Rebreather",
+		2,
 		60,
 		NULL,
 		IT_STAY_COOP|IT_POWERUP,
 		0,
 		NULL,
 		0,
-/* precache */ "items/airout.wav"
+		"items/airout.wav"
 	},
 
-/*QUAKED item_enviro (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_enviro (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_enviro",
 		Pickup_Powerup,
@@ -44917,21 +44745,19 @@ always owned, never in the world
 		"items/pkup.wav",
 		"models/items/enviro/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_envirosuit",
-/* pickup */	"Environment Suit",
-/* width */		2,
+		"p_envirosuit",
+		"Environment Suit",
+		2,
 		60,
 		NULL,
 		IT_STAY_COOP|IT_POWERUP,
 		0,
 		NULL,
 		0,
-/* precache */ "items/airout.wav"
+		"items/airout.wav"
 	},
 
-/*QUAKED item_ancient_head (.3 .3 1) (-16 -16 -16) (16 16 16)
-Special item that gives +2 to maximum health
-*/
+	/*QUAKED item_ancient_head (.3 .3 1) (-16 -16 -16) (16 16 16) Special item that gives +2 to maximum health*/
 	{
 		"item_ancient_head",
 		Pickup_AncientHead,
@@ -44941,21 +44767,19 @@ Special item that gives +2 to maximum health
 		"items/pkup.wav",
 		"models/items/c_head/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_fixme",
-/* pickup */	"Ancient Head",
-/* width */		2,
+		"i_fixme",
+		"Ancient Head",
+		2,
 		60,
 		NULL,
 		0,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_adrenaline (.3 .3 1) (-16 -16 -16) (16 16 16)
-gives +1 to maximum health
-*/
+	/*QUAKED item_adrenaline (.3 .3 1) (-16 -16 -16) (16 16 16) gives +1 to maximum health*/
 	{
 		"item_adrenaline",
 		Pickup_Adrenaline,
@@ -44965,20 +44789,19 @@ gives +1 to maximum health
 		"items/pkup.wav",
 		"models/items/adrenal/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_adrenaline",
-/* pickup */	"Adrenaline",
-/* width */		2,
+		"p_adrenaline",
+		"Adrenaline",
+		2,
 		60,
 		NULL,
 		0,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_bandolier (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_bandolier (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_bandolier",
 		Pickup_Bandolier,
@@ -44988,20 +44811,19 @@ gives +1 to maximum health
 		"items/pkup.wav",
 		"models/items/band/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"p_bandolier",
-/* pickup */	"Bandolier",
-/* width */		2,
+		"p_bandolier",
+		"Bandolier",
+		2,
 		60,
 		NULL,
 		0,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED item_pack (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
+	/*QUAKED item_pack (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_pack",
 		Pickup_Pack,
@@ -45011,24 +44833,21 @@ gives +1 to maximum health
 		"items/pkup.wav",
 		"models/items/pack/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_pack",
-/* pickup */	"Ammo Pack",
-/* width */		2,
+		"i_pack",
+		"Ammo Pack",
+		2,
 		180,
 		NULL,
 		0,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-	//
 	// KEYS
-	//
-/*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for computer centers
-*/
+
+	/*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16) key for computer centers */
 	{
 		"key_data_cd",
 		Pickup_Key,
@@ -45047,12 +44866,10 @@ key for computer centers
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH
-warehouse circuits
-*/
+	/*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH warehouse circuits*/
 	{
 		"key_power_cube",
 		Pickup_Key,
@@ -45071,12 +44888,10 @@ warehouse circuits
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for the entrance of jail3
-*/
+	/*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16) key for the entrance of jail3*/
 	{
 		"key_pyramid",
 		Pickup_Key,
@@ -45095,12 +44910,10 @@ key for the entrance of jail3
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for the city computer
-*/
+	/*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16) key for the city computer*/
 	{
 		"key_data_spinner",
 		Pickup_Key,
@@ -45119,12 +44932,10 @@ key for the city computer
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16)
-security pass for the security level
-*/
+	/*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16) security pass for the security level*/
 	{
 		"key_pass",
 		Pickup_Key,
@@ -45143,12 +44954,10 @@ security pass for the security level
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16)
-normal door key - blue
-*/
+	/*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16) normal door key - blue*/
 	{
 		"key_blue_key",
 		Pickup_Key,
@@ -45167,12 +44976,10 @@ normal door key - blue
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16)
-normal door key - red
-*/
+	/*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16) normal door key - red*/
 	{
 		"key_red_key",
 		Pickup_Key,
@@ -45191,12 +44998,10 @@ normal door key - red
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)
-tank commander's head
-*/
+	/*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)tank commander's head*/
 	{
 		"key_commander_head",
 		Pickup_Key,
@@ -45206,21 +45011,19 @@ tank commander's head
 		"items/pkup.wav",
 		"models/monsters/commandr/head/tris.md2", EF_GIB,
 		NULL,
-/* icon */		"k_comhead",
-/* pickup */	"Commander's Head",
-/* width */		2,
+		"k_comhead",
+		"Commander's Head",
+		2,
 		0,
 		NULL,
 		IT_STAY_COOP|IT_KEY,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
-/*QUAKED key_airstrike_target (0 .5 .8) (-16 -16 -16) (16 16 16)
-tank commander's head
-*/
+	/*QUAKED key_airstrike_target (0 .5 .8) (-16 -16 -16) (16 16 16) tank commander's head*/
 	{
 		"key_airstrike_target",
 		Pickup_Key,
@@ -45230,16 +45033,16 @@ tank commander's head
 		"items/pkup.wav",
 		"models/items/keys/target/tris.md2", EF_ROTATE,
 		NULL,
-/* icon */		"i_airstrike",
-/* pickup */	"Airstrike Marker",
-/* width */		2,
+		"i_airstrike",
+		"Airstrike Marker",
+		2,
 		0,
 		NULL,
 		IT_STAY_COOP|IT_KEY,
 		0,
 		NULL,
 		0,
-/* precache */ ""
+		""
 	},
 
 	{
@@ -45251,26 +45054,25 @@ tank commander's head
 		"items/pkup.wav",
 		NULL, 0,
 		NULL,
-/* icon */		"i_health",
-/* pickup */	"Health",
-/* width */		3,
+		"i_health",
+		"Health",
+		3,
 		0,
 		NULL,
 		0,
 		0,
 		NULL,
 		0,
-/* precache */ "items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"
+		"items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"
 	},
 
 	// end of list marker
-	{NULL}
+	{}
 };
 
 
-/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-void SP_item_health (edict_t *self)
+/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)*/
+void SP_item_health (edict_t* self)
 {
 	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
 	{
@@ -45286,7 +45088,7 @@ void SP_item_health (edict_t *self)
 
 /*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
-void SP_item_health_small (edict_t *self)
+void SP_item_health_small (edict_t* self)
 {
 	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
 	{
@@ -45303,7 +45105,7 @@ void SP_item_health_small (edict_t *self)
 
 /*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
-void SP_item_health_large (edict_t *self)
+void SP_item_health_large (edict_t* self)
 {
 	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
 	{
@@ -45319,7 +45121,7 @@ void SP_item_health_large (edict_t *self)
 
 /*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
-void SP_item_health_mega (edict_t *self)
+void SP_item_health_mega (edict_t* self)
 {
 	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
 	{
@@ -45682,24 +45484,14 @@ void G_RunFrame (void)
 	ClientEndServerFrames ();
 }
 
-/* ============ end source: game/g_main.c ============ */
-/* ============ begin source: game/g_misc.c ============ */
-
-// g_misc.c
-
-/* already inlined above: game/g_local.h */
-
-
 /*QUAKED func_group (0 0 0) ?
-Used to group brushes together just for editor convenience.
-*/
+Used to group brushes together just for editor convenience.*/
 
-//=====================================================
+static void Use_Areaportal(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
 
-void Use_Areaportal (edict_t *ent, edict_t *other, edict_t *activator)
-{
-	ent->count ^= 1;		// toggle state
-//	gi.dprintf ("portalstate: %i = %i\n", ent->style, ent->count);
+	ent->count ^= 1; // toggle state
 	gi.SetAreaPortalState (ent->style, ent->count);
 }
 
@@ -45757,7 +45549,7 @@ void ClipGibVelocity (edict_t *ent)
 gibs
 =================
 */
-void gib_think (edict_t *self)
+void gib_think (edict_t* self)
 {
 	self->s.frame++;
 	self->nextthink = level.time + FRAMETIME;
@@ -45769,7 +45561,7 @@ void gib_think (edict_t *self)
 	}
 }
 
-void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	vec3_t	normal_angles, right;
 
@@ -45795,12 +45587,12 @@ void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
 	}
 }
 
-void gib_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void gib_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	G_FreeEdict (self);
 }
 
-void ThrowGib (edict_t *self, char *gibname, int damage, int type)
+void ThrowGib (edict_t* self, char *gibname, int damage, int type)
 {
 	edict_t *gib;
 	vec3_t	vd;
@@ -45848,7 +45640,7 @@ void ThrowGib (edict_t *self, char *gibname, int damage, int type)
 	gi.linkentity (gib);
 }
 
-void ThrowHead (edict_t *self, char *gibname, int damage, int type)
+void ThrowHead (edict_t* self, char *gibname, int damage, int type)
 {
 	vec3_t	vd;
 	float	vscale;
@@ -45894,7 +45686,7 @@ void ThrowHead (edict_t *self, char *gibname, int damage, int type)
 }
 
 
-void ThrowClientHead (edict_t *self, int damage)
+void ThrowClientHead (edict_t* self, int damage)
 {
 	vec3_t	vd;
 	char	*gibname;
@@ -45946,12 +45738,12 @@ void ThrowClientHead (edict_t *self, int damage)
 debris
 =================
 */
-void debris_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void debris_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	G_FreeEdict (self);
 }
 
-void ThrowDebris (edict_t *self, char *modelname, float speed, vec3_t origin)
+void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin)
 {
 	edict_t	*chunk;
 	vec3_t	v;
@@ -45979,7 +45771,7 @@ void ThrowDebris (edict_t *self, char *modelname, float speed, vec3_t origin)
 }
 
 
-void BecomeExplosion1 (edict_t *self)
+void BecomeExplosion1 (edict_t* self)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_EXPLOSION1);
@@ -45990,7 +45782,7 @@ void BecomeExplosion1 (edict_t *self)
 }
 
 
-void BecomeExplosion2 (edict_t *self)
+void BecomeExplosion2 (edict_t* self)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_EXPLOSION2);
@@ -46007,7 +45799,7 @@ Pathtarget: gets used when an entity that has
 	this path_corner targeted touches it
 */
 
-void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void path_corner_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	vec3_t		v;
 	edict_t		*next;
@@ -46064,7 +45856,7 @@ void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 	}
 }
 
-void SP_path_corner (edict_t *self)
+void SP_path_corner (edict_t* self)
 {
 	if (!self->targetname)
 	{
@@ -46087,7 +45879,7 @@ Makes this the target of a monster and it will head here
 when first activated before going after the activator.  If
 hold is selected, it will stay here.
 */
-void point_combat_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void point_combat_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	edict_t	*activator;
 
@@ -46139,7 +45931,7 @@ void point_combat_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 	}
 }
 
-void SP_point_combat (edict_t *self)
+void SP_point_combat (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -46184,7 +45976,7 @@ void SP_viewthing(edict_t *ent)
 /*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for spotlights, etc.
 */
-void SP_info_null (edict_t *self)
+void SP_info_null (edict_t* self)
 {
 	G_FreeEdict (self);
 };
@@ -46193,7 +45985,7 @@ void SP_info_null (edict_t *self)
 /*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for lightning.
 */
-void SP_info_notnull (edict_t *self)
+void SP_info_notnull (edict_t* self)
 {
 	VectorCopy (self->s.origin, self->absmin);
 	VectorCopy (self->s.origin, self->absmax);
@@ -46210,7 +46002,7 @@ Default _cone value is 10 (used to set size of light for spotlights)
 
 #define START_OFF	1
 
-static void light_use (edict_t *self, edict_t *other, edict_t *activator)
+static void light_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (self->spawnflags & START_OFF)
 	{
@@ -46224,7 +46016,7 @@ static void light_use (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-void SP_light (edict_t *self)
+void SP_light (edict_t* self)
 {
 	// no targeted lights in deathmatch, because they cause global messages
 	if (!self->targetname || deathmatch->value)
@@ -46258,7 +46050,7 @@ START_ON		only valid for TRIGGER_SPAWN walls
 				the wall will initially be present
 */
 
-void func_wall_use (edict_t *self, edict_t *other, edict_t *activator)
+void func_wall_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (self->solid == SOLID_NOT)
 	{
@@ -46277,7 +46069,7 @@ void func_wall_use (edict_t *self, edict_t *other, edict_t *activator)
 		self->use = NULL;
 }
 
-void SP_func_wall (edict_t *self)
+void SP_func_wall (edict_t* self)
 {
 	self->movetype = MOVETYPE_PUSH;
 	gi.setmodel (self, self->model);
@@ -46330,7 +46122,7 @@ void SP_func_wall (edict_t *self)
 This is solid bmodel that will fall if it's support it removed.
 */
 
-void func_object_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void func_object_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	// only squash thing we fall on top of
 	if (!plane)
@@ -46342,13 +46134,13 @@ void func_object_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 	T_Damage (other, self, self, vec3_origin, self->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-void func_object_release (edict_t *self)
+void func_object_release (edict_t* self)
 {
 	self->movetype = MOVETYPE_TOSS;
 	self->touch = func_object_touch;
 }
 
-void func_object_use (edict_t *self, edict_t *other, edict_t *activator)
+void func_object_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
@@ -46357,7 +46149,7 @@ void func_object_use (edict_t *self, edict_t *other, edict_t *activator)
 	func_object_release (self);
 }
 
-void SP_func_object (edict_t *self)
+void SP_func_object (edict_t* self)
 {
 	gi.setmodel (self, self->model);
 
@@ -46410,7 +46202,7 @@ mass defaults to 75.  This determines how much debris is emitted when
 it explodes.  You get one large chunk per 100 of mass (up to 8) and
 one small chunk per 25 of mass (up to 16).  So 800 gives the most.
 */
-void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void func_explosive_explode (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	vec3_t	origin;
 	vec3_t	chunkorigin;
@@ -46474,12 +46266,12 @@ void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacke
 		G_FreeEdict (self);
 }
 
-void func_explosive_use(edict_t *self, edict_t *other, edict_t *activator)
+void func_explosive_use(edict_t* self, edict_t* other, edict_t* activator)
 {
 	func_explosive_explode (self, self, other, self->health, vec3_origin);
 }
 
-void func_explosive_spawn (edict_t *self, edict_t *other, edict_t *activator)
+void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
@@ -46488,7 +46280,7 @@ void func_explosive_spawn (edict_t *self, edict_t *other, edict_t *activator)
 	gi.linkentity (self);
 }
 
-void SP_func_explosive (edict_t *self)
+void SP_func_explosive (edict_t* self)
 {
 	if (deathmatch->value)
 	{	// auto-remove for deathmatch
@@ -46538,7 +46330,7 @@ Large exploding box.  You can override its mass (100),
 health (80), and dmg (150).
 */
 
-void barrel_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void barrel_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 
 {
 	float	ratio;
@@ -46552,7 +46344,7 @@ void barrel_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *s
 	M_walkmove (self, vectoyaw(v), 20 * ratio * FRAMETIME);
 }
 
-void barrel_explode (edict_t *self)
+void barrel_explode (edict_t* self)
 {
 	vec3_t	org;
 	float	spd;
@@ -46631,7 +46423,7 @@ void barrel_explode (edict_t *self)
 		BecomeExplosion1 (self);
 }
 
-void barrel_delay (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void barrel_delay (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	self->takedamage = DAMAGE_NO;
 	self->nextthink = level.time + 2 * FRAMETIME;
@@ -46639,7 +46431,7 @@ void barrel_delay (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 	self->activator = attacker;
 }
 
-void SP_misc_explobox (edict_t *self)
+void SP_misc_explobox (edict_t* self)
 {
 	if (deathmatch->value)
 	{	// auto-remove for deathmatch
@@ -46686,7 +46478,7 @@ void SP_misc_explobox (edict_t *self)
 /*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8)
 */
 
-void misc_blackhole_use (edict_t *ent, edict_t *other, edict_t *activator)
+void misc_blackhole_use (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	/*
 	gi.WriteByte (svc_temp_entity);
@@ -46697,7 +46489,7 @@ void misc_blackhole_use (edict_t *ent, edict_t *other, edict_t *activator)
 	G_FreeEdict (ent);
 }
 
-void misc_blackhole_think (edict_t *self)
+void misc_blackhole_think (edict_t* self)
 {
 	if (++self->s.frame < 19)
 		self->nextthink = level.time + FRAMETIME;
@@ -46725,7 +46517,7 @@ void SP_misc_blackhole (edict_t *ent)
 /*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32)
 */
 
-void misc_eastertank_think (edict_t *self)
+void misc_eastertank_think (edict_t* self)
 {
 	if (++self->s.frame < 293)
 		self->nextthink = level.time + FRAMETIME;
@@ -46753,7 +46545,7 @@ void SP_misc_eastertank (edict_t *ent)
 */
 
 
-void misc_easterchick_think (edict_t *self)
+void misc_easterchick_think (edict_t* self)
 {
 	if (++self->s.frame < 247)
 		self->nextthink = level.time + FRAMETIME;
@@ -46781,7 +46573,7 @@ void SP_misc_easterchick (edict_t *ent)
 */
 
 
-void misc_easterchick2_think (edict_t *self)
+void misc_easterchick2_think (edict_t* self)
 {
 	if (++self->s.frame < 287)
 		self->nextthink = level.time + FRAMETIME;
@@ -46811,7 +46603,7 @@ Not really a monster, this is the Tank Commander's decapitated body.
 There should be a item_commander_head that has this as it's target.
 */
 
-void commander_body_think (edict_t *self)
+void commander_body_think (edict_t* self)
 {
 	if (++self->s.frame < 24)
 		self->nextthink = level.time + FRAMETIME;
@@ -46822,20 +46614,20 @@ void commander_body_think (edict_t *self)
 		gi.sound (self, CHAN_BODY, gi.soundindex ("tank/thud.wav"), 1, ATTN_NORM, 0);
 }
 
-void commander_body_use (edict_t *self, edict_t *other, edict_t *activator)
+void commander_body_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->think = commander_body_think;
 	self->nextthink = level.time + FRAMETIME;
 	gi.sound (self, CHAN_BODY, gi.soundindex ("tank/pain.wav"), 1, ATTN_NORM, 0);
 }
 
-void commander_body_drop (edict_t *self)
+void commander_body_drop (edict_t* self)
 {
 	self->movetype = MOVETYPE_TOSS;
 	self->s.origin[2] += 2;
 }
 
-void SP_monster_commander_body (edict_t *self)
+void SP_monster_commander_body (edict_t* self)
 {
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_BBOX;
@@ -46882,7 +46674,7 @@ void SP_misc_banner (edict_t *ent)
 /*QUAKED misc_deadsoldier (1 .5 0) (-16 -16 0) (16 16 16) ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED
 This is the dead player model. Comes in 6 exciting different poses!
 */
-void misc_deadsoldier_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void misc_deadsoldier_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -46940,10 +46732,10 @@ There must be a path for it to follow once it is activated.
 "speed"		How fast the Viper should fly
 */
 
-extern void train_use (edict_t *self, edict_t *other, edict_t *activator);
-extern void func_train_find (edict_t *self);
+extern void train_use (edict_t* self, edict_t* other, edict_t* activator);
+extern void func_train_find (edict_t* self);
 
-void misc_viper_use  (edict_t *self, edict_t *other, edict_t *activator)
+void misc_viper_use  (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = train_use;
@@ -46995,7 +46787,7 @@ void SP_misc_bigviper (edict_t *ent)
 /*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make?
 */
-void misc_viper_bomb_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void misc_viper_bomb_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	G_UseTargets (self, self->activator);
 
@@ -47004,7 +46796,7 @@ void misc_viper_bomb_touch (edict_t *self, edict_t *other, cplane_t *plane, csur
 	BecomeExplosion2 (self);
 }
 
-void misc_viper_bomb_prethink (edict_t *self)
+void misc_viper_bomb_prethink (edict_t* self)
 {
 	vec3_t	v;
 	float	diff;
@@ -47023,7 +46815,7 @@ void misc_viper_bomb_prethink (edict_t *self)
 	self->s.angles[2] = diff + 10;
 }
 
-void misc_viper_bomb_use (edict_t *self, edict_t *other, edict_t *activator)
+void misc_viper_bomb_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	edict_t	*viper;
 
@@ -47043,7 +46835,7 @@ void misc_viper_bomb_use (edict_t *self, edict_t *other, edict_t *activator)
 	VectorCopy (viper->moveinfo.dir, self->moveinfo.dir);
 }
 
-void SP_misc_viper_bomb (edict_t *self)
+void SP_misc_viper_bomb (edict_t* self)
 {
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_NOT;
@@ -47070,10 +46862,10 @@ There must be a path for it to follow once it is activated.
 "speed"		How fast it should fly
 */
 
-extern void train_use (edict_t *self, edict_t *other, edict_t *activator);
-extern void func_train_find (edict_t *self);
+extern void train_use (edict_t* self, edict_t* other, edict_t* activator);
+extern void func_train_find (edict_t* self);
 
-void misc_strogg_ship_use  (edict_t *self, edict_t *other, edict_t *activator)
+void misc_strogg_ship_use  (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = train_use;
@@ -47110,14 +46902,14 @@ void SP_misc_strogg_ship (edict_t *ent)
 
 /*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128)
 */
-void misc_satellite_dish_think (edict_t *self)
+void misc_satellite_dish_think (edict_t* self)
 {
 	self->s.frame++;
 	if (self->s.frame < 38)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-void misc_satellite_dish_use (edict_t *self, edict_t *other, edict_t *activator)
+void misc_satellite_dish_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->s.frame = 0;
 	self->think = misc_satellite_dish_think;
@@ -47228,7 +47020,7 @@ used with target_string (must be on same "team")
 "count" is position in the string (starts at 1)
 */
 
-void SP_target_character (edict_t *self)
+void SP_target_character (edict_t* self)
 {
 	self->movetype = MOVETYPE_PUSH;
 	gi.setmodel (self, self->model);
@@ -47242,7 +47034,7 @@ void SP_target_character (edict_t *self)
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
 */
 
-void target_string_use (edict_t *self, edict_t *other, edict_t *activator)
+void target_string_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	edict_t *e;
 	int		n, l;
@@ -47272,7 +47064,7 @@ void target_string_use (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-void SP_target_string (edict_t *self)
+void SP_target_string (edict_t* self)
 {
 	if (!self->message)
 		self->message = "";
@@ -47298,7 +47090,7 @@ If START_OFF, this entity must be used before it starts
 // don't let field width of any clock messages change, or it
 // could cause an overwrite after a game load
 
-static void func_clock_reset (edict_t *self)
+static void func_clock_reset (edict_t* self)
 {
 	self->activator = NULL;
 	if (self->spawnflags & 1)
@@ -47313,7 +47105,7 @@ static void func_clock_reset (edict_t *self)
 	}
 }
 
-static void func_clock_format_countdown (edict_t *self)
+static void func_clock_format_countdown (edict_t* self)
 {
 	if (self->style == 0)
 	{
@@ -47340,7 +47132,7 @@ static void func_clock_format_countdown (edict_t *self)
 	}
 }
 
-void func_clock_think (edict_t *self)
+void func_clock_think (edict_t* self)
 {
 	if (!self->enemy)
 	{
@@ -47405,7 +47197,7 @@ void func_clock_think (edict_t *self)
 	self->nextthink = level.time + 1;
 }
 
-void func_clock_use (edict_t *self, edict_t *other, edict_t *activator)
+void func_clock_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (!(self->spawnflags & 8))
 		self->use = NULL;
@@ -47415,7 +47207,7 @@ void func_clock_use (edict_t *self, edict_t *other, edict_t *activator)
 	self->think (self);
 }
 
-void SP_func_clock (edict_t *self)
+void SP_func_clock (edict_t* self)
 {
 	if (!self->target)
 	{
@@ -47448,7 +47240,7 @@ void SP_func_clock (edict_t *self)
 
 //=================================================================================
 
-void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void teleporter_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	edict_t		*dest;
 	int			i;
@@ -47556,7 +47348,7 @@ void SP_misc_teleporter_dest (edict_t *ent)
 // and we can mess it up based on skill.  Spread should be for normal
 // and we can tighten or loosen based on skill.  We could muck with
 // the damages too, but I'm not sure that's such a good idea.
-void monster_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype)
+void monster_fire_bullet (edict_t* self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype)
 {
 	fire_bullet (self, start, dir, damage, kick, hspread, vspread, MOD_UNKNOWN);
 
@@ -47566,7 +47358,7 @@ void monster_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype)
+void monster_fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype)
 {
 	fire_shotgun (self, start, aimdir, damage, kick, hspread, vspread, count, MOD_UNKNOWN);
 
@@ -47576,7 +47368,7 @@ void monster_fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
+void monster_fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
 {
 	fire_blaster (self, start, dir, damage, speed, effect, false);
 
@@ -47586,7 +47378,7 @@ void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, 
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
+void monster_fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
 	fire_grenade (self, start, aimdir, damage, speed, 2.5, damage+40);
 
@@ -47596,7 +47388,7 @@ void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype)
+void monster_fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype)
 {
 	fire_rocket (self, start, dir, damage, speed, damage+20, damage);
 
@@ -47606,7 +47398,7 @@ void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
+void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
 {
 	fire_rail (self, start, aimdir, damage, kick);
 
@@ -47616,7 +47408,7 @@ void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype)
+void monster_fire_bfg (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype)
 {
 	fire_bfg (self, start, aimdir, damage, speed, damage_radius);
 
@@ -47632,13 +47424,13 @@ void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 // Monster utility functions
 //
 
-static void M_FliesOff (edict_t *self)
+static void M_FliesOff (edict_t* self)
 {
 	self->s.effects &= ~EF_FLIES;
 	self->s.sound = 0;
 }
 
-static void M_FliesOn (edict_t *self)
+static void M_FliesOn (edict_t* self)
 {
 	if (self->waterlevel)
 		return;
@@ -47648,7 +47440,7 @@ static void M_FliesOn (edict_t *self)
 	self->nextthink = level.time + 60;
 }
 
-void M_FlyCheck (edict_t *self)
+void M_FlyCheck (edict_t* self)
 {
 	if (self->waterlevel)
 		return;
@@ -47660,7 +47452,7 @@ void M_FlyCheck (edict_t *self)
 	self->nextthink = level.time + 5 + 10 * random();
 }
 
-void AttackFinished (edict_t *self, float time)
+void AttackFinished (edict_t* self, float time)
 {
 	self->monsterinfo.attack_finished = level.time + time;
 }
@@ -47886,7 +47678,7 @@ void M_SetEffects (edict_t *ent)
 }
 
 
-void M_MoveFrame (edict_t *self)
+void M_MoveFrame (edict_t* self)
 {
 	mmove_t	*move;
 	int		index;
@@ -47946,7 +47738,7 @@ void M_MoveFrame (edict_t *self)
 }
 
 
-void monster_think (edict_t *self)
+void monster_think (edict_t* self)
 {
 	M_MoveFrame (self);
 	if (self->linkcount != self->monsterinfo.linkcount)
@@ -47967,7 +47759,7 @@ monster_use
 Using a monster makes it angry at the current activator
 ================
 */
-void monster_use (edict_t *self, edict_t *other, edict_t *activator)
+void monster_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (self->enemy)
 		return;
@@ -47984,10 +47776,10 @@ void monster_use (edict_t *self, edict_t *other, edict_t *activator)
 }
 
 
-void monster_start_go (edict_t *self);
+void monster_start_go (edict_t* self);
 
 
-void monster_triggered_spawn (edict_t *self)
+void monster_triggered_spawn (edict_t* self)
 {
 	self->s.origin[2] += 1;
 	KillBox (self);
@@ -48010,7 +47802,7 @@ void monster_triggered_spawn (edict_t *self)
 	}
 }
 
-void monster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activator)
+void monster_triggered_spawn_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = monster_triggered_spawn;
@@ -48020,7 +47812,7 @@ void monster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activa
 	self->use = monster_use;
 }
 
-void monster_triggered_start (edict_t *self)
+void monster_triggered_start (edict_t* self)
 {
 	self->solid = SOLID_NOT;
 	self->movetype = MOVETYPE_NONE;
@@ -48038,7 +47830,7 @@ When a monster dies, it fires all of its targets with the current
 enemy as activator.
 ================
 */
-void monster_death_use (edict_t *self)
+void monster_death_use (edict_t* self)
 {
 	self->flags &= ~(FL_FLY|FL_SWIM);
 	self->monsterinfo.aiflags &= AI_GOOD_GUY;
@@ -48061,7 +47853,7 @@ void monster_death_use (edict_t *self)
 
 //============================================================================
 
-qboolean monster_start (edict_t *self)
+qboolean monster_start (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -48110,7 +47902,7 @@ qboolean monster_start (edict_t *self)
 	return true;
 }
 
-void monster_start_go (edict_t *self)
+void monster_start_go (edict_t* self)
 {
 	vec3_t	v;
 
@@ -48198,7 +47990,7 @@ void monster_start_go (edict_t *self)
 }
 
 
-void walkmonster_start_go (edict_t *self)
+void walkmonster_start_go (edict_t* self)
 {
 	if (!(self->spawnflags & 2) && level.time < 1)
 	{
@@ -48219,14 +48011,14 @@ void walkmonster_start_go (edict_t *self)
 		monster_triggered_start (self);
 }
 
-void walkmonster_start (edict_t *self)
+void walkmonster_start (edict_t* self)
 {
 	self->think = walkmonster_start_go;
 	monster_start (self);
 }
 
 
-void flymonster_start_go (edict_t *self)
+void flymonster_start_go (edict_t* self)
 {
 	if (!M_walkmove (self, 0, 0))
 		gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
@@ -48242,7 +48034,7 @@ void flymonster_start_go (edict_t *self)
 }
 
 
-void flymonster_start (edict_t *self)
+void flymonster_start (edict_t* self)
 {
 	self->flags |= FL_FLY;
 	self->think = flymonster_start_go;
@@ -48250,7 +48042,7 @@ void flymonster_start (edict_t *self)
 }
 
 
-void swimmonster_start_go (edict_t *self)
+void swimmonster_start_go (edict_t* self)
 {
 	if (!self->yaw_speed)
 		self->yaw_speed = 10;
@@ -48262,7 +48054,7 @@ void swimmonster_start_go (edict_t *self)
 		monster_triggered_start (self);
 }
 
-void swimmonster_start (edict_t *self)
+void swimmonster_start (edict_t* self)
 {
 	self->flags |= FL_SWIM;
 	self->think = swimmonster_start_go;
@@ -49978,10 +49770,10 @@ typedef struct
 } spawn_t;
 
 
-void SP_item_health (edict_t *self);
-void SP_item_health_small (edict_t *self);
-void SP_item_health_large (edict_t *self);
-void SP_item_health_mega (edict_t *self);
+void SP_item_health (edict_t* self);
+void SP_item_health_small (edict_t* self);
+void SP_item_health_large (edict_t* self);
+void SP_item_health_mega (edict_t* self);
 
 void SP_info_player_start (edict_t *ent);
 void SP_info_player_deathmatch (edict_t *ent);
@@ -49996,11 +49788,10 @@ void SP_func_door_secret (edict_t *ent);
 void SP_func_door_rotating (edict_t *ent);
 void SP_func_water (edict_t *ent);
 void SP_func_train (edict_t *ent);
-void SP_func_conveyor (edict_t *self);
-void SP_func_wall (edict_t *self);
-void SP_func_object (edict_t *self);
-void SP_func_explosive (edict_t *self);
-void SP_func_timer (edict_t *self);
+void SP_func_wall (edict_t* self);
+void SP_func_object (edict_t* self);
+void SP_func_explosive (edict_t* self);
+void SP_func_timer (edict_t* self);
 void SP_func_areaportal (edict_t *ent);
 void SP_func_clock (edict_t *ent);
 void SP_func_killbox (edict_t *ent);
@@ -50028,10 +49819,10 @@ void SP_target_spawner (edict_t *ent);
 void SP_target_blaster (edict_t *ent);
 void SP_target_crosslevel_trigger (edict_t *ent);
 void SP_target_crosslevel_target (edict_t *ent);
-void SP_target_laser (edict_t *self);
+void SP_target_laser (edict_t* self);
 void SP_target_help (edict_t *ent);
 void SP_target_actor (edict_t *ent);
-void SP_target_lightramp (edict_t *self);
+void SP_target_lightramp (edict_t* self);
 void SP_target_earthquake (edict_t *ent);
 void SP_target_character (edict_t *ent);
 void SP_target_string (edict_t *ent);
@@ -50039,62 +49830,61 @@ void SP_target_string (edict_t *ent);
 void SP_worldspawn (edict_t *ent);
 void SP_viewthing (edict_t *ent);
 
-void SP_light (edict_t *self);
+void SP_light (edict_t* self);
 void SP_light_mine1 (edict_t *ent);
 void SP_light_mine2 (edict_t *ent);
-void SP_info_null (edict_t *self);
-void SP_info_notnull (edict_t *self);
-void SP_path_corner (edict_t *self);
-void SP_point_combat (edict_t *self);
+void SP_info_null (edict_t* self);
+void SP_info_notnull (edict_t* self);
+void SP_path_corner (edict_t* self);
+void SP_point_combat (edict_t* self);
 
-void SP_misc_explobox (edict_t *self);
-void SP_misc_banner (edict_t *self);
-void SP_misc_satellite_dish (edict_t *self);
-void SP_misc_actor (edict_t *self);
-void SP_misc_gib_arm (edict_t *self);
-void SP_misc_gib_leg (edict_t *self);
-void SP_misc_gib_head (edict_t *self);
-void SP_misc_insane (edict_t *self);
-void SP_misc_deadsoldier (edict_t *self);
-void SP_misc_viper (edict_t *self);
-void SP_misc_viper_bomb (edict_t *self);
-void SP_misc_bigviper (edict_t *self);
-void SP_misc_strogg_ship (edict_t *self);
-void SP_misc_teleporter (edict_t *self);
-void SP_misc_teleporter_dest (edict_t *self);
-void SP_misc_blackhole (edict_t *self);
-void SP_misc_eastertank (edict_t *self);
-void SP_misc_easterchick (edict_t *self);
-void SP_misc_easterchick2 (edict_t *self);
+void SP_misc_explobox (edict_t* self);
+void SP_misc_banner (edict_t* self);
+void SP_misc_satellite_dish (edict_t* self);
+void SP_misc_actor (edict_t* self);
+void SP_misc_gib_arm (edict_t* self);
+void SP_misc_gib_leg (edict_t* self);
+void SP_misc_gib_head (edict_t* self);
+void SP_misc_insane (edict_t* self);
+void SP_misc_deadsoldier (edict_t* self);
+void SP_misc_viper (edict_t* self);
+void SP_misc_viper_bomb (edict_t* self);
+void SP_misc_bigviper (edict_t* self);
+void SP_misc_strogg_ship (edict_t* self);
+void SP_misc_teleporter (edict_t* self);
+void SP_misc_teleporter_dest (edict_t* self);
+void SP_misc_blackhole (edict_t* self);
+void SP_misc_eastertank (edict_t* self);
+void SP_misc_easterchick (edict_t* self);
+void SP_misc_easterchick2 (edict_t* self);
 
-void SP_monster_berserk (edict_t *self);
-void SP_monster_gladiator (edict_t *self);
-void SP_monster_gunner (edict_t *self);
-void SP_monster_infantry (edict_t *self);
-void SP_monster_soldier_light (edict_t *self);
-void SP_monster_soldier (edict_t *self);
-void SP_monster_soldier_ss (edict_t *self);
-void SP_monster_tank (edict_t *self);
-void SP_monster_medic (edict_t *self);
-void SP_monster_flipper (edict_t *self);
-void SP_monster_chick (edict_t *self);
-void SP_monster_parasite (edict_t *self);
-void SP_monster_flyer (edict_t *self);
-void SP_monster_brain (edict_t *self);
-void SP_monster_floater (edict_t *self);
-void SP_monster_hover (edict_t *self);
-void SP_monster_mutant (edict_t *self);
-void SP_monster_supertank (edict_t *self);
-void SP_monster_boss2 (edict_t *self);
-void SP_monster_jorg (edict_t *self);
-void SP_monster_boss3_stand (edict_t *self);
+void SP_monster_berserk (edict_t* self);
+void SP_monster_gladiator (edict_t* self);
+void SP_monster_gunner (edict_t* self);
+void SP_monster_infantry (edict_t* self);
+void SP_monster_soldier_light (edict_t* self);
+void SP_monster_soldier (edict_t* self);
+void SP_monster_soldier_ss (edict_t* self);
+void SP_monster_tank (edict_t* self);
+void SP_monster_medic (edict_t* self);
+void SP_monster_flipper (edict_t* self);
+void SP_monster_chick (edict_t* self);
+void SP_monster_parasite (edict_t* self);
+void SP_monster_flyer (edict_t* self);
+void SP_monster_brain (edict_t* self);
+void SP_monster_floater (edict_t* self);
+void SP_monster_hover (edict_t* self);
+void SP_monster_mutant (edict_t* self);
+void SP_monster_supertank (edict_t* self);
+void SP_monster_boss2 (edict_t* self);
+void SP_monster_jorg (edict_t* self);
+void SP_monster_boss3_stand (edict_t* self);
 
-void SP_monster_commander_body (edict_t *self);
+void SP_monster_commander_body (edict_t* self);
 
-void SP_turret_breach (edict_t *self);
-void SP_turret_base (edict_t *self);
-void SP_turret_driver (edict_t *self);
-
+void SP_turret_breach (edict_t* self);
+void SP_turret_base (edict_t* self);
+void SP_turret_driver (edict_t* self);
 
 spawn_t	spawns[] = {
 	{"item_health", SP_item_health},
@@ -51218,7 +51008,7 @@ void	ServerCommand (void)
 Fire an origin based temp entity event to the clients.
 "style"		type byte
 */
-void Use_Target_Tent (edict_t *ent, edict_t *other, edict_t *activator)
+void Use_Target_Tent (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (ent->style);
@@ -51250,7 +51040,7 @@ Normal sounds play each time the target is used.  The reliable flag can be set f
 Looped sounds are always atten 3 / vol 1, and the use function toggles it on/off.
 Multiple identical looping sounds will just increase volume without any speed cost.
 */
-void Use_Target_Speaker (edict_t *ent, edict_t *other, edict_t *activator)
+void Use_Target_Speaker (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	int		chan;
 
@@ -51310,7 +51100,7 @@ void SP_target_speaker (edict_t *ent)
 
 //==========================================================
 
-void Use_Target_Help (edict_t *ent, edict_t *other, edict_t *activator)
+void Use_Target_Help (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	if (ent->spawnflags & 1)
 		strncpy (game.helpmessage1, ent->message, sizeof(game.helpmessage2)-1);
@@ -51346,7 +51136,7 @@ void SP_target_help(edict_t *ent)
 Counts a secret found.
 These are single use targets.
 */
-void use_target_secret (edict_t *ent, edict_t *other, edict_t *activator)
+void use_target_secret (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
@@ -51381,7 +51171,7 @@ void SP_target_secret (edict_t *ent)
 Counts a goal completed.
 These are single use targets.
 */
-void use_target_goal (edict_t *ent, edict_t *other, edict_t *activator)
+void use_target_goal (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
@@ -51419,7 +51209,7 @@ Spawns an explosion temporary entity when used.
 "delay"		wait this long before going off
 "dmg"		how much radius damage should be done, defaults to 0
 */
-void target_explosion_explode (edict_t *self)
+void target_explosion_explode (edict_t* self)
 {
 	float		save;
 
@@ -51436,7 +51226,7 @@ void target_explosion_explode (edict_t *self)
 	self->delay = save;
 }
 
-void use_target_explosion (edict_t *self, edict_t *other, edict_t *activator)
+void use_target_explosion (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->activator = activator;
 
@@ -51462,7 +51252,7 @@ void SP_target_explosion (edict_t *ent)
 /*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8)
 Changes level to "map" when fired
 */
-void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
+void use_target_changelevel (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (level.intermissiontime)
 		return;		// already activated
@@ -51530,7 +51320,7 @@ Set "sounds" to one of the following:
 		useful for lava/sparks
 */
 
-void use_target_splash (edict_t *self, edict_t *other, edict_t *activator)
+void use_target_splash (edict_t* self, edict_t* other, edict_t* activator)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_SPLASH);
@@ -51544,7 +51334,7 @@ void use_target_splash (edict_t *self, edict_t *other, edict_t *activator)
 		T_RadiusDamage (self, activator, self->dmg, NULL, self->dmg+40, MOD_SPLASH);
 }
 
-void SP_target_splash (edict_t *self)
+void SP_target_splash (edict_t* self)
 {
 	self->use = use_target_splash;
 	G_SetMovedir (self->s.angles, self->movedir);
@@ -51572,7 +51362,7 @@ For gibs:
 */
 void ED_CallSpawn (edict_t *ent);
 
-void use_target_spawner (edict_t *self, edict_t *other, edict_t *activator)
+void use_target_spawner (edict_t* self, edict_t* other, edict_t* activator)
 {
 	edict_t	*ent;
 
@@ -51588,7 +51378,7 @@ void use_target_spawner (edict_t *self, edict_t *other, edict_t *activator)
 		VectorCopy (self->movedir, ent->velocity);
 }
 
-void SP_target_spawner (edict_t *self)
+void SP_target_spawner (edict_t* self)
 {
 	self->use = use_target_spawner;
 	self->svflags = SVF_NOCLIENT;
@@ -51608,13 +51398,13 @@ dmg		default is 15
 speed	default is 1000
 */
 
-void use_target_blaster (edict_t *self, edict_t *other, edict_t *activator)
+void use_target_blaster (edict_t* self, edict_t* other, edict_t* activator)
 {
 	fire_blaster (self, self->s.origin, self->movedir, self->dmg, self->speed, EF_BLASTER, MOD_TARGET_BLASTER);
 	gi.sound (self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_blaster (edict_t *self)
+void SP_target_blaster (edict_t* self)
 {
 	self->use = use_target_blaster;
 	G_SetMovedir (self->s.angles, self->movedir);
@@ -51634,13 +51424,13 @@ void SP_target_blaster (edict_t *self)
 /*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-void trigger_crosslevel_trigger_use (edict_t *self, edict_t *other, edict_t *activator)
+void trigger_crosslevel_trigger_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	game.serverflags |= self->spawnflags;
 	G_FreeEdict (self);
 }
 
-void SP_target_crosslevel_trigger (edict_t *self)
+void SP_target_crosslevel_trigger (edict_t* self)
 {
 	self->svflags = SVF_NOCLIENT;
 	self->use = trigger_crosslevel_trigger_use;
@@ -51652,7 +51442,7 @@ killtarget also work.
 
 "delay"		delay before using targets if the trigger has been activated (default 1)
 */
-void target_crosslevel_target_think (edict_t *self)
+void target_crosslevel_target_think (edict_t* self)
 {
 	if (self->spawnflags == (game.serverflags & SFL_CROSS_TRIGGER_MASK & self->spawnflags))
 	{
@@ -51661,7 +51451,7 @@ void target_crosslevel_target_think (edict_t *self)
 	}
 }
 
-void SP_target_crosslevel_target (edict_t *self)
+void SP_target_crosslevel_target (edict_t* self)
 {
 	if (! self->delay)
 		self->delay = 1;
@@ -51678,7 +51468,7 @@ When triggered, fires a laser.  You can either set a target
 or a direction.
 */
 
-void target_laser_think (edict_t *self)
+void target_laser_think (edict_t* self)
 {
 	edict_t	*ignore;
 	vec3_t	start;
@@ -51743,7 +51533,7 @@ void target_laser_think (edict_t *self)
 	self->nextthink = level.time + FRAMETIME;
 }
 
-void target_laser_on (edict_t *self)
+void target_laser_on (edict_t* self)
 {
 	if (!self->activator)
 		self->activator = self;
@@ -51752,14 +51542,14 @@ void target_laser_on (edict_t *self)
 	target_laser_think (self);
 }
 
-void target_laser_off (edict_t *self)
+void target_laser_off (edict_t* self)
 {
 	self->spawnflags &= ~1;
 	self->svflags |= SVF_NOCLIENT;
 	self->nextthink = 0;
 }
 
-void target_laser_use (edict_t *self, edict_t *other, edict_t *activator)
+void target_laser_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->activator = activator;
 	if (self->spawnflags & 1)
@@ -51768,7 +51558,7 @@ void target_laser_use (edict_t *self, edict_t *other, edict_t *activator)
 		target_laser_on (self);
 }
 
-void target_laser_start (edict_t *self)
+void target_laser_start (edict_t* self)
 {
 	edict_t *ent;
 
@@ -51825,7 +51615,7 @@ void target_laser_start (edict_t *self)
 		target_laser_off (self);
 }
 
-void SP_target_laser (edict_t *self)
+void SP_target_laser (edict_t* self)
 {
 	// let everything else get spawned before we start firing
 	self->think = target_laser_start;
@@ -51839,7 +51629,7 @@ speed		How many seconds the ramping will take
 message		two letters; starting lightlevel and ending lightlevel
 */
 
-void target_lightramp_think (edict_t *self)
+void target_lightramp_think (edict_t* self)
 {
 	char	style[2];
 
@@ -51862,7 +51652,7 @@ void target_lightramp_think (edict_t *self)
 	}
 }
 
-void target_lightramp_use (edict_t *self, edict_t *other, edict_t *activator)
+void target_lightramp_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (!self->enemy)
 	{
@@ -51898,7 +51688,7 @@ void target_lightramp_use (edict_t *self, edict_t *other, edict_t *activator)
 	target_lightramp_think (self);
 }
 
-void SP_target_lightramp (edict_t *self)
+void SP_target_lightramp (edict_t* self)
 {
 	if (!self->message || strlen(self->message) != 2 || self->message[0] < 'a' || self->message[0] > 'z' || self->message[1] < 'a' || self->message[1] > 'z' || self->message[0] == self->message[1])
 	{
@@ -51938,7 +51728,7 @@ All players and monsters are affected.
 "count"		duration of the quake (default:5)
 */
 
-void target_earthquake_think (edict_t *self)
+void target_earthquake_think (edict_t* self)
 {
 	int		i;
 	edict_t	*e;
@@ -51968,7 +51758,7 @@ void target_earthquake_think (edict_t *self)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-void target_earthquake_use (edict_t *self, edict_t *other, edict_t *activator)
+void target_earthquake_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->timestamp = level.time + self->count;
 	self->nextthink = level.time + FRAMETIME;
@@ -51976,7 +51766,7 @@ void target_earthquake_use (edict_t *self, edict_t *other, edict_t *activator)
 	self->last_move_time = 0;
 }
 
-void SP_target_earthquake (edict_t *self)
+void SP_target_earthquake (edict_t* self)
 {
 	if (!self->targetname)
 		gi.dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
@@ -51999,7 +51789,7 @@ void SP_target_earthquake (edict_t *self)
 /* already inlined above: game/g_local.h */
 
 
-void InitTrigger (edict_t *self)
+void InitTrigger (edict_t* self)
 {
 	if (!VectorCompare (self->s.angles, vec3_origin))
 		G_SetMovedir (self->s.angles, self->movedir);
@@ -52042,13 +51832,13 @@ void multi_trigger (edict_t *ent)
 	}
 }
 
-void Use_Multi (edict_t *ent, edict_t *other, edict_t *activator)
+void Use_Multi (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	ent->activator = activator;
 	multi_trigger (ent);
 }
 
-void Touch_Multi (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void Touch_Multi (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if(other->client)
 	{
@@ -52087,7 +51877,7 @@ sounds
 4)
 set "message" to text string
 */
-void trigger_enable (edict_t *self, edict_t *other, edict_t *activator)
+void trigger_enable (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->solid = SOLID_TRIGGER;
 	self->use = Use_Multi;
@@ -52165,12 +51955,12 @@ void SP_trigger_once(edict_t *ent)
 /*QUAKED trigger_relay (.5 .5 .5) (-8 -8 -8) (8 8 8)
 This fixed size trigger cannot be touched, it can only be fired by other events.
 */
-void trigger_relay_use (edict_t *self, edict_t *other, edict_t *activator)
+void trigger_relay_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	G_UseTargets (self, activator);
 }
 
-void SP_trigger_relay (edict_t *self)
+void SP_trigger_relay (edict_t* self)
 {
 	self->use = trigger_relay_use;
 }
@@ -52188,7 +51978,7 @@ trigger_key
 A relay trigger that only fires it's targets if player has the proper key.
 Use "item" to specify the required key, for example "key_data_cd"
 */
-void trigger_key_use (edict_t *self, edict_t *other, edict_t *activator)
+void trigger_key_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	int			index;
 
@@ -52258,7 +52048,7 @@ void trigger_key_use (edict_t *self, edict_t *other, edict_t *activator)
 	self->use = NULL;
 }
 
-void SP_trigger_key (edict_t *self)
+void SP_trigger_key (edict_t* self)
 {
 	if (!st.item)
 	{
@@ -52302,7 +52092,7 @@ If nomessage is not set, t will print "1 more.. " etc when triggered and "sequen
 After the counter has been triggered "count" times (default 2), it will fire all of it's targets and remove itself.
 */
 
-void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
+void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (self->count == 0)
 		return;
@@ -52328,7 +52118,7 @@ void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
 	multi_trigger (self);
 }
 
-void SP_trigger_counter (edict_t *self)
+void SP_trigger_counter (edict_t* self)
 {
 	self->wait = -1;
 	if (!self->count)
@@ -52370,7 +52160,7 @@ trigger_push
 
 static int windsound;
 
-void trigger_push_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void trigger_push_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (strcmp(other->classname, "grenade") == 0)
 	{
@@ -52400,7 +52190,7 @@ void trigger_push_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 Pushes the player
 "speed"		defaults to 1000
 */
-void SP_trigger_push (edict_t *self)
+void SP_trigger_push (edict_t* self)
 {
 	InitTrigger (self);
 	windsound = gi.soundindex ("misc/windfly.wav");
@@ -52431,7 +52221,7 @@ NO_PROTECTION	*nothing* stops the damage
 "dmg"			default 5 (whole numbers only)
 
 */
-void hurt_use (edict_t *self, edict_t *other, edict_t *activator)
+void hurt_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
@@ -52444,7 +52234,7 @@ void hurt_use (edict_t *self, edict_t *other, edict_t *activator)
 }
 
 
-void hurt_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void hurt_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	int		dflags;
 
@@ -52472,7 +52262,7 @@ void hurt_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *sur
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, self->dmg, dflags, MOD_TRIGGER_HURT);
 }
 
-void SP_trigger_hurt (edict_t *self)
+void SP_trigger_hurt (edict_t* self)
 {
 	InitTrigger (self);
 
@@ -52508,12 +52298,12 @@ the value of "gravity".  1.0 is standard
 gravity for the level.
 */
 
-void trigger_gravity_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void trigger_gravity_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	other->gravity = self->gravity;
 }
 
-void SP_trigger_gravity (edict_t *self)
+void SP_trigger_gravity (edict_t* self)
 {
 	if (st.gravity == 0)
 	{
@@ -52542,7 +52332,7 @@ Walking monsters that touch this will jump in the direction of the trigger's ang
 "height" default to 200, the speed thrown upwards
 */
 
-void trigger_monsterjump_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void trigger_monsterjump_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (other->flags & (FL_FLY | FL_SWIM) )
 		return;
@@ -52562,7 +52352,7 @@ void trigger_monsterjump_touch (edict_t *self, edict_t *other, cplane_t *plane, 
 	other->velocity[2] = self->movedir[2];
 }
 
-void SP_trigger_monsterjump (edict_t *self)
+void SP_trigger_monsterjump (edict_t* self)
 {
 	if (!self->speed)
 		self->speed = 200;
@@ -52606,7 +52396,7 @@ float SnapToEights(float x)
 }
 
 
-void turret_blocked(edict_t *self, edict_t *other)
+void turret_blocked(edict_t* self, edict_t* other)
 {
 	edict_t	*attacker;
 
@@ -52636,7 +52426,7 @@ Use "angle" to set the starting angle.
 "maxyaw"	max acceptable yaw angle   : default 360
 */
 
-void turret_breach_fire (edict_t *self)
+void turret_breach_fire (edict_t* self)
 {
 	vec3_t	f, r, u;
 	vec3_t	start;
@@ -52654,7 +52444,7 @@ void turret_breach_fire (edict_t *self)
 	gi.positioned_sound (start, self, CHAN_WEAPON, gi.soundindex("weapons/rocklf1a.wav"), 1, ATTN_NORM, 0);
 }
 
-void turret_breach_think (edict_t *self)
+void turret_breach_think (edict_t* self)
 {
 	edict_t	*ent;
 	vec3_t	current_angles;
@@ -52759,7 +52549,7 @@ void turret_breach_think (edict_t *self)
 	}
 }
 
-void turret_breach_finish_init (edict_t *self)
+void turret_breach_finish_init (edict_t* self)
 {
 	// get and save info for muzzle location
 	if (!self->target)
@@ -52778,7 +52568,7 @@ void turret_breach_finish_init (edict_t *self)
 	self->think (self);
 }
 
-void SP_turret_breach (edict_t *self)
+void SP_turret_breach (edict_t* self)
 {
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
@@ -52817,7 +52607,7 @@ This portion of the turret changes yaw only.
 MUST be teamed with a turret_breach.
 */
 
-void SP_turret_base (edict_t *self)
+void SP_turret_base (edict_t* self)
 {
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
@@ -52832,11 +52622,11 @@ Must NOT be on the team with the rest of the turret parts.
 Instead it must target the turret_breach.
 */
 
-void infantry_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
-void infantry_stand (edict_t *self);
-void monster_use (edict_t *self, edict_t *other, edict_t *activator);
+void infantry_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
+void infantry_stand (edict_t* self);
+void monster_use (edict_t* self, edict_t* other, edict_t* activator);
 
-void turret_driver_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void turret_driver_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	edict_t	*ent;
 
@@ -52856,9 +52646,9 @@ void turret_driver_die (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 	infantry_die (self, inflictor, attacker, damage, self->s.origin);
 }
 
-qboolean FindTarget (edict_t *self);
+qboolean FindTarget (edict_t* self);
 
-void turret_driver_think (edict_t *self)
+void turret_driver_think (edict_t* self)
 {
 	vec3_t	target;
 	vec3_t	dir;
@@ -52912,7 +52702,7 @@ void turret_driver_think (edict_t *self)
 	self->target_ent->spawnflags |= 65536;
 }
 
-void turret_driver_link (edict_t *self)
+void turret_driver_link (edict_t* self)
 {
 	vec3_t	vec;
 	edict_t	*ent;
@@ -52945,7 +52735,7 @@ void turret_driver_link (edict_t *self)
 	self->flags |= FL_TEAMSLAVE;
 }
 
-void SP_turret_driver (edict_t *self)
+void SP_turret_driver (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -53147,7 +52937,7 @@ match (string)self.target and call their .use function
 
 ==============================
 */
-void G_UseTargets (edict_t *ent, edict_t *activator)
+void G_UseTargets (edict_t *ent, edict_t* activator)
 {
 	edict_t		*t;
 
@@ -53548,7 +53338,7 @@ a non-instant attack weapon.  It checks to see if a
 monster's dodge function should be called.
 =================
 */
-static void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed)
+static void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
 {
 	vec3_t	end;
 	vec3_t	v;
@@ -53579,7 +53369,7 @@ fire_hit
 Used for all impact (hit/punch/slash) attacks
 =================
 */
-qboolean fire_hit (edict_t *self, vec3_t aim, int damage, int kick)
+qboolean fire_hit (edict_t* self, vec3_t aim, int damage, int kick)
 {
 	trace_t		tr;
 	vec3_t		forward, right, up;
@@ -53650,7 +53440,7 @@ fire_lead
 This is an internal support routine used for bullet/pellet based weapons.
 =================
 */
-static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int te_impact, int hspread, int vspread, int mod)
+static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int te_impact, int hspread, int vspread, int mod)
 {
 	trace_t		tr;
 	vec3_t		dir;
@@ -53793,7 +53583,7 @@ Fires a single round.  Used for machinegun and chaingun.  Would be fine for
 pistols, rifles, etc....
 =================
 */
-void fire_bullet (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod)
+void fire_bullet (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod)
 {
 	fire_lead (self, start, aimdir, damage, kick, TE_GUNSHOT, hspread, vspread, mod);
 }
@@ -53806,7 +53596,7 @@ fire_shotgun
 Shoots shotgun pellets.  Used by shotgun and super shotgun.
 =================
 */
-void fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod)
+void fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod)
 {
 	int		i;
 
@@ -53822,7 +53612,7 @@ fire_blaster
 Fires a single blaster bolt.  Used by the blaster and hyper blaster.
 =================
 */
-void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void blaster_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	int		mod;
 
@@ -53861,7 +53651,7 @@ void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 	G_FreeEdict (self);
 }
 
-void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int effect, qboolean hyper)
+void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int effect, qboolean hyper)
 {
 	edict_t	*bolt;
 	trace_t	tr;
@@ -53971,7 +53761,7 @@ static void Grenade_Explode (edict_t *ent)
 	G_FreeEdict (ent);
 }
 
-static void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void Grenade_Touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (other == ent->owner)
 		return;
@@ -54002,7 +53792,7 @@ static void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurfa
 	Grenade_Explode (ent);
 }
 
-void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius)
+void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius)
 {
 	edict_t	*grenade;
 	vec3_t	dir;
@@ -54035,7 +53825,7 @@ void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
 	gi.linkentity (grenade);
 }
 
-void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held)
+void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held)
 {
 	edict_t	*grenade;
 	vec3_t	dir;
@@ -54085,7 +53875,7 @@ void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int 
 fire_rocket
 =================
 */
-void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
+void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	vec3_t		origin;
 	int			n;
@@ -54136,7 +53926,7 @@ void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
 	G_FreeEdict (ent);
 }
 
-void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
+void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
 {
 	edict_t	*rocket;
 
@@ -54174,7 +53964,7 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 fire_rail
 =================
 */
-void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
+void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick)
 {
 	vec3_t		from;
 	vec3_t		end;
@@ -54237,7 +54027,7 @@ void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick
 fire_bfg
 =================
 */
-void bfg_explode (edict_t *self)
+void bfg_explode (edict_t* self)
 {
 	edict_t	*ent;
 	float	points;
@@ -54281,7 +54071,7 @@ void bfg_explode (edict_t *self)
 		self->think = G_FreeEdict;
 }
 
-void bfg_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (other == self->owner)
 		return;
@@ -54320,7 +54110,7 @@ void bfg_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
 }
 
 
-void bfg_think (edict_t *self)
+void bfg_think (edict_t* self)
 {
 	edict_t	*ent;
 	edict_t	*ignore;
@@ -54398,7 +54188,7 @@ void bfg_think (edict_t *self)
 }
 
 
-void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius)
+void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius)
 {
 	edict_t	*bfg;
 
@@ -55069,7 +54859,7 @@ static mframe_t actor_frames_stand[] = {
 
 static mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
 
-static void actor_stand(edict_t *self) {
+static void actor_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_stand;
 
 	// randomize on startup
@@ -55207,7 +54997,7 @@ static char* messages[] = {
 	"Check your targets"
 };
 
-static void actor_pain (edict_t *self, edict_t *other, float kick, int damage) {
+static void actor_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -55245,7 +55035,7 @@ static void actor_pain (edict_t *self, edict_t *other, float kick, int damage) {
 }
 
 
-void actorMachineGun (edict_t *self)
+void actorMachineGun (edict_t* self)
 {
 	vec3_t	start, target;
 	vec3_t	forward, right;
@@ -55275,7 +55065,7 @@ void actorMachineGun (edict_t *self)
 }
 
 
-void actor_dead (edict_t *self)
+void actor_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -55315,7 +55105,7 @@ static mframe_t actor_frames_death2[] = {
 
 static mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
 
-void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void actor_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -55348,7 +55138,7 @@ void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 }
 
 
-static void actor_fire(edict_t *self) {
+static void actor_fire(edict_t* self) {
 	actorMachineGun (self);
 
 	if (level.time >= self->monsterinfo.pausetime)
@@ -55366,7 +55156,7 @@ static mframe_t actor_frames_attack[] = {
 
 static mmove_t actor_move_attack = {FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run};
 
-static void actor_attack(edict_t *self) {
+static void actor_attack(edict_t* self) {
 	int		n;
 
 	self->monsterinfo.currentmove = &actor_move_attack;
@@ -55375,7 +55165,7 @@ static void actor_attack(edict_t *self) {
 }
 
 
-void actor_use (edict_t *self, edict_t *other, edict_t *activator)
+void actor_use (edict_t* self, edict_t* other, edict_t* activator)
 {
 	vec3_t		v;
 
@@ -55399,7 +55189,7 @@ void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 /*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32)
 */
 
-void SP_misc_actor (edict_t *self)
+void SP_misc_actor (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -55470,7 +55260,7 @@ for JUMP only:
 "height"		speed thrown upwards (default 200)
 */
 
-void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void target_actor_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	vec3_t	v;
 
@@ -55559,7 +55349,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 	}
 }
 
-void SP_target_actor (edict_t *self)
+void SP_target_actor (edict_t* self)
 {
 	if (!self->targetname)
 		gi.dprintf ("%s with no targetname at %s\n", self->classname, vtos(self->s.origin));
@@ -55864,18 +55654,18 @@ static int sound_punch;
 static int sound_sight;
 static int sound_search;
 
-void berserk_sight (edict_t *self, edict_t *other)
+void berserk_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void berserk_search (edict_t *self)
+void berserk_search (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
-void berserk_fidget (edict_t *self);
+void berserk_fidget (edict_t* self);
 static mframe_t berserk_frames_stand[] = {
 	{ai_stand, 0, berserk_fidget},
 	{ai_stand, 0, NULL},
@@ -55915,7 +55705,7 @@ static mframe_t berserk_frames_stand_fidget[] = {
 
 static mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
 
-void berserk_fidget (edict_t *self)
+void berserk_fidget (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
@@ -55943,7 +55733,7 @@ static mframe_t berserk_frames_walk[] = {
 
 static mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
 
-void berserk_walk (edict_t *self)
+void berserk_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &berserk_move_walk;
 }
@@ -55983,7 +55773,7 @@ static mframe_t berserk_frames_run1[] = {
 
 static mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
 
-void berserk_run (edict_t *self)
+void berserk_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &berserk_move_stand;
@@ -55992,14 +55782,14 @@ void berserk_run (edict_t *self)
 }
 
 
-void berserk_attack_spike (edict_t *self)
+void berserk_attack_spike (edict_t* self)
 {
 	static	vec3_t	aim = {MELEE_DISTANCE, 0, -24};
 	fire_hit (self, aim, (15 + (rand() % 6)), 400);		//	Faster attack -- upwards and backwards
 }
 
 
-void berserk_swing (edict_t *self)
+void berserk_swing (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
@@ -56017,7 +55807,7 @@ static mframe_t berserk_frames_attack_spike[] = {
 
 static mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
 
-void berserk_attack_club (edict_t *self)
+void berserk_attack_club (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -56042,7 +55832,7 @@ static mframe_t berserk_frames_attack_club [] = {
 
 static mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
-void berserk_melee (edict_t *self)
+void berserk_melee (edict_t* self)
 {
 	if ((rand() % 2) == 0)
 		self->monsterinfo.currentmove = &berserk_move_attack_spike;
@@ -56126,7 +55916,7 @@ static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) 
 		self->monsterinfo.currentmove = &berserk_move_pain2;
 }
 
-void berserk_dead (edict_t *self)
+void berserk_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -56167,7 +55957,7 @@ static mframe_t berserk_frames_death2[] = {
 
 static mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
 
-void berserk_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void berserk_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -56199,7 +55989,7 @@ void berserk_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 
 /*QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_berserk (edict_t *self)
+void SP_monster_berserk (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -56505,9 +56295,9 @@ boss2
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss2.h ============ */
 
-void BossExplode (edict_t *self);
+void BossExplode (edict_t* self);
 
-qboolean infront (edict_t *self, edict_t *other);
+qboolean infront (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -56515,21 +56305,21 @@ static int	sound_pain3;
 static int	sound_death;
 static int	sound_search1;
 
-void boss2_search (edict_t *self)
+void boss2_search (edict_t* self)
 {
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
 
-void boss2_run (edict_t *self);
-void boss2_stand (edict_t *self);
-void boss2_dead (edict_t *self);
-void boss2_attack (edict_t *self);
-void boss2_attack_mg (edict_t *self);
-void boss2_reattack_mg (edict_t *self);
-void boss2_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
+void boss2_run (edict_t* self);
+void boss2_stand (edict_t* self);
+void boss2_dead (edict_t* self);
+void boss2_attack (edict_t* self);
+void boss2_attack_mg (edict_t* self);
+void boss2_reattack_mg (edict_t* self);
+void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
-void Boss2Rocket (edict_t *self)
+void Boss2Rocket (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -56571,7 +56361,7 @@ void Boss2Rocket (edict_t *self)
 	monster_fire_rocket (self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
 }
 
-void boss2_firebullet_right (edict_t *self)
+void boss2_firebullet_right (edict_t* self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
@@ -56587,7 +56377,7 @@ void boss2_firebullet_right (edict_t *self)
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_R1);
 }
 
-void boss2_firebullet_left (edict_t *self)
+void boss2_firebullet_left (edict_t* self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
@@ -56604,7 +56394,7 @@ void boss2_firebullet_left (edict_t *self)
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_L1);
 }
 
-void Boss2MachineGun (edict_t *self)
+void Boss2MachineGun (edict_t* self)
 {
 /*	vec3_t	forward, right;
 	vec3_t	start;
@@ -56886,12 +56676,12 @@ mframe_t boss2_frames_death [] =
 };
 mmove_t boss2_move_death = {FRAME_death2, FRAME_death50, boss2_frames_death, boss2_dead};
 
-void boss2_stand (edict_t *self)
+void boss2_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &boss2_move_stand;
 }
 
-void boss2_run (edict_t *self)
+void boss2_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &boss2_move_stand;
@@ -56899,12 +56689,12 @@ void boss2_run (edict_t *self)
 		self->monsterinfo.currentmove = &boss2_move_run;
 }
 
-void boss2_walk (edict_t *self)
+void boss2_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &boss2_move_walk;
 }
 
-void boss2_attack (edict_t *self)
+void boss2_attack (edict_t* self)
 {
 	vec3_t	vec;
 	float	range;
@@ -56925,12 +56715,12 @@ void boss2_attack (edict_t *self)
 	}
 }
 
-void boss2_attack_mg (edict_t *self)
+void boss2_attack_mg (edict_t* self)
 {
 	self->monsterinfo.currentmove = &boss2_move_attack_mg;
 }
 
-void boss2_reattack_mg (edict_t *self)
+void boss2_reattack_mg (edict_t* self)
 {
 	if ( infront(self, self->enemy) )
 		if (random() <= 0.7)
@@ -56942,7 +56732,7 @@ void boss2_reattack_mg (edict_t *self)
 }
 
 
-void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
+void boss2_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -56969,7 +56759,7 @@ void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void boss2_dead (edict_t *self)
+void boss2_dead (edict_t* self)
 {
 	VectorSet (self->mins, -56, -56, 0);
 	VectorSet (self->maxs, 56, 56, 80);
@@ -56979,7 +56769,7 @@ void boss2_dead (edict_t *self)
 	gi.linkentity (self);
 }
 
-void boss2_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
@@ -57012,7 +56802,7 @@ void boss2_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 #endif
 }
 
-qboolean Boss2_CheckAttack (edict_t *self)
+qboolean Boss2_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -57106,7 +56896,7 @@ qboolean Boss2_CheckAttack (edict_t *self)
 
 /*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight
 */
-void SP_monster_boss2 (edict_t *self)
+void SP_monster_boss2 (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -57841,7 +57631,7 @@ boss3
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss32.h ============ */
 
-void Use_Boss3 (edict_t *ent, edict_t *other, edict_t *activator)
+void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_BOSSTPORT);
@@ -57863,7 +57653,7 @@ void Think_Boss3Stand (edict_t *ent)
 
 Just stands and cycles in one place until targeted, then teleports away.
 */
-void SP_monster_boss3_stand (edict_t *self)
+void SP_monster_boss3_stand (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -58097,8 +57887,8 @@ jorg
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss31.h ============ */
 
-extern void SP_monster_makron (edict_t *self);
-qboolean visible (edict_t *self, edict_t *other);
+extern void SP_monster_makron (edict_t* self);
+qboolean visible (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -58115,11 +57905,11 @@ static int	sound_step_left;
 static int	sound_step_right;
 static int	sound_death_hit;
 
-void BossExplode (edict_t *self);
-void MakronToss (edict_t *self);
+void BossExplode (edict_t* self);
+void MakronToss (edict_t* self);
 
 
-void jorg_search (edict_t *self)
+void jorg_search (edict_t* self)
 {
 	float r;
 
@@ -58134,16 +57924,16 @@ void jorg_search (edict_t *self)
 }
 
 
-void jorg_dead (edict_t *self);
-void jorgBFG (edict_t *self);
-void jorgMachineGun (edict_t *self);
-void jorg_firebullet (edict_t *self);
-void jorg_reattack1(edict_t *self);
-void jorg_attack1(edict_t *self);
-void jorg_idle(edict_t *self);
-void jorg_step_left(edict_t *self);
-void jorg_step_right(edict_t *self);
-void jorg_death_hit(edict_t *self);
+void jorg_dead (edict_t* self);
+void jorgBFG (edict_t* self);
+void jorgMachineGun (edict_t* self);
+void jorg_firebullet (edict_t* self);
+void jorg_reattack1(edict_t* self);
+void jorg_attack1(edict_t* self);
+void jorg_idle(edict_t* self);
+void jorg_step_left(edict_t* self);
+void jorg_step_right(edict_t* self);
+void jorg_death_hit(edict_t* self);
 
 //
 // stand
@@ -58204,29 +57994,29 @@ static mframe_t jorg_frames_stand[] = {
 };
 mmove_t	jorg_move_stand = {FRAME_stand01, FRAME_stand51, jorg_frames_stand, NULL};
 
-void jorg_idle (edict_t *self)
+void jorg_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_NORM,0);
 }
 
-void jorg_death_hit (edict_t *self)
+void jorg_death_hit (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_death_hit, 1, ATTN_NORM,0);
 }
 
 
-void jorg_step_left (edict_t *self)
+void jorg_step_left (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
 }
 
-void jorg_step_right (edict_t *self)
+void jorg_step_right (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
 }
 
 
-void jorg_stand (edict_t *self)
+void jorg_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &jorg_move_stand;
 }
@@ -58294,12 +58084,12 @@ mframe_t jorg_frames_end_walk [] =
 };
 mmove_t jorg_move_end_walk = {FRAME_walk20, FRAME_walk25, jorg_frames_end_walk, NULL};
 
-void jorg_walk (edict_t *self)
+void jorg_walk (edict_t* self)
 {
 		self->monsterinfo.currentmove = &jorg_move_walk;
 }
 
-void jorg_run (edict_t *self)
+void jorg_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &jorg_move_stand;
@@ -58458,7 +58248,7 @@ mframe_t jorg_frames_end_attack1[]=
 };
 mmove_t jorg_move_end_attack1 = {FRAME_attak115, FRAME_attak118, jorg_frames_end_attack1, jorg_run};
 
-void jorg_reattack1(edict_t *self)
+void jorg_reattack1(edict_t* self)
 {
 	if (visible(self, self->enemy))
 		if (random() < 0.9)
@@ -58475,12 +58265,12 @@ void jorg_reattack1(edict_t *self)
 	}
 }
 
-void jorg_attack1(edict_t *self)
+void jorg_attack1(edict_t* self)
 {
 	self->monsterinfo.currentmove = &jorg_move_attack1;
 }
 
-void jorg_pain (edict_t *self, edict_t *other, float kick, int damage)
+void jorg_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 
 	if (self->health < (self->max_health / 2))
@@ -58539,7 +58329,7 @@ void jorg_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 };
 
-void jorgBFG (edict_t *self)
+void jorgBFG (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -58554,7 +58344,7 @@ void jorgBFG (edict_t *self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
-	/*void monster_fire_bfg (edict_t *self,
+	/*void monster_fire_bfg (edict_t* self,
 							 vec3_t start,
 							 vec3_t aimdir,
 							 int damage,
@@ -58565,7 +58355,7 @@ void jorgBFG (edict_t *self)
 	monster_fire_bfg (self, start, dir, 50, 300, 100, 200, MZ2_JORG_BFG_1);
 }
 
-void jorg_firebullet_right (edict_t *self)
+void jorg_firebullet_right (edict_t* self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
@@ -58581,7 +58371,7 @@ void jorg_firebullet_right (edict_t *self)
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_R1);
 }
 
-void jorg_firebullet_left (edict_t *self)
+void jorg_firebullet_left (edict_t* self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
@@ -58597,13 +58387,13 @@ void jorg_firebullet_left (edict_t *self)
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_JORG_MACHINEGUN_L1);
 }
 
-void jorg_firebullet (edict_t *self)
+void jorg_firebullet (edict_t* self)
 {
 	jorg_firebullet_left(self);
 	jorg_firebullet_right(self);
 };
 
-void jorg_attack(edict_t *self)
+void jorg_attack(edict_t* self)
 {
 	if (random() <= 0.75)
 	{
@@ -58618,7 +58408,7 @@ void jorg_attack(edict_t *self)
 	}
 }
 
-void jorg_dead (edict_t *self)
+void jorg_dead (edict_t* self)
 {
 #if 0
 	edict_t	*tempent;
@@ -58647,7 +58437,7 @@ void jorg_dead (edict_t *self)
 }
 
 
-void jorg_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
@@ -58657,7 +58447,7 @@ void jorg_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	self->monsterinfo.currentmove = &jorg_move_death;
 }
 
-qboolean Jorg_CheckAttack (edict_t *self)
+qboolean Jorg_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -58752,7 +58542,7 @@ void MakronPrecache (void);
 
 /*QUAKED monster_jorg (1 .5 0) (-80 -80 0) (90 90 140) Ambush Trigger_Spawn Sight
 */
-void SP_monster_jorg (edict_t *self)
+void SP_monster_jorg (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -58820,15 +58610,15 @@ Makron -- Final Boss
 /* already inlined above: game/g_local.h */
 /* already inlined above: game/m_boss32.h */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
-void MakronRailgun (edict_t *self);
-void MakronSaveloc (edict_t *self);
-void MakronHyperblaster (edict_t *self);
-void makron_step_left (edict_t *self);
-void makron_step_right (edict_t *self);
-void makronBFG (edict_t *self);
-void makron_dead (edict_t *self);
+void MakronRailgun (edict_t* self);
+void MakronSaveloc (edict_t* self);
+void MakronHyperblaster (edict_t* self);
+void makron_step_left (edict_t* self);
+void makron_step_right (edict_t* self);
+void makronBFG (edict_t* self);
+void makron_dead (edict_t* self);
 
 static int	sound_pain4;
 static int	sound_pain5;
@@ -58845,7 +58635,7 @@ static int	sound_taunt2;
 static int	sound_taunt3;
 static int	sound_hit;
 
-void makron_taunt (edict_t *self)
+void makron_taunt (edict_t* self)
 {
 	float r;
 
@@ -58927,7 +58717,7 @@ static mframe_t makron_frames_stand[]= {
 
 static mmove_t makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
 
-void makron_stand (edict_t *self)
+void makron_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &makron_move_stand;
 }
@@ -58947,32 +58737,32 @@ mframe_t makron_frames_run [] =
 };
 mmove_t	makron_move_run = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
 
-void makron_hit (edict_t *self)
+void makron_hit (edict_t* self)
 {
 	gi.sound (self, CHAN_AUTO, sound_hit, 1, ATTN_NONE,0);
 }
 
-void makron_popup (edict_t *self)
+void makron_popup (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_popup, 1, ATTN_NONE,0);
 }
 
-void makron_step_left (edict_t *self)
+void makron_step_left (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
 }
 
-void makron_step_right (edict_t *self)
+void makron_step_right (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
 }
 
-void makron_brainsplorch (edict_t *self)
+void makron_brainsplorch (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_brainsplorch, 1, ATTN_NORM,0);
 }
 
-void makron_prerailgun (edict_t *self)
+void makron_prerailgun (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
 }
@@ -58993,12 +58783,12 @@ mframe_t makron_frames_walk [] =
 };
 mmove_t	makron_move_walk = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
 
-void makron_walk (edict_t *self)
+void makron_walk (edict_t* self)
 {
 		self->monsterinfo.currentmove = &makron_move_walk;
 }
 
-void makron_run (edict_t *self)
+void makron_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &makron_move_stand;
@@ -59199,7 +58989,7 @@ mframe_t makron_frames_sight [] =
 };
 mmove_t makron_move_sight= {FRAME_active01, FRAME_active13, makron_frames_sight, makron_run};
 
-void makronBFG (edict_t *self)
+void makronBFG (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -59283,14 +59073,14 @@ mframe_t makron_frames_attack5[]=
 };
 mmove_t makron_move_attack5 = {FRAME_attak501, FRAME_attak516, makron_frames_attack5, makron_run};
 
-void MakronSaveloc (edict_t *self)
+void MakronSaveloc (edict_t* self)
 {
 	VectorCopy (self->enemy->s.origin, self->pos1);	//save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 };
 
 // FIXME: He's not firing from the proper Z
-void MakronRailgun (edict_t *self)
+void MakronRailgun (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	dir;
@@ -59307,7 +59097,7 @@ void MakronRailgun (edict_t *self)
 }
 
 // FIXME: This is all wrong. He's not firing at the proper angles.
-void MakronHyperblaster (edict_t *self)
+void MakronHyperblaster (edict_t* self)
 {
 	vec3_t	dir;
 	vec3_t	vec;
@@ -59344,7 +59134,7 @@ void MakronHyperblaster (edict_t *self)
 }
 
 
-void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
+void makron_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 
 	if (self->health < (self->max_health / 2))
@@ -59388,12 +59178,12 @@ void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 };
 
-void makron_sight(edict_t *self, edict_t *other)
+void makron_sight(edict_t* self, edict_t* other)
 {
 	self->monsterinfo.currentmove = &makron_move_sight;
 };
 
-void makron_attack(edict_t *self)
+void makron_attack(edict_t* self)
 {
 	float	r;
 
@@ -59413,7 +59203,7 @@ Makron Torso. This needs to be spawned in
 ---
 */
 
-void makron_torso_think (edict_t *self)
+void makron_torso_think (edict_t* self)
 {
 	if (++self->s.frame < 365)
 		self->nextthink = level.time + FRAMETIME;
@@ -59443,7 +59233,7 @@ void makron_torso (edict_t *ent)
 // death
 //
 
-void makron_dead (edict_t *self)
+void makron_dead (edict_t* self)
 {
 	VectorSet (self->mins, -60, -60, 0);
 	VectorSet (self->maxs, 60, 60, 72);
@@ -59454,7 +59244,7 @@ void makron_dead (edict_t *self)
 }
 
 
-void makron_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void makron_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	edict_t *tempent;
 
@@ -59492,7 +59282,7 @@ void makron_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 }
 
-qboolean Makron_CheckAttack (edict_t *self)
+qboolean Makron_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -59609,7 +59399,7 @@ void MakronPrecache (void)
 
 /*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) Ambush Trigger_Spawn Sight
 */
-void SP_monster_makron (edict_t *self)
+void SP_monster_makron (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -59656,7 +59446,7 @@ MakronSpawn
 
 =================
 */
-void MakronSpawn (edict_t *self)
+void MakronSpawn (edict_t* self)
 {
 	vec3_t		vec;
 	edict_t		*player;
@@ -59683,7 +59473,7 @@ MakronToss
 Jorg is just about dead, so set up to launch Makron out
 =================
 */
-void MakronToss (edict_t *self)
+void MakronToss (edict_t* self)
 {
 	edict_t	*ent;
 
@@ -60079,19 +59869,19 @@ static int	sound_melee2;
 static int	sound_melee3;
 
 
-void brain_sight (edict_t *self, edict_t *other)
+void brain_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void brain_search (edict_t *self)
+void brain_search (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
-void brain_run (edict_t *self);
-void brain_dead (edict_t *self);
+void brain_run (edict_t* self);
+void brain_dead (edict_t* self);
 
 
 //
@@ -60135,7 +59925,7 @@ mframe_t brain_frames_stand [] =
 };
 mmove_t brain_move_stand = {FRAME_stand01, FRAME_stand30, brain_frames_stand, NULL};
 
-void brain_stand (edict_t *self)
+void brain_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &brain_move_stand;
 }
@@ -60182,7 +59972,7 @@ mframe_t brain_frames_idle [] =
 };
 mmove_t brain_move_idle = {FRAME_stand31, FRAME_stand60, brain_frames_idle, brain_stand};
 
-void brain_idle (edict_t *self)
+void brain_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
 	self->monsterinfo.currentmove = &brain_move_idle;
@@ -60210,7 +60000,7 @@ mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NU
 
 // walk2 is FUBAR, do not use
 #if 0
-void brain_walk2_cycle (edict_t *self)
+void brain_walk2_cycle (edict_t* self)
 {
 	if (random() > 0.1)
 		self->monsterinfo.nextframe = FRAME_walk220;
@@ -60265,7 +60055,7 @@ mframe_t brain_frames_walk2 [] =
 mmove_t brain_move_walk2 = {FRAME_walk201, FRAME_walk240, brain_frames_walk2, NULL};
 #endif
 
-void brain_walk (edict_t *self)
+void brain_walk (edict_t* self)
 {
 //	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &brain_move_walk1;
@@ -60344,7 +60134,7 @@ mmove_t brain_move_pain1 = {FRAME_pain101, FRAME_pain121, brain_frames_pain1, br
 // DUCK
 //
 
-void brain_duck_down (edict_t *self)
+void brain_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -60354,7 +60144,7 @@ void brain_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void brain_duck_hold (edict_t *self)
+void brain_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -60362,7 +60152,7 @@ void brain_duck_hold (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void brain_duck_up (edict_t *self)
+void brain_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -60383,7 +60173,7 @@ mframe_t brain_frames_duck [] =
 };
 mmove_t brain_move_duck = {FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run};
 
-void brain_dodge (edict_t *self, edict_t *attacker, float eta)
+void brain_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	if (random() > 0.25)
 		return;
@@ -60434,12 +60224,12 @@ mmove_t brain_move_death1 = {FRAME_death101, FRAME_death118, brain_frames_death1
 // MELEE
 //
 
-void brain_swing_right (edict_t *self)
+void brain_swing_right (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_melee1, 1, ATTN_NORM, 0);
 }
 
-void brain_hit_right (edict_t *self)
+void brain_hit_right (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -60448,12 +60238,12 @@ void brain_hit_right (edict_t *self)
 		gi.sound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
-void brain_swing_left (edict_t *self)
+void brain_swing_left (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_melee2, 1, ATTN_NORM, 0);
 }
 
-void brain_hit_left (edict_t *self)
+void brain_hit_left (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -60485,14 +60275,14 @@ mframe_t brain_frames_attack1 [] =
 };
 mmove_t brain_move_attack1 = {FRAME_attak101, FRAME_attak118, brain_frames_attack1, brain_run};
 
-void brain_chest_open (edict_t *self)
+void brain_chest_open (edict_t* self)
 {
 	self->spawnflags &= ~65536;
 	self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 	gi.sound (self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
 }
 
-void brain_tentacle_attack (edict_t *self)
+void brain_tentacle_attack (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -60502,7 +60292,7 @@ void brain_tentacle_attack (edict_t *self)
 	gi.sound (self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
 
-void brain_chest_closed (edict_t *self)
+void brain_chest_closed (edict_t* self)
 {
 	self->monsterinfo.power_armor_type = POWER_ARMOR_SCREEN;
 	if (self->spawnflags & 65536)
@@ -60534,7 +60324,7 @@ mframe_t brain_frames_attack2 [] =
 };
 mmove_t brain_move_attack2 = {FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run};
 
-void brain_melee(edict_t *self)
+void brain_melee(edict_t* self)
 {
 	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &brain_move_attack1;
@@ -60563,7 +60353,7 @@ mframe_t brain_frames_run [] =
 };
 mmove_t brain_move_run = {FRAME_walk101, FRAME_walk111, brain_frames_run, NULL};
 
-void brain_run (edict_t *self)
+void brain_run (edict_t* self)
 {
 	self->monsterinfo.power_armor_type = POWER_ARMOR_SCREEN;
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -60573,7 +60363,7 @@ void brain_run (edict_t *self)
 }
 
 
-void brain_pain (edict_t *self, edict_t *other, float kick, int damage)
+void brain_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	float	r;
 
@@ -60605,7 +60395,7 @@ void brain_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void brain_dead (edict_t *self)
+void brain_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -60617,7 +60407,7 @@ void brain_dead (edict_t *self)
 
 
 
-void brain_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -60652,7 +60442,7 @@ void brain_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 /*QUAKED monster_brain (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_brain (edict_t *self)
+void SP_monster_brain (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -61210,13 +61000,13 @@ chick
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_chick.h ============ */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
-void chick_stand (edict_t *self);
-void chick_run (edict_t *self);
-void chick_reslash(edict_t *self);
-void chick_rerocket(edict_t *self);
-void chick_attack1(edict_t *self);
+void chick_stand (edict_t* self);
+void chick_run (edict_t* self);
+void chick_reslash(edict_t* self);
+void chick_rerocket(edict_t* self);
+void chick_attack1(edict_t* self);
 
 static int	sound_missile_prelaunch;
 static int	sound_missile_launch;
@@ -61235,7 +61025,7 @@ static int	sound_sight;
 static int	sound_search;
 
 
-void ChickMoan (edict_t *self)
+void ChickMoan (edict_t* self)
 {
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
@@ -61278,7 +61068,7 @@ mframe_t chick_frames_fidget [] =
 };
 mmove_t chick_move_fidget = {FRAME_stand201, FRAME_stand230, chick_frames_fidget, chick_stand};
 
-void chick_fidget (edict_t *self)
+void chick_fidget (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
@@ -61322,7 +61112,7 @@ mframe_t chick_frames_stand [] =
 };
 mmove_t chick_move_stand = {FRAME_stand101, FRAME_stand130, chick_frames_stand, NULL};
 
-void chick_stand (edict_t *self)
+void chick_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_stand;
 }
@@ -61375,12 +61165,12 @@ mframe_t chick_frames_walk [] =
 
 mmove_t chick_move_walk = {FRAME_walk11, FRAME_walk20, chick_frames_walk, NULL};
 
-void chick_walk (edict_t *self)
+void chick_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_walk;
 }
 
-void chick_run (edict_t *self)
+void chick_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
@@ -61445,7 +61235,7 @@ mframe_t chick_frames_pain3 [] =
 };
 mmove_t chick_move_pain3 = {FRAME_pain301, FRAME_pain321, chick_frames_pain3, chick_run};
 
-void chick_pain (edict_t *self, edict_t *other, float kick, int damage)
+void chick_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	float	r;
 
@@ -61476,7 +61266,7 @@ void chick_pain (edict_t *self, edict_t *other, float kick, int damage)
 		self->monsterinfo.currentmove = &chick_move_pain3;
 }
 
-void chick_dead (edict_t *self)
+void chick_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 16);
@@ -61532,7 +61322,7 @@ mframe_t chick_frames_death1 [] =
 };
 mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
 
-void chick_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void chick_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -61570,7 +61360,7 @@ void chick_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 }
 
 
-void chick_duck_down (edict_t *self)
+void chick_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -61581,7 +61371,7 @@ void chick_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void chick_duck_hold (edict_t *self)
+void chick_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -61589,7 +61379,7 @@ void chick_duck_hold (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void chick_duck_up (edict_t *self)
+void chick_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -61609,7 +61399,7 @@ mframe_t chick_frames_duck [] =
 };
 mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_run};
 
-void chick_dodge (edict_t *self, edict_t *attacker, float eta)
+void chick_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	if (random() > 0.25)
 		return;
@@ -61620,7 +61410,7 @@ void chick_dodge (edict_t *self, edict_t *attacker, float eta)
 	self->monsterinfo.currentmove = &chick_move_duck;
 }
 
-void ChickSlash (edict_t *self)
+void ChickSlash (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -61630,7 +61420,7 @@ void ChickSlash (edict_t *self)
 }
 
 
-void ChickRocket (edict_t *self)
+void ChickRocket (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -61648,12 +61438,12 @@ void ChickRocket (edict_t *self)
 	monster_fire_rocket (self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
 }
 
-void Chick_PreAttack1 (edict_t *self)
+void Chick_PreAttack1 (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
 }
 
-void ChickReload (edict_t *self)
+void ChickReload (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
@@ -61709,7 +61499,7 @@ mframe_t chick_frames_end_attack1 [] =
 };
 mmove_t chick_move_end_attack1 = {FRAME_attak128, FRAME_attak132, chick_frames_end_attack1, chick_run};
 
-void chick_rerocket(edict_t *self)
+void chick_rerocket(edict_t* self)
 {
 	if (self->enemy->health > 0)
 	{
@@ -61724,7 +61514,7 @@ void chick_rerocket(edict_t *self)
 	self->monsterinfo.currentmove = &chick_move_end_attack1;
 }
 
-void chick_attack1(edict_t *self)
+void chick_attack1(edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_attack1;
 }
@@ -61754,7 +61544,7 @@ mframe_t chick_frames_end_slash [] =
 mmove_t chick_move_end_slash = {FRAME_attak213, FRAME_attak216, chick_frames_end_slash, chick_run};
 
 
-void chick_reslash(edict_t *self)
+void chick_reslash(edict_t* self)
 {
 	if (self->enemy->health > 0)
 	{
@@ -61775,7 +61565,7 @@ void chick_reslash(edict_t *self)
 	self->monsterinfo.currentmove = &chick_move_end_slash;
 }
 
-void chick_slash(edict_t *self)
+void chick_slash(edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_slash;
 }
@@ -61791,25 +61581,25 @@ mmove_t chick_move_start_slash = {FRAME_attak201, FRAME_attak203, chick_frames_s
 
 
 
-void chick_melee(edict_t *self)
+void chick_melee(edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_start_slash;
 }
 
 
-void chick_attack(edict_t *self)
+void chick_attack(edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_start_attack1;
 }
 
-void chick_sight(edict_t *self, edict_t *other)
+void chick_sight(edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 /*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_chick (edict_t *self)
+void SP_monster_chick (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -62054,7 +61844,7 @@ static int	sound_search;
 static int	sound_sight;
 
 
-void flipper_stand (edict_t *self);
+void flipper_stand (edict_t* self);
 
 mframe_t flipper_frames_stand [] =
 {
@@ -62063,7 +61853,7 @@ mframe_t flipper_frames_stand [] =
 
 mmove_t	flipper_move_stand = {FRAME_flphor01, FRAME_flphor01, flipper_frames_stand, NULL};
 
-void flipper_stand (edict_t *self)
+void flipper_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &flipper_move_stand;
 }
@@ -62101,7 +61891,7 @@ mframe_t flipper_frames_run [] =
 };
 mmove_t flipper_move_run_loop = {FRAME_flpver06, FRAME_flpver29, flipper_frames_run, NULL};
 
-void flipper_run_loop (edict_t *self)
+void flipper_run_loop (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_run_loop;
 }
@@ -62117,7 +61907,7 @@ mframe_t flipper_frames_run_start [] =
 };
 mmove_t flipper_move_run_start = {FRAME_flpver01, FRAME_flpver06, flipper_frames_run_start, flipper_run_loop};
 
-void flipper_run (edict_t *self)
+void flipper_run (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_run_start;
 }
@@ -62152,7 +61942,7 @@ mframe_t flipper_frames_walk [] =
 };
 mmove_t flipper_move_walk = {FRAME_flphor01, FRAME_flphor24, flipper_frames_walk, NULL};
 
-void flipper_walk (edict_t *self)
+void flipper_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_walk;
 }
@@ -62167,7 +61957,7 @@ mframe_t flipper_frames_start_run [] =
 };
 mmove_t flipper_move_start_run = {FRAME_flphor01, FRAME_flphor05, flipper_frames_start_run, NULL};
 
-void flipper_start_run (edict_t *self)
+void flipper_start_run (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_start_run;
 }
@@ -62192,7 +61982,7 @@ mframe_t flipper_frames_pain1 [] =
 };
 mmove_t flipper_move_pain1 = {FRAME_flppn201, FRAME_flppn205, flipper_frames_pain1, flipper_run};
 
-void flipper_bite (edict_t *self)
+void flipper_bite (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -62200,7 +61990,7 @@ void flipper_bite (edict_t *self)
 	fire_hit (self, aim, 5, 0);
 }
 
-void flipper_preattack (edict_t *self)
+void flipper_preattack (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
@@ -62230,12 +62020,12 @@ mframe_t flipper_frames_attack [] =
 };
 mmove_t flipper_move_attack = {FRAME_flpbit01, FRAME_flpbit20, flipper_frames_attack, flipper_run};
 
-void flipper_melee(edict_t *self)
+void flipper_melee(edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_attack;
 }
 
-void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
+void flipper_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	int		n;
 
@@ -62263,7 +62053,7 @@ void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void flipper_dead (edict_t *self)
+void flipper_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -62339,12 +62129,12 @@ mframe_t flipper_frames_death [] =
 };
 mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_death, flipper_dead};
 
-void flipper_sight (edict_t *self, edict_t *other)
+void flipper_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void flipper_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -62373,7 +62163,7 @@ void flipper_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 
 /*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_flipper (edict_t *self)
+void SP_monster_flipper (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -62867,26 +62657,26 @@ static int	sound_pain2;
 static int	sound_sight;
 
 
-void floater_sight (edict_t *self, edict_t *other)
+void floater_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void floater_idle (edict_t *self)
+void floater_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 
-//void floater_stand1 (edict_t *self);
-void floater_dead (edict_t *self);
-void floater_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
-void floater_run (edict_t *self);
-void floater_wham (edict_t *self);
-void floater_zap (edict_t *self);
+//void floater_stand1 (edict_t* self);
+void floater_dead (edict_t* self);
+void floater_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
+void floater_run (edict_t* self);
+void floater_wham (edict_t* self);
+void floater_zap (edict_t* self);
 
 
-void floater_fire_blaster (edict_t *self)
+void floater_fire_blaster (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -63023,7 +62813,7 @@ mframe_t floater_frames_stand2 [] =
 };
 mmove_t	floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_stand2, NULL};
 
-void floater_stand (edict_t *self)
+void floater_stand (edict_t* self)
 {
 	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &floater_move_stand1;
@@ -63328,7 +63118,7 @@ mframe_t floater_frames_run [] =
 };
 mmove_t	floater_move_run = {FRAME_stand101, FRAME_stand152, floater_frames_run, NULL};
 
-void floater_run (edict_t *self)
+void floater_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &floater_move_stand1;
@@ -63336,19 +63126,19 @@ void floater_run (edict_t *self)
 		self->monsterinfo.currentmove = &floater_move_run;
 }
 
-void floater_walk (edict_t *self)
+void floater_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &floater_move_walk;
 }
 
-void floater_wham (edict_t *self)
+void floater_wham (edict_t* self)
 {
 	static	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
 	gi.sound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, 5 + rand() % 6, -50);
 }
 
-void floater_zap (edict_t *self)
+void floater_zap (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	origin;
@@ -63377,13 +63167,13 @@ void floater_zap (edict_t *self)
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
 
-void floater_attack(edict_t *self)
+void floater_attack(edict_t* self)
 {
 	self->monsterinfo.currentmove = &floater_move_attack1;
 }
 
 
-void floater_melee(edict_t *self)
+void floater_melee(edict_t* self)
 {
 	if (random() < 0.5)
 		self->monsterinfo.currentmove = &floater_move_attack3;
@@ -63392,7 +63182,7 @@ void floater_melee(edict_t *self)
 }
 
 
-void floater_pain (edict_t *self, edict_t *other, float kick, int damage)
+void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	int		n;
 
@@ -63419,7 +63209,7 @@ void floater_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void floater_dead (edict_t *self)
+void floater_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -63429,7 +63219,7 @@ void floater_dead (edict_t *self)
 	gi.linkentity (self);
 }
 
-void floater_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void floater_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
@@ -63437,7 +63227,7 @@ void floater_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 
 /*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_floater (edict_t *self)
+void SP_monster_floater (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -63775,7 +63565,7 @@ flyer
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flyer.h ============ */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
 static int	nextmove;			// Used for start/stop frames
 
@@ -63788,25 +63578,25 @@ static int	sound_sproing;
 static int	sound_die;
 
 
-void flyer_check_melee(edict_t *self);
-void flyer_loop_melee (edict_t *self);
-void flyer_melee (edict_t *self);
-void flyer_setstart (edict_t *self);
-void flyer_stand (edict_t *self);
-void flyer_nextmove (edict_t *self);
+void flyer_check_melee(edict_t* self);
+void flyer_loop_melee (edict_t* self);
+void flyer_melee (edict_t* self);
+void flyer_setstart (edict_t* self);
+void flyer_stand (edict_t* self);
+void flyer_nextmove (edict_t* self);
 
 
-void flyer_sight (edict_t *self, edict_t *other)
+void flyer_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void flyer_idle (edict_t *self)
+void flyer_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void flyer_pop_blades (edict_t *self)
+void flyer_pop_blades (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
@@ -63963,7 +63753,7 @@ mframe_t flyer_frames_run [] =
 };
 mmove_t	flyer_move_run = {FRAME_stand01, FRAME_stand45, flyer_frames_run, NULL};
 
-void flyer_run (edict_t *self)
+void flyer_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &flyer_move_stand;
@@ -63971,12 +63761,12 @@ void flyer_run (edict_t *self)
 		self->monsterinfo.currentmove = &flyer_move_run;
 }
 
-void flyer_walk (edict_t *self)
+void flyer_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flyer_move_walk;
 }
 
-void flyer_stand (edict_t *self)
+void flyer_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &flyer_move_stand;
 }
@@ -64004,12 +63794,12 @@ mframe_t flyer_frames_stop [] =
 };
 mmove_t flyer_move_stop = {FRAME_stop01, FRAME_stop07, flyer_frames_stop, NULL};
 
-void flyer_stop (edict_t *self)
+void flyer_stop (edict_t* self)
 {
 		self->monsterinfo.currentmove = &flyer_move_stop;
 }
 
-void flyer_start (edict_t *self)
+void flyer_start (edict_t* self)
 {
 		self->monsterinfo.currentmove = &flyer_move_start;
 }
@@ -64111,7 +63901,7 @@ mframe_t flyer_frames_bankleft [] =
 mmove_t flyer_move_bankleft = {FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, NULL};
 
 
-void flyer_fire (edict_t *self, int flash_number)
+void flyer_fire (edict_t* self, int flash_number)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -64133,12 +63923,12 @@ void flyer_fire (edict_t *self, int flash_number)
 	monster_fire_blaster (self, start, dir, 1, 1000, flash_number, effect);
 }
 
-void flyer_fireleft (edict_t *self)
+void flyer_fireleft (edict_t* self)
 {
 	flyer_fire (self, MZ2_FLYER_BLASTER_1);
 }
 
-void flyer_fireright (edict_t *self)
+void flyer_fireright (edict_t* self)
 {
 	flyer_fire (self, MZ2_FLYER_BLASTER_2);
 }
@@ -64167,7 +63957,7 @@ mframe_t flyer_frames_attack2 [] =
 mmove_t flyer_move_attack2 = {FRAME_attak201, FRAME_attak217, flyer_frames_attack2, flyer_run};
 
 
-void flyer_slash_left (edict_t *self)
+void flyer_slash_left (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -64176,7 +63966,7 @@ void flyer_slash_left (edict_t *self)
 	gi.sound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
-void flyer_slash_right (edict_t *self)
+void flyer_slash_right (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -64223,7 +64013,7 @@ mframe_t flyer_frames_loop_melee [] =
 };
 mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_loop_melee, flyer_check_melee};
 
-void flyer_loop_melee (edict_t *self)
+void flyer_loop_melee (edict_t* self)
 {
 /*	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &flyer_move_attack1;
@@ -64233,7 +64023,7 @@ void flyer_loop_melee (edict_t *self)
 
 
 
-void flyer_attack (edict_t *self)
+void flyer_attack (edict_t* self)
 {
 /*	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &flyer_move_attack1;
@@ -64241,13 +64031,13 @@ void flyer_attack (edict_t *self)
 	self->monsterinfo.currentmove = &flyer_move_attack2;
 }
 
-void flyer_setstart (edict_t *self)
+void flyer_setstart (edict_t* self)
 {
 	nextmove = ACTION_run;
 	self->monsterinfo.currentmove = &flyer_move_start;
 }
 
-void flyer_nextmove (edict_t *self)
+void flyer_nextmove (edict_t* self)
 {
 	if (nextmove == ACTION_attack1)
 		self->monsterinfo.currentmove = &flyer_move_start_melee;
@@ -64257,14 +64047,14 @@ void flyer_nextmove (edict_t *self)
 		self->monsterinfo.currentmove = &flyer_move_run;
 }
 
-void flyer_melee (edict_t *self)
+void flyer_melee (edict_t* self)
 {
 //	flyer.nextmove = ACTION_attack1;
 //	self->monsterinfo.currentmove = &flyer_move_stop;
 	self->monsterinfo.currentmove = &flyer_move_start_melee;
 }
 
-void flyer_check_melee(edict_t *self)
+void flyer_check_melee(edict_t* self)
 {
 	if (range (self, self->enemy) == RANGE_MELEE)
 		if (random() <= 0.8)
@@ -64275,7 +64065,7 @@ void flyer_check_melee(edict_t *self)
 		self->monsterinfo.currentmove = &flyer_move_end_melee;
 }
 
-void flyer_pain (edict_t *self, edict_t *other, float kick, int damage)
+void flyer_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	int		n;
 
@@ -64308,7 +64098,7 @@ void flyer_pain (edict_t *self, edict_t *other, float kick, int damage)
 }
 
 
-void flyer_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
@@ -64317,7 +64107,7 @@ void flyer_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 
 /*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_flyer (edict_t *self)
+void SP_monster_flyer (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -64561,22 +64351,22 @@ static int	sound_search;
 static int	sound_sight;
 
 
-void gladiator_idle (edict_t *self)
+void gladiator_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void gladiator_sight (edict_t *self, edict_t *other)
+void gladiator_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void gladiator_search (edict_t *self)
+void gladiator_search (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-void gladiator_cleaver_swing (edict_t *self)
+void gladiator_cleaver_swing (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
@@ -64593,7 +64383,7 @@ mframe_t gladiator_frames_stand [] =
 };
 mmove_t gladiator_move_stand = {FRAME_stand1, FRAME_stand7, gladiator_frames_stand, NULL};
 
-void gladiator_stand (edict_t *self)
+void gladiator_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_stand;
 }
@@ -64620,7 +64410,7 @@ mframe_t gladiator_frames_walk [] =
 };
 mmove_t gladiator_move_walk = {FRAME_walk1, FRAME_walk16, gladiator_frames_walk, NULL};
 
-void gladiator_walk (edict_t *self)
+void gladiator_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_walk;
 }
@@ -64637,7 +64427,7 @@ mframe_t gladiator_frames_run [] =
 };
 mmove_t gladiator_move_run = {FRAME_run1, FRAME_run6, gladiator_frames_run, NULL};
 
-void gladiator_run (edict_t *self)
+void gladiator_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &gladiator_move_stand;
@@ -64646,7 +64436,7 @@ void gladiator_run (edict_t *self)
 }
 
 
-void GaldiatorMelee (edict_t *self)
+void GaldiatorMelee (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -64679,13 +64469,13 @@ mframe_t gladiator_frames_attack_melee [] =
 };
 mmove_t gladiator_move_attack_melee = {FRAME_melee1, FRAME_melee17, gladiator_frames_attack_melee, gladiator_run};
 
-void gladiator_melee(edict_t *self)
+void gladiator_melee(edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_attack_melee;
 }
 
 
-void GladiatorGun (edict_t *self)
+void GladiatorGun (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	dir;
@@ -64715,7 +64505,7 @@ mframe_t gladiator_frames_attack_gun [] =
 };
 mmove_t gladiator_move_attack_gun = {FRAME_attack1, FRAME_attack9, gladiator_frames_attack_gun, gladiator_run};
 
-void gladiator_attack(edict_t *self)
+void gladiator_attack(edict_t* self)
 {
 	float	range;
 	vec3_t	v;
@@ -64757,7 +64547,7 @@ mframe_t gladiator_frames_pain_air [] =
 };
 mmove_t gladiator_move_pain_air = {FRAME_painup1, FRAME_painup7, gladiator_frames_pain_air, gladiator_run};
 
-void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
+void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 
 	if (self->health < (self->max_health / 2))
@@ -64788,7 +64578,7 @@ void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
 }
 
 
-void gladiator_dead (edict_t *self)
+void gladiator_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -64825,7 +64615,7 @@ mframe_t gladiator_frames_death [] =
 };
 mmove_t gladiator_move_death = {FRAME_death1, FRAME_death22, gladiator_frames_death, gladiator_dead};
 
-void gladiator_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -64856,7 +64646,7 @@ void gladiator_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 
 /*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
 */
-void SP_monster_gladiator (edict_t *self)
+void SP_monster_gladiator (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -65341,30 +65131,30 @@ static int	sound_search;
 static int	sound_sight;
 
 
-void gunner_idlesound (edict_t *self)
+void gunner_idlesound (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void gunner_sight (edict_t *self, edict_t *other)
+void gunner_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void gunner_search (edict_t *self)
+void gunner_search (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
-qboolean visible (edict_t *self, edict_t *other);
-void GunnerGrenade (edict_t *self);
-void GunnerFire (edict_t *self);
-void gunner_fire_chain(edict_t *self);
-void gunner_refire_chain(edict_t *self);
+qboolean visible (edict_t* self, edict_t* other);
+void GunnerGrenade (edict_t* self);
+void GunnerFire (edict_t* self);
+void gunner_fire_chain(edict_t* self);
+void gunner_refire_chain(edict_t* self);
 
 
-void gunner_stand (edict_t *self);
+void gunner_stand (edict_t* self);
 
 mframe_t gunner_frames_fidget [] =
 {
@@ -65424,7 +65214,7 @@ mframe_t gunner_frames_fidget [] =
 };
 mmove_t	gunner_move_fidget = {FRAME_stand31, FRAME_stand70, gunner_frames_fidget, gunner_stand};
 
-void gunner_fidget (edict_t *self)
+void gunner_fidget (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
@@ -65469,7 +65259,7 @@ mframe_t gunner_frames_stand [] =
 };
 mmove_t	gunner_move_stand = {FRAME_stand01, FRAME_stand30, gunner_frames_stand, NULL};
 
-void gunner_stand (edict_t *self)
+void gunner_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &gunner_move_stand;
 }
@@ -65493,7 +65283,7 @@ mframe_t gunner_frames_walk [] =
 };
 mmove_t gunner_move_walk = {FRAME_walk07, FRAME_walk19, gunner_frames_walk, NULL};
 
-void gunner_walk (edict_t *self)
+void gunner_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gunner_move_walk;
 }
@@ -65512,7 +65302,7 @@ mframe_t gunner_frames_run [] =
 
 mmove_t gunner_move_run = {FRAME_run01, FRAME_run08, gunner_frames_run, NULL};
 
-void gunner_run (edict_t *self)
+void gunner_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &gunner_move_stand;
@@ -65532,7 +65322,7 @@ mframe_t gunner_frames_runandshoot [] =
 
 mmove_t gunner_move_runandshoot = {FRAME_runs01, FRAME_runs06, gunner_frames_runandshoot, NULL};
 
-void gunner_runandshoot (edict_t *self)
+void gunner_runandshoot (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gunner_move_runandshoot;
 }
@@ -65583,7 +65373,7 @@ mframe_t gunner_frames_pain1 [] =
 };
 mmove_t gunner_move_pain1 = {FRAME_pain101, FRAME_pain118, gunner_frames_pain1, gunner_run};
 
-void gunner_pain (edict_t *self, edict_t *other, float kick, int damage)
+void gunner_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -65609,7 +65399,7 @@ void gunner_pain (edict_t *self, edict_t *other, float kick, int damage)
 		self->monsterinfo.currentmove = &gunner_move_pain1;
 }
 
-void gunner_dead (edict_t *self)
+void gunner_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -65635,7 +65425,7 @@ mframe_t gunner_frames_death [] =
 };
 mmove_t gunner_move_death = {FRAME_death01, FRAME_death11, gunner_frames_death, gunner_dead};
 
-void gunner_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void gunner_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -65663,7 +65453,7 @@ void gunner_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 }
 
 
-void gunner_duck_down (edict_t *self)
+void gunner_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -65680,7 +65470,7 @@ void gunner_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void gunner_duck_hold (edict_t *self)
+void gunner_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -65688,7 +65478,7 @@ void gunner_duck_hold (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void gunner_duck_up (edict_t *self)
+void gunner_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -65709,7 +65499,7 @@ mframe_t gunner_frames_duck [] =
 };
 mmove_t	gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunner_run};
 
-void gunner_dodge (edict_t *self, edict_t *attacker, float eta)
+void gunner_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	if (random() > 0.25)
 		return;
@@ -65721,12 +65511,12 @@ void gunner_dodge (edict_t *self, edict_t *attacker, float eta)
 }
 
 
-void gunner_opengun (edict_t *self)
+void gunner_opengun (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
 }
 
-void GunnerFire (edict_t *self)
+void GunnerFire (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -65749,7 +65539,7 @@ void GunnerFire (edict_t *self)
 	monster_fire_bullet (self, start, aim, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-void GunnerGrenade (edict_t *self)
+void GunnerGrenade (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -65847,7 +65637,7 @@ mframe_t gunner_frames_attack_grenade [] =
 };
 mmove_t gunner_move_attack_grenade = {FRAME_attak101, FRAME_attak121, gunner_frames_attack_grenade, gunner_run};
 
-void gunner_attack(edict_t *self)
+void gunner_attack(edict_t* self)
 {
 	if (range (self, self->enemy) == RANGE_MELEE)
 	{
@@ -65862,12 +65652,12 @@ void gunner_attack(edict_t *self)
 	}
 }
 
-void gunner_fire_chain(edict_t *self)
+void gunner_fire_chain(edict_t* self)
 {
 	self->monsterinfo.currentmove = &gunner_move_fire_chain;
 }
 
-void gunner_refire_chain(edict_t *self)
+void gunner_refire_chain(edict_t* self)
 {
 	if (self->enemy->health > 0)
 		if ( visible (self, self->enemy) )
@@ -65881,7 +65671,7 @@ void gunner_refire_chain(edict_t *self)
 
 /*QUAKED monster_gunner (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_gunner (edict_t *self)
+void SP_monster_gunner (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -66214,7 +66004,7 @@ hover
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_hover.h ============ */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
 
 static int	sound_pain1;
@@ -66226,12 +66016,12 @@ static int	sound_search1;
 static int	sound_search2;
 
 
-void hover_sight (edict_t *self, edict_t *other)
+void hover_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void hover_search (edict_t *self)
+void hover_search (edict_t* self)
 {
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
@@ -66240,13 +66030,13 @@ void hover_search (edict_t *self)
 }
 
 
-void hover_run (edict_t *self);
-void hover_stand (edict_t *self);
-void hover_dead (edict_t *self);
-void hover_attack (edict_t *self);
-void hover_reattack (edict_t *self);
-void hover_fire_blaster (edict_t *self);
-void hover_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
+void hover_run (edict_t* self);
+void hover_stand (edict_t* self);
+void hover_dead (edict_t* self);
+void hover_attack (edict_t* self);
+void hover_reattack (edict_t* self);
+void hover_fire_blaster (edict_t* self);
+void hover_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
 mframe_t hover_frames_stand [] =
 {
@@ -66604,7 +66394,7 @@ mframe_t hover_frames_end_attack [] =
 };
 mmove_t hover_move_end_attack = {FRAME_attak107, FRAME_attak108, hover_frames_end_attack, hover_run};
 
-void hover_reattack (edict_t *self)
+void hover_reattack (edict_t* self)
 {
 	if (self->enemy->health > 0 )
 		if (visible (self, self->enemy) )
@@ -66617,7 +66407,7 @@ void hover_reattack (edict_t *self)
 }
 
 
-void hover_fire_blaster (edict_t *self)
+void hover_fire_blaster (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -66641,12 +66431,12 @@ void hover_fire_blaster (edict_t *self)
 }
 
 
-void hover_stand (edict_t *self)
+void hover_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &hover_move_stand;
 }
 
-void hover_run (edict_t *self)
+void hover_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &hover_move_stand;
@@ -66654,23 +66444,23 @@ void hover_run (edict_t *self)
 		self->monsterinfo.currentmove = &hover_move_run;
 }
 
-void hover_walk (edict_t *self)
+void hover_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &hover_move_walk;
 }
 
-void hover_start_attack (edict_t *self)
+void hover_start_attack (edict_t* self)
 {
 	self->monsterinfo.currentmove = &hover_move_start_attack;
 }
 
-void hover_attack(edict_t *self)
+void hover_attack(edict_t* self)
 {
 	self->monsterinfo.currentmove = &hover_move_attack1;
 }
 
 
-void hover_pain (edict_t *self, edict_t *other, float kick, int damage)
+void hover_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -66703,7 +66493,7 @@ void hover_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void hover_deadthink (edict_t *self)
+void hover_deadthink (edict_t* self)
 {
 	if (!self->groundentity && level.time < self->timestamp)
 	{
@@ -66713,7 +66503,7 @@ void hover_deadthink (edict_t *self)
 	BecomeExplosion1(self);
 }
 
-void hover_dead (edict_t *self)
+void hover_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -66724,7 +66514,7 @@ void hover_dead (edict_t *self)
 	gi.linkentity (self);
 }
 
-void hover_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void hover_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -66756,7 +66546,7 @@ void hover_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 /*QUAKED monster_hover (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_hover (edict_t *self)
+void SP_monster_hover (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -67231,7 +67021,7 @@ INFANTRY
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_infantry.h ============ */
 
-void InfantryMachineGun (edict_t *self);
+void InfantryMachineGun (edict_t* self);
 
 
 static int	sound_pain1;
@@ -67275,7 +67065,7 @@ mframe_t infantry_frames_stand [] =
 };
 mmove_t infantry_move_stand = {FRAME_stand50, FRAME_stand71, infantry_frames_stand, NULL};
 
-void infantry_stand (edict_t *self)
+void infantry_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_stand;
 }
@@ -67335,7 +67125,7 @@ mframe_t infantry_frames_fidget [] =
 };
 mmove_t infantry_move_fidget = {FRAME_stand01, FRAME_stand49, infantry_frames_fidget, infantry_stand};
 
-void infantry_fidget (edict_t *self)
+void infantry_fidget (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_fidget;
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
@@ -67358,7 +67148,7 @@ mframe_t infantry_frames_walk [] =
 };
 mmove_t infantry_move_walk = {FRAME_walk03, FRAME_walk14, infantry_frames_walk, NULL};
 
-void infantry_walk (edict_t *self)
+void infantry_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_walk;
 }
@@ -67376,7 +67166,7 @@ mframe_t infantry_frames_run [] =
 };
 mmove_t infantry_move_run = {FRAME_run01, FRAME_run08, infantry_frames_run, NULL};
 
-void infantry_run (edict_t *self)
+void infantry_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &infantry_move_stand;
@@ -67415,7 +67205,7 @@ mframe_t infantry_frames_pain2 [] =
 };
 mmove_t infantry_move_pain2 = {FRAME_pain201, FRAME_pain210, infantry_frames_pain2, infantry_run};
 
-void infantry_pain (edict_t *self, edict_t *other, float kick, int damage)
+void infantry_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	int		n;
 
@@ -67458,7 +67248,7 @@ static vec3_t aimangles[] = {
 	{90.0, 35.0, 0.0},
 };
 
-void InfantryMachineGun (edict_t *self)
+void InfantryMachineGun (edict_t* self)
 {
 	vec3_t	start, target;
 	vec3_t	forward, right;
@@ -67497,12 +67287,12 @@ void InfantryMachineGun (edict_t *self)
 	monster_fire_bullet (self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-void infantry_sight (edict_t *self, edict_t *other)
+void infantry_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void infantry_dead (edict_t *self)
+void infantry_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -67584,7 +67374,7 @@ mframe_t infantry_frames_death3 [] =
 mmove_t infantry_move_death3 = {FRAME_death301, FRAME_death309, infantry_frames_death3, infantry_dead};
 
 
-void infantry_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void infantry_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -67627,7 +67417,7 @@ void infantry_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 }
 
 
-void infantry_duck_down (edict_t *self)
+void infantry_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -67638,7 +67428,7 @@ void infantry_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void infantry_duck_hold (edict_t *self)
+void infantry_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -67646,7 +67436,7 @@ void infantry_duck_hold (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void infantry_duck_up (edict_t *self)
+void infantry_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -67664,7 +67454,7 @@ mframe_t infantry_frames_duck [] =
 };
 mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, infantry_run};
 
-void infantry_dodge (edict_t *self, edict_t *attacker, float eta)
+void infantry_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	if (random() > 0.25)
 		return;
@@ -67676,7 +67466,7 @@ void infantry_dodge (edict_t *self, edict_t *attacker, float eta)
 }
 
 
-void infantry_cock_gun (edict_t *self)
+void infantry_cock_gun (edict_t* self)
 {
 	int		n;
 
@@ -67685,7 +67475,7 @@ void infantry_cock_gun (edict_t *self)
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
 
-void infantry_fire (edict_t *self)
+void infantry_fire (edict_t* self)
 {
 	InfantryMachineGun (self);
 
@@ -67716,12 +67506,12 @@ mframe_t infantry_frames_attack1 [] =
 mmove_t infantry_move_attack1 = {FRAME_attak101, FRAME_attak115, infantry_frames_attack1, infantry_run};
 
 
-void infantry_swing (edict_t *self)
+void infantry_swing (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
 }
 
-void infantry_smack (edict_t *self)
+void infantry_smack (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -67743,7 +67533,7 @@ mframe_t infantry_frames_attack2 [] =
 };
 mmove_t infantry_move_attack2 = {FRAME_attak201, FRAME_attak208, infantry_frames_attack2, infantry_run};
 
-void infantry_attack(edict_t *self)
+void infantry_attack(edict_t* self)
 {
 	if (range (self, self->enemy) == RANGE_MELEE)
 		self->monsterinfo.currentmove = &infantry_move_attack2;
@@ -67754,7 +67544,7 @@ void infantry_attack(edict_t *self)
 
 /*QUAKED monster_infantry (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_infantry (edict_t *self)
+void SP_monster_infantry (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -68259,35 +68049,35 @@ static int	sound_shake;
 static int	sound_moan;
 static int	sound_scream[8];
 
-void insane_fist (edict_t *self)
+void insane_fist (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
 
-void insane_shake (edict_t *self)
+void insane_shake (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
 }
 
-void insane_moan (edict_t *self)
+void insane_moan (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 }
 
-void insane_scream (edict_t *self)
+void insane_scream (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
 }
 
 
-void insane_stand (edict_t *self);
-void insane_dead (edict_t *self);
-void insane_cross (edict_t *self);
-void insane_walk (edict_t *self);
-void insane_run (edict_t *self);
-void insane_checkdown (edict_t *self);
-void insane_checkup (edict_t *self);
-void insane_onground (edict_t *self);
+void insane_stand (edict_t* self);
+void insane_dead (edict_t* self);
+void insane_cross (edict_t* self);
+void insane_walk (edict_t* self);
+void insane_run (edict_t* self);
+void insane_checkdown (edict_t* self);
+void insane_checkup (edict_t* self);
+void insane_onground (edict_t* self);
 
 
 mframe_t insane_frames_stand_normal [] =
@@ -68656,7 +68446,7 @@ mframe_t insane_frames_struggle_cross [] =
 };
 mmove_t insane_move_struggle_cross = {FRAME_cross16, FRAME_cross30, insane_frames_struggle_cross, insane_cross};
 
-void insane_cross (edict_t *self)
+void insane_cross (edict_t* self)
 {
 	if (random() < 0.8)
 		self->monsterinfo.currentmove = &insane_move_cross;
@@ -68664,7 +68454,7 @@ void insane_cross (edict_t *self)
 		self->monsterinfo.currentmove = &insane_move_struggle_cross;
 }
 
-void insane_walk (edict_t *self)
+void insane_walk (edict_t* self)
 {
 	if ( self->spawnflags & 16 )			// Hold Ground?
 		if (self->s.frame == FRAME_cr_pain10)
@@ -68681,7 +68471,7 @@ void insane_walk (edict_t *self)
 			self->monsterinfo.currentmove = &insane_move_walk_insane;
 }
 
-void insane_run (edict_t *self)
+void insane_run (edict_t* self)
 {
 	if ( self->spawnflags & 16 )			// Hold Ground?
 		if (self->s.frame == FRAME_cr_pain10)
@@ -68699,7 +68489,7 @@ void insane_run (edict_t *self)
 }
 
 
-void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
+void insane_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	int	l,r;
 
@@ -68741,12 +68531,12 @@ void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 }
 
-void insane_onground (edict_t *self)
+void insane_onground (edict_t* self)
 {
 	self->monsterinfo.currentmove = &insane_move_down;
 }
 
-void insane_checkdown (edict_t *self)
+void insane_checkdown (edict_t* self)
 {
 //	if ( (self->s.frame == FRAME_stand94) || (self->s.frame == FRAME_stand65) )
 	if (self->spawnflags & 32)				// Always stand
@@ -68760,7 +68550,7 @@ void insane_checkdown (edict_t *self)
 	}
 }
 
-void insane_checkup (edict_t *self)
+void insane_checkup (edict_t* self)
 {
 	// If Hold_Ground and Crawl are set
 	if ( (self->spawnflags & 4) && (self->spawnflags & 16) )
@@ -68770,7 +68560,7 @@ void insane_checkup (edict_t *self)
 
 }
 
-void insane_stand (edict_t *self)
+void insane_stand (edict_t* self)
 {
 	if (self->spawnflags & 8)			// If crucified
 	{
@@ -68787,7 +68577,7 @@ void insane_stand (edict_t *self)
 			self->monsterinfo.currentmove = &insane_move_stand_insane;
 }
 
-void insane_dead (edict_t *self)
+void insane_dead (edict_t* self)
 {
 	if (self->spawnflags & 8)
 	{
@@ -68805,7 +68595,7 @@ void insane_dead (edict_t *self)
 }
 
 
-void insane_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -68845,7 +68635,7 @@ void insane_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 /*QUAKED misc_insane (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn CRAWL CRUCIFIED STAND_GROUND ALWAYS_STAND
 */
-void SP_misc_insane (edict_t *self)
+void SP_misc_insane (edict_t* self)
 {
 //	static int skin = 0;	//@@
 
@@ -69290,7 +69080,7 @@ MEDIC
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_medic.h ============ */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
 
 static int	sound_idle1;
@@ -69305,7 +69095,7 @@ static int	sound_hook_heal;
 static int	sound_hook_retract;
 
 
-edict_t *medic_FindDeadMonster (edict_t *self)
+edict_t *medic_FindDeadMonster (edict_t* self)
 {
 	edict_t	*ent = NULL;
 	edict_t	*best = NULL;
@@ -69339,7 +69129,7 @@ edict_t *medic_FindDeadMonster (edict_t *self)
 	return best;
 }
 
-void medic_idle (edict_t *self)
+void medic_idle (edict_t* self)
 {
 	edict_t	*ent;
 
@@ -69355,7 +69145,7 @@ void medic_idle (edict_t *self)
 	}
 }
 
-void medic_search (edict_t *self)
+void medic_search (edict_t* self)
 {
 	edict_t	*ent;
 
@@ -69375,7 +69165,7 @@ void medic_search (edict_t *self)
 	}
 }
 
-void medic_sight (edict_t *self, edict_t *other)
+void medic_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
@@ -69477,7 +69267,7 @@ mframe_t medic_frames_stand [] =
 };
 mmove_t medic_move_stand = {FRAME_wait1, FRAME_wait90, medic_frames_stand, NULL};
 
-void medic_stand (edict_t *self)
+void medic_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &medic_move_stand;
 }
@@ -69500,7 +69290,7 @@ mframe_t medic_frames_walk [] =
 };
 mmove_t medic_move_walk = {FRAME_walk1, FRAME_walk12, medic_frames_walk, NULL};
 
-void medic_walk (edict_t *self)
+void medic_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &medic_move_walk;
 }
@@ -69518,7 +69308,7 @@ mframe_t medic_frames_run [] =
 };
 mmove_t medic_move_run = {FRAME_run1, FRAME_run6, medic_frames_run, NULL};
 
-void medic_run (edict_t *self)
+void medic_run (edict_t* self)
 {
 	if (!(self->monsterinfo.aiflags & AI_MEDIC))
 	{
@@ -69576,7 +69366,7 @@ mframe_t medic_frames_pain2 [] =
 };
 mmove_t medic_move_pain2 = {FRAME_painb1, FRAME_painb15, medic_frames_pain2, medic_run};
 
-void medic_pain (edict_t *self, edict_t *other, float kick, int damage)
+void medic_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -69601,7 +69391,7 @@ void medic_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-void medic_fire_blaster (edict_t *self)
+void medic_fire_blaster (edict_t* self)
 {
 	vec3_t	start;
 	vec3_t	forward, right;
@@ -69627,7 +69417,7 @@ void medic_fire_blaster (edict_t *self)
 }
 
 
-void medic_dead (edict_t *self)
+void medic_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -69672,7 +69462,7 @@ mframe_t medic_frames_death [] =
 };
 mmove_t medic_move_death = {FRAME_death1, FRAME_death30, medic_frames_death, medic_dead};
 
-void medic_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void medic_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -69705,7 +69495,7 @@ void medic_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 }
 
 
-void medic_duck_down (edict_t *self)
+void medic_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -69716,7 +69506,7 @@ void medic_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void medic_duck_hold (edict_t *self)
+void medic_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -69724,7 +69514,7 @@ void medic_duck_hold (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void medic_duck_up (edict_t *self)
+void medic_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -69753,7 +69543,7 @@ mframe_t medic_frames_duck [] =
 };
 mmove_t medic_move_duck = {FRAME_duck1, FRAME_duck16, medic_frames_duck, medic_run};
 
-void medic_dodge (edict_t *self, edict_t *attacker, float eta)
+void medic_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	if (random() > 0.25)
 		return;
@@ -69786,7 +69576,7 @@ mframe_t medic_frames_attackHyperBlaster [] =
 mmove_t medic_move_attackHyperBlaster = {FRAME_attack15, FRAME_attack30, medic_frames_attackHyperBlaster, medic_run};
 
 
-void medic_continue (edict_t *self)
+void medic_continue (edict_t* self)
 {
 	if (visible (self, self->enemy) )
 		if (random() <= 0.95)
@@ -69814,7 +69604,7 @@ mframe_t medic_frames_attackBlaster [] =
 mmove_t medic_move_attackBlaster = {FRAME_attack1, FRAME_attack14, medic_frames_attackBlaster, medic_run};
 
 
-void medic_hook_launch (edict_t *self)
+void medic_hook_launch (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_hook_launch, 1, ATTN_NORM, 0);
 }
@@ -69834,7 +69624,7 @@ static vec3_t medic_cable_offsets[] = {
 	{32.7, -19.7, 10.4},
 };
 
-void medic_cable_attack (edict_t *self)
+void medic_cable_attack (edict_t* self)
 {
 	vec3_t	offset, start, end, f, r;
 	trace_t	tr;
@@ -69914,7 +69704,7 @@ void medic_cable_attack (edict_t *self)
 	gi.multicast (self->s.origin, MULTICAST_PVS);
 }
 
-void medic_hook_retract (edict_t *self)
+void medic_hook_retract (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
 	self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
@@ -69954,7 +69744,7 @@ mframe_t medic_frames_attackCable [] =
 mmove_t medic_move_attackCable = {FRAME_attack33, FRAME_attack60, medic_frames_attackCable, medic_run};
 
 
-void medic_attack(edict_t *self)
+void medic_attack(edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_MEDIC)
 		self->monsterinfo.currentmove = &medic_move_attackCable;
@@ -69962,7 +69752,7 @@ void medic_attack(edict_t *self)
 		self->monsterinfo.currentmove = &medic_move_attackBlaster;
 }
 
-qboolean medic_checkattack (edict_t *self)
+qboolean medic_checkattack (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_MEDIC)
 	{
@@ -69976,7 +69766,7 @@ qboolean medic_checkattack (edict_t *self)
 
 /*QUAKED monster_medic (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_medic (edict_t *self)
+void SP_monster_medic (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -70894,7 +70684,7 @@ static int	sound_thud;
 // SOUNDS
 //
 
-void mutant_step (edict_t *self)
+void mutant_step (edict_t* self)
 {
 	int		n;
 	n = (rand() + 1) % 3;
@@ -70906,17 +70696,17 @@ void mutant_step (edict_t *self)
 		gi.sound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
 }
 
-void mutant_sight (edict_t *self, edict_t *other)
+void mutant_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void mutant_search (edict_t *self)
+void mutant_search (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-void mutant_swing (edict_t *self)
+void mutant_swing (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
 }
@@ -70987,7 +70777,7 @@ mframe_t mutant_frames_stand [] =
 };
 mmove_t mutant_move_stand = {FRAME_stand101, FRAME_stand151, mutant_frames_stand, NULL};
 
-void mutant_stand (edict_t *self)
+void mutant_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_stand;
 }
@@ -70997,7 +70787,7 @@ void mutant_stand (edict_t *self)
 // IDLE
 //
 
-void mutant_idle_loop (edict_t *self)
+void mutant_idle_loop (edict_t* self)
 {
 	if (random() < 0.75)
 		self->monsterinfo.nextframe = FRAME_stand155;
@@ -71021,7 +70811,7 @@ static mframe_t mutant_frames_idle[] = {
 
 static mmove_t mutant_move_idle = {FRAME_stand152, FRAME_stand164, mutant_frames_idle, mutant_stand};
 
-void mutant_idle (edict_t *self)
+void mutant_idle (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_idle;
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
@@ -71032,7 +70822,7 @@ void mutant_idle (edict_t *self)
 // WALK
 //
 
-void mutant_walk (edict_t *self);
+void mutant_walk (edict_t* self);
 
 mframe_t mutant_frames_walk [] =
 {
@@ -71051,7 +70841,7 @@ mframe_t mutant_frames_walk [] =
 };
 mmove_t mutant_move_walk = {FRAME_walk05, FRAME_walk16, mutant_frames_walk, NULL};
 
-void mutant_walk_loop (edict_t *self)
+void mutant_walk_loop (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_walk;
 }
@@ -71065,7 +70855,7 @@ mframe_t mutant_frames_start_walk [] =
 };
 mmove_t mutant_move_start_walk = {FRAME_walk01, FRAME_walk04, mutant_frames_start_walk, mutant_walk_loop};
 
-void mutant_walk (edict_t *self)
+void mutant_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_start_walk;
 }
@@ -71086,7 +70876,7 @@ mframe_t mutant_frames_run [] =
 };
 mmove_t mutant_move_run = {FRAME_run03, FRAME_run08, mutant_frames_run, NULL};
 
-void mutant_run (edict_t *self)
+void mutant_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &mutant_move_stand;
@@ -71099,7 +70889,7 @@ void mutant_run (edict_t *self)
 // MELEE
 //
 
-void mutant_hit_left (edict_t *self)
+void mutant_hit_left (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -71110,7 +70900,7 @@ void mutant_hit_left (edict_t *self)
 		gi.sound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
 }
 
-void mutant_hit_right (edict_t *self)
+void mutant_hit_right (edict_t* self)
 {
 	vec3_t	aim;
 
@@ -71121,7 +70911,7 @@ void mutant_hit_right (edict_t *self)
 		gi.sound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
 }
 
-void mutant_check_refire (edict_t *self)
+void mutant_check_refire (edict_t* self)
 {
 	if (!self->enemy || !self->enemy->inuse || self->enemy->health <= 0)
 		return;
@@ -71142,7 +70932,7 @@ mframe_t mutant_frames_attack [] =
 };
 mmove_t mutant_move_attack = {FRAME_attack09, FRAME_attack15, mutant_frames_attack, mutant_run};
 
-void mutant_melee (edict_t *self)
+void mutant_melee (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_attack;
 }
@@ -71152,7 +70942,7 @@ void mutant_melee (edict_t *self)
 // ATTACK
 //
 
-void mutant_jump_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+void mutant_jump_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
 {
 	if (self->health <= 0)
 	{
@@ -71189,7 +70979,7 @@ void mutant_jump_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 	self->touch = NULL;
 }
 
-void mutant_jump_takeoff (edict_t *self)
+void mutant_jump_takeoff (edict_t* self)
 {
 	vec3_t	forward;
 
@@ -71204,7 +70994,7 @@ void mutant_jump_takeoff (edict_t *self)
 	self->touch = mutant_jump_touch;
 }
 
-void mutant_check_landing (edict_t *self)
+void mutant_check_landing (edict_t* self)
 {
 	if (self->groundentity)
 	{
@@ -71233,7 +71023,7 @@ mframe_t mutant_frames_jump [] =
 };
 mmove_t mutant_move_jump = {FRAME_attack01, FRAME_attack08, mutant_frames_jump, mutant_run};
 
-void mutant_jump (edict_t *self)
+void mutant_jump (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_jump;
 }
@@ -71243,14 +71033,14 @@ void mutant_jump (edict_t *self)
 // CHECKATTACK
 //
 
-qboolean mutant_check_melee (edict_t *self)
+qboolean mutant_check_melee (edict_t* self)
 {
 	if (range (self, self->enemy) == RANGE_MELEE)
 		return true;
 	return false;
 }
 
-qboolean mutant_check_jump (edict_t *self)
+qboolean mutant_check_jump (edict_t* self)
 {
 	vec3_t	v;
 	float	distance;
@@ -71277,7 +71067,7 @@ qboolean mutant_check_jump (edict_t *self)
 	return true;
 }
 
-qboolean mutant_checkattack (edict_t *self)
+qboolean mutant_checkattack (edict_t* self)
 {
 	if (!self->enemy || self->enemy->health <= 0)
 		return false;
@@ -71340,7 +71130,7 @@ mframe_t mutant_frames_pain3 [] =
 };
 mmove_t mutant_move_pain3 = {FRAME_pain301, FRAME_pain311, mutant_frames_pain3, mutant_run};
 
-void mutant_pain (edict_t *self, edict_t *other, float kick, int damage)
+void mutant_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	float	r;
 
@@ -71378,7 +71168,7 @@ void mutant_pain (edict_t *self, edict_t *other, float kick, int damage)
 // DEATH
 //
 
-void mutant_dead (edict_t *self)
+void mutant_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -71418,7 +71208,7 @@ mframe_t mutant_frames_death2 [] =
 };
 mmove_t mutant_move_death2 = {FRAME_death201, FRAME_death210, mutant_frames_death2, mutant_dead};
 
-void mutant_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void mutant_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -71455,7 +71245,7 @@ void mutant_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 /*QUAKED monster_mutant (1 .5 0) (-32 -32 -24) (32 32 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_mutant (edict_t *self)
+void SP_monster_mutant (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -71727,42 +71517,42 @@ static int	sound_scratch;
 static int	sound_search;
 
 
-void parasite_stand (edict_t *self);
-void parasite_start_run (edict_t *self);
-void parasite_run (edict_t *self);
-void parasite_walk (edict_t *self);
-void parasite_start_walk (edict_t *self);
-void parasite_end_fidget (edict_t *self);
-void parasite_do_fidget (edict_t *self);
-void parasite_refidget (edict_t *self);
+void parasite_stand (edict_t* self);
+void parasite_start_run (edict_t* self);
+void parasite_run (edict_t* self);
+void parasite_walk (edict_t* self);
+void parasite_start_walk (edict_t* self);
+void parasite_end_fidget (edict_t* self);
+void parasite_do_fidget (edict_t* self);
+void parasite_refidget (edict_t* self);
 
 
-void parasite_launch (edict_t *self)
+void parasite_launch (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
 }
 
-void parasite_reel_in (edict_t *self)
+void parasite_reel_in (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
 
-void parasite_sight (edict_t *self, edict_t *other)
+void parasite_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void parasite_tap (edict_t *self)
+void parasite_tap (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_tap, 1, ATTN_IDLE, 0);
 }
 
-void parasite_scratch (edict_t *self)
+void parasite_scratch (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_scratch, 1, ATTN_IDLE, 0);
 }
 
-void parasite_search (edict_t *self)
+void parasite_search (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
@@ -71801,17 +71591,17 @@ mframe_t parasite_frames_end_fidget [] =
 };
 mmove_t parasite_move_end_fidget = {FRAME_stand28, FRAME_stand35, parasite_frames_end_fidget, parasite_stand};
 
-void parasite_end_fidget (edict_t *self)
+void parasite_end_fidget (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_end_fidget;
 }
 
-void parasite_do_fidget (edict_t *self)
+void parasite_do_fidget (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_fidget;
 }
 
-void parasite_refidget (edict_t *self)
+void parasite_refidget (edict_t* self)
 {
 	if (random() <= 0.8)
 		self->monsterinfo.currentmove = &parasite_move_fidget;
@@ -71819,7 +71609,7 @@ void parasite_refidget (edict_t *self)
 		self->monsterinfo.currentmove = &parasite_move_end_fidget;
 }
 
-void parasite_idle (edict_t *self)
+void parasite_idle (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
@@ -71847,7 +71637,7 @@ mframe_t parasite_frames_stand [] =
 };
 mmove_t	parasite_move_stand = {FRAME_stand01, FRAME_stand17, parasite_frames_stand, parasite_stand};
 
-void parasite_stand (edict_t *self)
+void parasite_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_stand;
 }
@@ -71883,7 +71673,7 @@ mframe_t parasite_frames_stop_run [] =
 };
 mmove_t parasite_move_stop_run = {FRAME_run10, FRAME_run15, parasite_frames_stop_run, NULL};
 
-void parasite_start_run (edict_t *self)
+void parasite_start_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &parasite_move_stand;
@@ -71891,7 +71681,7 @@ void parasite_start_run (edict_t *self)
 		self->monsterinfo.currentmove = &parasite_move_start_run;
 }
 
-void parasite_run (edict_t *self)
+void parasite_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &parasite_move_stand;
@@ -71929,12 +71719,12 @@ mframe_t parasite_frames_stop_walk[] = {
 };
 mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_stop_walk, NULL};
 
-void parasite_start_walk (edict_t *self)
+void parasite_start_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_start_walk;
 }
 
-void parasite_walk (edict_t *self)
+void parasite_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_walk;
 }
@@ -71956,7 +71746,7 @@ mframe_t parasite_frames_pain1 [] =
 };
 mmove_t parasite_move_pain1 = {FRAME_pain101, FRAME_pain111, parasite_frames_pain1, parasite_start_run};
 
-void parasite_pain (edict_t *self, edict_t *other, float kick, int damage)
+void parasite_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -71997,7 +71787,7 @@ static qboolean parasite_drain_attack_ok (vec3_t start, vec3_t end)
 	return true;
 }
 
-void parasite_drain_attack (edict_t *self)
+void parasite_drain_attack (edict_t* self)
 {
 	vec3_t	offset, start, f, r, end, dir;
 	trace_t	tr;
@@ -72114,7 +71904,7 @@ Break Stuff Ends
 ===
 */
 
-void parasite_attack (edict_t *self)
+void parasite_attack (edict_t* self)
 {
 //	if (random() <= 0.2)
 //		self->monsterinfo.currentmove = &parasite_move_break;
@@ -72130,7 +71920,7 @@ Death Stuff Starts
 ===
 */
 
-void parasite_dead (edict_t *self)
+void parasite_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -72152,7 +71942,7 @@ mframe_t parasite_frames_death [] =
 };
 mmove_t parasite_move_death = {FRAME_death101, FRAME_death107, parasite_frames_death, parasite_dead};
 
-void parasite_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void parasite_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -72187,7 +71977,7 @@ End Death Stuff
 
 /*QUAKED monster_parasite (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_parasite (edict_t *self)
+void SP_monster_parasite (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -72995,13 +72785,13 @@ static int	sound_death_ss;
 static int	sound_cock;
 
 
-void soldier_idle (edict_t *self)
+void soldier_idle (edict_t* self)
 {
 	if (random() > 0.8)
 		gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void soldier_cock (edict_t *self)
+void soldier_cock (edict_t* self)
 {
 	if (self->s.frame == FRAME_stand322)
 		gi.sound (self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
@@ -73012,7 +72802,7 @@ void soldier_cock (edict_t *self)
 
 // STAND
 
-void soldier_stand (edict_t *self);
+void soldier_stand (edict_t* self);
 
 mframe_t soldier_frames_stand1 [] =
 {
@@ -73162,7 +72952,7 @@ mframe_t soldier_frames_stand4 [] =
 mmove_t soldier_move_stand4 = {FRAME_stand401, FRAME_stand452, soldier_frames_stand4, NULL};
 #endif
 
-void soldier_stand (edict_t *self)
+void soldier_stand (edict_t* self)
 {
 	if ((self->monsterinfo.currentmove == &soldier_move_stand3) || (random() < 0.8))
 		self->monsterinfo.currentmove = &soldier_move_stand1;
@@ -73175,7 +72965,7 @@ void soldier_stand (edict_t *self)
 // WALK
 //
 
-void soldier_walk1_random (edict_t *self)
+void soldier_walk1_random (edict_t* self)
 {
 	if (random() > 0.1)
 		self->monsterinfo.nextframe = FRAME_walk101;
@@ -73234,7 +73024,7 @@ mframe_t soldier_frames_walk2 [] =
 };
 mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2, NULL};
 
-void soldier_walk (edict_t *self)
+void soldier_walk (edict_t* self)
 {
 	if (random() < 0.5)
 		self->monsterinfo.currentmove = &soldier_move_walk1;
@@ -73247,7 +73037,7 @@ void soldier_walk (edict_t *self)
 // RUN
 //
 
-void soldier_run (edict_t *self);
+void soldier_run (edict_t* self);
 
 mframe_t soldier_frames_start_run [] =
 {
@@ -73267,7 +73057,7 @@ mframe_t soldier_frames_run [] =
 };
 mmove_t soldier_move_run = {FRAME_run03, FRAME_run08, soldier_frames_run, NULL};
 
-void soldier_run (edict_t *self)
+void soldier_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
@@ -73360,7 +73150,7 @@ mframe_t soldier_frames_pain4 [] =
 mmove_t soldier_move_pain4 = {FRAME_pain401, FRAME_pain417, soldier_frames_pain4, soldier_run};
 
 
-void soldier_pain (edict_t *self, edict_t *other, float kick, int damage)
+void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	float	r;
 	int		n;
@@ -73413,7 +73203,7 @@ static int blaster_flash [] = {MZ2_SOLDIER_BLASTER_1, MZ2_SOLDIER_BLASTER_2, MZ2
 static int shotgun_flash [] = {MZ2_SOLDIER_SHOTGUN_1, MZ2_SOLDIER_SHOTGUN_2, MZ2_SOLDIER_SHOTGUN_3, MZ2_SOLDIER_SHOTGUN_4, MZ2_SOLDIER_SHOTGUN_5, MZ2_SOLDIER_SHOTGUN_6, MZ2_SOLDIER_SHOTGUN_7, MZ2_SOLDIER_SHOTGUN_8};
 static int machinegun_flash [] = {MZ2_SOLDIER_MACHINEGUN_1, MZ2_SOLDIER_MACHINEGUN_2, MZ2_SOLDIER_MACHINEGUN_3, MZ2_SOLDIER_MACHINEGUN_4, MZ2_SOLDIER_MACHINEGUN_5, MZ2_SOLDIER_MACHINEGUN_6, MZ2_SOLDIER_MACHINEGUN_7, MZ2_SOLDIER_MACHINEGUN_8};
 
-void soldier_fire (edict_t *self, int flash_number)
+void soldier_fire (edict_t* self, int flash_number)
 {
 	vec3_t	start;
 	vec3_t	forward, right, up;
@@ -73479,12 +73269,12 @@ void soldier_fire (edict_t *self, int flash_number)
 
 // ATTACK1 (blaster/shotgun)
 
-void soldier_fire1 (edict_t *self)
+void soldier_fire1 (edict_t* self)
 {
 	soldier_fire (self, 0);
 }
 
-void soldier_attack1_refire1 (edict_t *self)
+void soldier_attack1_refire1 (edict_t* self)
 {
 	if (self->s.skinnum > 1)
 		return;
@@ -73498,7 +73288,7 @@ void soldier_attack1_refire1 (edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attak110;
 }
 
-void soldier_attack1_refire2 (edict_t *self)
+void soldier_attack1_refire2 (edict_t* self)
 {
 	if (self->s.skinnum < 2)
 		return;
@@ -73529,12 +73319,12 @@ mmove_t soldier_move_attack1 = {FRAME_attak101, FRAME_attak112, soldier_frames_a
 
 // ATTACK2 (blaster/shotgun)
 
-void soldier_fire2 (edict_t *self)
+void soldier_fire2 (edict_t* self)
 {
 	soldier_fire (self, 1);
 }
 
-void soldier_attack2_refire1 (edict_t *self)
+void soldier_attack2_refire1 (edict_t* self)
 {
 	if (self->s.skinnum > 1)
 		return;
@@ -73548,7 +73338,7 @@ void soldier_attack2_refire1 (edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attak216;
 }
 
-void soldier_attack2_refire2 (edict_t *self)
+void soldier_attack2_refire2 (edict_t* self)
 {
 	if (self->s.skinnum < 2)
 		return;
@@ -73585,7 +73375,7 @@ mmove_t soldier_move_attack2 = {FRAME_attak201, FRAME_attak218, soldier_frames_a
 
 // ATTACK3 (duck and shoot)
 
-void soldier_duck_down (edict_t *self)
+void soldier_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
@@ -73596,7 +73386,7 @@ void soldier_duck_down (edict_t *self)
 	gi.linkentity (self);
 }
 
-void soldier_duck_up (edict_t *self)
+void soldier_duck_up (edict_t* self)
 {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
@@ -73604,13 +73394,13 @@ void soldier_duck_up (edict_t *self)
 	gi.linkentity (self);
 }
 
-void soldier_fire3 (edict_t *self)
+void soldier_fire3 (edict_t* self)
 {
 	soldier_duck_down (self);
 	soldier_fire (self, 2);
 }
 
-void soldier_attack3_refire (edict_t *self)
+void soldier_attack3_refire (edict_t* self)
 {
 	if ((level.time + 0.4) < self->monsterinfo.pausetime)
 		self->monsterinfo.nextframe = FRAME_attak303;
@@ -73632,7 +73422,7 @@ mmove_t soldier_move_attack3 = {FRAME_attak301, FRAME_attak309, soldier_frames_a
 
 // ATTACK4 (machinegun)
 
-void soldier_fire4 (edict_t *self)
+void soldier_fire4 (edict_t* self)
 {
 	soldier_fire (self, 3);
 //
@@ -73657,12 +73447,12 @@ mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_a
 #if 0
 // ATTACK5 (prone)
 
-void soldier_fire5 (edict_t *self)
+void soldier_fire5 (edict_t* self)
 {
 	soldier_fire (self, 4);
 }
 
-void soldier_attack5_refire (edict_t *self)
+void soldier_attack5_refire (edict_t* self)
 {
 	if (self->enemy->health <= 0)
 		return;
@@ -73687,12 +73477,12 @@ mmove_t soldier_move_attack5 = {FRAME_attak501, FRAME_attak508, soldier_frames_a
 
 // ATTACK6 (run & shoot)
 
-void soldier_fire8 (edict_t *self)
+void soldier_fire8 (edict_t* self)
 {
 	soldier_fire (self, 7);
 }
 
-void soldier_attack6_refire (edict_t *self)
+void soldier_attack6_refire (edict_t* self)
 {
 	if (self->enemy->health <= 0)
 		return;
@@ -73723,7 +73513,7 @@ mframe_t soldier_frames_attack6 [] =
 };
 mmove_t soldier_move_attack6 = {FRAME_runs01, FRAME_runs14, soldier_frames_attack6, soldier_run};
 
-void soldier_attack(edict_t *self)
+void soldier_attack(edict_t* self)
 {
 	if (self->s.skinnum < 4)
 	{
@@ -73743,7 +73533,7 @@ void soldier_attack(edict_t *self)
 // SIGHT
 //
 
-void soldier_sight(edict_t *self, edict_t *other)
+void soldier_sight(edict_t* self, edict_t* other)
 {
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
@@ -73761,7 +73551,7 @@ void soldier_sight(edict_t *self, edict_t *other)
 // DUCK
 //
 
-void soldier_duck_hold (edict_t *self)
+void soldier_duck_hold (edict_t* self)
 {
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -73779,7 +73569,7 @@ mframe_t soldier_frames_duck [] =
 };
 mmove_t soldier_move_duck = {FRAME_duck01, FRAME_duck05, soldier_frames_duck, soldier_run};
 
-void soldier_dodge (edict_t *self, edict_t *attacker, float eta)
+void soldier_dodge (edict_t* self, edict_t* attacker, float eta)
 {
 	float	r;
 
@@ -73825,17 +73615,17 @@ void soldier_dodge (edict_t *self, edict_t *attacker, float eta)
 // DEATH
 //
 
-void soldier_fire6 (edict_t *self)
+void soldier_fire6 (edict_t* self)
 {
 	soldier_fire (self, 5);
 }
 
-void soldier_fire7 (edict_t *self)
+void soldier_fire7 (edict_t* self)
 {
 	soldier_fire (self, 6);
 }
 
-void soldier_dead (edict_t *self)
+void soldier_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
@@ -74095,7 +73885,7 @@ mframe_t soldier_frames_death6 [] =
 };
 mmove_t soldier_move_death6 = {FRAME_death601, FRAME_death610, soldier_frames_death6, soldier_dead};
 
-void soldier_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void soldier_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -74151,7 +73941,7 @@ void soldier_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 // SPAWN
 //
 
-void SP_monster_soldier_x (edict_t *self)
+void SP_monster_soldier_x (edict_t* self)
 {
 
 	self->s.modelindex = gi.modelindex ("models/monsters/soldier/tris.md2");
@@ -74189,7 +73979,7 @@ void SP_monster_soldier_x (edict_t *self)
 
 /*QUAKED monster_soldier_light (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_soldier_light (edict_t *self)
+void SP_monster_soldier_light (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -74212,7 +74002,7 @@ void SP_monster_soldier_light (edict_t *self)
 
 /*QUAKED monster_soldier (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_soldier (edict_t *self)
+void SP_monster_soldier (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -74233,7 +74023,7 @@ void SP_monster_soldier (edict_t *self)
 
 /*QUAKED monster_soldier_ss (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
-void SP_monster_soldier_ss (edict_t *self)
+void SP_monster_soldier_ss (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -74528,7 +74318,7 @@ SUPERTANK
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_supertank.h ============ */
 
-qboolean visible (edict_t *self, edict_t *other);
+qboolean visible (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -74539,14 +74329,14 @@ static int	sound_search2;
 
 static	int	tread_sound;
 
-void BossExplode (edict_t *self);
+void BossExplode (edict_t* self);
 
-void TreadSound (edict_t *self)
+void TreadSound (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, tread_sound, 1, ATTN_NORM, 0);
 }
 
-void supertank_search (edict_t *self)
+void supertank_search (edict_t* self)
 {
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
@@ -74555,10 +74345,10 @@ void supertank_search (edict_t *self)
 }
 
 
-void supertank_dead (edict_t *self);
-void supertankRocket (edict_t *self);
-void supertankMachineGun (edict_t *self);
-void supertank_reattack1(edict_t *self);
+void supertank_dead (edict_t* self);
+void supertankRocket (edict_t* self);
+void supertankMachineGun (edict_t* self);
+void supertank_reattack1(edict_t* self);
 
 
 //
@@ -74630,7 +74420,7 @@ mframe_t supertank_frames_stand []=
 };
 mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_stand, NULL};
 
-void supertank_stand (edict_t *self)
+void supertank_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &supertank_move_stand;
 }
@@ -74687,17 +74477,17 @@ mframe_t supertank_frames_forward [] =
 };
 mmove_t	supertank_move_forward = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_frames_forward, NULL};
 
-void supertank_forward (edict_t *self)
+void supertank_forward (edict_t* self)
 {
 		self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
-void supertank_walk (edict_t *self)
+void supertank_walk (edict_t* self)
 {
 		self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
-void supertank_run (edict_t *self)
+void supertank_run (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &supertank_move_stand;
@@ -74938,7 +74728,7 @@ mframe_t supertank_frames_end_attack1[]=
 mmove_t supertank_move_end_attack1 = {FRAME_attak1_7, FRAME_attak1_20, supertank_frames_end_attack1, supertank_run};
 
 
-void supertank_reattack1(edict_t *self)
+void supertank_reattack1(edict_t* self)
 {
 	if (visible(self, self->enemy))
 		if (random() < 0.9)
@@ -74949,7 +74739,7 @@ void supertank_reattack1(edict_t *self)
 		self->monsterinfo.currentmove = &supertank_move_end_attack1;
 }
 
-void supertank_pain (edict_t *self, edict_t *other, float kick, int damage)
+void supertank_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 
 	if (self->health < (self->max_health / 2))
@@ -74991,7 +74781,7 @@ void supertank_pain (edict_t *self, edict_t *other, float kick, int damage)
 };
 
 
-void supertankRocket (edict_t *self)
+void supertankRocket (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -75017,7 +74807,7 @@ void supertankRocket (edict_t *self)
 	monster_fire_rocket (self, start, dir, 50, 500, flash_number);
 }
 
-void supertankMachineGun (edict_t *self)
+void supertankMachineGun (edict_t* self)
 {
 	vec3_t	dir;
 	vec3_t	vec;
@@ -75048,7 +74838,7 @@ void supertankMachineGun (edict_t *self)
 }
 
 
-void supertank_attack(edict_t *self)
+void supertank_attack(edict_t* self)
 {
 	vec3_t	vec;
 	float	range;
@@ -75080,7 +74870,7 @@ void supertank_attack(edict_t *self)
 // death
 //
 
-void supertank_dead (edict_t *self)
+void supertank_dead (edict_t* self)
 {
 	VectorSet (self->mins, -60, -60, 0);
 	VectorSet (self->maxs, 60, 60, 72);
@@ -75091,7 +74881,7 @@ void supertank_dead (edict_t *self)
 }
 
 
-void BossExplode (edict_t *self)
+void BossExplode (edict_t* self)
 {
 	vec3_t	org;
 	int		n;
@@ -75154,7 +74944,7 @@ void BossExplode (edict_t *self)
 }
 
 
-void supertank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void supertank_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
@@ -75169,7 +74959,7 @@ void supertank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 
 /*QUAKED monster_supertank (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
 */
-void SP_monster_supertank (edict_t *self)
+void SP_monster_supertank (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -75796,9 +75586,9 @@ TANK
 /* ============ end inlined header: game/m_tank.h ============ */
 
 
-void tank_refire_rocket (edict_t *self);
-void tank_doattack_rocket (edict_t *self);
-void tank_reattack_blaster (edict_t *self);
+void tank_refire_rocket (edict_t* self);
+void tank_doattack_rocket (edict_t* self);
+void tank_reattack_blaster (edict_t* self);
 
 static int	sound_thud;
 static int	sound_pain;
@@ -75813,28 +75603,28 @@ static int	sound_strike;
 // misc
 //
 
-void tank_sight (edict_t *self, edict_t *other)
+void tank_sight (edict_t* self, edict_t* other)
 {
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 
-void tank_footstep (edict_t *self)
+void tank_footstep (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
 }
 
-void tank_thud (edict_t *self)
+void tank_thud (edict_t* self)
 {
 	gi.sound (self, CHAN_BODY, sound_thud, 1, ATTN_NORM, 0);
 }
 
-void tank_windup (edict_t *self)
+void tank_windup (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
 }
 
-void tank_idle (edict_t *self)
+void tank_idle (edict_t* self)
 {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
@@ -75879,7 +75669,7 @@ mframe_t tank_frames_stand []=
 };
 mmove_t	tank_move_stand = {FRAME_stand01, FRAME_stand30, tank_frames_stand, NULL};
 
-void tank_stand (edict_t *self)
+void tank_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &tank_move_stand;
 }
@@ -75889,7 +75679,7 @@ void tank_stand (edict_t *self)
 // walk
 //
 
-void tank_walk (edict_t *self);
+void tank_walk (edict_t* self);
 
 mframe_t tank_frames_start_walk [] =
 {
@@ -75932,7 +75722,7 @@ mframe_t tank_frames_stop_walk [] =
 };
 mmove_t	tank_move_stop_walk = {FRAME_walk21, FRAME_walk25, tank_frames_stop_walk, tank_stand};
 
-void tank_walk (edict_t *self)
+void tank_walk (edict_t* self)
 {
 		self->monsterinfo.currentmove = &tank_move_walk;
 }
@@ -75942,7 +75732,7 @@ void tank_walk (edict_t *self)
 // run
 //
 
-void tank_run (edict_t *self);
+void tank_run (edict_t* self);
 
 mframe_t tank_frames_start_run [] =
 {
@@ -75984,7 +75774,7 @@ mframe_t tank_frames_stop_run [] =
 };
 mmove_t	tank_move_stop_run = {FRAME_walk21, FRAME_walk25, tank_frames_stop_run, tank_walk};
 
-void tank_run (edict_t *self)
+void tank_run (edict_t* self)
 {
 	if (self->enemy && self->enemy->client)
 		self->monsterinfo.aiflags |= AI_BRUTAL;
@@ -76053,7 +75843,7 @@ mframe_t tank_frames_pain3 [] =
 mmove_t	tank_move_pain3 = {FRAME_pain301, FRAME_pain316, tank_frames_pain3, tank_run};
 
 
-void tank_pain (edict_t *self, edict_t *other, float kick, int damage)
+void tank_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum |= 1;
@@ -76096,7 +75886,7 @@ void tank_pain (edict_t *self, edict_t *other, float kick, int damage)
 // attacks
 //
 
-void TankBlaster (edict_t *self)
+void TankBlaster (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -76121,12 +75911,12 @@ void TankBlaster (edict_t *self)
 	monster_fire_blaster (self, start, dir, 30, 800, flash_number, EF_BLASTER);
 }
 
-void TankStrike (edict_t *self)
+void TankStrike (edict_t* self)
 {
 	gi.sound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
 }
 
-void TankRocket (edict_t *self)
+void TankRocket (edict_t* self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -76152,7 +75942,7 @@ void TankRocket (edict_t *self)
 	monster_fire_rocket (self, start, dir, 50, 550, flash_number);
 }
 
-void TankMachineGun (edict_t *self)
+void TankMachineGun (edict_t* self)
 {
 	vec3_t	dir;
 	vec3_t	vec;
@@ -76232,7 +76022,7 @@ mframe_t tank_frames_attack_post_blast [] =
 };
 mmove_t tank_move_attack_post_blast = {FRAME_attak117, FRAME_attak122, tank_frames_attack_post_blast, tank_run};
 
-void tank_reattack_blaster (edict_t *self)
+void tank_reattack_blaster (edict_t* self)
 {
 	if (skill->value >= 2)
 		if (visible (self, self->enemy))
@@ -76246,7 +76036,7 @@ void tank_reattack_blaster (edict_t *self)
 }
 
 
-void tank_poststrike (edict_t *self)
+void tank_poststrike (edict_t* self)
 {
 	self->enemy = NULL;
 	tank_run (self);
@@ -76401,7 +76191,7 @@ mframe_t tank_frames_attack_chain [] =
 };
 mmove_t tank_move_attack_chain = {FRAME_attak401, FRAME_attak429, tank_frames_attack_chain, tank_run};
 
-void tank_refire_rocket (edict_t *self)
+void tank_refire_rocket (edict_t* self)
 {
 	// Only on hard or nightmare
 	if ( skill->value >= 2 )
@@ -76415,12 +76205,12 @@ void tank_refire_rocket (edict_t *self)
 	self->monsterinfo.currentmove = &tank_move_attack_post_rocket;
 }
 
-void tank_doattack_rocket (edict_t *self)
+void tank_doattack_rocket (edict_t* self)
 {
 	self->monsterinfo.currentmove = &tank_move_attack_fire_rocket;
 }
 
-void tank_attack(edict_t *self)
+void tank_attack(edict_t* self)
 {
 	vec3_t	vec;
 	float	range;
@@ -76471,7 +76261,7 @@ void tank_attack(edict_t *self)
 // death
 //
 
-void tank_dead (edict_t *self)
+void tank_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -16);
 	VectorSet (self->maxs, 16, 16, -0);
@@ -76518,7 +76308,7 @@ mframe_t tank_frames_death1 [] =
 };
 mmove_t	tank_move_death = {FRAME_death101, FRAME_death132, tank_frames_death1, tank_dead};
 
-void tank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void tank_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -76557,7 +76347,7 @@ void tank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 */
 /*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) Ambush Trigger_Spawn Sight
 */
-void SP_monster_tank (edict_t *self)
+void SP_monster_tank (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -76644,7 +76434,7 @@ void SP_misc_teleporter_dest (edict_t *ent);
 // we use carnal knowledge of the maps to fix the coop spot targetnames to match
 // that of the nearest named single player spot
 
-static void SP_FixCoopSpots (edict_t *self)
+static void SP_FixCoopSpots (edict_t* self)
 {
 	edict_t	*spot;
 	vec3_t	d;
@@ -76675,7 +76465,7 @@ static void SP_FixCoopSpots (edict_t *self)
 // some maps don't have any coop spots at all, so we need to create them
 // where they should have been
 
-static void SP_CreateCoopSpots (edict_t *self)
+static void SP_CreateCoopSpots (edict_t* self)
 {
 	edict_t	*spot;
 
@@ -76713,7 +76503,7 @@ static void SP_CreateCoopSpots (edict_t *self)
 /*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32)
 The normal starting point for a level.
 */
-void SP_info_player_start(edict_t *self)
+void SP_info_player_start(edict_t* self)
 {
 	if (!coop->value)
 		return;
@@ -76728,7 +76518,7 @@ void SP_info_player_start(edict_t *self)
 /*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32)
 potential spawning position for deathmatch games
 */
-void SP_info_player_deathmatch(edict_t *self)
+void SP_info_player_deathmatch(edict_t* self)
 {
 	if (!deathmatch->value)
 	{
@@ -76742,7 +76532,7 @@ void SP_info_player_deathmatch(edict_t *self)
 potential spawning position for coop games
 */
 
-void SP_info_player_coop(edict_t *self)
+void SP_info_player_coop(edict_t* self)
 {
 	if (!coop->value)
 	{
@@ -76784,7 +76574,7 @@ void SP_info_player_intermission(edict_t *ent)
 //=======================================================================
 
 
-void player_pain (edict_t *self, edict_t *other, float kick, int damage)
+void player_pain (edict_t* self, edict_t* other, float kick, int damage)
 {
 	// player pain is handled at the end of the frame in P_DamageFeedback
 }
@@ -76816,7 +76606,7 @@ qboolean IsNeutral (edict_t *ent)
 	return false;
 }
 
-void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
+void ClientObituary (edict_t* self, edict_t* inflictor, edict_t* attacker)
 {
 	int			mod;
 	char		*message;
@@ -77013,9 +76803,9 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 }
 
 
-void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
+void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf);
 
-void TossClientWeapon (edict_t *self)
+void TossClientWeapon (edict_t* self)
 {
 	gitem_t		*item;
 	edict_t		*drop;
@@ -77068,7 +76858,7 @@ void TossClientWeapon (edict_t *self)
 LookAtKiller
 ==================
 */
-void LookAtKiller (edict_t *self, edict_t *inflictor, edict_t *attacker)
+void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 {
 	vec3_t		dir;
 
@@ -77106,7 +76896,7 @@ void LookAtKiller (edict_t *self, edict_t *inflictor, edict_t *attacker)
 player_die
 ==================
 */
-void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int		n;
 
@@ -77536,7 +77326,7 @@ void InitBodyQue (void)
 	}
 }
 
-void body_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+void body_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
 {
 	int	n;
 
@@ -77585,7 +77375,7 @@ void CopyToBodyQue (edict_t *ent)
 }
 
 
-void respawn (edict_t *self)
+void respawn (edict_t* self)
 {
 	if (deathmatch->value || coop->value)
 	{
@@ -79043,7 +78833,7 @@ void PlayerTrail_New (vec3_t spot)
 }
 
 
-edict_t *PlayerTrail_PickFirst (edict_t *self)
+edict_t *PlayerTrail_PickFirst (edict_t* self)
 {
 	int		marker;
 	int		n;
@@ -79072,7 +78862,7 @@ edict_t *PlayerTrail_PickFirst (edict_t *self)
 	return trail[marker];
 }
 
-edict_t *PlayerTrail_PickNext (edict_t *self)
+edict_t *PlayerTrail_PickNext (edict_t* self)
 {
 	int		marker;
 	int		n;
@@ -80267,7 +80057,7 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 }
 
 
-qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
+qboolean Pickup_Weapon (edict_t *ent, edict_t* other)
 {
 	int			index;
 	gitem_t		*ammo;
@@ -95592,12 +95382,14 @@ static void BrightnessCallback(void* s) {
 	s_brightness_slider.curvalue = s_brightness_slider.curvalue;
 }
 
-static void ResetDefaults( void *unused )
-{
+static void ResetDefaults(void* unused) {
+	UNUSED(unused);
 	VID_MenuInit();
 }
 
-static void ApplyChanges( void *unused ) {
+static void ApplyChanges(void* unused) {
+	UNUSED(unused);
+
 	// invert sense so greater = brighter, and scale to a range of 0.5 to 1.3
 	float gamma = (0.8f - (s_brightness_slider.curvalue / 10.0f - 0.5f)) + 0.5f;
 
@@ -95621,7 +95413,8 @@ static void ApplyChanges( void *unused ) {
 	M_ForceMenuOff();
 }
 
-static void CancelChanges(void *unused) {
+static void CancelChanges(void* unused) {
+	UNUSED(unused);
 	extern void M_PopMenu( void );
 	M_PopMenu();
 }
