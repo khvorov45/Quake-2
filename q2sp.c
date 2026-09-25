@@ -55043,9 +55043,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_actor.h ============ */
 
-#define	MAX_ACTOR_NAMES		8
-char *actor_names[MAX_ACTOR_NAMES] =
-{
+static char* actor_names[] = {
 	"Hellrot",
 	"Tokay",
 	"Killme",
@@ -55102,15 +55100,15 @@ static mframe_t actor_frames_stand[] = {
 	{ai_stand, 0, NULL},
 };
 
-mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
+static mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
 
-void actor_stand (edict_t *self)
-{
+static void actor_stand(edict_t *self) {
 	self->monsterinfo.currentmove = &actor_move_stand;
 
 	// randomize on startup
-	if (level.time < 1.0)
+	if (level.time < 1.0) {
 		self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
+	}
 }
 
 static mframe_t actor_frames_walk[] = {
@@ -55127,10 +55125,9 @@ static mframe_t actor_frames_walk[] = {
 	{ai_walk, 0,  NULL},
 };
 
-mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
+static mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
 
-void actor_walk (edict_t *self)
-{
+static void actor_walk(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
 
@@ -55149,10 +55146,9 @@ static mframe_t actor_frames_run[] = {
 	{ai_run, -1, NULL},
 };
 
-mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
+static mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
 
-void actor_run (edict_t *self)
-{
+static void actor_run(edict_t* self) {
 	if ((level.time < self->pain_debounce_time) && (!self->enemy))
 	{
 		if (self->movetarget)
@@ -55178,74 +55174,73 @@ static mframe_t actor_frames_pain1 [] = {
 	{ai_move, 1,  NULL},
 };
 
-mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
+static mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
 
 static mframe_t actor_frames_pain2[] = {
 	{ai_move, -4, NULL},
 	{ai_move, 4,  NULL},
 	{ai_move, 0,  NULL},
 };
-mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
 
-mframe_t actor_frames_pain3 [] =
-{
-	ai_move, -1, NULL,
-	ai_move, 1,  NULL,
-	ai_move, 0,  NULL
+static mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
+
+static mframe_t actor_frames_pain3[] = {
+	{ai_move, -1, NULL},
+	{ai_move, 1,  NULL},
+	{ai_move, 0,  NULL},
 };
-mmove_t actor_move_pain3 = {FRAME_pain301, FRAME_pain303, actor_frames_pain3, actor_run};
 
-mframe_t actor_frames_flipoff [] =
-{
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL
+static mmove_t actor_move_pain3 = {FRAME_pain301, FRAME_pain303, actor_frames_pain3, actor_run};
+
+static mframe_t actor_frames_flipoff[] = {
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
 };
-mmove_t actor_move_flipoff = {FRAME_flip01, FRAME_flip14, actor_frames_flipoff, actor_run};
 
-mframe_t actor_frames_taunt [] =
-{
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL
+static mmove_t actor_move_flipoff = {FRAME_flip01, FRAME_flip14, actor_frames_flipoff, actor_run};
+
+static mframe_t actor_frames_taunt[] = {
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
+	{ai_turn, 0,  NULL},
 };
-mmove_t actor_move_taunt = {FRAME_taunt01, FRAME_taunt17, actor_frames_taunt, actor_run};
 
-char *messages[] =
-{
+static mmove_t actor_move_taunt = {FRAME_taunt01, FRAME_taunt17, actor_frames_taunt, actor_run};
+
+static char* messages[] = {
 	"Watch it",
 	"#$@*&",
 	"Idiot",
 	"Check your targets"
 };
 
-void actor_pain (edict_t *self, edict_t *other, float kick, int damage)
-{
+static void actor_pain (edict_t *self, edict_t *other, float kick, int damage) {
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -55268,7 +55263,7 @@ void actor_pain (edict_t *self, edict_t *other, float kick, int damage)
 			self->monsterinfo.currentmove = &actor_move_flipoff;
 		else
 			self->monsterinfo.currentmove = &actor_move_taunt;
-		name = actor_names[(self - g_edicts)%MAX_ACTOR_NAMES];
+		name = actor_names[(self - g_edicts) % carray_count(actor_names)];
 		gi.cprintf (other, PRINT_CHAT, "%s: %s!\n", name, messages[rand()%3]);
 		return;
 	}
@@ -55323,35 +55318,35 @@ void actor_dead (edict_t *self)
 	gi.linkentity (self);
 }
 
-mframe_t actor_frames_death1 [] =
-{
-	ai_move, 0,   NULL,
-	ai_move, 0,   NULL,
-	ai_move, -13, NULL,
-	ai_move, 14,  NULL,
-	ai_move, 3,   NULL,
-	ai_move, -2,  NULL,
-	ai_move, 1,   NULL
+static mframe_t actor_frames_death1[] = {
+	{ai_move, 0,   NULL},
+	{ai_move, 0,   NULL},
+	{ai_move, -13, NULL},
+	{ai_move, 14,  NULL},
+	{ai_move, 3,   NULL},
+	{ai_move, -2,  NULL},
+	{ai_move, 1,   NULL},
 };
-mmove_t actor_move_death1 = {FRAME_death101, FRAME_death107, actor_frames_death1, actor_dead};
 
-mframe_t actor_frames_death2 [] =
-{
-	ai_move, 0,   NULL,
-	ai_move, 7,   NULL,
-	ai_move, -6,  NULL,
-	ai_move, -5,  NULL,
-	ai_move, 1,   NULL,
-	ai_move, 0,   NULL,
-	ai_move, -1,  NULL,
-	ai_move, -2,  NULL,
-	ai_move, -1,  NULL,
-	ai_move, -9,  NULL,
-	ai_move, -13, NULL,
-	ai_move, -13, NULL,
-	ai_move, 0,   NULL
+static mmove_t actor_move_death1 = {FRAME_death101, FRAME_death107, actor_frames_death1, actor_dead};
+
+static mframe_t actor_frames_death2[] = {
+	{ai_move, 0,   NULL},
+	{ai_move, 7,   NULL},
+	{ai_move, -6,  NULL},
+	{ai_move, -5,  NULL},
+	{ai_move, 1,   NULL},
+	{ai_move, 0,   NULL},
+	{ai_move, -1,  NULL},
+	{ai_move, -2,  NULL},
+	{ai_move, -1,  NULL},
+	{ai_move, -9,  NULL},
+	{ai_move, -13, NULL},
+	{ai_move, -13, NULL},
+	{ai_move, 0,   NULL},
 };
-mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
+
+static mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
 
 void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
@@ -55386,8 +55381,7 @@ void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 }
 
 
-void actor_fire (edict_t *self)
-{
+static void actor_fire(edict_t *self) {
 	actorMachineGun (self);
 
 	if (level.time >= self->monsterinfo.pausetime)
@@ -55396,17 +55390,16 @@ void actor_fire (edict_t *self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-mframe_t actor_frames_attack [] =
-{
-	ai_charge, -2,  actor_fire,
-	ai_charge, -2,  NULL,
-	ai_charge, 3,   NULL,
-	ai_charge, 2,   NULL
+static mframe_t actor_frames_attack[] = {
+	{ai_charge, -2,  actor_fire},
+	{ai_charge, -2,  NULL},
+	{ai_charge, 3,   NULL},
+	{ai_charge, 2,   NULL},
 };
-mmove_t actor_move_attack = {FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run};
 
-void actor_attack(edict_t *self)
-{
+static mmove_t actor_move_attack = {FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run};
+
+static void actor_attack(edict_t *self) {
 	int		n;
 
 	self->monsterinfo.currentmove = &actor_move_attack;
@@ -55532,7 +55525,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 			ent = &g_edicts[n];
 			if (!ent->inuse)
 				continue;
-			gi.cprintf (ent, PRINT_CHAT, "%s: %s\n", actor_names[(other - g_edicts)%MAX_ACTOR_NAMES], self->message);
+			gi.cprintf (ent, PRINT_CHAT, "%s: %s\n", actor_names[(other - g_edicts) % carray_count(actor_names)], self->message);
 		}
 	}
 
@@ -55916,45 +55909,44 @@ void berserk_search (edict_t *self)
 
 
 void berserk_fidget (edict_t *self);
-mframe_t berserk_frames_stand [] =
-{
-	ai_stand, 0, berserk_fidget,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+static mframe_t berserk_frames_stand[] = {
+	{ai_stand, 0, berserk_fidget},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
-mmove_t berserk_move_stand = {FRAME_stand1, FRAME_stand5, berserk_frames_stand, NULL};
 
-void berserk_stand (edict_t *self)
-{
+static mmove_t berserk_move_stand = {FRAME_stand1, FRAME_stand5, berserk_frames_stand, NULL};
+
+static void berserk_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &berserk_move_stand;
 }
 
-mframe_t berserk_frames_stand_fidget [] =
-{
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+static mframe_t berserk_frames_stand_fidget[] = {
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
-mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
+
+static mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
 
 void berserk_fidget (edict_t *self)
 {
@@ -55967,23 +55959,22 @@ void berserk_fidget (edict_t *self)
 	gi.sound (self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-
-mframe_t berserk_frames_walk [] =
-{
-	ai_walk, 9.1, NULL,
-	ai_walk, 6.3, NULL,
-	ai_walk, 4.9, NULL,
-	ai_walk, 6.7, NULL,
-	ai_walk, 6.0, NULL,
-	ai_walk, 8.2, NULL,
-	ai_walk, 7.2, NULL,
-	ai_walk, 6.1, NULL,
-	ai_walk, 4.9, NULL,
-	ai_walk, 4.7, NULL,
-	ai_walk, 4.7, NULL,
-	ai_walk, 4.8, NULL
+static mframe_t berserk_frames_walk[] = {
+	{ai_walk, 9.1, NULL},
+	{ai_walk, 6.3, NULL},
+	{ai_walk, 4.9, NULL},
+	{ai_walk, 6.7, NULL},
+	{ai_walk, 6.0, NULL},
+	{ai_walk, 8.2, NULL},
+	{ai_walk, 7.2, NULL},
+	{ai_walk, 6.1, NULL},
+	{ai_walk, 4.9, NULL},
+	{ai_walk, 4.7, NULL},
+	{ai_walk, 4.7, NULL},
+	{ai_walk, 4.8, NULL},
 };
-mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
+
+static mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
 
 void berserk_walk (edict_t *self)
 {
@@ -56014,17 +56005,16 @@ void()	berserk_runb12	=[	$r_att12 ,	berserk_runb7	] {ai_run(19);};
 // running with arm in air : end loop
 */
 
-
-mframe_t berserk_frames_run1 [] =
-{
-	ai_run, 21, NULL,
-	ai_run, 11, NULL,
-	ai_run, 21, NULL,
-	ai_run, 25, NULL,
-	ai_run, 18, NULL,
-	ai_run, 19, NULL
+static mframe_t berserk_frames_run1[] = {
+	{ai_run, 21, NULL},
+	{ai_run, 11, NULL},
+	{ai_run, 21, NULL},
+	{ai_run, 25, NULL},
+	{ai_run, 18, NULL},
+	{ai_run, 19, NULL},
 };
-mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
+
+static mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
 
 void berserk_run (edict_t *self)
 {
@@ -56047,19 +56037,18 @@ void berserk_swing (edict_t *self)
 	gi.sound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
 
-mframe_t berserk_frames_attack_spike [] =
-{
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, berserk_swing,
-		ai_charge, 0, berserk_attack_spike,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL
+static mframe_t berserk_frames_attack_spike[] = {
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, berserk_swing},
+	{ai_charge, 0, berserk_attack_spike},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
 };
-mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
 
+static mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
 
 void berserk_attack_club (edict_t *self)
 {
@@ -56069,50 +56058,45 @@ void berserk_attack_club (edict_t *self)
 	fire_hit (self, aim, (5 + (rand() % 6)), 400);		// Slower attack
 }
 
-mframe_t berserk_frames_attack_club [] =
-{
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, berserk_swing,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, berserk_attack_club,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL
+static mframe_t berserk_frames_attack_club [] = {
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, berserk_swing},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, berserk_attack_club},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
 };
-mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
+static mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
-void berserk_strike (edict_t *self)
-{
-	//FIXME play impact sound
+static void berserk_strike(edict_t *self) {
+	// FIXME play impact sound
 }
 
-
-mframe_t berserk_frames_attack_strike [] =
-{
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, berserk_swing,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, berserk_strike,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 9.7, NULL,
-	ai_move, 13.6, NULL
+static mframe_t berserk_frames_attack_strike[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_swing},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_strike},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 9.7, NULL},
+	{ai_move, 13.6, NULL},
 };
 
-mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
-
+static mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
 
 void berserk_melee (edict_t *self)
 {
@@ -56145,43 +56129,41 @@ void() 	berserk_atke18	=[	$r_attb18,	berserk_run1	] {ai_run(7.8);};
 */
 
 
-mframe_t berserk_frames_pain1 [] =
-{
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
+static mframe_t berserk_frames_pain1[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
-mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
 
+static mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
 
-mframe_t berserk_frames_pain2 [] =
-{
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
+static mframe_t berserk_frames_pain2[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
-mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
 
-void berserk_pain (edict_t *self, edict_t *other, float kick, int damage)
-{
+static mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
+
+static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -56200,7 +56182,6 @@ void berserk_pain (edict_t *self, edict_t *other, float kick, int damage)
 		self->monsterinfo.currentmove = &berserk_move_pain2;
 }
 
-
 void berserk_dead (edict_t *self)
 {
 	VectorSet (self->mins, -16, -16, -24);
@@ -56211,40 +56192,36 @@ void berserk_dead (edict_t *self)
 	gi.linkentity (self);
 }
 
-
-mframe_t berserk_frames_death1 [] =
-{
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
-
+static mframe_t berserk_frames_death1[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
-mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
 
+static mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
 
-mframe_t berserk_frames_death2 [] =
-{
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
+static mframe_t berserk_frames_death2[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
-mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
 
+static mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
 
 void berserk_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
@@ -56706,9 +56683,7 @@ void Boss2MachineGun (edict_t *self)
 	boss2_firebullet_right(self);
 }
 
-
-mframe_t boss2_frames_stand [] =
-{
+mframe_t boss2_frames_stand[] = {
 	ai_stand, 0, NULL,
 	ai_stand, 0, NULL,
 	ai_stand, 0, NULL,
