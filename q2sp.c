@@ -1221,25 +1221,6 @@ static int MSG_ReadLong(sizebuf_t* msg_read) {
 	return c;
 }
 
-static float MSG_ReadFloat(sizebuf_t* msg_read) {
-	union {
-		byte	b[4];
-		float	f;
-		int		l;
-	} dat;
-	if (msg_read->readcount+4 > msg_read->cursize) {
-		dat.f = -1;
-	} else {
-		dat.b[0] =	msg_read->data[msg_read->readcount];
-		dat.b[1] =	msg_read->data[msg_read->readcount+1];
-		dat.b[2] =	msg_read->data[msg_read->readcount+2];
-		dat.b[3] =	msg_read->data[msg_read->readcount+3];
-	}
-	msg_read->readcount += 4;
-	dat.l = LittleLong(dat.l);
-	return dat.f;
-}
-
 static char* MSG_ReadString(sizebuf_t* msg_read) {
 	static char	string[2048];
 
@@ -1866,18 +1847,6 @@ static void COM_ClearArgv(int arg) {
 		return;
 	}
 	com_argv[arg] = "";
-}
-
-static void COM_InitArgv(int argc, char **argv) {
-	assert(argc <= MAX_NUM_ARGVS);
-	com_argc = argc;
-	for (int i = 0; i < argc; i++) {
-		if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
-			com_argv[i] = "";
-		} else {
-			com_argv[i] = argv[i];
-		}
-	}
 }
 
 // creates the variable if it doesn't exist, or returns the existing one
@@ -5343,8 +5312,6 @@ enum svc_ops_e {
 };
 
 static int vidref_val;
-
-static int realtime;
 
 static FILE* log_stats_file;
 
@@ -56075,29 +56042,6 @@ static mframe_t berserk_frames_attack_club [] = {
 
 static mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
-static void berserk_strike(edict_t *self) {
-	// FIXME play impact sound
-}
-
-static mframe_t berserk_frames_attack_strike[] = {
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, berserk_swing},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, berserk_strike},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 9.7, NULL},
-	{ai_move, 13.6, NULL},
-};
-
-static mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
-
 void berserk_melee (edict_t *self)
 {
 	if ((rand() % 2) == 0)
@@ -67499,21 +67443,19 @@ void infantry_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 }
 
-
-vec3_t	aimangles[] =
-{
-	0.0, 5.0, 0.0,
-	10.0, 15.0, 0.0,
-	20.0, 25.0, 0.0,
-	25.0, 35.0, 0.0,
-	30.0, 40.0, 0.0,
-	30.0, 45.0, 0.0,
-	25.0, 50.0, 0.0,
-	20.0, 40.0, 0.0,
-	15.0, 35.0, 0.0,
-	40.0, 35.0, 0.0,
-	70.0, 35.0, 0.0,
-	90.0, 35.0, 0.0
+static vec3_t aimangles[] = {
+	{0.0, 5.0, 0.0},
+	{10.0, 15.0, 0.0},
+	{20.0, 25.0, 0.0},
+	{25.0, 35.0, 0.0},
+	{30.0, 40.0, 0.0},
+	{30.0, 45.0, 0.0},
+	{25.0, 50.0, 0.0},
+	{20.0, 40.0, 0.0},
+	{15.0, 35.0, 0.0},
+	{40.0, 35.0, 0.0},
+	{70.0, 35.0, 0.0},
+	{90.0, 35.0, 0.0},
 };
 
 void InfantryMachineGun (edict_t *self)
@@ -69879,18 +69821,17 @@ void medic_hook_launch (edict_t *self)
 
 void ED_CallSpawn (edict_t *ent);
 
-static vec3_t	medic_cable_offsets[] =
-{
-	45.0,  -9.2, 15.5,
-	48.4,  -9.7, 15.2,
-	47.8,  -9.8, 15.8,
-	47.3,  -9.3, 14.3,
-	45.4, -10.1, 13.1,
-	41.9, -12.7, 12.0,
-	37.8, -15.8, 11.2,
-	34.3, -18.4, 10.7,
-	32.7, -19.7, 10.4,
-	32.7, -19.7, 10.4
+static vec3_t medic_cable_offsets[] = {
+	{45.0,  -9.2, 15.5},
+	{48.4,  -9.7, 15.2},
+	{47.8,  -9.8, 15.8},
+	{47.3,  -9.3, 14.3},
+	{45.4, -10.1, 13.1},
+	{41.9, -12.7, 12.0},
+	{37.8, -15.8, 11.2},
+	{34.3, -18.4, 10.7},
+	{32.7, -19.7, 10.4},
+	{32.7, -19.7, 10.4},
 };
 
 void medic_cable_attack (edict_t *self)
@@ -76433,25 +76374,25 @@ mframe_t tank_frames_attack_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
-	NULL,      0, TankMachineGun,
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
+	{NULL,      0, TankMachineGun},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -94776,31 +94717,14 @@ void S_Activate (qboolean active)
 //
 #define IDI_ICON1                       101
 
-// Next default values for new objects
-//
-#ifdef APSTUDIO_INVOKED
-#ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        103
-#define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1000
-#define _APS_NEXT_SYMED_VALUE           101
-#endif
-#endif
-/* ============ end inlined header: win32/resource.h ============ */
-/* already inlined above: win32/conproc.h */
-
 #define MINIMUM_WIN_MEMORY	0x0a00000
 #define MAXIMUM_WIN_MEMORY	0x1000000
-
-//#define DEMO
 
 qboolean s_win95;
 
 int			starttime;
 int			ActiveApp;
 qboolean	Minimized;
-
-static HANDLE		hinput, houtput;
 
 unsigned	sys_msg_time;
 unsigned	sys_frame_time;
@@ -94926,16 +94850,7 @@ char *Sys_ScanForCD (void) {
 
 //================================================================
 
-static char	console_text[256];
-static int	console_textlen;
-
-/*
-================
-Sys_SendKeyEvents
-
-Send Key_Event calls
-================
-*/
+// Send Key_Event calls
 void Sys_SendKeyEvents (void)
 {
     MSG        msg;
