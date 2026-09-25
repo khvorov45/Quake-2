@@ -56684,127 +56684,127 @@ void Boss2MachineGun (edict_t *self)
 }
 
 mframe_t boss2_frames_stand[] = {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	boss2_move_stand = {FRAME_stand30, FRAME_stand50, boss2_frames_stand, NULL};
 
 mframe_t boss2_frames_fidget [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t boss2_move_fidget = {FRAME_stand1, FRAME_stand30, boss2_frames_fidget, NULL};
 
 mframe_t boss2_frames_walk [] =
 {
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	8,	NULL
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	8,	NULL},
 };
 mmove_t boss2_move_walk = {FRAME_walk1, FRAME_walk20, boss2_frames_walk, NULL};
 
 
 mframe_t boss2_frames_run [] =
 {
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL,
-	ai_run,	8,	NULL
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
+	{ai_run,	8,	NULL},
 };
 mmove_t boss2_move_run = {FRAME_walk1, FRAME_walk20, boss2_frames_run, NULL};
 
 mframe_t boss2_frames_attack_pre_mg [] =
 {
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	boss2_attack_mg
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	boss2_attack_mg},
 };
 mmove_t boss2_move_attack_pre_mg = {FRAME_attack1, FRAME_attack9, boss2_frames_attack_pre_mg, NULL};
 
@@ -56812,133 +56812,133 @@ mmove_t boss2_move_attack_pre_mg = {FRAME_attack1, FRAME_attack9, boss2_frames_a
 // Loop this
 mframe_t boss2_frames_attack_mg [] =
 {
-	ai_charge,	1,	Boss2MachineGun,
-	ai_charge,	1,	Boss2MachineGun,
-	ai_charge,	1,	Boss2MachineGun,
-	ai_charge,	1,	Boss2MachineGun,
-	ai_charge,	1,	Boss2MachineGun,
-	ai_charge,	1,	boss2_reattack_mg
+	{ai_charge,	1,	Boss2MachineGun},
+	{ai_charge,	1,	Boss2MachineGun},
+	{ai_charge,	1,	Boss2MachineGun},
+	{ai_charge,	1,	Boss2MachineGun},
+	{ai_charge,	1,	Boss2MachineGun},
+	{ai_charge,	1,	boss2_reattack_mg},
 };
 mmove_t boss2_move_attack_mg = {FRAME_attack10, FRAME_attack15, boss2_frames_attack_mg, NULL};
 
 mframe_t boss2_frames_attack_post_mg [] =
 {
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
 };
 mmove_t boss2_move_attack_post_mg = {FRAME_attack16, FRAME_attack19, boss2_frames_attack_post_mg, boss2_run};
 
 mframe_t boss2_frames_attack_rocket [] =
 {
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_move,	-20,	Boss2Rocket,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL,
-	ai_charge,	1,	NULL
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_move,	-20,	Boss2Rocket},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	1,	NULL},
 };
 mmove_t boss2_move_attack_rocket = {FRAME_attack20, FRAME_attack40, boss2_frames_attack_rocket, boss2_run};
 
 mframe_t boss2_frames_pain_heavy [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t boss2_move_pain_heavy = {FRAME_pain2, FRAME_pain19, boss2_frames_pain_heavy, boss2_run};
 
 mframe_t boss2_frames_pain_light [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t boss2_move_pain_light = {FRAME_pain20, FRAME_pain23, boss2_frames_pain_light, boss2_run};
 
 mframe_t boss2_frames_death [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	BossExplode
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	BossExplode},
 };
 mmove_t boss2_move_death = {FRAME_death2, FRAME_death50, boss2_frames_death, boss2_dead};
 
@@ -58205,59 +58205,58 @@ void jorg_death_hit(edict_t *self);
 // stand
 //
 
-mframe_t jorg_frames_stand []=
-{
-	ai_stand, 0, jorg_idle,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 10
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 20
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 30
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 19, NULL,
-	ai_stand, 11, jorg_step_left,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 6, NULL,
-	ai_stand, 9, jorg_step_right,
-	ai_stand, 0, NULL,		// 40
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, -2, NULL,
-	ai_stand, -17, jorg_step_left,
-	ai_stand, 0, NULL,
-	ai_stand, -12, NULL,		// 50
-	ai_stand, -14, jorg_step_right	// 51
+static mframe_t jorg_frames_stand[] = {
+	{ai_stand, 0, jorg_idle},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 10
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 20
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 30
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 19, NULL},
+	{ai_stand, 11, jorg_step_left},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 6, NULL},
+	{ai_stand, 9, jorg_step_right},
+	{ai_stand, 0, NULL},		// 40
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -2, NULL},
+	{ai_stand, -17, jorg_step_left},
+	{ai_stand, 0, NULL},
+	{ai_stand, -12, NULL},		// 50
+	{ai_stand, -14, jorg_step_right},	// 51
 };
 mmove_t	jorg_move_stand = {FRAME_stand01, FRAME_stand51, jorg_frames_stand, NULL};
 
@@ -58290,20 +58289,20 @@ void jorg_stand (edict_t *self)
 
 mframe_t jorg_frames_run [] =
 {
-	ai_run, 17,	jorg_step_left,
-	ai_run, 0,	NULL,
-	ai_run, 0,	NULL,
-	ai_run, 0,	NULL,
-	ai_run, 12,	NULL,
-	ai_run, 8,	NULL,
-	ai_run, 10,	NULL,
-	ai_run, 33,	jorg_step_right,
-	ai_run, 0,	NULL,
-	ai_run, 0,	NULL,
-	ai_run, 0,	NULL,
-	ai_run, 9,	NULL,
-	ai_run, 9,	NULL,
-	ai_run, 9,	NULL
+	{ai_run, 17,	jorg_step_left},
+	{ai_run, 0,	NULL},
+	{ai_run, 0,	NULL},
+	{ai_run, 0,	NULL},
+	{ai_run, 12,	NULL},
+	{ai_run, 8,	NULL},
+	{ai_run, 10,	NULL},
+	{ai_run, 33,	jorg_step_right},
+	{ai_run, 0,	NULL},
+	{ai_run, 0,	NULL},
+	{ai_run, 0,	NULL},
+	{ai_run, 9,	NULL},
+	{ai_run, 9,	NULL},
+	{ai_run, 9,	NULL},
 };
 mmove_t	jorg_move_run = {FRAME_walk06, FRAME_walk19, jorg_frames_run, NULL};
 
@@ -58313,41 +58312,41 @@ mmove_t	jorg_move_run = {FRAME_walk06, FRAME_walk19, jorg_frames_run, NULL};
 
 mframe_t jorg_frames_start_walk [] =
 {
-	ai_walk,	5,	NULL,
-	ai_walk,	6,	NULL,
-	ai_walk,	7,	NULL,
-	ai_walk,	9,	NULL,
-	ai_walk,	15,	NULL
+	{ai_walk,	5,	NULL},
+	{ai_walk,	6,	NULL},
+	{ai_walk,	7,	NULL},
+	{ai_walk,	9,	NULL},
+	{ai_walk,	15,	NULL},
 };
 mmove_t jorg_move_start_walk = {FRAME_walk01, FRAME_walk05, jorg_frames_start_walk, NULL};
 
 mframe_t jorg_frames_walk [] =
 {
-	ai_walk, 17,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 12,	NULL,
-	ai_walk, 8,	NULL,
-	ai_walk, 10,	NULL,
-	ai_walk, 33,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 9,	NULL,
-	ai_walk, 9,	NULL,
-	ai_walk, 9,	NULL
+	{ai_walk, 17,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 12,	NULL},
+	{ai_walk, 8,	NULL},
+	{ai_walk, 10,	NULL},
+	{ai_walk, 33,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 9,	NULL},
+	{ai_walk, 9,	NULL},
+	{ai_walk, 9,	NULL},
 };
 mmove_t	jorg_move_walk = {FRAME_walk06, FRAME_walk19, jorg_frames_walk, NULL};
 
 mframe_t jorg_frames_end_walk [] =
 {
-	ai_walk,	11,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	8,	NULL,
-	ai_walk,	-8,	NULL
+	{ai_walk,	11,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	8,	NULL},
+	{ai_walk,	-8,	NULL},
 };
 mmove_t jorg_move_end_walk = {FRAME_walk20, FRAME_walk25, jorg_frames_end_walk, NULL};
 
@@ -58366,153 +58365,152 @@ void jorg_run (edict_t *self)
 
 mframe_t jorg_frames_pain3 [] =
 {
-	ai_move,	-28,	NULL,
-	ai_move,	-6,	NULL,
-	ai_move,	-3,	jorg_step_left,
-	ai_move,	-9,	NULL,
-	ai_move,	0,	jorg_step_right,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-7,	NULL,
-	ai_move,	1,	NULL,
-	ai_move,	-11,	NULL,
-	ai_move,	-4,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	10,	NULL,
-	ai_move,	11,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	10,	NULL,
-	ai_move,	3,	NULL,
-	ai_move,	10,	NULL,
-	ai_move,	7,	jorg_step_left,
-	ai_move,	17,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	jorg_step_right
+	{ai_move,	-28,	NULL},
+	{ai_move,	-6,	NULL},
+	{ai_move,	-3,	jorg_step_left},
+	{ai_move,	-9,	NULL},
+	{ai_move,	0,	jorg_step_right},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-7,	NULL},
+	{ai_move,	1,	NULL},
+	{ai_move,	-11,	NULL},
+	{ai_move,	-4,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	10,	NULL},
+	{ai_move,	11,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	10,	NULL},
+	{ai_move,	3,	NULL},
+	{ai_move,	10,	NULL},
+	{ai_move,	7,	jorg_step_left},
+	{ai_move,	17,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	jorg_step_right},
 };
 mmove_t jorg_move_pain3 = {FRAME_pain301, FRAME_pain325, jorg_frames_pain3, jorg_run};
 
 mframe_t jorg_frames_pain2 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t jorg_move_pain2 = {FRAME_pain201, FRAME_pain203, jorg_frames_pain2, jorg_run};
 
 mframe_t jorg_frames_pain1 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t jorg_move_pain1 = {FRAME_pain101, FRAME_pain103, jorg_frames_pain1, jorg_run};
 
-mframe_t jorg_frames_death1 [] =
-{
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 10
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 20
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 30
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 40
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	MakronToss,
-	ai_move,	0,	BossExplode		// 50
+mframe_t jorg_frames_death1[] = {
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 10
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 20
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 30
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 40
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	MakronToss},
+	{ai_move,	0,	BossExplode},		// 50
 };
 mmove_t jorg_move_death = {FRAME_death01, FRAME_death50, jorg_frames_death1, jorg_dead};
 
 mframe_t jorg_frames_attack2 []=
 {
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	jorgBFG,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	jorgBFG},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t jorg_move_attack2 = {FRAME_attak201, FRAME_attak213, jorg_frames_attack2, jorg_run};
 
 mframe_t jorg_frames_start_attack1 [] =
 {
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
 };
 mmove_t jorg_move_start_attack1 = {FRAME_attak101, FRAME_attak108, jorg_frames_start_attack1, jorg_attack1};
 
 mframe_t jorg_frames_attack1[]=
 {
-	ai_charge,	0,	jorg_firebullet,
-	ai_charge,	0,	jorg_firebullet,
-	ai_charge,	0,	jorg_firebullet,
-	ai_charge,	0,	jorg_firebullet,
-	ai_charge,	0,	jorg_firebullet,
-	ai_charge,	0,	jorg_firebullet
+	{ai_charge,	0,	jorg_firebullet},
+	{ai_charge,	0,	jorg_firebullet},
+	{ai_charge,	0,	jorg_firebullet},
+	{ai_charge,	0,	jorg_firebullet},
+	{ai_charge,	0,	jorg_firebullet},
+	{ai_charge,	0,	jorg_firebullet},
 };
 mmove_t jorg_move_attack1 = {FRAME_attak109, FRAME_attak114, jorg_frames_attack1, jorg_reattack1};
 
 mframe_t jorg_frames_end_attack1[]=
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t jorg_move_end_attack1 = {FRAME_attak115, FRAME_attak118, jorg_frames_end_attack1, jorg_run};
 
@@ -58920,70 +58918,70 @@ void makron_taunt (edict_t *self)
 // stand
 //
 
-mframe_t makron_frames_stand []=
-{
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 10
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 20
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 30
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 40
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 50
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL		// 60
+static mframe_t makron_frames_stand[]= {
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 10
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 20
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 30
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 40
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 50
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 60
 };
-mmove_t	makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
+
+static mmove_t makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
 
 void makron_stand (edict_t *self)
 {
@@ -58992,16 +58990,16 @@ void makron_stand (edict_t *self)
 
 mframe_t makron_frames_run [] =
 {
-	ai_run, 3,	makron_step_left,
-	ai_run, 12,	NULL,
-	ai_run, 8,	NULL,
-	ai_run, 8,	NULL,
-	ai_run, 8,	makron_step_right,
-	ai_run, 6,	NULL,
-	ai_run, 12,	NULL,
-	ai_run, 9,	NULL,
-	ai_run, 6,	NULL,
-	ai_run, 12,	NULL
+	{ai_run, 3,	makron_step_left},
+	{ai_run, 12,	NULL},
+	{ai_run, 8,	NULL},
+	{ai_run, 8,	NULL},
+	{ai_run, 8,	makron_step_right},
+	{ai_run, 6,	NULL},
+	{ai_run, 12,	NULL},
+	{ai_run, 9,	NULL},
+	{ai_run, 6,	NULL},
+	{ai_run, 12,	NULL},
 };
 mmove_t	makron_move_run = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
 
@@ -59038,16 +59036,16 @@ void makron_prerailgun (edict_t *self)
 
 mframe_t makron_frames_walk [] =
 {
-	ai_walk, 3,	makron_step_left,
-	ai_walk, 12,	NULL,
-	ai_walk, 8,	NULL,
-	ai_walk, 8,	NULL,
-	ai_walk, 8,	makron_step_right,
-	ai_walk, 6,	NULL,
-	ai_walk, 12,	NULL,
-	ai_walk, 9,	NULL,
-	ai_walk, 6,	NULL,
-	ai_walk, 12,	NULL
+	{ai_walk, 3,	makron_step_left},
+	{ai_walk, 12,	NULL},
+	{ai_walk, 8,	NULL},
+	{ai_walk, 8,	NULL},
+	{ai_walk, 8,	makron_step_right},
+	{ai_walk, 6,	NULL},
+	{ai_walk, 12,	NULL},
+	{ai_walk, 9,	NULL},
+	{ai_walk, 6,	NULL},
+	{ai_walk, 12,	NULL},
 };
 mmove_t	makron_move_walk = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
 
@@ -59066,194 +59064,194 @@ void makron_run (edict_t *self)
 
 mframe_t makron_frames_pain6 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 10
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	makron_popup,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,		// 20
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	makron_taunt,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 10
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	makron_popup},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},		// 20
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	makron_taunt},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_pain6 = {FRAME_pain601, FRAME_pain627, makron_frames_pain6, makron_run};
 
 mframe_t makron_frames_pain5 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_pain5 = {FRAME_pain501, FRAME_pain504, makron_frames_pain5, makron_run};
 
 mframe_t makron_frames_pain4 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_pain4 = {FRAME_pain401, FRAME_pain404, makron_frames_pain4, makron_run};
 
-mframe_t makron_frames_death2 [] =
-{
-	ai_move,	-15,	NULL,
-	ai_move,	3,	NULL,
-	ai_move,	-12,	NULL,
-	ai_move,	0,	makron_step_left,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 10
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	11,	NULL,
-	ai_move,	12,	NULL,
-	ai_move,	11,	makron_step_right,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 20
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 30
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	5,	NULL,
-	ai_move,	7,	NULL,
-	ai_move,	6,	makron_step_left,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-1,	NULL,
-	ai_move,	2,	NULL,			// 40
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 50
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-6,	NULL,
-	ai_move,	-4,	NULL,
-	ai_move,	-6,	makron_step_right,
-	ai_move,	-4,	NULL,
-	ai_move,	-4,	makron_step_left,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 60
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-2,	NULL,
-	ai_move,	-5,	NULL,
-	ai_move,	-3,	makron_step_right,
-	ai_move,	-8,	NULL,
-	ai_move,	-3,	makron_step_left,
-	ai_move,	-7,	NULL,
-	ai_move,	-4,	NULL,
-	ai_move,	-4,	makron_step_right,			// 70
-	ai_move,	-6,	NULL,
-	ai_move,	-7,	NULL,
-	ai_move,	0,	makron_step_left,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,			// 80
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-2,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	2,	NULL,
-	ai_move,	0,	NULL,			// 90
-	ai_move,	27,	makron_hit,
-	ai_move,	26,	NULL,
-	ai_move,	0,	makron_brainsplorch,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL			// 95
+mframe_t makron_frames_death2[] = {
+	{ai_move,	-15,	NULL},
+	{ai_move,	3,	NULL},
+	{ai_move,	-12,	NULL},
+	{ai_move,	0,	makron_step_left},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 10
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	11,	NULL},
+	{ai_move,	12,	NULL},
+	{ai_move,	11,	makron_step_right},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 20
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 30
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	5,	NULL},
+	{ai_move,	7,	NULL},
+	{ai_move,	6,	makron_step_left},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-1,	NULL},
+	{ai_move,	2,	NULL},			// 40
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 50
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-6,	NULL},
+	{ai_move,	-4,	NULL},
+	{ai_move,	-6,	makron_step_right},
+	{ai_move,	-4,	NULL},
+	{ai_move,	-4,	makron_step_left},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 60
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-2,	NULL},
+	{ai_move,	-5,	NULL},
+	{ai_move,	-3,	makron_step_right},
+	{ai_move,	-8,	NULL},
+	{ai_move,	-3,	makron_step_left},
+	{ai_move,	-7,	NULL},
+	{ai_move,	-4,	NULL},
+	{ai_move,	-4,	makron_step_right},			// 70
+	{ai_move,	-6,	NULL},
+	{ai_move,	-7,	NULL},
+	{ai_move,	0,	makron_step_left},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 80
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-2,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	2,	NULL},
+	{ai_move,	0,	NULL},			// 90
+	{ai_move,	27,	makron_hit},
+	{ai_move,	26,	NULL},
+	{ai_move,	0,	makron_brainsplorch},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},			// 95
 };
+
 mmove_t makron_move_death2 = {FRAME_death201, FRAME_death295, makron_frames_death2, makron_dead};
 
 mframe_t makron_frames_death3 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_death3 = {FRAME_death301, FRAME_death320, makron_frames_death3, NULL};
 
 mframe_t makron_frames_sight [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_sight= {FRAME_active01, FRAME_active13, makron_frames_sight, makron_run};
 
@@ -59278,66 +59276,66 @@ void makronBFG (edict_t *self)
 
 mframe_t makron_frames_attack3 []=
 {
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	makronBFG,		// FIXME: BFG Attack here
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	makronBFG},		// FIXME: BFG Attack here
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_attack3 = {FRAME_attak301, FRAME_attak308, makron_frames_attack3, makron_run};
 
 mframe_t makron_frames_attack4[]=
 {
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	MakronHyperblaster,		// fire
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	MakronHyperblaster},		// fire
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_attack4 = {FRAME_attak401, FRAME_attak426, makron_frames_attack4, makron_run};
 
 mframe_t makron_frames_attack5[]=
 {
-	ai_charge,	0,	makron_prerailgun,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	MakronSaveloc,
-	ai_move,	0,	MakronRailgun,		// Fire railgun
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_charge,	0,	makron_prerailgun},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	MakronSaveloc},
+	{ai_move,	0,	MakronRailgun},		// Fire railgun
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t makron_move_attack5 = {FRAME_attak501, FRAME_attak516, makron_frames_attack5, makron_run};
 
@@ -60158,38 +60156,38 @@ void brain_dead (edict_t *self);
 
 mframe_t brain_frames_stand [] =
 {
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 };
 mmove_t brain_move_stand = {FRAME_stand01, FRAME_stand30, brain_frames_stand, NULL};
 
@@ -60205,38 +60203,38 @@ void brain_stand (edict_t *self)
 
 mframe_t brain_frames_idle [] =
 {
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL,
-	ai_stand,	0,	NULL
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
+	{ai_stand,	0,	NULL},
 };
 mmove_t brain_move_idle = {FRAME_stand31, FRAME_stand60, brain_frames_idle, brain_stand};
 
@@ -60252,17 +60250,17 @@ void brain_idle (edict_t *self)
 //
 mframe_t brain_frames_walk1 [] =
 {
-	ai_walk,	7,	NULL,
-	ai_walk,	2,	NULL,
-	ai_walk,	3,	NULL,
-	ai_walk,	3,	NULL,
-	ai_walk,	1,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	9,	NULL,
-	ai_walk,	-4,	NULL,
-	ai_walk,	-1,	NULL,
-	ai_walk,	2,	NULL
+	{ai_walk,	7,	NULL},
+	{ai_walk,	2,	NULL},
+	{ai_walk,	3,	NULL},
+	{ai_walk,	3,	NULL},
+	{ai_walk,	1,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	9,	NULL},
+	{ai_walk,	-4,	NULL},
+	{ai_walk,	-1,	NULL},
+	{ai_walk,	2,	NULL},
 };
 mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NULL};
 
@@ -60276,49 +60274,49 @@ void brain_walk2_cycle (edict_t *self)
 
 mframe_t brain_frames_walk2 [] =
 {
-	ai_walk,	3,	NULL,
-	ai_walk,	-2,	NULL,
-	ai_walk,	-4,	NULL,
-	ai_walk,	-3,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	1,	NULL,
-	ai_walk,	12,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	-3,	NULL,
-	ai_walk,	0,	NULL,
+	{ai_walk,	3,	NULL},
+	{ai_walk,	-2,	NULL},
+	{ai_walk,	-4,	NULL},
+	{ai_walk,	-3,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	1,	NULL},
+	{ai_walk,	12,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	-3,	NULL},
+	{ai_walk,	0,	NULL},
 
-	ai_walk,	-2,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	1,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	10,	NULL,		// Cycle Start
+	{ai_walk,	-2,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	1,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	10,	NULL,		// Cycle Star}t
 
-	ai_walk,	-1,	NULL,
-	ai_walk,	7,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	3,	NULL,
-	ai_walk,	-3,	NULL,
-	ai_walk,	2,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	-3,	NULL,
-	ai_walk,	2,	NULL,
-	ai_walk,	0,	NULL,
+	{ai_walk,	-1,	NULL},
+	{ai_walk,	7,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	3,	NULL},
+	{ai_walk,	-3,	NULL},
+	{ai_walk,	2,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	-3,	NULL},
+	{ai_walk,	2,	NULL},
+	{ai_walk,	0,	NULL},
 
-	ai_walk,	4,	brain_walk2_cycle,
-	ai_walk,	-1,	NULL,
-	ai_walk,	-1,	NULL,
-	ai_walk,	-8,	NULL,
-	ai_walk,	0,	NULL,
-	ai_walk,	1,	NULL,
-	ai_walk,	5,	NULL,
-	ai_walk,	2,	NULL,
-	ai_walk,	-1,	NULL,
-	ai_walk,	-5,	NULL
+	{ai_walk,	4,	brain_walk2_cycle},
+	{ai_walk,	-1,	NULL},
+	{ai_walk,	-1,	NULL},
+	{ai_walk,	-8,	NULL},
+	{ai_walk,	0,	NULL},
+	{ai_walk,	1,	NULL},
+	{ai_walk,	5,	NULL},
+	{ai_walk,	2,	NULL},
+	{ai_walk,	-1,	NULL},
+	{ai_walk,	-5,	NULL},
 };
 mmove_t brain_move_walk2 = {FRAME_walk201, FRAME_walk240, brain_frames_walk2, NULL};
 #endif
@@ -60335,65 +60333,65 @@ void brain_walk (edict_t *self)
 
 mframe_t brain_frames_defense [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t brain_move_defense = {FRAME_defens01, FRAME_defens08, brain_frames_defense, NULL};
 
 mframe_t brain_frames_pain3 [] =
 {
-	ai_move,	-2,	NULL,
-	ai_move,	2,	NULL,
-	ai_move,	1,	NULL,
-	ai_move,	3,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-4,	NULL
+	{ai_move,	-2,	NULL},
+	{ai_move,	2,	NULL},
+	{ai_move,	1,	NULL},
+	{ai_move,	3,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-4,	NULL},
 };
 mmove_t brain_move_pain3 = {FRAME_pain301, FRAME_pain306, brain_frames_pain3, brain_run};
 
 mframe_t brain_frames_pain2 [] =
 {
-	ai_move,	-2,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	3,	NULL,
-	ai_move,	1,	NULL,
-	ai_move,	-2,	NULL
+	{ai_move,	-2,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	3,	NULL},
+	{ai_move,	1,	NULL},
+	{ai_move,	-2,	NULL},
 };
 mmove_t brain_move_pain2 = {FRAME_pain201, FRAME_pain208, brain_frames_pain2, brain_run};
 
 mframe_t brain_frames_pain1 [] =
 {
-	ai_move,	-6,	NULL,
-	ai_move,	-2,	NULL,
-	ai_move,	-6,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	2,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	2,	NULL,
-	ai_move,	1,	NULL,
-	ai_move,	7,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	3,	NULL,
-	ai_move,	-1,	NULL
+	{ai_move,	-6,	NULL},
+	{ai_move,	-2,	NULL},
+	{ai_move,	-6,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	2,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	2,	NULL},
+	{ai_move,	1,	NULL},
+	{ai_move,	7,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	3,	NULL},
+	{ai_move,	-1,	NULL},
 };
 mmove_t brain_move_pain1 = {FRAME_pain101, FRAME_pain121, brain_frames_pain1, brain_run};
 
@@ -60430,14 +60428,14 @@ void brain_duck_up (edict_t *self)
 
 mframe_t brain_frames_duck [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	-2,	brain_duck_down,
-	ai_move,	17,	brain_duck_hold,
-	ai_move,	-3,	NULL,
-	ai_move,	-1,	brain_duck_up,
-	ai_move,	-5,	NULL,
-	ai_move,	-6,	NULL,
-	ai_move,	-6,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	-2,	brain_duck_down},
+	{ai_move,	17,	brain_duck_hold},
+	{ai_move,	-3,	NULL},
+	{ai_move,	-1,	brain_duck_up},
+	{ai_move,	-5,	NULL},
+	{ai_move,	-6,	NULL},
+	{ai_move,	-6,	NULL},
 };
 mmove_t brain_move_duck = {FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run};
 
@@ -60456,34 +60454,34 @@ void brain_dodge (edict_t *self, edict_t *attacker, float eta)
 
 mframe_t brain_frames_death2 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	9,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	9,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t brain_move_death2 = {FRAME_death201, FRAME_death205, brain_frames_death2, brain_dead};
 
 mframe_t brain_frames_death1 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	-2,	NULL,
-	ai_move,	9,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	-2,	NULL},
+	{ai_move,	9,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t brain_move_death1 = {FRAME_death101, FRAME_death118, brain_frames_death1, brain_dead};
 
@@ -60522,24 +60520,24 @@ void brain_hit_left (edict_t *self)
 
 mframe_t brain_frames_attack1 [] =
 {
-	ai_charge,	8,	NULL,
-	ai_charge,	3,	NULL,
-	ai_charge,	5,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	-3,	brain_swing_right,
-	ai_charge,	0,	NULL,
-	ai_charge,	-5,	NULL,
-	ai_charge,	-7,	brain_hit_right,
-	ai_charge,	0,	NULL,
-	ai_charge,	6,	brain_swing_left,
-	ai_charge,	1,	NULL,
-	ai_charge,	2,	brain_hit_left,
-	ai_charge,	-3,	NULL,
-	ai_charge,	6,	NULL,
-	ai_charge,	-1,	NULL,
-	ai_charge,	-3,	NULL,
-	ai_charge,	2,	NULL,
-	ai_charge,	-11,NULL
+	{ai_charge,	8,	NULL},
+	{ai_charge,	3,	NULL},
+	{ai_charge,	5,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	-3,	brain_swing_right},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	-5,	NULL},
+	{ai_charge,	-7,	brain_hit_right},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	6,	brain_swing_left},
+	{ai_charge,	1,	NULL},
+	{ai_charge,	2,	brain_hit_left},
+	{ai_charge,	-3,	NULL},
+	{ai_charge,	6,	NULL},
+	{ai_charge,	-1,	NULL},
+	{ai_charge,	-3,	NULL},
+	{ai_charge,	2,	NULL},
+	{ai_charge,	-11,NULL},
 };
 mmove_t brain_move_attack1 = {FRAME_attak101, FRAME_attak118, brain_frames_attack1, brain_run};
 
@@ -60572,23 +60570,23 @@ void brain_chest_closed (edict_t *self)
 
 mframe_t brain_frames_attack2 [] =
 {
-	ai_charge,	5,	NULL,
-	ai_charge,	-4,	NULL,
-	ai_charge,	-4,	NULL,
-	ai_charge,	-3,	NULL,
-	ai_charge,	0,	brain_chest_open,
-	ai_charge,	0,	NULL,
-	ai_charge,	13,	brain_tentacle_attack,
-	ai_charge,	0,	NULL,
-	ai_charge,	2,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	-9,	brain_chest_closed,
-	ai_charge,	0,	NULL,
-	ai_charge,	4,	NULL,
-	ai_charge,	3,	NULL,
-	ai_charge,	2,	NULL,
-	ai_charge,	-3,	NULL,
-	ai_charge,	-6,	NULL
+	{ai_charge,	5,	NULL},
+	{ai_charge,	-4,	NULL},
+	{ai_charge,	-4,	NULL},
+	{ai_charge,	-3,	NULL},
+	{ai_charge,	0,	brain_chest_open},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	13,	brain_tentacle_attack},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	2,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	-9,	brain_chest_closed},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	4,	NULL},
+	{ai_charge,	3,	NULL},
+	{ai_charge,	2,	NULL},
+	{ai_charge,	-3,	NULL},
+	{ai_charge,	-6,	NULL},
 };
 mmove_t brain_move_attack2 = {FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run};
 
@@ -60607,17 +60605,17 @@ void brain_melee(edict_t *self)
 
 mframe_t brain_frames_run [] =
 {
-	ai_run,	9,	NULL,
-	ai_run,	2,	NULL,
-	ai_run,	3,	NULL,
-	ai_run,	3,	NULL,
-	ai_run,	1,	NULL,
-	ai_run,	0,	NULL,
-	ai_run,	0,	NULL,
-	ai_run,	10,	NULL,
-	ai_run,	-4,	NULL,
-	ai_run,	-1,	NULL,
-	ai_run,	2,	NULL
+	{ai_run,	9,	NULL},
+	{ai_run,	2,	NULL},
+	{ai_run,	3,	NULL},
+	{ai_run,	3,	NULL},
+	{ai_run,	1,	NULL},
+	{ai_run,	0,	NULL},
+	{ai_run,	0,	NULL},
+	{ai_run,	10,	NULL},
+	{ai_run,	-4,	NULL},
+	{ai_run,	-1,	NULL},
+	{ai_run,	2,	NULL},
 };
 mmove_t brain_move_run = {FRAME_walk101, FRAME_walk111, brain_frames_run, NULL};
 
@@ -61303,36 +61301,36 @@ void ChickMoan (edict_t *self)
 
 mframe_t chick_frames_fidget [] =
 {
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  ChickMoan,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL,
-	ai_stand, 0,  NULL
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  ChickMoan},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
+	{ai_stand, 0,  NULL},
 };
 mmove_t chick_move_fidget = {FRAME_stand201, FRAME_stand230, chick_frames_fidget, chick_stand};
 
@@ -61346,36 +61344,36 @@ void chick_fidget (edict_t *self)
 
 mframe_t chick_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, chick_fidget,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, chick_fidget},
 
 };
 mmove_t chick_move_stand = {FRAME_stand101, FRAME_stand130, chick_frames_stand, NULL};
@@ -61387,31 +61385,31 @@ void chick_stand (edict_t *self)
 
 mframe_t chick_frames_start_run [] =
 {
-	ai_run, 1,  NULL,
-	ai_run, 0,  NULL,
-	ai_run, 0,	 NULL,
-	ai_run, -1, NULL,
-	ai_run, -1, NULL,
-	ai_run, 0,  NULL,
-	ai_run, 1,  NULL,
-	ai_run, 3,  NULL,
-	ai_run, 6,	 NULL,
-	ai_run, 3,	 NULL
+	{ai_run, 1,  NULL},
+	{ai_run, 0,  NULL},
+	{ai_run, 0,	 NULL},
+	{ai_run, -1, NULL},
+	{ai_run, -1, NULL},
+	{ai_run, 0,  NULL},
+	{ai_run, 1,  NULL},
+	{ai_run, 3,  NULL},
+	{ai_run, 6,	 NULL},
+	{ai_run, 3,	 NULL},
 };
 mmove_t chick_move_start_run = {FRAME_walk01, FRAME_walk10, chick_frames_start_run, chick_run};
 
 mframe_t chick_frames_run [] =
 {
-	ai_run, 6,	NULL,
-	ai_run, 8,  NULL,
-	ai_run, 13, NULL,
-	ai_run, 5,  NULL,
-	ai_run, 7,  NULL,
-	ai_run, 4,  NULL,
-	ai_run, 11, NULL,
-	ai_run, 5,  NULL,
-	ai_run, 9,  NULL,
-	ai_run, 7,  NULL
+	{ai_run, 6,	NULL},
+	{ai_run, 8,  NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 5,  NULL},
+	{ai_run, 7,  NULL},
+	{ai_run, 4,  NULL},
+	{ai_run, 11, NULL},
+	{ai_run, 5,  NULL},
+	{ai_run, 9,  NULL},
+	{ai_run, 7,  NULL},
 
 };
 
@@ -61419,16 +61417,16 @@ mmove_t chick_move_run = {FRAME_walk11, FRAME_walk20, chick_frames_run, NULL};
 
 mframe_t chick_frames_walk [] =
 {
-	ai_walk, 6,	 NULL,
-	ai_walk, 8,  NULL,
-	ai_walk, 13, NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 7,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 11, NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 9,  NULL,
-	ai_walk, 7,  NULL
+	{ai_walk, 6,	 NULL},
+	{ai_walk, 8,  NULL},
+	{ai_walk, 13, NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 7,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 11, NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 9,  NULL},
+	{ai_walk, 7,  NULL},
 };
 
 mmove_t chick_move_walk = {FRAME_walk11, FRAME_walk20, chick_frames_walk, NULL};
@@ -61459,47 +61457,47 @@ void chick_run (edict_t *self)
 
 mframe_t chick_frames_pain1 [] =
 {
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
 mmove_t chick_move_pain1 = {FRAME_pain101, FRAME_pain105, chick_frames_pain1, chick_run};
 
 mframe_t chick_frames_pain2 [] =
 {
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0, NULL
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
 };
 mmove_t chick_move_pain2 = {FRAME_pain201, FRAME_pain205, chick_frames_pain2, chick_run};
 
 mframe_t chick_frames_pain3 [] =
 {
-	ai_move, 0,		NULL,
-	ai_move, 0,		NULL,
-	ai_move, -6,	NULL,
-	ai_move, 3,		NULL,
-	ai_move, 11,	NULL,
-	ai_move, 3,		NULL,
-	ai_move, 0,		NULL,
-	ai_move, 0,		NULL,
-	ai_move, 4,		NULL,
-	ai_move, 1,		NULL,
-	ai_move, 0,		NULL,
-	ai_move, -3,	NULL,
-	ai_move, -4,	NULL,
-	ai_move, 5,		NULL,
-	ai_move, 7,		NULL,
-	ai_move, -2,	NULL,
-	ai_move, 3,		NULL,
-	ai_move, -5,	NULL,
-	ai_move, -2,	NULL,
-	ai_move, -8,	NULL,
-	ai_move, 2,		NULL
+	{ai_move, 0,		NULL},
+	{ai_move, 0,		NULL},
+	{ai_move, -6,	NULL},
+	{ai_move, 3,		NULL},
+	{ai_move, 11,	NULL},
+	{ai_move, 3,		NULL},
+	{ai_move, 0,		NULL},
+	{ai_move, 0,		NULL},
+	{ai_move, 4,		NULL},
+	{ai_move, 1,		NULL},
+	{ai_move, 0,		NULL},
+	{ai_move, -3,	NULL},
+	{ai_move, -4,	NULL},
+	{ai_move, 5,		NULL},
+	{ai_move, 7,		NULL},
+	{ai_move, -2,	NULL},
+	{ai_move, 3,		NULL},
+	{ai_move, -5,	NULL},
+	{ai_move, -2,	NULL},
+	{ai_move, -8,	NULL},
+	{ai_move, 2,		NULL},
 };
 mmove_t chick_move_pain3 = {FRAME_pain301, FRAME_pain321, chick_frames_pain3, chick_run};
 
@@ -61546,46 +61544,46 @@ void chick_dead (edict_t *self)
 
 mframe_t chick_frames_death2 [] =
 {
-	ai_move, -6, NULL,
-	ai_move, 0,  NULL,
-	ai_move, -1,  NULL,
-	ai_move, -5, NULL,
-	ai_move, 0, NULL,
-	ai_move, -1,  NULL,
-	ai_move, -2,  NULL,
-	ai_move, 1,  NULL,
-	ai_move, 10, NULL,
-	ai_move, 2,  NULL,
-	ai_move, 3,  NULL,
-	ai_move, 1,  NULL,
-	ai_move, 2, NULL,
-	ai_move, 0,  NULL,
-	ai_move, 3,  NULL,
-	ai_move, 3,  NULL,
-	ai_move, 1,  NULL,
-	ai_move, -3,  NULL,
-	ai_move, -5, NULL,
-	ai_move, 4, NULL,
-	ai_move, 15, NULL,
-	ai_move, 14, NULL,
-	ai_move, 1, NULL
+	{ai_move, -6, NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, -1,  NULL},
+	{ai_move, -5, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1,  NULL},
+	{ai_move, -2,  NULL},
+	{ai_move, 1,  NULL},
+	{ai_move, 10, NULL},
+	{ai_move, 2,  NULL},
+	{ai_move, 3,  NULL},
+	{ai_move, 1,  NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 3,  NULL},
+	{ai_move, 3,  NULL},
+	{ai_move, 1,  NULL},
+	{ai_move, -3,  NULL},
+	{ai_move, -5, NULL},
+	{ai_move, 4, NULL},
+	{ai_move, 15, NULL},
+	{ai_move, 14, NULL},
+	{ai_move, 1, NULL},
 };
 mmove_t chick_move_death2 = {FRAME_death201, FRAME_death223, chick_frames_death2, chick_dead};
 
 mframe_t chick_frames_death1 [] =
 {
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, -7, NULL,
-	ai_move, 4,  NULL,
-	ai_move, 11, NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL,
-	ai_move, 0,  NULL
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, -7, NULL},
+	{ai_move, 4,  NULL},
+	{ai_move, 11, NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
+	{ai_move, 0,  NULL},
 
 };
 mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
@@ -61657,13 +61655,13 @@ void chick_duck_up (edict_t *self)
 
 mframe_t chick_frames_duck [] =
 {
-	ai_move, 0, chick_duck_down,
-	ai_move, 1, NULL,
-	ai_move, 4, chick_duck_hold,
-	ai_move, -4,  NULL,
-	ai_move, -5,  chick_duck_up,
-	ai_move, 3, NULL,
-	ai_move, 1,  NULL
+	{ai_move, 0, chick_duck_down},
+	{ai_move, 1, NULL},
+	{ai_move, 4, chick_duck_hold},
+	{ai_move, -4,  NULL},
+	{ai_move, -5,  chick_duck_up},
+	{ai_move, 3, NULL},
+	{ai_move, 1,  NULL},
 };
 mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_run};
 
@@ -61719,50 +61717,51 @@ void ChickReload (edict_t *self)
 
 mframe_t chick_frames_start_attack1 [] =
 {
-	ai_charge, 0,	Chick_PreAttack1,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 4,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, -3,  NULL,
-	ai_charge, 3,	NULL,
-	ai_charge, 5,	NULL,
-	ai_charge, 7,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	chick_attack1
+	{ai_charge, 0,	Chick_PreAttack1},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 4,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, -3,  NULL},
+	{ai_charge, 3,	NULL},
+	{ai_charge, 5,	NULL},
+	{ai_charge, 7,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	chick_attack1},
 };
+
 mmove_t chick_move_start_attack1 = {FRAME_attak101, FRAME_attak113, chick_frames_start_attack1, NULL};
 
 
 mframe_t chick_frames_attack1 [] =
 {
-	ai_charge, 19,	ChickRocket,
-	ai_charge, -6,	NULL,
-	ai_charge, -5,	NULL,
-	ai_charge, -2,	NULL,
-	ai_charge, -7,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 1,	NULL,
-	ai_charge, 10,	ChickReload,
-	ai_charge, 4,	NULL,
-	ai_charge, 5,	NULL,
-	ai_charge, 6,	NULL,
-	ai_charge, 6,	NULL,
-	ai_charge, 4,	NULL,
-	ai_charge, 3,	chick_rerocket
-
+	{ai_charge, 19,	ChickRocket},
+	{ai_charge, -6,	NULL},
+	{ai_charge, -5,	NULL},
+	{ai_charge, -2,	NULL},
+	{ai_charge, -7,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 1,	NULL},
+	{ai_charge, 10,	ChickReload},
+	{ai_charge, 4,	NULL},
+	{ai_charge, 5,	NULL},
+	{ai_charge, 6,	NULL},
+	{ai_charge, 6,	NULL},
+	{ai_charge, 4,	NULL},
+	{ai_charge, 3,	chick_rerocket},
 };
+
 mmove_t chick_move_attack1 = {FRAME_attak114, FRAME_attak127, chick_frames_attack1, NULL};
 
 mframe_t chick_frames_end_attack1 [] =
 {
-	ai_charge, -3,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, -6,	NULL,
-	ai_charge, -4,	NULL,
-	ai_charge, -2,  NULL
+	{ai_charge, -3,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, -6,	NULL},
+	{ai_charge, -4,	NULL},
+	{ai_charge, -2,  NULL},
 };
 mmove_t chick_move_end_attack1 = {FRAME_attak128, FRAME_attak132, chick_frames_end_attack1, chick_run};
 
@@ -61788,24 +61787,25 @@ void chick_attack1(edict_t *self)
 
 mframe_t chick_frames_slash [] =
 {
-	ai_charge, 1,	NULL,
-	ai_charge, 7,	ChickSlash,
-	ai_charge, -7,	NULL,
-	ai_charge, 1,	NULL,
-	ai_charge, -1,	NULL,
-	ai_charge, 1,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 1,	NULL,
-	ai_charge, -2,	chick_reslash
+	{ai_charge, 1,	NULL},
+	{ai_charge, 7,	ChickSlash},
+	{ai_charge, -7,	NULL},
+	{ai_charge, 1,	NULL},
+	{ai_charge, -1,	NULL},
+	{ai_charge, 1,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 1,	NULL},
+	{ai_charge, -2,	chick_reslash},
 };
+
 mmove_t chick_move_slash = {FRAME_attak204, FRAME_attak212, chick_frames_slash, NULL};
 
 mframe_t chick_frames_end_slash [] =
 {
-	ai_charge, -6,	NULL,
-	ai_charge, -1,	NULL,
-	ai_charge, -6,	NULL,
-	ai_charge, 0,	NULL
+	{ai_charge, -6,	NULL},
+	{ai_charge, -1,	NULL},
+	{ai_charge, -6,	NULL},
+	{ai_charge, 0,	NULL},
 };
 mmove_t chick_move_end_slash = {FRAME_attak213, FRAME_attak216, chick_frames_end_slash, chick_run};
 
@@ -61839,9 +61839,9 @@ void chick_slash(edict_t *self)
 
 mframe_t chick_frames_start_slash [] =
 {
-	ai_charge, 1,	NULL,
-	ai_charge, 8,	NULL,
-	ai_charge, 3,	NULL
+	{ai_charge, 1,	NULL},
+	{ai_charge, 8,	NULL},
+	{ai_charge, 3,	NULL},
 };
 mmove_t chick_move_start_slash = {FRAME_attak201, FRAME_attak203, chick_frames_start_slash, chick_slash};
 
@@ -62114,7 +62114,7 @@ void flipper_stand (edict_t *self);
 
 mframe_t flipper_frames_stand [] =
 {
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
 };
 
 mmove_t	flipper_move_stand = {FRAME_flphor01, FRAME_flphor01, flipper_frames_stand, NULL};
@@ -62128,32 +62128,32 @@ void flipper_stand (edict_t *self)
 
 mframe_t flipper_frames_run [] =
 {
-	ai_run, FLIPPER_RUN_SPEED, NULL,	// 6
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,	// 10
+	{ai_run, FLIPPER_RUN_SPEED, NULL},	// 6
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},	// 10
 
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,	// 20
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},	// 20
 
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL,
-	ai_run, FLIPPER_RUN_SPEED, NULL		// 29
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},
+	{ai_run, FLIPPER_RUN_SPEED, NULL},		// 29
 };
 mmove_t flipper_move_run_loop = {FRAME_flpver06, FRAME_flpver29, flipper_frames_run, NULL};
 
@@ -62164,12 +62164,12 @@ void flipper_run_loop (edict_t *self)
 
 mframe_t flipper_frames_run_start [] =
 {
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
 };
 mmove_t flipper_move_run_start = {FRAME_flpver01, FRAME_flpver06, flipper_frames_run_start, flipper_run_loop};
 
@@ -62181,30 +62181,30 @@ void flipper_run (edict_t *self)
 /* Standard Swimming */
 mframe_t flipper_frames_walk [] =
 {
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 4, NULL
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
 };
 mmove_t flipper_move_walk = {FRAME_flphor01, FRAME_flphor24, flipper_frames_walk, NULL};
 
@@ -62215,11 +62215,11 @@ void flipper_walk (edict_t *self)
 
 mframe_t flipper_frames_start_run [] =
 {
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, NULL,
-	ai_run, 8, flipper_run
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 8, flipper_run},
 };
 mmove_t flipper_move_start_run = {FRAME_flphor01, FRAME_flphor05, flipper_frames_start_run, NULL};
 
@@ -62230,21 +62230,21 @@ void flipper_start_run (edict_t *self)
 
 mframe_t flipper_frames_pain2 [] =
 {
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0,	NULL,
-	ai_move, 0,	NULL,
-	ai_move, 0, NULL
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0,	NULL},
+	{ai_move, 0,	NULL},
+	{ai_move, 0, NULL},
 };
 mmove_t flipper_move_pain2 = {FRAME_flppn101, FRAME_flppn105, flipper_frames_pain2, flipper_run};
 
 mframe_t flipper_frames_pain1 [] =
 {
-	ai_move, 0, NULL,
-	ai_move, 0, NULL,
-	ai_move, 0,	NULL,
-	ai_move, 0,	NULL,
-	ai_move, 0, NULL
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0,	NULL},
+	{ai_move, 0,	NULL},
+	{ai_move, 0, NULL},
 };
 mmove_t flipper_move_pain1 = {FRAME_flppn201, FRAME_flppn205, flipper_frames_pain1, flipper_run};
 
@@ -62263,26 +62263,26 @@ void flipper_preattack (edict_t *self)
 
 mframe_t flipper_frames_attack [] =
 {
-	ai_charge, 0,	flipper_preattack,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	flipper_bite,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	NULL,
-	ai_charge, 0,	flipper_bite,
-	ai_charge, 0,	NULL
+	{ai_charge, 0,	flipper_preattack},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	flipper_bite},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	NULL},
+	{ai_charge, 0,	flipper_bite},
+	{ai_charge, 0,	NULL},
 };
 mmove_t flipper_move_attack = {FRAME_flpbit01, FRAME_flpbit20, flipper_frames_attack, flipper_run};
 
@@ -62331,67 +62331,67 @@ void flipper_dead (edict_t *self)
 
 mframe_t flipper_frames_death [] =
 {
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL,
-	ai_move, 0,	 NULL
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
+	{ai_move, 0,	 NULL},
 };
 mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_death, flipper_dead};
 
@@ -62967,115 +62967,115 @@ void floater_fire_blaster (edict_t *self)
 
 mframe_t floater_frames_stand1 [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	floater_move_stand1 = {FRAME_stand101, FRAME_stand152, floater_frames_stand1, NULL};
 
 mframe_t floater_frames_stand2 [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_stand2, NULL};
 
@@ -63089,298 +63089,298 @@ void floater_stand (edict_t *self)
 
 mframe_t floater_frames_activate [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t floater_move_activate = {FRAME_actvat01, FRAME_actvat31, floater_frames_activate, NULL};
 
 mframe_t floater_frames_attack1 [] =
 {
-	ai_charge,	0,	NULL,			// Blaster attack
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	floater_fire_blaster,			// BOOM (0, -25.8, 32.5)	-- LOOP Starts
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	floater_fire_blaster,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL			//							-- LOOP Ends
+	{ai_charge,	0,	NULL},			// Blaster attack
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	floater_fire_blaster},			// BOOM (0, -25.8, 32.5)	-- LOOP Starts
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	floater_fire_blaster},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},			//							-- LOOP Ends
 };
 mmove_t floater_move_attack1 = {FRAME_attak101, FRAME_attak114, floater_frames_attack1, floater_run};
 
 mframe_t floater_frames_attack2 [] =
 {
-	ai_charge,	0,	NULL,			// Claws
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	floater_wham,			// WHAM (0, -45, 29.6)		-- LOOP Starts
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,			//							-- LOOP Ends
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL
+	{ai_charge,	0,	NULL},			// Claws
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	floater_wham},			// WHAM (0, -45, 29.6)		-- LOOP Starts
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},			//							-- LOOP Ends
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
 };
 mmove_t floater_move_attack2 = {FRAME_attak201, FRAME_attak225, floater_frames_attack2, floater_run};
 
 mframe_t floater_frames_attack3 [] =
 {
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	floater_zap,		//								-- LOOP Starts
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,		//								-- LOOP Ends
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL,
-	ai_charge,	0,	NULL
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	floater_zap},		//								-- LOOP Starts
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},		//								-- LOOP Ends
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
+	{ai_charge,	0,	NULL},
 };
 mmove_t floater_move_attack3 = {FRAME_attak301, FRAME_attak334, floater_frames_attack3, floater_run};
 
 mframe_t floater_frames_death [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t floater_move_death = {FRAME_death01, FRAME_death13, floater_frames_death, floater_dead};
 
 mframe_t floater_frames_pain1 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t floater_move_pain1 = {FRAME_pain101, FRAME_pain107, floater_frames_pain1, floater_run};
 
 mframe_t floater_frames_pain2 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t floater_move_pain2 = {FRAME_pain201, FRAME_pain208, floater_frames_pain2, floater_run};
 
 mframe_t floater_frames_pain3 [] =
 {
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL,
-	ai_move,	0,	NULL
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 };
 mmove_t floater_move_pain3 = {FRAME_pain301, FRAME_pain312, floater_frames_pain3, floater_run};
 
 mframe_t floater_frames_walk [] =
 {
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
 };
 mmove_t	floater_move_walk = {FRAME_stand101, FRAME_stand152, floater_frames_walk, NULL};
 
 mframe_t floater_frames_run [] =
 {
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL,
-	ai_run, 13, NULL
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 13, NULL},
 };
 mmove_t	floater_move_run = {FRAME_stand101, FRAME_stand152, floater_frames_run, NULL};
 
@@ -63870,152 +63870,152 @@ void flyer_pop_blades (edict_t *self)
 
 mframe_t flyer_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	flyer_move_stand = {FRAME_stand01, FRAME_stand45, flyer_frames_stand, NULL};
 
 
 mframe_t flyer_frames_walk [] =
 {
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 5, NULL
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
 };
 mmove_t	flyer_move_walk = {FRAME_stand01, FRAME_stand45, flyer_frames_walk, NULL};
 
 mframe_t flyer_frames_run [] =
 {
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL,
-	ai_run, 10, NULL
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
 };
 mmove_t	flyer_move_run = {FRAME_stand01, FRAME_stand45, flyer_frames_run, NULL};
 
@@ -64039,24 +64039,24 @@ void flyer_stand (edict_t *self)
 
 mframe_t flyer_frames_start [] =
 {
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	flyer_nextmove
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	flyer_nextmove},
 };
 mmove_t flyer_move_start = {FRAME_start01, FRAME_start06, flyer_frames_start, NULL};
 
 mframe_t flyer_frames_stop [] =
 {
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	NULL,
-		ai_move, 0,	flyer_nextmove
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	NULL},
+		{ai_move, 0,	flyer_nextmove},
 };
 mmove_t flyer_move_stop = {FRAME_stop01, FRAME_stop07, flyer_frames_stop, NULL};
 
@@ -64073,96 +64073,96 @@ void flyer_start (edict_t *self)
 
 mframe_t flyer_frames_rollright [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_rollright = {FRAME_rollr01, FRAME_rollr09, flyer_frames_rollright, NULL};
 
 mframe_t flyer_frames_rollleft [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_rollleft = {FRAME_rollf01, FRAME_rollf09, flyer_frames_rollleft, NULL};
 
 mframe_t flyer_frames_pain3 [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_pain3 = {FRAME_pain301, FRAME_pain304, flyer_frames_pain3, flyer_run};
 
 mframe_t flyer_frames_pain2 [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_pain2 = {FRAME_pain201, FRAME_pain204, flyer_frames_pain2, flyer_run};
 
 mframe_t flyer_frames_pain1 [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_pain1 = {FRAME_pain101, FRAME_pain109, flyer_frames_pain1, flyer_run};
 
 mframe_t flyer_frames_defense [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,		// Hold this frame
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},		// Hold this frame
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_defense = {FRAME_defens01, FRAME_defens06, flyer_frames_defense, NULL};
 
 mframe_t flyer_frames_bankright [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_bankright = {FRAME_bankr01, FRAME_bankr07, flyer_frames_bankright, NULL};
 
 mframe_t flyer_frames_bankleft [] =
 {
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL,
-		ai_move, 0, NULL
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
 };
 mmove_t flyer_move_bankleft = {FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, NULL};
 
@@ -64202,23 +64202,23 @@ void flyer_fireright (edict_t *self)
 
 mframe_t flyer_frames_attack2 [] =
 {
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, -10, flyer_fireleft,			// left gun
-		ai_charge, -10, flyer_fireright,		// right gun
-		ai_charge, -10, flyer_fireleft,			// left gun
-		ai_charge, -10, flyer_fireright,		// right gun
-		ai_charge, -10, flyer_fireleft,			// left gun
-		ai_charge, -10, flyer_fireright,		// right gun
-		ai_charge, -10, flyer_fireleft,			// left gun
-		ai_charge, -10, flyer_fireright,		// right gun
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, -10, flyer_fireleft},			// left gun
+		{ai_charge, -10, flyer_fireright},		// right gun
+		{ai_charge, -10, flyer_fireleft},			// left gun
+		{ai_charge, -10, flyer_fireright},		// right gun
+		{ai_charge, -10, flyer_fireleft},			// left gun
+		{ai_charge, -10, flyer_fireright},		// right gun
+		{ai_charge, -10, flyer_fireleft},			// left gun
+		{ai_charge, -10, flyer_fireright},		// right gun
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
 };
 mmove_t flyer_move_attack2 = {FRAME_attak201, FRAME_attak217, flyer_frames_attack2, flyer_run};
 
@@ -64243,38 +64243,38 @@ void flyer_slash_right (edict_t *self)
 
 mframe_t flyer_frames_start_melee [] =
 {
-		ai_charge, 0, flyer_pop_blades,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL
+		{ai_charge, 0, flyer_pop_blades},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
 };
 mmove_t flyer_move_start_melee = {FRAME_attak101, FRAME_attak106, flyer_frames_start_melee, flyer_loop_melee};
 
 mframe_t flyer_frames_end_melee [] =
 {
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
 };
 mmove_t flyer_move_end_melee = {FRAME_attak119, FRAME_attak121, flyer_frames_end_melee, flyer_run};
 
 
 mframe_t flyer_frames_loop_melee [] =
 {
-		ai_charge, 0, NULL,		// Loop Start
-		ai_charge, 0, NULL,
-		ai_charge, 0, flyer_slash_left,		// Left Wing Strike
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, flyer_slash_right,	// Right Wing Strike
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL,
-		ai_charge, 0, NULL		// Loop Ends
+		{ai_charge, 0, NULL},		// Loop Start
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, flyer_slash_left},		// Left Wing Strike
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, flyer_slash_right},	// Right Wing Strike
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL},
+		{ai_charge, 0, NULL}		// Loop Ends
 
 };
 mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_loop_melee, flyer_check_melee};
@@ -64639,13 +64639,13 @@ void gladiator_cleaver_swing (edict_t *self)
 
 mframe_t gladiator_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t gladiator_move_stand = {FRAME_stand1, FRAME_stand7, gladiator_frames_stand, NULL};
 
@@ -64657,22 +64657,22 @@ void gladiator_stand (edict_t *self)
 
 mframe_t gladiator_frames_walk [] =
 {
-	ai_walk, 15, NULL,
-	ai_walk, 7,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 8,  NULL,
-	ai_walk, 12, NULL,
-	ai_walk, 8,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 1,  NULL,
-	ai_walk, 8,  NULL
+	{ai_walk, 15, NULL},
+	{ai_walk, 7,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 8,  NULL},
+	{ai_walk, 12, NULL},
+	{ai_walk, 8,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 1,  NULL},
+	{ai_walk, 8,  NULL},
 };
 mmove_t gladiator_move_walk = {FRAME_walk1, FRAME_walk16, gladiator_frames_walk, NULL};
 
@@ -64684,12 +64684,12 @@ void gladiator_walk (edict_t *self)
 
 mframe_t gladiator_frames_run [] =
 {
-	ai_run, 23,	NULL,
-	ai_run, 14,	NULL,
-	ai_run, 14,	NULL,
-	ai_run, 21,	NULL,
-	ai_run, 12,	NULL,
-	ai_run, 13,	NULL
+	{ai_run, 23,	NULL},
+	{ai_run, 14,	NULL},
+	{ai_run, 14,	NULL},
+	{ai_run, 21,	NULL},
+	{ai_run, 12,	NULL},
+	{ai_run, 13,	NULL},
 };
 mmove_t gladiator_move_run = {FRAME_run1, FRAME_run6, gladiator_frames_run, NULL};
 
@@ -64715,23 +64715,23 @@ void GaldiatorMelee (edict_t *self)
 
 mframe_t gladiator_frames_attack_melee [] =
 {
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, gladiator_cleaver_swing,
-	ai_charge, 0, NULL,
-	ai_charge, 0, GaldiatorMelee,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, gladiator_cleaver_swing,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, GaldiatorMelee,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, gladiator_cleaver_swing},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, GaldiatorMelee},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, gladiator_cleaver_swing},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, GaldiatorMelee},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
 };
 mmove_t gladiator_move_attack_melee = {FRAME_melee1, FRAME_melee17, gladiator_frames_attack_melee, gladiator_run};
 
@@ -64759,15 +64759,15 @@ void GladiatorGun (edict_t *self)
 
 mframe_t gladiator_frames_attack_gun [] =
 {
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, GladiatorGun,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL,
-	ai_charge, 0, NULL
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, GladiatorGun},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
 };
 mmove_t gladiator_move_attack_gun = {FRAME_attack1, FRAME_attack9, gladiator_frames_attack_gun, gladiator_run};
 
@@ -65424,59 +65424,59 @@ void gunner_stand (edict_t *self);
 
 mframe_t gunner_frames_fidget [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, gunner_idlesound,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	gunner_move_fidget = {FRAME_stand31, FRAME_stand70, gunner_frames_fidget, gunner_stand};
 
@@ -65490,37 +65490,37 @@ void gunner_fidget (edict_t *self)
 
 mframe_t gunner_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, gunner_fidget,
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, gunner_fidget,
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, gunner_fidget
 };
 mmove_t	gunner_move_stand = {FRAME_stand01, FRAME_stand30, gunner_frames_stand, NULL};
@@ -65533,19 +65533,19 @@ void gunner_stand (edict_t *self)
 
 mframe_t gunner_frames_walk [] =
 {
-	ai_walk, 0, NULL,
-	ai_walk, 3, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 7, NULL,
-	ai_walk, 2, NULL,
-	ai_walk, 6, NULL,
-	ai_walk, 4, NULL,
-	ai_walk, 2, NULL,
-	ai_walk, 7, NULL,
-	ai_walk, 5, NULL,
-	ai_walk, 7, NULL,
-	ai_walk, 4, NULL
+	{ai_walk, 0, NULL},
+	{ai_walk, 3, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 7, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 6, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 7, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 7, NULL},
+	{ai_walk, 4, NULL},
 };
 mmove_t gunner_move_walk = {FRAME_walk07, FRAME_walk19, gunner_frames_walk, NULL};
 
@@ -66306,36 +66306,36 @@ void hover_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 mframe_t hover_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	hover_move_stand = {FRAME_stand01, FRAME_stand30, hover_frames_stand, NULL};
 
@@ -66513,41 +66513,41 @@ mmove_t hover_move_forward = {FRAME_forwrd01, FRAME_forwrd35, hover_frames_forwa
 
 mframe_t hover_frames_walk [] =
 {
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL,
-	ai_walk,	4,	NULL
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
+	{ai_walk,	4,	NULL},
 };
 mmove_t hover_move_walk = {FRAME_forwrd01, FRAME_forwrd35, hover_frames_walk, NULL};
 
@@ -67306,28 +67306,28 @@ static int	sound_idle;
 
 mframe_t infantry_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t infantry_move_stand = {FRAME_stand50, FRAME_stand71, infantry_frames_stand, NULL};
 
@@ -67399,18 +67399,18 @@ void infantry_fidget (edict_t *self)
 
 mframe_t infantry_frames_walk [] =
 {
-	ai_walk, 5,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 5,  NULL
+	{ai_walk, 5,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 5,  NULL},
 };
 mmove_t infantry_move_walk = {FRAME_walk03, FRAME_walk14, infantry_frames_walk, NULL};
 
@@ -68350,11 +68350,11 @@ void insane_onground (edict_t *self);
 
 mframe_t insane_frames_stand_normal [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, insane_checkdown
 };
 mmove_t insane_move_stand_normal = {FRAME_stand60, FRAME_stand65, insane_frames_stand_normal, insane_stand};
@@ -68544,53 +68544,53 @@ mframe_t insane_frames_down [] =
 };
 mmove_t insane_move_down = {FRAME_stand100, FRAME_stand160, insane_frames_down, insane_onground};
 
-mframe_t insane_frames_walk_normal [] =
+static mframe_t insane_frames_walk_normal [] =
 {
-	ai_walk,	0,		insane_scream,
-	ai_walk,	2.5,	NULL,
-	ai_walk,	3.5,	NULL,
-	ai_walk,	1.7,	NULL,
-	ai_walk,	2.3,	NULL,
-	ai_walk,	2.4,	NULL,
-	ai_walk,	2.2,	NULL,
-	ai_walk,	4.2,	NULL,
-	ai_walk,	5.6,	NULL,
-	ai_walk,	3.3,	NULL,
-	ai_walk,	2.4,	NULL,
-	ai_walk,	0.9,	NULL,
-	ai_walk,	0,		NULL
+	{ai_walk,	0,		insane_scream},
+	{ai_walk,	2.5,	NULL},
+	{ai_walk,	3.5,	NULL},
+	{ai_walk,	1.7,	NULL},
+	{ai_walk,	2.3,	NULL},
+	{ai_walk,	2.4,	NULL},
+	{ai_walk,	2.2,	NULL},
+	{ai_walk,	4.2,	NULL},
+	{ai_walk,	5.6,	NULL},
+	{ai_walk,	3.3,	NULL},
+	{ai_walk,	2.4,	NULL},
+	{ai_walk,	0.9,	NULL},
+	{ai_walk,	0,		NULL},
 };
-mmove_t insane_move_walk_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_walk};
-mmove_t insane_move_run_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_run};
 
-mframe_t insane_frames_walk_insane [] =
-{
-	ai_walk,	0,		insane_scream,		// walk 1
-	ai_walk,	3.4,	NULL,		// walk 2
-	ai_walk,	3.6,	NULL,		// 3
-	ai_walk,	2.9,	NULL,		// 4
-	ai_walk,	2.2,	NULL,		// 5
-	ai_walk,	2.6,	NULL,		// 6
-	ai_walk,	0,		NULL,		// 7
-	ai_walk,	0.7,	NULL,		// 8
-	ai_walk,	4.8,	NULL,		// 9
-	ai_walk,	5.3,	NULL,		// 10
-	ai_walk,	1.1,	NULL,		// 11
-	ai_walk,	2,		NULL,		// 12
-	ai_walk,	0.5,	NULL,		// 13
-	ai_walk,	0,		NULL,		// 14
-	ai_walk,	0,		NULL,		// 15
-	ai_walk,	4.9,	NULL,		// 16
-	ai_walk,	6.7,	NULL,		// 17
-	ai_walk,	3.8,	NULL,		// 18
-	ai_walk,	2,		NULL,		// 19
-	ai_walk,	0.2,	NULL,		// 20
-	ai_walk,	0,		NULL,		// 21
-	ai_walk,	3.4,	NULL,		// 22
-	ai_walk,	6.4,	NULL,		// 23
-	ai_walk,	5,		NULL,		// 24
-	ai_walk,	1.8,	NULL,		// 25
-	ai_walk,	0,		NULL		// 26
+static mmove_t insane_move_walk_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_walk};
+static mmove_t insane_move_run_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_run};
+
+static mframe_t insane_frames_walk_insane[] = {
+	{ai_walk,	0,	insane_scream},		// walk 1
+	{ai_walk,	3.4,	NULL},		// walk 2
+	{ai_walk,	3.6,	NULL},		// 3
+	{ai_walk,	2.9,	NULL},		// 4
+	{ai_walk,	2.2,	NULL},		// 5
+	{ai_walk,	2.6,	NULL},		// 6
+	{ai_walk,	0,	NULL},		// 7
+	{ai_walk,	0.7,	NULL},		// 8
+	{ai_walk,	4.8,	NULL},		// 9
+	{ai_walk,	5.3,	NULL},		// 10
+	{ai_walk,	1.1,	NULL},		// 11
+	{ai_walk,	2,	NULL},		// 12
+	{ai_walk,	0.5,	NULL},		// 13
+	{ai_walk,	0,	NULL},		// 14
+	{ai_walk,	0,	NULL},		// 15
+	{ai_walk,	4.9,	NULL},		// 16
+	{ai_walk,	6.7,	NULL},		// 17
+	{ai_walk,	3.8,	NULL},		// 18
+	{ai_walk,	2,	NULL},		// 19
+	{ai_walk,	0.2,	NULL},		// 20
+	{ai_walk,	0,	NULL},		// 21
+	{ai_walk,	3.4,	NULL},		// 22
+	{ai_walk,	6.4,	NULL},		// 23
+	{ai_walk,	5,	NULL},		// 24
+	{ai_walk,	1.8,	NULL},		// 25
+	{ai_walk,	0,	NULL},		// 26
 };
 mmove_t insane_move_walk_insane = {FRAME_walk1, FRAME_walk26, insane_frames_walk_insane, insane_walk};
 mmove_t insane_move_run_insane = {FRAME_walk1, FRAME_walk26, insane_frames_walk_insane, insane_run};
@@ -68635,15 +68635,15 @@ mmove_t insane_move_stand_death = {FRAME_st_death2, FRAME_st_death18, insane_fra
 
 mframe_t insane_frames_crawl [] =
 {
-	ai_walk,	0,		insane_scream,
-	ai_walk,	1.5,	NULL,
-	ai_walk,	2.1,	NULL,
-	ai_walk,	3.6,	NULL,
-	ai_walk,	2,		NULL,
-	ai_walk,	0.9,	NULL,
-	ai_walk,	3,		NULL,
-	ai_walk,	3.4,	NULL,
-	ai_walk,	2.4,	NULL
+	{ai_walk,	0,		insane_scream},
+	{ai_walk,	1.5,	NULL},
+	{ai_walk,	2.1,	NULL},
+	{ai_walk,	3.6,	NULL},
+	{ai_walk,	2,		NULL},
+	{ai_walk,	0.9,	NULL},
+	{ai_walk,	3,		NULL},
+	{ai_walk,	3.4,	NULL},
+	{ai_walk,	2.4,	NULL},
 };
 mmove_t insane_move_crawl = {FRAME_crawl1, FRAME_crawl9, insane_frames_crawl, NULL};
 mmove_t insane_move_runcrawl = {FRAME_crawl1, FRAME_crawl9, insane_frames_crawl, NULL};
@@ -69442,95 +69442,95 @@ void medic_sight (edict_t *self, edict_t *other)
 mframe_t medic_frames_stand [] =
 {
 	ai_stand, 0, medic_idle,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
 };
 mmove_t medic_move_stand = {FRAME_wait1, FRAME_wait90, medic_frames_stand, NULL};
@@ -69543,18 +69543,18 @@ void medic_stand (edict_t *self)
 
 mframe_t medic_frames_walk [] =
 {
-	ai_walk, 6.2,	NULL,
-	ai_walk, 18.1,  NULL,
-	ai_walk, 1,		NULL,
-	ai_walk, 9,		NULL,
-	ai_walk, 10,	NULL,
-	ai_walk, 9,		NULL,
-	ai_walk, 11,	NULL,
-	ai_walk, 11.6,  NULL,
-	ai_walk, 2,		NULL,
-	ai_walk, 9.9,	NULL,
-	ai_walk, 14,	NULL,
-	ai_walk, 9.3,	NULL
+	{ai_walk, 6.2,	NULL},
+	{ai_walk, 18.1,  NULL},
+	{ai_walk, 1,		NULL},
+	{ai_walk, 9,		NULL},
+	{ai_walk, 10,	NULL},
+	{ai_walk, 9,		NULL},
+	{ai_walk, 11,	NULL},
+	{ai_walk, 11.6,  NULL},
+	{ai_walk, 2,		NULL},
+	{ai_walk, 9.9,	NULL},
+	{ai_walk, 14,	NULL},
+	{ai_walk, 9.3,	NULL},
 };
 mmove_t medic_move_walk = {FRAME_walk1, FRAME_walk12, medic_frames_walk, NULL};
 
@@ -70987,62 +70987,62 @@ void mutant_swing (edict_t *self)
 
 mframe_t mutant_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 10
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 10
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 20
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 20
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 30
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 30
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 40
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 40
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,		// 50
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},		// 50
 
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
 };
 mmove_t mutant_move_stand = {FRAME_stand101, FRAME_stand151, mutant_frames_stand, NULL};
 
@@ -71062,23 +71062,23 @@ void mutant_idle_loop (edict_t *self)
 		self->monsterinfo.nextframe = FRAME_stand155;
 }
 
-mframe_t mutant_frames_idle [] =
-{
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,					// scratch loop start
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, mutant_idle_loop,		// scratch loop end
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+static mframe_t mutant_frames_idle[] = {
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},					// scratch loop start
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, mutant_idle_loop},		// scratch loop end
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
-mmove_t mutant_move_idle = {FRAME_stand152, FRAME_stand164, mutant_frames_idle, mutant_stand};
+
+static mmove_t mutant_move_idle = {FRAME_stand152, FRAME_stand164, mutant_frames_idle, mutant_stand};
 
 void mutant_idle (edict_t *self)
 {
@@ -71095,18 +71095,18 @@ void mutant_walk (edict_t *self);
 
 mframe_t mutant_frames_walk [] =
 {
-	ai_walk,	3,		NULL,
-	ai_walk,	1,		NULL,
-	ai_walk,	5,		NULL,
-	ai_walk,	10,		NULL,
-	ai_walk,	13,		NULL,
-	ai_walk,	10,		NULL,
-	ai_walk,	0,		NULL,
-	ai_walk,	5,		NULL,
-	ai_walk,	6,		NULL,
-	ai_walk,	16,		NULL,
-	ai_walk,	15,		NULL,
-	ai_walk,	6,		NULL
+	{ai_walk,	3,		NULL},
+	{ai_walk,	1,		NULL},
+	{ai_walk,	5,		NULL},
+	{ai_walk,	10,		NULL},
+	{ai_walk,	13,		NULL},
+	{ai_walk,	10,		NULL},
+	{ai_walk,	0,		NULL},
+	{ai_walk,	5,		NULL},
+	{ai_walk,	6,		NULL},
+	{ai_walk,	16,		NULL},
+	{ai_walk,	15,		NULL},
+	{ai_walk,	6,		NULL},
 };
 mmove_t mutant_move_walk = {FRAME_walk05, FRAME_walk16, mutant_frames_walk, NULL};
 
@@ -71117,10 +71117,10 @@ void mutant_walk_loop (edict_t *self)
 
 mframe_t mutant_frames_start_walk [] =
 {
-	ai_walk,	5,		NULL,
-	ai_walk,	5,		NULL,
-	ai_walk,	-2,		NULL,
-	ai_walk,	1,		NULL
+	{ai_walk,	5,		NULL},
+	{ai_walk,	5,		NULL},
+	{ai_walk,	-2,		NULL},
+	{ai_walk,	1,		NULL},
 };
 mmove_t mutant_move_start_walk = {FRAME_walk01, FRAME_walk04, mutant_frames_start_walk, mutant_walk_loop};
 
@@ -71829,34 +71829,34 @@ void parasite_search (edict_t *self)
 
 mframe_t parasite_frames_start_fidget [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t parasite_move_start_fidget = {FRAME_stand18, FRAME_stand21, parasite_frames_start_fidget, parasite_do_fidget};
 
 mframe_t parasite_frames_fidget [] =
 {
 	ai_stand, 0, parasite_scratch,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_scratch,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t parasite_move_fidget = {FRAME_stand22, FRAME_stand27, parasite_frames_fidget, parasite_refidget};
 
 mframe_t parasite_frames_end_fidget [] =
 {
 	ai_stand, 0, parasite_scratch,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t parasite_move_end_fidget = {FRAME_stand28, FRAME_stand35, parasite_frames_end_fidget, parasite_stand};
 
@@ -71886,22 +71886,22 @@ void parasite_idle (edict_t *self)
 
 mframe_t parasite_frames_stand [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
 	ai_stand, 0, parasite_tap
 };
 mmove_t	parasite_move_stand = {FRAME_stand01, FRAME_stand17, parasite_frames_stand, parasite_stand};
@@ -71961,31 +71961,30 @@ void parasite_run (edict_t *self)
 
 mframe_t parasite_frames_walk [] =
 {
-	ai_walk, 30, NULL,
-	ai_walk, 30, NULL,
-	ai_walk, 22, NULL,
-	ai_walk, 19, NULL,
-	ai_walk, 24, NULL,
-	ai_walk, 28, NULL,
-	ai_walk, 25, NULL
+	{ai_walk, 30, NULL},
+	{ai_walk, 30, NULL},
+	{ai_walk, 22, NULL},
+	{ai_walk, 19, NULL},
+	{ai_walk, 24, NULL},
+	{ai_walk, 28, NULL},
+	{ai_walk, 25, NULL},
 };
 mmove_t parasite_move_walk = {FRAME_run03, FRAME_run09, parasite_frames_walk, parasite_walk};
 
-mframe_t parasite_frames_start_walk [] =
-{
-	ai_walk, 0,	NULL,
-	ai_walk, 30, parasite_walk
+static mframe_t parasite_frames_start_walk[] = {
+	{ai_walk, 0,	NULL},
+	{ai_walk, 30, parasite_walk},
 };
-mmove_t parasite_move_start_walk = {FRAME_run01, FRAME_run02, parasite_frames_start_walk, NULL};
 
-mframe_t parasite_frames_stop_walk [] =
-{
-	ai_walk, 20, NULL,
-	ai_walk, 20,	NULL,
-	ai_walk, 12, NULL,
-	ai_walk, 10, NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL
+static mmove_t parasite_move_start_walk = {FRAME_run01, FRAME_run02, parasite_frames_start_walk, NULL};
+
+mframe_t parasite_frames_stop_walk[] = {
+	{ai_walk, 20, NULL},
+	{ai_walk, 20,	NULL},
+	{ai_walk, 12, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
 };
 mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_stop_walk, NULL};
 
@@ -73077,147 +73076,147 @@ void soldier_stand (edict_t *self);
 mframe_t soldier_frames_stand1 [] =
 {
 	ai_stand, 0, soldier_idle,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t soldier_move_stand1 = {FRAME_stand101, FRAME_stand130, soldier_frames_stand1, soldier_stand};
 
 mframe_t soldier_frames_stand3 [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
 	ai_stand, 0, soldier_cock,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
 
 #if 0
 mframe_t soldier_frames_stand4 [] =
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 	ai_stand, 4, NULL,
 	ai_stand, 1, NULL,
 	ai_stand, -1, NULL,
 	ai_stand, -2, NULL,
 
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t soldier_move_stand4 = {FRAME_stand401, FRAME_stand452, soldier_frames_stand4, NULL};
 #endif
@@ -73243,54 +73242,54 @@ void soldier_walk1_random (edict_t *self)
 
 mframe_t soldier_frames_walk1 [] =
 {
-	ai_walk, 3,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 1,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 3,  NULL,
-	ai_walk, -1, soldier_walk1_random,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL
+	{ai_walk, 3,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 2,  NULL},
+	{ai_walk, 1,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 3,  NULL},
+	{ai_walk, -1, soldier_walk1_random},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
+	{ai_walk, 0,  NULL},
 };
 mmove_t soldier_move_walk1 = {FRAME_walk101, FRAME_walk133, soldier_frames_walk1, NULL};
 
 mframe_t soldier_frames_walk2 [] =
 {
-	ai_walk, 4,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 9,  NULL,
-	ai_walk, 8,  NULL,
-	ai_walk, 5,  NULL,
-	ai_walk, 1,  NULL,
-	ai_walk, 3,  NULL,
-	ai_walk, 7,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 7,  NULL
+	{ai_walk, 4,  NULL},
+	{ai_walk, 4,  NULL},
+	{ai_walk, 9,  NULL},
+	{ai_walk, 8,  NULL},
+	{ai_walk, 5,  NULL},
+	{ai_walk, 1,  NULL},
+	{ai_walk, 3,  NULL},
+	{ai_walk, 7,  NULL},
+	{ai_walk, 6,  NULL},
+	{ai_walk, 7,  NULL},
 };
 mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2, NULL};
 
@@ -74627,66 +74626,66 @@ void supertank_reattack1(edict_t *self);
 
 mframe_t supertank_frames_stand []=
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_stand, NULL};
 
@@ -74726,24 +74725,24 @@ mmove_t	supertank_move_run = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_frames_
 
 mframe_t supertank_frames_forward [] =
 {
-	ai_walk, 4,	TreadSound,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	NULL
+	{ai_walk, 4,	TreadSound},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	NULL},
 };
 mmove_t	supertank_move_forward = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_frames_forward, NULL};
 
@@ -74870,24 +74869,24 @@ mmove_t supertank_move_death = {FRAME_death_1, FRAME_death_24, supertank_frames_
 
 mframe_t supertank_frames_backward[] =
 {
-	ai_walk, 0,	TreadSound,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL,
-	ai_walk, 0,	NULL
+	{ai_walk, 0,	TreadSound},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
+	{ai_walk, 0,	NULL},
 };
 mmove_t	supertank_move_backward = {FRAME_backwd_1, FRAME_backwd_18, supertank_frames_backward, NULL};
 
@@ -75906,36 +75905,36 @@ void tank_idle (edict_t *self)
 
 mframe_t tank_frames_stand []=
 {
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL,
-	ai_stand, 0, NULL
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
 };
 mmove_t	tank_move_stand = {FRAME_stand01, FRAME_stand30, tank_frames_stand, NULL};
 
@@ -75953,41 +75952,42 @@ void tank_walk (edict_t *self);
 
 mframe_t tank_frames_start_walk [] =
 {
-	ai_walk,  0, NULL,
-	ai_walk,  6, NULL,
-	ai_walk,  6, NULL,
-	ai_walk, 11, tank_footstep
+	{ai_walk,  0, NULL},
+	{ai_walk,  6, NULL},
+	{ai_walk,  6, NULL},
+	{ai_walk, 11, tank_footstep},
 };
 mmove_t	tank_move_start_walk = {FRAME_walk01, FRAME_walk04, tank_frames_start_walk, tank_walk};
 
 mframe_t tank_frames_walk [] =
 {
-	ai_walk, 4,	NULL,
-	ai_walk, 5,	NULL,
-	ai_walk, 3,	NULL,
-	ai_walk, 2,	NULL,
-	ai_walk, 5,	NULL,
-	ai_walk, 5,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 4,	tank_footstep,
-	ai_walk, 3,	NULL,
-	ai_walk, 5,	NULL,
-	ai_walk, 4,	NULL,
-	ai_walk, 5,	NULL,
-	ai_walk, 7,	NULL,
-	ai_walk, 7,	NULL,
-	ai_walk, 6,	NULL,
-	ai_walk, 6,	tank_footstep
+	{ai_walk, 4,	NULL},
+	{ai_walk, 5,	NULL},
+	{ai_walk, 3,	NULL},
+	{ai_walk, 2,	NULL},
+	{ai_walk, 5,	NULL},
+	{ai_walk, 5,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 4,	tank_footstep},
+	{ai_walk, 3,	NULL},
+	{ai_walk, 5,	NULL},
+	{ai_walk, 4,	NULL},
+	{ai_walk, 5,	NULL},
+	{ai_walk, 7,	NULL},
+	{ai_walk, 7,	NULL},
+	{ai_walk, 6,	NULL},
+	{ai_walk, 6,	tank_footstep},
 };
+
 mmove_t	tank_move_walk = {FRAME_walk05, FRAME_walk20, tank_frames_walk, NULL};
 
 mframe_t tank_frames_stop_walk [] =
 {
-	ai_walk,  3, NULL,
-	ai_walk,  3, NULL,
-	ai_walk,  2, NULL,
-	ai_walk,  2, NULL,
-	ai_walk,  4, tank_footstep
+	{ai_walk,  3, NULL},
+	{ai_walk,  3, NULL},
+	{ai_walk,  2, NULL},
+	{ai_walk,  2, NULL},
+	{ai_walk,  4, tank_footstep},
 };
 mmove_t	tank_move_stop_walk = {FRAME_walk21, FRAME_walk25, tank_frames_stop_walk, tank_stand};
 
