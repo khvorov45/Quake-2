@@ -4130,7 +4130,7 @@ struct edict_s {
 	void		(*prethink) (struct edict_s *ent);
 	void		(*think)(struct edict_s *self);
 	void		(*blocked)(struct edict_s *self, struct edict_s *other);	//move to moveinfo?
-	void		(*touch)(struct edict_s *self, struct edict_s *other, cplane_t* plane, csurface_t *surf);
+	void		(*touch)(struct edict_s *self, struct edict_s *other, cplane_t* plane, csurface_t* surf);
 	void		(*use)(struct edict_s *self, struct edict_s *other, struct edict_s *activator);
 	void		(*pain)(struct edict_s *self, struct edict_s *other, float kick, int damage);
 	void		(*die)(struct edict_s *self, struct edict_s *inflictor, struct edict_s *attacker, int damage, vec3_t point);
@@ -6096,7 +6096,7 @@ int ArmorIndex (edict_t *ent);
 int PowerArmorType (edict_t *ent);
 gitem_t	*GetItemByIndex (int index);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
-void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf);
+void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf);
 
 //
 // g_utils.c
@@ -6155,7 +6155,6 @@ void monster_fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, 
 void monster_fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype);
 void monster_fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype);
 void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype);
-void monster_fire_bfg (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype);
 void M_droptofloor (edict_t *ent);
 void monster_think (edict_t* self);
 void walkmonster_start (edict_t* self);
@@ -41401,7 +41400,7 @@ static void Use_Plat (edict_t *ent, edict_t* other, edict_t* activator) {
 	plat_go_down(ent);
 }
 
-static void Touch_Plat_Center(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf) {
+static void Touch_Plat_Center(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -41567,7 +41566,7 @@ void rotating_blocked (edict_t* self, edict_t* other)
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-static void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+static void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 	if (self->avelocity[0] || self->avelocity[1] || self->avelocity[2]) {
@@ -41714,7 +41713,7 @@ static void button_use(edict_t* self, edict_t* other, edict_t* activator) {
 	button_fire (self);
 }
 
-static void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+static void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -42107,7 +42106,7 @@ static void door_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	door_use (self->teammaster, attacker, attacker);
 }
 
-static void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf) {
+static void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -43774,7 +43773,7 @@ void Drop_PowerArmor (edict_t *ent, gitem_t *item)
 	Drop_General (ent, item);
 }
 
-static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf) {
+static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -43840,7 +43839,7 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 
 //======================================================================
 
-static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
+static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
 	if (other == ent->owner)
 		return;
@@ -45544,25 +45543,22 @@ void ClipGibVelocity (edict_t *ent)
 }
 
 
-/*
-=================
-gibs
-=================
-*/
-void gib_think (edict_t* self)
-{
+// gibs
+
+static void gib_think(edict_t* self) {
 	self->s.frame++;
 	self->nextthink = level.time + FRAMETIME;
 
-	if (self->s.frame == 10)
-	{
+	if (self->s.frame == 10) {
 		self->think = G_FreeEdict;
-		self->nextthink = level.time + 8 + random()*10;
+		self->nextthink = level.time + 8 + random() * 10;
 	}
 }
 
-void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(other);
+	UNUSED(surf);
+
 	vec3_t	normal_angles, right;
 
 	if (!self->groundentity)
@@ -45587,9 +45583,13 @@ void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf
 	}
 }
 
-void gib_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
-	G_FreeEdict (self);
+static void gib_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
+
+	G_FreeEdict(self);
 }
 
 void ThrowGib (edict_t* self, char *gibname, int damage, int type)
@@ -45733,14 +45733,14 @@ void ThrowClientHead (edict_t* self, int damage)
 }
 
 
-/*
-=================
-debris
-=================
-*/
-void debris_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
-	G_FreeEdict (self);
+// debris
+static void debris_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
+
+	G_FreeEdict(self);
 }
 
 void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin)
@@ -45799,8 +45799,10 @@ Pathtarget: gets used when an entity that has
 	this path_corner targeted touches it
 */
 
-void path_corner_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void path_corner_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	vec3_t		v;
 	edict_t		*next;
 
@@ -45879,8 +45881,10 @@ Makes this the target of a monster and it will head here
 when first activated before going after the activator.  If
 hold is selected, it will stay here.
 */
-void point_combat_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	edict_t	*activator;
 
 	if (other->movetarget != self)
@@ -46002,8 +46006,10 @@ Default _cone value is 10 (used to set size of light for spotlights)
 
 #define START_OFF	1
 
-static void light_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void light_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (self->spawnflags & START_OFF)
 	{
 		gi.configstring (CS_LIGHTS+self->style, "m");
@@ -46050,8 +46056,10 @@ START_ON		only valid for TRIGGER_SPAWN walls
 				the wall will initially be present
 */
 
-void func_wall_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void func_wall_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (self->solid == SOLID_NOT)
 	{
 		self->solid = SOLID_BSP;
@@ -46122,8 +46130,9 @@ void SP_func_wall (edict_t* self)
 This is solid bmodel that will fall if it's support it removed.
 */
 
-void func_object_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void func_object_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(surf);
+
 	// only squash thing we fall on top of
 	if (!plane)
 		return;
@@ -46140,8 +46149,10 @@ void func_object_release (edict_t* self)
 	self->touch = func_object_touch;
 }
 
-void func_object_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void func_object_use (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = NULL;
@@ -46202,8 +46213,10 @@ mass defaults to 75.  This determines how much debris is emitted when
 it explodes.  You get one large chunk per 100 of mass (up to 8) and
 one small chunk per 25 of mass (up to 16).  So 800 gives the most.
 */
-void func_explosive_explode (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void func_explosive_explode(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(damage);
+	UNUSED(point);
+
 	vec3_t	origin;
 	vec3_t	chunkorigin;
 	vec3_t	size;
@@ -46266,13 +46279,16 @@ void func_explosive_explode (edict_t* self, edict_t* inflictor, edict_t* attacke
 		G_FreeEdict (self);
 }
 
-void func_explosive_use(edict_t* self, edict_t* other, edict_t* activator)
-{
-	func_explosive_explode (self, self, other, self->health, vec3_origin);
+static void func_explosive_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(activator);
+
+	func_explosive_explode(self, self, other, self->health, vec3_origin);
 }
 
-void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = NULL;
@@ -46330,9 +46346,10 @@ Large exploding box.  You can override its mass (100),
 health (80), and dmg (150).
 */
 
-void barrel_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
+static void barrel_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
 
-{
 	float	ratio;
 	vec3_t	v;
 
@@ -46423,8 +46440,11 @@ void barrel_explode (edict_t* self)
 		BecomeExplosion1 (self);
 }
 
-void barrel_delay (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void barrel_delay(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(damage);
+	UNUSED(point);
+
 	self->takedamage = DAMAGE_NO;
 	self->nextthink = level.time + 2 * FRAMETIME;
 	self->think = barrel_explode;
@@ -46478,14 +46498,10 @@ void SP_misc_explobox (edict_t* self)
 /*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8)
 */
 
-void misc_blackhole_use (edict_t *ent, edict_t* other, edict_t* activator)
-{
-	/*
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_BOSSTPORT);
-	gi.WritePosition (ent->s.origin);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
-	*/
+static void misc_blackhole_use(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	G_FreeEdict (ent);
 }
 
@@ -46614,8 +46630,10 @@ void commander_body_think (edict_t* self)
 		gi.sound (self, CHAN_BODY, gi.soundindex ("tank/thud.wav"), 1, ATTN_NORM, 0);
 }
 
-void commander_body_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void commander_body_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	self->think = commander_body_think;
 	self->nextthink = level.time + FRAMETIME;
 	gi.sound (self, CHAN_BODY, gi.soundindex ("tank/pain.wav"), 1, ATTN_NORM, 0);
@@ -46674,8 +46692,11 @@ void SP_misc_banner (edict_t *ent)
 /*QUAKED misc_deadsoldier (1 .5 0) (-16 -16 0) (16 16 16) ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED
 This is the dead player model. Comes in 6 exciting different poses!
 */
-void misc_deadsoldier_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void misc_deadsoldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 	if (self->health > -80)
@@ -46787,8 +46808,11 @@ void SP_misc_bigviper (edict_t *ent)
 /*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make?
 */
-void misc_viper_bomb_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void misc_viper_bomb_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(other);
+	UNUSED(plane);
+	UNUSED(surf);
+
 	G_UseTargets (self, self->activator);
 
 	self->s.origin[2] = self->absmin[2] + 1;
@@ -46815,8 +46839,9 @@ void misc_viper_bomb_prethink (edict_t* self)
 	self->s.angles[2] = diff + 10;
 }
 
-void misc_viper_bomb_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void misc_viper_bomb_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	edict_t	*viper;
 
 	self->solid = SOLID_BBOX;
@@ -46909,8 +46934,10 @@ void misc_satellite_dish_think (edict_t* self)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-void misc_satellite_dish_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void misc_satellite_dish_use (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	self->s.frame = 0;
 	self->think = misc_satellite_dish_think;
 	self->nextthink = level.time + FRAMETIME;
@@ -47034,8 +47061,10 @@ void SP_target_character (edict_t* self)
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
 */
 
-void target_string_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void target_string_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	edict_t *e;
 	int		n, l;
 	char	c;
@@ -47197,8 +47226,9 @@ void func_clock_think (edict_t* self)
 	self->nextthink = level.time + 1;
 }
 
-void func_clock_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void func_clock_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	if (!(self->spawnflags & 8))
 		self->use = NULL;
 	if (self->activator)
@@ -47240,8 +47270,10 @@ void SP_func_clock (edict_t* self)
 
 //=================================================================================
 
-void teleporter_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	edict_t		*dest;
 	int			i;
 
@@ -47408,9 +47440,8 @@ void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damag
 	gi.multicast (start, MULTICAST_PVS);
 }
 
-void monster_fire_bfg (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype)
-{
-	fire_bfg (self, start, aimdir, damage, speed, damage_radius);
+static void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, int flashtype) {
+	fire_bfg(self, start, aimdir, damage, speed, damage_radius);
 
 	gi.WriteByte (svc_muzzleflash2);
 	gi.WriteShort (self - g_edicts);
@@ -47751,16 +47782,10 @@ void monster_think (edict_t* self)
 	M_SetEffects (self);
 }
 
+// Using a monster makes it angry at the current activator
+static void monster_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
 
-/*
-================
-monster_use
-
-Using a monster makes it angry at the current activator
-================
-*/
-void monster_use (edict_t* self, edict_t* other, edict_t* activator)
-{
 	if (self->enemy)
 		return;
 	if (self->health <= 0)
@@ -47802,8 +47827,10 @@ void monster_triggered_spawn (edict_t* self)
 	}
 }
 
-void monster_triggered_spawn_use (edict_t* self, edict_t* other, edict_t* activator)
+static void monster_triggered_spawn_use(edict_t* self, edict_t* other, edict_t* activator)
 {
+	UNUSED(other);
+
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = monster_triggered_spawn;
 	self->nextthink = level.time + FRAMETIME;
@@ -49211,8 +49238,7 @@ void InitGame (void)
 
 //=========================================================
 
-void WriteField1 (FILE *f, field_t *field, byte *base)
-{
+static void WriteField1(field_t *field, byte *base) {
 	void		*p;
 	int			len;
 	int			index;
@@ -49401,7 +49427,7 @@ void WriteClient (FILE *f, gclient_t *client)
 	// change the pointers to lengths or indexes
 	for (field=clientfields ; field->name ; field++)
 	{
-		WriteField1 (f, field, (byte *)&temp);
+		WriteField1(field, (byte *)&temp);
 	}
 
 	// write the block
@@ -49525,7 +49551,7 @@ void WriteEdict (FILE *f, edict_t *ent)
 	// change the pointers to lengths or indexes
 	for (field=fields ; field->name ; field++)
 	{
-		WriteField1 (f, field, (byte *)&temp);
+		WriteField1(field, (byte *)&temp);
 	}
 
 	// write the block
@@ -49557,7 +49583,7 @@ void WriteLevelLocals (FILE *f)
 	// change the pointers to lengths or indexes
 	for (field=levelfields ; field->name ; field++)
 	{
-		WriteField1 (f, field, (byte *)&temp);
+		WriteField1(field, (byte *)&temp);
 	}
 
 	// write the block
@@ -51008,8 +51034,10 @@ void	ServerCommand (void)
 Fire an origin based temp entity event to the clients.
 "style"		type byte
 */
-void Use_Target_Tent (edict_t *ent, edict_t* other, edict_t* activator)
-{
+static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (ent->style);
 	gi.WritePosition (ent->s.origin);
@@ -51040,8 +51068,10 @@ Normal sounds play each time the target is used.  The reliable flag can be set f
 Looped sounds are always atten 3 / vol 1, and the use function toggles it on/off.
 Multiple identical looping sounds will just increase volume without any speed cost.
 */
-void Use_Target_Speaker (edict_t *ent, edict_t* other, edict_t* activator)
-{
+static void Use_Target_Speaker(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	int		chan;
 
 	if (ent->spawnflags & 3)
@@ -51100,8 +51130,10 @@ void SP_target_speaker (edict_t *ent)
 
 //==========================================================
 
-void Use_Target_Help (edict_t *ent, edict_t* other, edict_t* activator)
-{
+static void Use_Target_Help(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (ent->spawnflags & 1)
 		strncpy (game.helpmessage1, ent->message, sizeof(game.helpmessage2)-1);
 	else
@@ -51136,8 +51168,10 @@ void SP_target_help(edict_t *ent)
 Counts a secret found.
 These are single use targets.
 */
-void use_target_secret (edict_t *ent, edict_t* other, edict_t* activator)
+static void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
 {
+	UNUSED(other);
+
 	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_secrets++;
@@ -51171,8 +51205,10 @@ void SP_target_secret (edict_t *ent)
 Counts a goal completed.
 These are single use targets.
 */
-void use_target_goal (edict_t *ent, edict_t* other, edict_t* activator)
+static void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
 {
+	UNUSED(other);
+
 	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_goals++;
@@ -51226,8 +51262,10 @@ void target_explosion_explode (edict_t* self)
 	self->delay = save;
 }
 
-void use_target_explosion (edict_t* self, edict_t* other, edict_t* activator)
+static void use_target_explosion(edict_t* self, edict_t* other, edict_t* activator)
 {
+	UNUSED(other);
+
 	self->activator = activator;
 
 	if (!self->delay)
@@ -51320,8 +51358,9 @@ Set "sounds" to one of the following:
 		useful for lava/sparks
 */
 
-void use_target_splash (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void use_target_splash(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_SPLASH);
 	gi.WriteByte (self->count);
@@ -51362,8 +51401,10 @@ For gibs:
 */
 void ED_CallSpawn (edict_t *ent);
 
-void use_target_spawner (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void use_target_spawner (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	edict_t	*ent;
 
 	ent = G_Spawn();
@@ -51398,8 +51439,9 @@ dmg		default is 15
 speed	default is 1000
 */
 
-void use_target_blaster (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void use_target_blaster (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
 	fire_blaster (self, self->s.origin, self->movedir, self->dmg, self->speed, EF_BLASTER, MOD_TARGET_BLASTER);
 	gi.sound (self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
@@ -51424,8 +51466,9 @@ void SP_target_blaster (edict_t* self)
 /*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-void trigger_crosslevel_trigger_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void trigger_crosslevel_trigger_use (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
 	game.serverflags |= self->spawnflags;
 	G_FreeEdict (self);
 }
@@ -51549,8 +51592,9 @@ void target_laser_off (edict_t* self)
 	self->nextthink = 0;
 }
 
-void target_laser_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void target_laser_use (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	self->activator = activator;
 	if (self->spawnflags & 1)
 		target_laser_off (self);
@@ -51652,8 +51696,10 @@ void target_lightramp_think (edict_t* self)
 	}
 }
 
-void target_lightramp_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (!self->enemy)
 	{
 		edict_t		*e;
@@ -51758,8 +51804,9 @@ void target_earthquake_think (edict_t* self)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-void target_earthquake_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void target_earthquake_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	self->timestamp = level.time + self->count;
 	self->nextthink = level.time + FRAMETIME;
 	self->activator = activator;
@@ -51832,14 +51879,17 @@ void multi_trigger (edict_t *ent)
 	}
 }
 
-void Use_Multi (edict_t *ent, edict_t* other, edict_t* activator)
-{
+static void Use_Multi(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	ent->activator = activator;
 	multi_trigger (ent);
 }
 
-void Touch_Multi (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void Touch_Multi(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if(other->client)
 	{
 		if (self->spawnflags & 2)
@@ -51877,8 +51927,10 @@ sounds
 4)
 set "message" to text string
 */
-void trigger_enable (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void trigger_enable (edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	self->solid = SOLID_TRIGGER;
 	self->use = Use_Multi;
 	gi.linkentity (self);
@@ -51955,8 +52007,9 @@ void SP_trigger_once(edict_t *ent)
 /*QUAKED trigger_relay (.5 .5 .5) (-8 -8 -8) (8 8 8)
 This fixed size trigger cannot be touched, it can only be fired by other events.
 */
-void trigger_relay_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void trigger_relay_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	G_UseTargets (self, activator);
 }
 
@@ -51978,8 +52031,9 @@ trigger_key
 A relay trigger that only fires it's targets if player has the proper key.
 Use "item" to specify the required key, for example "key_data_cd"
 */
-void trigger_key_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	int			index;
 
 	if (!self->item)
@@ -52092,8 +52146,9 @@ If nomessage is not set, t will print "1 more.. " etc when triggered and "sequen
 After the counter has been triggered "count" times (default 2), it will fire all of it's targets and remove itself.
 */
 
-void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activator)
-{
+static void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+
 	if (self->count == 0)
 		return;
 
@@ -52160,8 +52215,10 @@ trigger_push
 
 static int windsound;
 
-void trigger_push_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (strcmp(other->classname, "grenade") == 0)
 	{
 		VectorScale (self->movedir, self->speed * 10, other->velocity);
@@ -52221,8 +52278,10 @@ NO_PROTECTION	*nothing* stops the damage
 "dmg"			default 5 (whole numbers only)
 
 */
-void hurt_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -52234,8 +52293,10 @@ void hurt_use (edict_t* self, edict_t* other, edict_t* activator)
 }
 
 
-void hurt_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void hurt_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	int		dflags;
 
 	if (!other->takedamage)
@@ -52298,8 +52359,10 @@ the value of "gravity".  1.0 is standard
 gravity for the level.
 */
 
-void trigger_gravity_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void trigger_gravity_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	other->gravity = self->gravity;
 }
 
@@ -52332,8 +52395,10 @@ Walking monsters that touch this will jump in the direction of the trigger's ang
 "height" default to 200, the speed thrown upwards
 */
 
-void trigger_monsterjump_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void trigger_monsterjump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (other->flags & (FL_FLY | FL_SWIM) )
 		return;
 	if (other->svflags & SVF_DEADMONSTER)
@@ -52626,8 +52691,9 @@ void infantry_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 void infantry_stand (edict_t* self);
 void monster_use (edict_t* self, edict_t* other, edict_t* activator);
 
-void turret_driver_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void turret_driver_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(point);
+
 	edict_t	*ent;
 
 	// level the gun
@@ -53612,7 +53678,7 @@ fire_blaster
 Fires a single blaster bolt.  Used by the blaster and hyper blaster.
 =================
 */
-void blaster_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
+void blaster_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
 	int		mod;
 
@@ -53761,8 +53827,9 @@ static void Grenade_Explode (edict_t *ent)
 	G_FreeEdict (ent);
 }
 
-static void Grenade_Touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void Grenade_Touch(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+
 	if (other == ent->owner)
 		return;
 
@@ -53875,7 +53942,7 @@ void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int 
 fire_rocket
 =================
 */
-void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf)
+void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
 	vec3_t		origin;
 	int			n;
@@ -54071,7 +54138,7 @@ void bfg_explode (edict_t* self)
 		self->think = G_FreeEdict;
 }
 
-void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
+void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
 	if (other == self->owner)
 		return;
@@ -54997,7 +55064,10 @@ static char* messages[] = {
 	"Check your targets"
 };
 
-static void actor_pain (edict_t* self, edict_t* other, float kick, int damage) {
+static void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(kick);
+	UNUSED(damage);
+
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -55105,8 +55175,11 @@ static mframe_t actor_frames_death2[] = {
 
 static mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
 
-void actor_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -55165,8 +55238,10 @@ static void actor_attack(edict_t* self) {
 }
 
 
-void actor_use (edict_t* self, edict_t* other, edict_t* activator)
-{
+static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
 	vec3_t		v;
 
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
@@ -55260,8 +55335,10 @@ for JUMP only:
 "height"		speed thrown upwards (default 200)
 */
 
-void target_actor_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	vec3_t	v;
 
 	if (other->movetarget != self)
@@ -55654,14 +55731,14 @@ static int sound_punch;
 static int sound_sight;
 static int sound_search;
 
-void berserk_sight (edict_t* self, edict_t* other)
-{
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+static void berserk_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
+	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void berserk_search (edict_t* self)
-{
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+static void berserk_search(edict_t* self) {
+	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
@@ -55898,6 +55975,9 @@ static mframe_t berserk_frames_pain2[] = {
 static mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
 
 static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -55957,8 +56037,11 @@ static mframe_t berserk_frames_death2[] = {
 
 static mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
 
-void berserk_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 	if (self->health <= self->gib_health)
@@ -56732,8 +56815,10 @@ void boss2_reattack_mg (edict_t* self)
 }
 
 
-void boss2_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -56759,8 +56844,7 @@ void boss2_pain (edict_t* self, edict_t* other, float kick, int damage)
 	}
 }
 
-void boss2_dead (edict_t* self)
-{
+static void boss2_dead (edict_t* self) {
 	VectorSet (self->mins, -56, -56, 0);
 	VectorSet (self->maxs, 56, 56, 80);
 	self->movetype = MOVETYPE_TOSS;
@@ -56769,37 +56853,17 @@ void boss2_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
-void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
+
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->count = 0;
 	self->monsterinfo.currentmove = &boss2_move_death;
-#if 0
-	int		n;
-
-	self->s.sound = 0;
-	// check for gib
-	if (self->health <= self->gib_health)
-	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
-		for (n= 0; n < 2; n++)
-			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
-		for (n= 0; n < 4; n++)
-			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
-		ThrowHead (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
-		self->deadflag = DEAD_DEAD;
-		return;
-	}
-
-	if (self->deadflag == DEAD_DEAD)
-		return;
-
-	self->deadflag = DEAD_DEAD;
-	self->takedamage = DAMAGE_YES;
-	self->monsterinfo.currentmove = &boss2_move_death;
-#endif
 }
 
 qboolean Boss2_CheckAttack (edict_t* self)
@@ -57631,8 +57695,9 @@ boss3
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss32.h ============ */
 
-void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator)
-{
+static void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_BOSSTPORT);
 	gi.WritePosition (ent->s.origin);
@@ -58265,13 +58330,13 @@ void jorg_reattack1(edict_t* self)
 	}
 }
 
-void jorg_attack1(edict_t* self)
-{
+static void jorg_attack1(edict_t* self) {
 	self->monsterinfo.currentmove = &jorg_move_attack1;
 }
 
-void jorg_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
 
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum = 1;
@@ -58344,15 +58409,7 @@ void jorgBFG (edict_t* self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
-	/*void monster_fire_bfg (edict_t* self,
-							 vec3_t start,
-							 vec3_t aimdir,
-							 int damage,
-							 int speed,
-							 int kick,
-							 float damage_radius,
-							 int flashtype)*/
-	monster_fire_bfg (self, start, dir, 50, 300, 100, 200, MZ2_JORG_BFG_1);
+	monster_fire_bfg(self, start, dir, 50, 300, 200, MZ2_JORG_BFG_1);
 }
 
 void jorg_firebullet_right (edict_t* self)
@@ -58408,37 +58465,16 @@ void jorg_attack(edict_t* self)
 	}
 }
 
-void jorg_dead (edict_t* self)
-{
-#if 0
-	edict_t	*tempent;
-	/*
-	VectorSet (self->mins, -16, -16, -24);
-	VectorSet (self->maxs, 16, 16, -8);
-	*/
-
-	// Jorg is on modelindex2. Do not clear him.
-	VectorSet (self->mins, -60, -60, 0);
-	VectorSet (self->maxs, 60, 60, 72);
-	self->movetype = MOVETYPE_TOSS;
-	self->nextthink = 0;
-	gi.linkentity (self);
-
-	tempent = G_Spawn();
-	VectorCopy (self->s.origin, tempent->s.origin);
-	VectorCopy (self->s.angles, tempent->s.angles);
-	tempent->killtarget = self->killtarget;
-	tempent->target = self->target;
-	tempent->activator = self->enemy;
-	self->killtarget = 0;
-	self->target = 0;
-	SP_monster_makron (tempent);
-#endif
+static void jorg_dead(edict_t* self) {
+	UNUSED(self);
 }
 
+static void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
 
-void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -59004,7 +59040,7 @@ void makronBFG (edict_t* self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
-	monster_fire_bfg (self, start, dir, 50, 300, 100, 300, MZ2_MAKRON_BFG);
+	monster_fire_bfg(self, start, dir, 50, 300, 300, MZ2_MAKRON_BFG);
 }
 
 
@@ -59133,9 +59169,9 @@ void MakronHyperblaster (edict_t* self)
 	monster_fire_blaster (self, start, forward, 15, 1000, MZ2_MAKRON_BLASTER_1, EF_BLASTER);
 }
 
-
-void makron_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
 
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum = 1;
@@ -59178,8 +59214,9 @@ void makron_pain (edict_t* self, edict_t* other, float kick, int damage)
 	}
 };
 
-void makron_sight(edict_t* self, edict_t* other)
-{
+static void makron_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	self->monsterinfo.currentmove = &makron_move_sight;
 };
 
@@ -59243,9 +59280,11 @@ void makron_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
+static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
 
-void makron_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	edict_t *tempent;
 
 	int		n;
@@ -59869,8 +59908,8 @@ static int	sound_melee2;
 static int	sound_melee3;
 
 
-void brain_sight (edict_t* self, edict_t* other)
-{
+static void brain_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -60363,8 +60402,11 @@ void brain_run (edict_t* self)
 }
 
 
-void brain_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	float	r;
 
 	if (self->health < (self->max_health / 2))
@@ -60405,10 +60447,11 @@ void brain_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
+static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
 
-
-void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	int		n;
 
 	self->s.effects = 0;
@@ -61235,8 +61278,10 @@ mframe_t chick_frames_pain3 [] =
 };
 mmove_t chick_move_pain3 = {FRAME_pain301, FRAME_pain321, chick_frames_pain3, chick_run};
 
-void chick_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+
 	float	r;
 
 	if (self->health < (self->max_health / 2))
@@ -61304,7 +61349,7 @@ mframe_t chick_frames_death2 [] =
 };
 mmove_t chick_move_death2 = {FRAME_death201, FRAME_death223, chick_frames_death2, chick_dead};
 
-mframe_t chick_frames_death1 [] =
+static mframe_t chick_frames_death1 [] =
 {
 	{ai_move, 0,  NULL},
 	{ai_move, 0,  NULL},
@@ -61320,10 +61365,13 @@ mframe_t chick_frames_death1 [] =
 	{ai_move, 0,  NULL},
 
 };
-mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
+static mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
 
-void chick_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -61379,28 +61427,28 @@ void chick_duck_hold (edict_t* self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-void chick_duck_up (edict_t* self)
-{
+static void chick_duck_up (edict_t* self) {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
 	gi.linkentity (self);
 }
 
-mframe_t chick_frames_duck [] =
-{
+static mframe_t chick_frames_duck[] = {
 	{ai_move, 0, chick_duck_down},
 	{ai_move, 1, NULL},
 	{ai_move, 4, chick_duck_hold},
-	{ai_move, -4,  NULL},
-	{ai_move, -5,  chick_duck_up},
+	{ai_move, -4, NULL},
+	{ai_move, -5, chick_duck_up},
 	{ai_move, 3, NULL},
-	{ai_move, 1,  NULL},
+	{ai_move, 1, NULL},
 };
-mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_run};
 
-void chick_dodge (edict_t* self, edict_t* attacker, float eta)
-{
+static mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_run};
+
+static void chick_dodge(edict_t* self, edict_t* attacker, float eta) {
+	UNUSED(eta);
+
 	if (random() > 0.25)
 		return;
 
@@ -61592,9 +61640,10 @@ void chick_attack(edict_t* self)
 	self->monsterinfo.currentmove = &chick_move_start_attack1;
 }
 
-void chick_sight(edict_t* self, edict_t* other)
-{
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+static void chick_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
+	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 /*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
@@ -62025,8 +62074,11 @@ void flipper_melee(edict_t* self)
 	self->monsterinfo.currentmove = &flipper_move_attack;
 }
 
-void flipper_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void flipper_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -62129,13 +62181,17 @@ mframe_t flipper_frames_death [] =
 };
 mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_death, flipper_dead};
 
-void flipper_sight (edict_t* self, edict_t* other)
-{
+static void flipper_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -62656,14 +62712,13 @@ static int	sound_pain1;
 static int	sound_pain2;
 static int	sound_sight;
 
+static void floater_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
 
-void floater_sight (edict_t* self, edict_t* other)
-{
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void floater_idle (edict_t* self)
-{
+static void floater_idle (edict_t* self) {
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
@@ -63167,23 +63222,23 @@ void floater_zap (edict_t* self)
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
 
-void floater_attack(edict_t* self)
-{
+static void floater_attack(edict_t* self) {
 	self->monsterinfo.currentmove = &floater_move_attack1;
 }
 
-
-void floater_melee(edict_t* self)
-{
-	if (random() < 0.5)
+static void floater_melee(edict_t* self) {
+	if (random() < 0.5) {
 		self->monsterinfo.currentmove = &floater_move_attack3;
-	else
+	} else {
 		self->monsterinfo.currentmove = &floater_move_attack2;
+	}
 }
 
+static void floater_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
 
-void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -63209,8 +63264,7 @@ void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
 	}
 }
 
-void floater_dead (edict_t* self)
-{
+static void floater_dead(edict_t* self) {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -63219,8 +63273,12 @@ void floater_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
-void floater_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
+
 	gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
@@ -63577,7 +63635,6 @@ static int	sound_slash;
 static int	sound_sproing;
 static int	sound_die;
 
-
 void flyer_check_melee(edict_t* self);
 void flyer_loop_melee (edict_t* self);
 void flyer_melee (edict_t* self);
@@ -63585,9 +63642,9 @@ void flyer_setstart (edict_t* self);
 void flyer_stand (edict_t* self);
 void flyer_nextmove (edict_t* self);
 
+static void flyer_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
 
-void flyer_sight (edict_t* self, edict_t* other)
-{
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -64065,8 +64122,11 @@ void flyer_check_melee(edict_t* self)
 		self->monsterinfo.currentmove = &flyer_move_end_melee;
 }
 
-void flyer_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -64097,13 +64157,15 @@ void flyer_pain (edict_t* self, edict_t* other, float kick, int damage)
 	}
 }
 
+static void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
 
-void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
-
 
 /*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
@@ -64356,9 +64418,10 @@ void gladiator_idle (edict_t* self)
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void gladiator_sight (edict_t* self, edict_t* other)
-{
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+static void gladiator_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
+	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gladiator_search (edict_t* self)
@@ -64547,8 +64610,10 @@ mframe_t gladiator_frames_pain_air [] =
 };
 mmove_t gladiator_move_pain_air = {FRAME_painup1, FRAME_painup7, gladiator_frames_pain_air, gladiator_run};
 
-void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
 
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -64615,8 +64680,11 @@ mframe_t gladiator_frames_death [] =
 };
 mmove_t gladiator_move_death = {FRAME_death1, FRAME_death22, gladiator_frames_death, gladiator_dead};
 
-void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -65136,8 +65204,9 @@ void gunner_idlesound (edict_t* self)
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void gunner_sight (edict_t* self, edict_t* other)
-{
+static void gunner_sight (edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -65373,8 +65442,10 @@ mframe_t gunner_frames_pain1 [] =
 };
 mmove_t gunner_move_pain1 = {FRAME_pain101, FRAME_pain118, gunner_frames_pain1, gunner_run};
 
-void gunner_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -65425,8 +65496,11 @@ mframe_t gunner_frames_death [] =
 };
 mmove_t gunner_move_death = {FRAME_death01, FRAME_death11, gunner_frames_death, gunner_dead};
 
-void gunner_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -65486,8 +65560,7 @@ void gunner_duck_up (edict_t* self)
 	gi.linkentity (self);
 }
 
-mframe_t gunner_frames_duck [] =
-{
+static mframe_t gunner_frames_duck[] = {
 	{ai_move, 1,  gunner_duck_down},
 	{ai_move, 1,  NULL},
 	{ai_move, 1,  gunner_duck_hold},
@@ -65497,10 +65570,12 @@ mframe_t gunner_frames_duck [] =
 	{ai_move, 0,  gunner_duck_up},
 	{ai_move, -1, NULL},
 };
-mmove_t	gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunner_run};
 
-void gunner_dodge (edict_t* self, edict_t* attacker, float eta)
-{
+static mmove_t gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunner_run};
+
+static void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
+	UNUSED(eta);
+
 	if (random() > 0.25)
 		return;
 
@@ -66015,9 +66090,9 @@ static int	sound_sight;
 static int	sound_search1;
 static int	sound_search2;
 
+static void hover_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
 
-void hover_sight (edict_t* self, edict_t* other)
-{
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -66459,9 +66534,10 @@ void hover_attack(edict_t* self)
 	self->monsterinfo.currentmove = &hover_move_attack1;
 }
 
+static void hover_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
 
-void hover_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -66514,8 +66590,11 @@ void hover_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
-void hover_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -67205,8 +67284,11 @@ mframe_t infantry_frames_pain2 [] =
 };
 mmove_t infantry_move_pain2 = {FRAME_pain201, FRAME_pain210, infantry_frames_pain2, infantry_run};
 
-void infantry_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	int		n;
 
 	if (self->health < (self->max_health / 2))
@@ -67287,9 +67369,10 @@ void InfantryMachineGun (edict_t* self)
 	monster_fire_bullet (self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-void infantry_sight (edict_t* self, edict_t* other)
-{
-	gi.sound (self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
+static void infantry_sight (edict_t* self, edict_t* other) {
+	UNUSED(other);
+
+	gi.sound(self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void infantry_dead (edict_t* self)
@@ -67373,9 +67456,11 @@ mframe_t infantry_frames_death3 [] =
 };
 mmove_t infantry_move_death3 = {FRAME_death301, FRAME_death309, infantry_frames_death3, infantry_dead};
 
+static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
 
-void infantry_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	int		n;
 
 // check for gib
@@ -67444,18 +67529,19 @@ void infantry_duck_up (edict_t* self)
 	gi.linkentity (self);
 }
 
-mframe_t infantry_frames_duck [] =
-{
+static mframe_t infantry_frames_duck[] = {
 	{ai_move, -2, infantry_duck_down},
 	{ai_move, -5, infantry_duck_hold},
 	{ai_move, 3,  NULL},
 	{ai_move, 4,  infantry_duck_up},
 	{ai_move, 0,  NULL},
 };
-mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, infantry_run};
 
-void infantry_dodge (edict_t* self, edict_t* attacker, float eta)
-{
+static mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, infantry_run};
+
+static void infantry_dodge(edict_t* self, edict_t* attacker, float eta) {
+	UNUSED(eta);
+
 	if (random() > 0.25)
 		return;
 
@@ -68488,9 +68574,11 @@ void insane_run (edict_t* self)
 			self->monsterinfo.currentmove = &insane_move_run_insane;
 }
 
+static void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
 
-void insane_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
 	int	l,r;
 
 //	if (self->health < (self->max_health / 2))
@@ -68594,9 +68682,11 @@ void insane_dead (edict_t* self)
 	gi.linkentity (self);
 }
 
+static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
 
-void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	int		n;
 
 	if (self->health <= self->gib_health)
@@ -69165,8 +69255,9 @@ void medic_search (edict_t* self)
 	}
 }
 
-void medic_sight (edict_t* self, edict_t* other)
-{
+static void medic_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -69346,8 +69437,7 @@ mframe_t medic_frames_pain1 [] =
 };
 mmove_t medic_move_pain1 = {FRAME_paina1, FRAME_paina8, medic_frames_pain1, medic_run};
 
-mframe_t medic_frames_pain2 [] =
-{
+static mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -69364,10 +69454,14 @@ mframe_t medic_frames_pain2 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t medic_move_pain2 = {FRAME_painb1, FRAME_painb15, medic_frames_pain2, medic_run};
 
-void medic_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static mmove_t medic_move_pain2 = {FRAME_painb1, FRAME_painb15, medic_frames_pain2, medic_run};
+
+static void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -69462,8 +69556,11 @@ mframe_t medic_frames_death [] =
 };
 mmove_t medic_move_death = {FRAME_death1, FRAME_death30, medic_frames_death, medic_dead};
 
-void medic_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 	// if we had a pending patient, free him up for another medic
@@ -69543,8 +69640,9 @@ mframe_t medic_frames_duck [] =
 };
 mmove_t medic_move_duck = {FRAME_duck1, FRAME_duck16, medic_frames_duck, medic_run};
 
-void medic_dodge (edict_t* self, edict_t* attacker, float eta)
-{
+static void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
+	UNUSED(eta);
+
 	if (random() > 0.25)
 		return;
 
@@ -70696,8 +70794,9 @@ void mutant_step (edict_t* self)
 		gi.sound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
 }
 
-void mutant_sight (edict_t* self, edict_t* other)
-{
+static void mutant_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -70942,8 +71041,10 @@ void mutant_melee (edict_t* self)
 // ATTACK
 //
 
-void mutant_jump_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t *surf)
-{
+static void mutant_jump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
 	if (self->health <= 0)
 	{
 		self->touch = NULL;
@@ -71130,8 +71231,11 @@ mframe_t mutant_frames_pain3 [] =
 };
 mmove_t mutant_move_pain3 = {FRAME_pain301, FRAME_pain311, mutant_frames_pain3, mutant_run};
 
-void mutant_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	float	r;
 
 	if (self->health < (self->max_health / 2))
@@ -71208,8 +71312,11 @@ mframe_t mutant_frames_death2 [] =
 };
 mmove_t mutant_move_death2 = {FRAME_death201, FRAME_death210, mutant_frames_death2, mutant_dead};
 
-void mutant_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 	if (self->health <= self->gib_health)
@@ -71537,8 +71644,9 @@ void parasite_reel_in (edict_t* self)
 	gi.sound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
 
-void parasite_sight (edict_t* self, edict_t* other)
-{
+static void parasite_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -71724,14 +71832,11 @@ void parasite_start_walk (edict_t* self)
 	self->monsterinfo.currentmove = &parasite_move_start_walk;
 }
 
-void parasite_walk (edict_t* self)
-{
+static void parasite_walk(edict_t* self) {
 	self->monsterinfo.currentmove = &parasite_move_walk;
 }
 
-
-mframe_t parasite_frames_pain1 [] =
-{
+static mframe_t parasite_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0,	NULL},
@@ -71744,10 +71849,14 @@ mframe_t parasite_frames_pain1 [] =
 	{ai_move, -7, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t parasite_move_pain1 = {FRAME_pain101, FRAME_pain111, parasite_frames_pain1, parasite_start_run};
 
-void parasite_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static mmove_t parasite_move_pain1 = {FRAME_pain101, FRAME_pain111, parasite_frames_pain1, parasite_start_run};
+
+static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -71942,8 +72051,11 @@ mframe_t parasite_frames_death [] =
 };
 mmove_t parasite_move_death = {FRAME_death101, FRAME_death107, parasite_frames_death, parasite_dead};
 
-void parasite_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(attacker);
+	UNUSED(inflictor);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -73149,9 +73261,11 @@ mframe_t soldier_frames_pain4 [] =
 };
 mmove_t soldier_move_pain4 = {FRAME_pain401, FRAME_pain417, soldier_frames_pain4, soldier_run};
 
+static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
 
-void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
 	float	r;
 	int		n;
 
@@ -73533,8 +73647,9 @@ void soldier_attack(edict_t* self)
 // SIGHT
 //
 
-void soldier_sight(edict_t* self, edict_t* other)
-{
+static void soldier_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
 	else
@@ -73885,8 +74000,10 @@ mframe_t soldier_frames_death6 [] =
 };
 mmove_t soldier_move_death6 = {FRAME_death601, FRAME_death610, soldier_frames_death6, soldier_dead};
 
-void soldier_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(attacker);
+	UNUSED(inflictor);
+
 	int		n;
 
 // check for gib
@@ -74739,8 +74856,9 @@ void supertank_reattack1(edict_t* self)
 		self->monsterinfo.currentmove = &supertank_move_end_attack1;
 }
 
-void supertank_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
 
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum = 1;
@@ -74943,9 +75061,12 @@ void BossExplode (edict_t* self)
 	self->nextthink = level.time + 0.1;
 }
 
+static void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(damage);
+	UNUSED(point);
 
-void supertank_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -75603,8 +75724,9 @@ static int	sound_strike;
 // misc
 //
 
-void tank_sight (edict_t* self, edict_t* other)
-{
+static void tank_sight(edict_t* self, edict_t* other) {
+	UNUSED(other);
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -75842,9 +75964,9 @@ mframe_t tank_frames_pain3 [] =
 };
 mmove_t	tank_move_pain3 = {FRAME_pain301, FRAME_pain316, tank_frames_pain3, tank_run};
 
-
-void tank_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(other);
+	UNUSED(kick);
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum |= 1;
 
@@ -76308,8 +76430,11 @@ mframe_t tank_frames_death1 [] =
 };
 mmove_t	tank_move_death = {FRAME_death101, FRAME_death132, tank_frames_death1, tank_dead};
 
-void tank_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int		n;
 
 // check for gib
@@ -76465,8 +76590,9 @@ static void SP_FixCoopSpots (edict_t* self)
 // some maps don't have any coop spots at all, so we need to create them
 // where they should have been
 
-static void SP_CreateCoopSpots (edict_t* self)
-{
+static void SP_CreateCoopSpots(edict_t* self) {
+	UNUSED(self);
+
 	edict_t	*spot;
 
 	if(Q_stricmp(level.mapname, "security") == 0)
@@ -76568,14 +76694,18 @@ Use 'angles' instead of 'angle', so you can set pitch or roll as well as yaw.  '
 */
 void SP_info_player_intermission(edict_t *ent)
 {
+	UNUSED(ent);
 }
 
 
 //=======================================================================
 
 
-void player_pain (edict_t* self, edict_t* other, float kick, int damage)
-{
+void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
+	UNUSED(self);
+	UNUSED(other);
+	UNUSED(kick);
+	UNUSED(damage);
 	// player pain is handled at the end of the frame in P_DamageFeedback
 }
 
@@ -76606,8 +76736,9 @@ qboolean IsNeutral (edict_t *ent)
 	return false;
 }
 
-void ClientObituary (edict_t* self, edict_t* inflictor, edict_t* attacker)
-{
+static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker) {
+	UNUSED(inflictor);
+
 	int			mod;
 	char		*message;
 	char		*message2;
@@ -76803,7 +76934,7 @@ void ClientObituary (edict_t* self, edict_t* inflictor, edict_t* attacker)
 }
 
 
-void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t *surf);
+void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf);
 
 void TossClientWeapon (edict_t* self)
 {
@@ -76891,13 +77022,9 @@ void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 
 }
 
-/*
-==================
-player_die
-==================
-*/
-void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(point);
+
 	int		n;
 
 	VectorClear (self->avelocity);
@@ -77326,8 +77453,11 @@ void InitBodyQue (void)
 	}
 }
 
-void body_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point)
-{
+static void body_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+	UNUSED(inflictor);
+	UNUSED(attacker);
+	UNUSED(point);
+
 	int	n;
 
 	if (self->health < -40)
@@ -78904,14 +79034,7 @@ float	bobmove;
 int		bobcycle;		// odd cycles are right foot going forward
 float	bobfracsin;		// sin(bobfrac*M_PI)
 
-/*
-===============
-SV_CalcRoll
-
-===============
-*/
-float SV_CalcRoll (vec3_t angles, vec3_t velocity)
-{
+static float SV_CalcRoll(vec3_t velocity) {
 	float	sign;
 	float	side;
 	float	value;
@@ -79876,7 +79999,7 @@ void ClientEndServerFrame (edict_t *ent)
 		ent->s.angles[PITCH] = ent->client->v_angle[PITCH]/3;
 	ent->s.angles[YAW] = ent->client->v_angle[YAW];
 	ent->s.angles[ROLL] = 0;
-	ent->s.angles[ROLL] = SV_CalcRoll (ent->s.angles, ent->velocity)*4;
+	ent->s.angles[ROLL] = SV_CalcRoll (ent->velocity)*4;
 
 	//
 	// calculate speed and cycle to be used for
@@ -85565,17 +85688,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 		qglEnable( GL_TEXTURE_2D );
 }
 
-
-#if 1
-/*
-=============
-GL_DrawAliasShadow
-=============
-*/
-extern	vec3_t			lightspot;
-
-void GL_DrawAliasShadow (dmdl_t *paliashdr, int posenum)
-{
+static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 	int		*order;
 	vec3_t	point;
 	float	height, lheight;
@@ -85629,8 +85742,6 @@ void GL_DrawAliasShadow (dmdl_t *paliashdr, int posenum)
 		qglEnd ();
 	}
 }
-
-#endif
 
 /*
 ** R_CullAliasModel
@@ -86092,7 +86203,7 @@ void R_DrawAliasModel (entity_t *e)
 		qglDisable (GL_TEXTURE_2D);
 		qglEnable (GL_BLEND);
 		qglColor4f (0,0,0,0.5);
-		GL_DrawAliasShadow (paliashdr, currententity->frame );
+		GL_DrawAliasShadow(paliashdr);
 		qglEnable (GL_TEXTURE_2D);
 		qglDisable (GL_BLEND);
 		qglPopMatrix ();
@@ -86633,15 +86744,9 @@ void CalcSurfaceExtents (msurface_t *s)
 void GL_BuildPolygonFromSurface(msurface_t *fa);
 void GL_CreateSurfaceLightmap (msurface_t *surf);
 void GL_EndBuildingLightmaps (void);
-void GL_BeginBuildingLightmaps (model_t *m);
+static void GL_BeginBuildingLightmaps();
 
-/*
-=================
-Mod_LoadFaces
-=================
-*/
-void Mod_LoadFaces (lump_t *l)
-{
+static void Mod_LoadFaces(lump_t *l) {
 	dface_t		*in;
 	msurface_t 	*out;
 	int			i, count, surfnum;
@@ -86659,7 +86764,7 @@ void Mod_LoadFaces (lump_t *l)
 
 	currentmodel = loadmodel;
 
-	GL_BeginBuildingLightmaps (loadmodel);
+	GL_BeginBuildingLightmaps();
 
 	for ( surfnum=0 ; surfnum<count ; surfnum++, in++, out++)
 	{
@@ -90615,15 +90720,7 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
 }
 
-
-/*
-==================
-GL_BeginBuildingLightmaps
-
-==================
-*/
-void GL_BeginBuildingLightmaps (model_t *m)
-{
+static void GL_BeginBuildingLightmaps() {
 	static lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 	int				i;
 	unsigned		dummy[128*128];
@@ -91434,7 +91531,7 @@ HANDLE	heventParentSend;
 HANDLE	hStdout;
 HANDLE	hStdin;
 
-unsigned _stdcall RequestProc (void *arg);
+static unsigned _stdcall RequestProc(void* arg);
 LPVOID GetMappedBuffer (HANDLE hfileBuffer);
 void ReleaseMappedBuffer (LPVOID pBuffer);
 BOOL GetScreenBufferLines (int *piLines);
@@ -91546,9 +91643,9 @@ void DeinitConProc (void)
 		SetEvent (heventDone);
 }
 
+static unsigned _stdcall RequestProc(void *arg) {
+	UNUSED(arg);
 
-unsigned _stdcall RequestProc (void *arg)
-{
 	int		*pBuffer;
 	DWORD	dwRet;
 	HANDLE	heventWait[2];
@@ -93002,9 +93099,9 @@ qboolean	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_me
 
 }
 
+static void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t to) {
+	UNUSED(to);
 
-void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t to)
-{
 	int		i;
 	loopback_t	*loop;
 
@@ -95199,11 +95296,7 @@ static void VID_GetModeInfo(int* width, int* height, int mode) {
 	*height = vid_modes[mode].height;
 }
 
-/*
-** VID_UpdateWindowPosAndSize
-*/
-void VID_UpdateWindowPosAndSize( int x, int y )
-{
+static void VID_UpdateWindowPosAndSize() {
 	RECT r;
 	int		style;
 	int		w, h;
@@ -95322,7 +95415,7 @@ static void VID_CheckChanges() {
 	// update our window position
 	if (vid_xpos->modified || vid_ypos->modified) {
 		if (!vid_fullscreen->value) {
-			VID_UpdateWindowPosAndSize( vid_xpos->value, vid_ypos->value );
+			VID_UpdateWindowPosAndSize();
 		}
 
 		vid_xpos->modified = false;
@@ -95371,7 +95464,11 @@ static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
 
-static void DriverMenuCallback(void* unused) {assert(s_ref_list.curvalue == 0);}
+static void DriverMenuCallback(void* unused) {
+	UNUSED(unused);
+
+	assert(s_ref_list.curvalue == 0);
+}
 
 static void ScreenSizeCallback(void *s) {
 	menuslider_s* slider = (menuslider_s*)s;
@@ -95379,6 +95476,8 @@ static void ScreenSizeCallback(void *s) {
 }
 
 static void BrightnessCallback(void* s) {
+	UNUSED(s);
+
 	s_brightness_slider.curvalue = s_brightness_slider.curvalue;
 }
 
@@ -100250,6 +100349,8 @@ void GLimp_LogNewFrame( void )
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	UNUSED(nCmdShow);
+
 	// previous instances do not exist in Win32
 	if (hPrevInstance) {
 		return 0;
