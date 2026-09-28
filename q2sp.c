@@ -1359,10 +1359,7 @@ static int FS_FOpenFile(char* filename, FILE** file);
 static void FS_FCloseFile(FILE* f);
 
 // a null buffer will just return the file length without loading a -1 length is not present
-static int FS_LoadFile (char* path, void** buffer);
-
-// properly handles partial reads
-static void FS_Read(void* buffer, int len, FILE* f);
+static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 static void FS_CreatePath(char* path);
@@ -4788,7 +4785,6 @@ int			CM_WriteAreaBits (byte *buffer, int area);
 qboolean	CM_HeadnodeVisible (int headnode, byte *visbits);
 
 void		CM_WritePortalState (FILE *f);
-void		CM_ReadPortalState (FILE *f);
 
 //
 // SECTION pm (player movement)
@@ -5324,8 +5320,6 @@ static int time_before_game;
 static int time_after_game;
 static int time_before_ref;
 static int time_after_ref;
-
-void Qcommon_Shutdown();
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
@@ -7348,18 +7342,9 @@ void	CM_WritePortalState (FILE *f)
 	fwrite (portalopen, sizeof(portalopen), 1, f);
 }
 
-/*
-===================
-CM_ReadPortalState
-
-Reads the portal state from a savegame file
-and recalculates the area connections
-===================
-*/
-void	CM_ReadPortalState (FILE *f)
-{
-	FS_Read (portalopen, sizeof(portalopen), f);
-	FloodAreaConnections ();
+static void FS_Read(void* buffer, int len, FILE *f) {
+	int read = fread(buffer, 1, len, f);
+	assert(read == len);
 }
 
 /*
@@ -7635,32 +7620,6 @@ byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
 	return crc;
 }
 
-//========================================================
-
-/*
-=============
-Com_Error_f
-
-Just throw a fatal error to
-test error shutdown procedures
-=============
-*/
-void Com_Error_f (void)
-{
-	Com_Error (ERR_FATAL, "%s", Cmd_Argv(1));
-}
-
-/*
-=================
-Qcommon_Shutdown
-=================
-*/
-void Qcommon_Shutdown (void)
-{
-}
-/* ============ end source: qcommon/common.c ============ */
-/* ============ begin source: qcommon/crc.c ============ */
-
 /* crc.c */
 
 /* already inlined above: qcommon/qcommon.h */
@@ -7826,19 +7785,11 @@ static int Developer_searchpath() {
 	return 0;
 }
 
-
-/*
-===========
-FS_FOpenFile
-
-Finds the file in the search path.
-returns filesize and an open FILE *
-Used for streaming data out of either a pak file or
-a seperate file.
-===========
-*/
 int file_from_pak = 0;
-#ifndef NO_ADDONS
+
+// Finds the file in the search path.
+// returns filesize and an open FILE *
+// Used for streaming data out of either a pak file or a seperate file.
 int FS_FOpenFile (char *filename, FILE **file)
 {
 	searchpath_t	*search;
@@ -7865,32 +7816,29 @@ int FS_FOpenFile (char *filename, FILE **file)
 		}
 	}
 
-//
-// search through the path, one element at a time
-//
+	// search through the path, one element at a time
 	for (search = fs_searchpaths ; search ; search = search->next)
 	{
 	// is the element a pak file?
 		if (search->pack)
 		{
-		// look through all the pak file elements
+			// look through all the pak file elements
 			pak = search->pack;
 			for (i=0 ; i<pak->numfiles ; i++)
 				if (!Q_strcasecmp (pak->files[i].name, filename))
 				{	// found it!
 					file_from_pak = 1;
 					Com_DPrintf ("PackFile: %s : %s\n",pak->filename, filename);
-				// open a new file on the pakfile
+					// open a new file on the pakfile
 					*file = fopen (pak->filename, "rb");
-					if (!*file)
-						Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);
+					assert(*file);
 					fseek (*file, pak->files[i].filepos, SEEK_SET);
 					return pak->files[i].filelen;
 				}
 		}
 		else
 		{
-	// check a file in the directory tree
+		// check a file in the directory tree
 
 			Com_sprintf (netpath, sizeof(netpath), "%s/%s",search->filename, filename);
 
@@ -7909,113 +7857,6 @@ int FS_FOpenFile (char *filename, FILE **file)
 
 	*file = NULL;
 	return -1;
-}
-
-#else
-
-// this is just for demos to prevent add on hacking
-
-int FS_FOpenFile (char *filename, FILE **file)
-{
-	searchpath_t	*search;
-	char			netpath[MAX_OSPATH];
-	pack_t			*pak;
-	int				i;
-
-	file_from_pak = 0;
-
-	// get config from directory, everything else from pak
-	if (!strcmp(filename, "config.cfg") || !strncmp(filename, "players/", 8))
-	{
-		Com_sprintf (netpath, sizeof(netpath), "%s/%s",FS_Gamedir(), filename);
-
-		*file = fopen (netpath, "rb");
-		if (!*file)
-			return -1;
-
-		Com_DPrintf ("FindFile: %s\n",netpath);
-
-		return FS_filelength (*file);
-	}
-
-	for (search = fs_searchpaths ; search ; search = search->next)
-		if (search->pack)
-			break;
-	if (!search)
-	{
-		*file = NULL;
-		return -1;
-	}
-
-	pak = search->pack;
-	for (i=0 ; i<pak->numfiles ; i++)
-		if (!Q_strcasecmp (pak->files[i].name, filename))
-		{	// found it!
-			file_from_pak = 1;
-			Com_DPrintf ("PackFile: %s : %s\n",pak->filename, filename);
-		// open a new file on the pakfile
-			*file = fopen (pak->filename, "rb");
-			if (!*file)
-				Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);
-			fseek (*file, pak->files[i].filepos, SEEK_SET);
-			return pak->files[i].filelen;
-		}
-
-	Com_DPrintf ("FindFile: can't find %s\n", filename);
-
-	*file = NULL;
-	return -1;
-}
-
-#endif
-
-
-/*
-=================
-FS_ReadFile
-
-Properly handles partial reads
-=================
-*/
-
-#define	MAX_READ	0x10000		// read in blocks of 64k
-void FS_Read (void *buffer, int len, FILE *f)
-{
-	int		block, remaining;
-	int		read;
-	byte	*buf;
-	int		tries;
-
-	buf = (byte *)buffer;
-
-	// read in chunks for progress bar
-	remaining = len;
-	tries = 0;
-	while (remaining)
-	{
-		block = remaining;
-		if (block > MAX_READ)
-			block = MAX_READ;
-		read = fread (buf, 1, block, f);
-		if (read == 0)
-		{
-			// we might have been trying to read from a CD
-			if (!tries)
-			{
-				tries = 1;
-			}
-			else
-				Com_Error (ERR_FATAL, "FS_Read: 0 bytes read");
-		}
-
-		if (read == -1)
-			Com_Error (ERR_FATAL, "FS_Read: -1 bytes read");
-
-		// do some progress bar thing here...
-
-		remaining -= read;
-		buf += read;
-	}
 }
 
 /*
@@ -8098,15 +7939,13 @@ pack_t *FS_LoadPackFile (char *packfile)
 		return NULL;
 
 	fread (&header, 1, sizeof(header), packhandle);
-	if (LittleLong(header.ident) != IDPAKHEADER)
-		Com_Error (ERR_FATAL, "%s is not a packfile", packfile);
+	assert(LittleLong(header.ident) == IDPAKHEADER);
 	header.dirofs = LittleLong (header.dirofs);
 	header.dirlen = LittleLong (header.dirlen);
 
 	numpackfiles = header.dirlen / sizeof(dpackfile_t);
 
-	if (numpackfiles > MAX_FILES_IN_PACK)
-		Com_Error (ERR_FATAL, "%s has %i files", packfile, numpackfiles);
+	assert(numpackfiles <= MAX_FILES_IN_PACK);
 
 	newfiles = Z_Malloc (numpackfiles * sizeof(packfile_t));
 
@@ -10690,7 +10529,6 @@ void SV_Error (char *error, ...);
 //
 extern	game_export_t	*ge;
 
-void SV_InitGameProgs (void);
 void SV_ShutdownGameProgs (void);
 void SV_InitEdict (edict_t *e);
 
@@ -11001,7 +10839,8 @@ void SV_ReadLevelFile (void)
 		return;
 	}
 	FS_Read (sv.configstrings, sizeof(sv.configstrings), f);
-	CM_ReadPortalState (f);
+	FS_Read(portalopen, sizeof(portalopen), f);
+	FloodAreaConnections();
 	fclose (f);
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", FS_Gamedir(), sv.name);
@@ -11081,20 +10920,12 @@ void SV_WriteServerFile (qboolean autosave)
 	ge->WriteGame (name, autosave);
 }
 
-/*
-==============
-SV_ReadServerFile
-
-==============
-*/
 void SV_ReadServerFile (void)
 {
 	FILE	*f;
 	char	name[MAX_OSPATH], string[128];
 	char	comment[32];
 	char	mapcmd[MAX_TOKEN_CHARS];
-
-	Com_DPrintf("SV_ReadServerFile()\n");
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", FS_Gamedir());
 	f = fopen (name, "rb");
@@ -11258,21 +11089,6 @@ void SV_Map_f (void)
 	SV_GameMap_f ();
 }
 
-/*
-=====================================================================
-
-  SAVEGAMES
-
-=====================================================================
-*/
-
-
-/*
-==============
-SV_Loadgame_f
-
-==============
-*/
 void SV_Loadgame_f (void)
 {
 	char	name[MAX_OSPATH];
@@ -11305,7 +11121,7 @@ void SV_Loadgame_f (void)
 
 	SV_CopySaveGame (Cmd_Argv(1), "current");
 
-	SV_ReadServerFile ();
+	SV_ReadServerFile();
 
 	// go to the map
 	sv.state = ss_dead;		// don't save current level when changing
@@ -12172,8 +11988,7 @@ void SV_FatPVS (vec3_t org)
 	}
 
 	count = CM_BoxLeafnums (mins, maxs, leafs, 64, NULL);
-	if (count < 1)
-		Com_Error (ERR_FATAL, "SV_FatPVS: count < 1");
+	assert(count >= 1);
 	longs = (numclusters + 31)>>5;
 
 	// convert leafs to clusters
@@ -12482,8 +12297,7 @@ void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 	if (ent)
 	{
 		n = NUM_FOR_EDICT(ent);
-		if (n < 1 || n > maxclients->value)
-			Com_Error (ERR_DROP, "cprintf to a non-client");
+		assert(n >= 1 && n <= maxclients->value);
 	}
 
 	va_start (argptr,fmt);
@@ -12512,7 +12326,7 @@ void PF_centerprintf (edict_t *ent, char *fmt, ...)
 
 	n = NUM_FOR_EDICT(ent);
 	if (n < 1 || n > maxclients->value)
-		return;	// Com_Error (ERR_DROP, "centerprintf to a non-client");
+		return;
 
 	va_start (argptr,fmt);
 	vsprintf (msg, fmt, argptr);
@@ -12523,14 +12337,7 @@ void PF_centerprintf (edict_t *ent, char *fmt, ...)
 	PF_Unicast (ent, true);
 }
 
-
-/*
-===============
-PF_error
-
-Abort the server with a game error
-===============
-*/
+// Abort the server with a game error
 void PF_error (char *fmt, ...)
 {
 	char		msg[1024];
@@ -12703,13 +12510,7 @@ void SV_ShutdownGameProgs (void)
 	ge = NULL;
 }
 
-/*
-===============
-SV_InitGameProgs
-
-Init the game subsystem for a new map
-===============
-*/
+// Init the game subsystem for a new map
 void SCR_DebugGraph (float value, int color);
 
 void SV_InitGameProgs (void)
@@ -13051,13 +12852,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	Com_Printf ("-------------------------------------\n");
 }
 
-/*
-==============
-SV_InitGame
-
-A brand new game has been started
-==============
-*/
+// A brand new game has been started
 void SV_InitGame (void)
 {
 	int		i;
@@ -43627,8 +43422,7 @@ void PrecacheItem (gitem_t *it)
 			s++;
 
 		len = s-start;
-		if (len >= MAX_QPATH || len < 5)
-			gi.error ("PrecacheItem: %s has bad precache string", it->classname);
+		assert(len >= 5 && len < MAX_QPATH);
 		memcpy (data, start, len);
 		data[len] = 0;
 		if (*s)
@@ -44779,17 +44573,8 @@ void ShutdownGame (void)
 	gi.FreeTags (TAG_GAME);
 }
 
-
-/*
-=================
-GetGameAPI
-
-Returns a pointer to the structure with all entry points
-and global variables
-=================
-*/
-game_export_t *GetGameAPI (game_import_t *import)
-{
+// Returns a pointer to the structure with all entry points and global variables
+game_export_t *GetGameAPI(game_import_t *import) {
 	gi = *import;
 
 	globals.apiversion = GAME_API_VERSION;
@@ -47737,28 +47522,16 @@ void SV_CheckVelocity (edict_t *ent)
 	}
 }
 
-/*
-=============
-SV_RunThink
-
-Runs thinking code for this frame if necessary
-=============
-*/
-qboolean SV_RunThink (edict_t *ent)
-{
-	float	thinktime;
-
-	thinktime = ent->nextthink;
-	if (thinktime <= 0)
+// Runs thinking code for this frame if necessary
+static qboolean SV_RunThink(edict_t* ent) {
+	if (ent->nextthink <= 0 || ent->nextthink > level.time + 0.001) {
 		return true;
-	if (thinktime > level.time+0.001)
-		return true;
+	}
 
 	ent->nextthink = 0;
-	if (!ent->think)
-		gi.error ("NULL ent->think");
-	ent->think (ent);
+	assert(ent->think);
 
+	ent->think(ent);
 	return false;
 }
 
@@ -48238,8 +48011,7 @@ void SV_Physics_Pusher (edict_t *ent)
 				break;	// move was blocked
 		}
 	}
-	if (pushed_p > &pushed[MAX_EDICTS])
-		gi.error (ERR_FATAL, "pushed_p > &pushed[MAX_EDICTS], memory corrupted");
+	assert(pushed_p <= &pushed[MAX_EDICTS]);
 
 	if (part)
 	{
@@ -48570,17 +48342,10 @@ void SV_Physics_Step (edict_t *ent)
 					gi.sound (ent, 0, gi.soundindex("world/land.wav"), 1, 1, 0);
 	}
 
-// regular thinking
+	// regular thinking
 	SV_RunThink (ent);
 }
 
-//============================================================================
-/*
-================
-G_RunEntity
-
-================
-*/
 void G_RunEntity (edict_t *ent)
 {
 	if (ent->prethink)
@@ -48608,16 +48373,9 @@ void G_RunEntity (edict_t *ent)
 		SV_Physics_Toss (ent);
 		break;
 	default:
-		gi.error ("SV_Physics: bad movetype %i", (int)ent->movetype);
+		assert(!"unreachable");
 	}
 }
-/* ============ end source: game/g_phys.c ============ */
-/* ============ begin source: game/g_save.c ============ */
-
-
-/* already inlined above: game/g_local.h */
-
-#define Function(f) {#f, f}
 
 static mmove_t mmove_reloc;
 
@@ -94174,7 +93932,6 @@ void Sys_Error (char *error, ...)
 	char		text[1024];
 
 	CL_Shutdown ();
-	Qcommon_Shutdown ();
 
 	va_start (argptr, error);
 	Q_vsnprintf (text, sizeof(text), error, argptr);
@@ -94196,7 +93953,6 @@ void Sys_Quit (void)
 	timeEndPeriod( 1 );
 
 	CL_Shutdown();
-	Qcommon_Shutdown ();
 	CloseHandle (qwclsemaphore);
 
 // shut down QHOST hooks if necessary
@@ -94367,16 +94123,8 @@ void Sys_UnloadGame (void)
 	// statically linked — nothing to unload
 }
 
-/*
-=================
-Sys_GetGameAPI
-
-The game is statically linked — call GetGameAPI directly (g_main.c)
-=================
-*/
-void *Sys_GetGameAPI (void *parms)
-{
-	return GetGameAPI ((game_import_t *)parms);
+void* Sys_GetGameAPI(void* parms) {
+	return GetGameAPI((game_import_t *)parms);
 }
 
 //=======================================================================
@@ -100270,8 +100018,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		Cbuf_AddEarlyCommands(true);
 		Cmd_ExecuteCbuf();
-
-		Cmd_AddCommand("error", Com_Error_f);
 
 		host_speeds = COM_GetCvar("host_speeds", "0", 0);
 		log_stats = COM_GetCvar("log_stats", "0", 0);
