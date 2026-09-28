@@ -83090,7 +83090,7 @@ void GL_TexEnv( GLenum mode )
 {
 	static int lastmodes[2] = { -1, -1 };
 
-	if ( mode != lastmodes[gl_state.currenttmu] )
+	if ( (int)mode != lastmodes[gl_state.currenttmu] )
 	{
 		qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode );
 		lastmodes[gl_state.currenttmu] = mode;
@@ -83140,8 +83140,6 @@ glmode_t modes[] = {
 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
 };
 
-#define NUM_GL_MODES (sizeof(modes) / sizeof (glmode_t))
-
 typedef struct
 {
 	char *name;
@@ -83157,8 +83155,6 @@ gltmode_t gl_alpha_modes[] = {
 	{"GL_RGBA2", GL_RGBA2},
 };
 
-#define NUM_GL_ALPHA_MODES (sizeof(gl_alpha_modes) / sizeof (gltmode_t))
-
 gltmode_t gl_solid_modes[] = {
 	{"default", 3},
 	{"GL_RGB", GL_RGB},
@@ -83171,25 +83167,18 @@ gltmode_t gl_solid_modes[] = {
 #endif
 };
 
-#define NUM_GL_SOLID_MODES (sizeof(gl_solid_modes) / sizeof (gltmode_t))
-
-/*
-===============
-GL_TextureMode
-===============
-*/
 void GL_TextureMode( char *string )
 {
 	int		i;
 	image_t	*glt;
 
-	for (i=0 ; i< NUM_GL_MODES ; i++)
+	for (i=0 ; i< (int)carray_count(modes) ; i++)
 	{
 		if ( !Q_stricmp( modes[i].name, string ) )
 			break;
 	}
 
-	if (i == NUM_GL_MODES)
+	if (i == (int)carray_count(modes))
 	{
 		ri.Con_Printf (PRINT_ALL, "bad filter name\n");
 		return;
@@ -83219,13 +83208,13 @@ void GL_TextureAlphaMode( char *string )
 {
 	int		i;
 
-	for (i=0 ; i< NUM_GL_ALPHA_MODES ; i++)
+	for (i=0 ; i< (int)carray_count(gl_alpha_modes) ; i++)
 	{
 		if ( !Q_stricmp( gl_alpha_modes[i].name, string ) )
 			break;
 	}
 
-	if (i == NUM_GL_ALPHA_MODES)
+	if (i == (int)carray_count(gl_alpha_modes))
 	{
 		ri.Con_Printf (PRINT_ALL, "bad alpha texture mode name\n");
 		return;
@@ -83243,13 +83232,13 @@ void GL_TextureSolidMode( char *string )
 {
 	int		i;
 
-	for (i=0 ; i< NUM_GL_SOLID_MODES ; i++)
+	for (i=0 ; i< (int)carray_count(gl_solid_modes) ; i++)
 	{
 		if ( !Q_stricmp( gl_solid_modes[i].name, string ) )
 			break;
 	}
 
-	if (i == NUM_GL_SOLID_MODES)
+	if (i == (int)carray_count(gl_solid_modes))
 	{
 		ri.Con_Printf (PRINT_ALL, "bad solid texture mode name\n");
 		return;
@@ -83969,7 +83958,7 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	upload_width = scaled_width;
 	upload_height = scaled_height;
 
-	if (scaled_width * scaled_height > sizeof(scaled)/4)
+	if (scaled_width * scaled_height > (int)sizeof(scaled) / 4)
 		ri.Sys_Error (ERR_DROP, "GL_Upload32: too big");
 
 	// scan the texture for any non-255 alpha
@@ -84112,39 +84101,15 @@ done: ;
 	return (samples == gl_alpha_format);
 }
 
-/*
-===============
-GL_Upload8
-
-Returns has_alpha
-===============
-*/
-/*
-static qboolean IsPowerOf2( int value )
-{
-	int i = 1;
-
-
-	while ( 1 )
-	{
-		if ( value == i )
-			return true;
-		if ( i > value )
-			return false;
-		i <<= 1;
-	}
-}
-*/
-
-qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean is_sky )
-{
+// Returns has_alpha
+static qboolean GL_Upload8(byte *data, int width, int height,  qboolean mipmap, qboolean is_sky) {
 	unsigned	trans[512*256];
 	int			i, s;
 	int			p;
 
 	s = width*height;
 
-	if (s > sizeof(trans)/4)
+	if (s > (int)sizeof(trans)/4)
 		ri.Sys_Error (ERR_DROP, "GL_Upload8: too large");
 
 	if ( qglColorTableEXT &&
@@ -84964,7 +84929,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
 	size = smax*tmax;
-	if (size > (sizeof(s_blocklights)>>4) )
+	if (size > ((int)sizeof(s_blocklights)>>4) )
 		ri.Sys_Error (ERR_DROP, "Bad s_blocklights size");
 
 // set to full bright if no light data
@@ -87048,7 +87013,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 // swap all the lumps
 	mod_base = (byte *)header;
 
-	for (i=0 ; i<sizeof(dheader_t)/4 ; i++)
+	for (i=0 ; i<(int)sizeof(dheader_t)/4 ; i++)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 
 // load into heap
@@ -87129,7 +87094,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	pheader = Hunk_Alloc (LittleLong(pinmodel->ofs_end));
 
 	// byte swap the header fields and sanity check
-	for (i=0 ; i<sizeof(dmdl_t)/4 ; i++)
+	for (i=0 ; i<(int)sizeof(dmdl_t)/4 ; i++)
 		((int *)pheader)[i] = LittleLong (((int *)buffer)[i]);
 
 	if (pheader->skinheight > MAX_LBM_HEIGHT)
@@ -92567,7 +92532,7 @@ void IN_Commands (void)
 	// loop through the joystick buttons
 	// key a joystick event or auxillary event for higher number buttons for each state change
 	buttonstate = ji.dwButtons;
-	for (i=0 ; i < joy_numbuttons ; i++)
+	for (i=0 ; i < (int)joy_numbuttons ; i++)
 	{
 		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
 		{
@@ -95281,7 +95246,7 @@ static struct {
 };
 
 static void VID_GetModeInfo(int* width, int* height, int mode) {
-	assert(mode >= 0 && mode < carray_count(vid_modes));
+	assert(mode >= 0 && mode < (int)carray_count(vid_modes));
 	*width  = vid_modes[mode].width;
 	*height = vid_modes[mode].height;
 }
