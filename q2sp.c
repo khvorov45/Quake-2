@@ -408,7 +408,7 @@ static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
 //
 
 typedef struct sizebuf_s {
-	qboolean	allowoverflow;	// if false, do a Com_Error
+	qboolean	allowoverflow;
 	qboolean	overflowed;		// set to true if the buffer size failed
 	byte		*data;
 	int			maxsize;
@@ -2007,7 +2007,6 @@ static void COM_SetValueCvar(char *var_name, float value) {
 }
 
 void 		Com_DPrintf (char *fmt, ...);
-void 		Com_Error (int code, char *fmt, ...);
 void 		Com_Quit (void);
 
 int			Com_ServerState (void);		// this should have just been a cvar...
@@ -4751,9 +4750,6 @@ static cmodel_t* CM_LoadMap(char* name, qboolean clientload, unsigned* checksum)
 
 cmodel_t	*CM_InlineModel (char *name);	// *1, *2, etc
 
-int			CM_NumClusters (void);
-int			CM_NumInlineModels (void);
-char		*CM_EntityString (void);
 
 // creates a clipping hull for an arbitrary box
 int			CM_HeadnodeForBox (vec3_t mins, vec3_t maxs);
@@ -5329,7 +5325,6 @@ static int time_after_game;
 static int time_before_ref;
 static int time_after_ref;
 
-void Qcommon_Frame(int msec);
 void Qcommon_Shutdown();
 
 // this is in the client code, but can be used for debugging from server
@@ -5343,18 +5338,15 @@ void Sys_UnloadGame (void);
 void	*Sys_GetGameAPI (void *parms);
 
 void Sys_SendKeyEvents (void);
-void Sys_Error (char *error, ...);
 void Sys_Quit (void);
 char* Sys_GetClipboardData( void );
 
 void CL_Drop (void);
 void CL_Shutdown (void);
-void CL_Frame (int msec);
 
 void SCR_BeginLoadingPlaque (void);
 
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
-void SV_Frame (int msec);
 
 //
 // SECTION ???
@@ -6346,124 +6338,27 @@ char *COM_FileExtension (char *in)
 	return exten;
 }
 
-
-//====================================================================
-
-
-/* ============ end source: game/q_shared.c ============ */
-
-/* engine core */
-/* ============ begin source: qcommon/cmd.c ============ */
-
-// cmd.c -- Quake script command processing module
-
-/* already inlined above: qcommon/qcommon.h */
-
-
-
-//=============================================================================
-
-/*
-=============================================================================
-
-						COMMAND BUFFER
-
-=============================================================================
-*/
-
-
-/*
-==============================================================================
-
-						SCRIPT COMMANDS
-
-==============================================================================
-*/
-
-/*
-=============================================================================
-
-					COMMAND EXECUTION
-
-=============================================================================
-*/
-
-
-
-/* ============ end source: qcommon/cmd.c ============ */
-/* ============ begin source: qcommon/cmodel.c ============ */
-
-// cmodel.c -- model loading
-
-/* already inlined above: qcommon/qcommon.h */
-
-
-/*
-===============================================================================
-
-					MAP LOADING
-
-===============================================================================
-*/
-
-
-
-/*
-==================
-CM_InlineModel
-==================
-*/
-cmodel_t	*CM_InlineModel (char *name)
-{
-	int		num;
-
-	if (!name || name[0] != '*')
-		Com_Error (ERR_DROP, "CM_InlineModel: bad name");
-	num = atoi (name+1);
-	if (num < 1 || num >= numcmodels)
-		Com_Error (ERR_DROP, "CM_InlineModel: bad number");
-
+static cmodel_t* CM_InlineModel(char *name) {
+	assert(name && name[0] == '*');
+	int num = atoi (name + 1);
+	assert(num >= 1 && num < numcmodels);
 	return &map_cmodels[num];
 }
 
-int		CM_NumClusters (void)
-{
-	return numclusters;
-}
-
-int		CM_NumInlineModels (void)
-{
-	return numcmodels;
-}
-
-char	*CM_EntityString (void)
-{
-	return map_entitystring;
-}
-
-int		CM_LeafContents (int leafnum)
-{
-	if (leafnum < 0 || leafnum >= numleafs)
-		Com_Error (ERR_DROP, "CM_LeafContents: bad number");
+static int CM_LeafContents(int leafnum) {
+	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].contents;
 }
 
-int		CM_LeafCluster (int leafnum)
-{
-	if (leafnum < 0 || leafnum >= numleafs)
-		Com_Error (ERR_DROP, "CM_LeafCluster: bad number");
+static int CM_LeafCluster(int leafnum) {
+	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].cluster;
 }
 
-int		CM_LeafArea (int leafnum)
-{
-	if (leafnum < 0 || leafnum >= numleafs)
-		Com_Error (ERR_DROP, "CM_LeafArea: bad number");
+static int CM_LeafArea(int leafnum) {
+	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].area;
 }
-
-//=======================================================================
-
 
 cplane_t	*box_planes;
 int			box_headnode;
@@ -6488,12 +6383,12 @@ void CM_InitBoxHull (void)
 
 	box_headnode = numnodes;
 	box_planes = &map_planes[numplanes];
-	if (numnodes+6 > MAX_MAP_NODES
-		|| numbrushes+1 > MAX_MAP_BRUSHES
-		|| numleafbrushes+1 > MAX_MAP_LEAFBRUSHES
-		|| numbrushsides+6 > MAX_MAP_BRUSHSIDES
-		|| numplanes+12 > MAX_MAP_PLANES)
-		Com_Error (ERR_DROP, "Not enough room for box tree");
+
+	assert(numnodes + 6 <= MAX_MAP_NODES);
+	assert(numbrushes + 1 <= MAX_MAP_BRUSHES);
+	assert(numleafbrushes + 1 <= MAX_MAP_LEAFBRUSHES);
+	assert(numbrushsides + 6 <= MAX_MAP_BRUSHSIDES);
+	assert(numplanes + 12 <= MAX_MAP_PLANES);
 
 	box_brush = &map_brushes[numbrushes];
 	box_brush->numsides = 6;
@@ -7349,44 +7244,22 @@ byte	*CM_ClusterPHS (int cluster)
 	return phsrow;
 }
 
+static void FloodArea_r(carea_t* area, int floodnum) {
+	if (area->floodvalid == floodvalid) {
+		assert(area->floodnum == floodnum);
+	} else {
+		area->floodnum = floodnum;
+		area->floodvalid = floodvalid;
 
-/*
-===============================================================================
-
-AREAPORTALS
-
-===============================================================================
-*/
-
-void FloodArea_r (carea_t *area, int floodnum)
-{
-	int		i;
-	dareaportal_t	*p;
-
-	if (area->floodvalid == floodvalid)
-	{
-		if (area->floodnum == floodnum)
-			return;
-		Com_Error (ERR_DROP, "FloodArea_r: reflooded");
-	}
-
-	area->floodnum = floodnum;
-	area->floodvalid = floodvalid;
-	p = &map_areaportals[area->firstareaportal];
-	for (i=0 ; i<area->numareaportals ; i++, p++)
-	{
-		if (portalopen[p->portalnum])
-			FloodArea_r (&map_areas[p->otherarea], floodnum);
+		dareaportal_t* p = &map_areaportals[area->firstareaportal];
+		for (int i = 0; i < area->numareaportals; i++, p++) {
+			if (portalopen[p->portalnum]) {
+				FloodArea_r(&map_areas[p->otherarea], floodnum);
+			}
+		}
 	}
 }
 
-/*
-====================
-FloodAreaConnections
-
-
-====================
-*/
 void	FloodAreaConnections (void)
 {
 	int		i;
@@ -7409,26 +7282,19 @@ void	FloodAreaConnections (void)
 
 }
 
-void	CM_SetAreaPortalState (int portalnum, qboolean open)
-{
-	if (portalnum > numareaportals)
-		Com_Error (ERR_DROP, "areaportal > numareaportals");
-
+static void CM_SetAreaPortalState(int portalnum, qboolean open) {
+	assert(portalnum >= 0 && portalnum <= numareaportals);
 	portalopen[portalnum] = open;
-	FloodAreaConnections ();
+	FloodAreaConnections();
 }
 
-qboolean	CM_AreasConnected (int area1, int area2)
-{
-	if (map_noareas->value)
+static qboolean CM_AreasConnected(int area1, int area2) {
+	if (map_noareas->value) {
 		return true;
-
-	if (area1 > numareas || area2 > numareas)
-		Com_Error (ERR_DROP, "area > numareas");
-
-	if (map_areas[area1].floodnum == map_areas[area2].floodnum)
-		return true;
-	return false;
+	}
+	assert(area1 >= 0 && area1 <= numareas && area2 >= 0 && area2 <= numareas);
+	qboolean result = map_areas[area1].floodnum == map_areas[area2].floodnum;
+	return result;
 }
 
 
@@ -7527,30 +7393,7 @@ qboolean CM_HeadnodeVisible (int nodenum, byte *visbits)
 	return CM_HeadnodeVisible(node->children[1], visbits);
 }
 
-/* ============ end source: qcommon/cmodel.c ============ */
-/* ============ begin source: qcommon/common.c ============ */
-
-// common.c -- misc functions used in client and server
-/* already inlined above: qcommon/qcommon.h */
-#include <setjmp.h>
-
-jmp_buf abortframe; // an ERR_DROP occured, exit the entire frame
-
-/*
-============================================================================
-
-CLIENT / SERVER interactions
-
-============================================================================
-*/
-
-/*
-================
-Com_DPrintf
-
-A Com_Printf that only shows up if the "developer" cvar is set
-================
-*/
+// A Com_Printf that only shows up if the "developer" cvar is set
 void Com_DPrintf (char *fmt, ...)
 {
 	va_list		argptr;
@@ -7568,55 +7411,29 @@ void Com_DPrintf (char *fmt, ...)
 
 #define	ERR_DISCONNECT		2		// don't kill server
 
-/*
-=============
-Com_Error
+// Both client and server can use this, and it will do the apropriate things.
+static void Com_Error(int code, char *fmt, ...) {
+	assert(code != ERR_DISCONNECT && code != ERR_DROP);
 
-Both client and server can use this, and it will
-do the apropriate things.
-=============
-*/
-void Com_Error (int code, char *fmt, ...)
-{
-	va_list		argptr;
-	static char		msg[MAXPRINTMSG];
-	static	qboolean	recursive;
-
-	if (recursive)
-		Sys_Error ("recursive error after: %s", msg);
+	static qboolean recursive = false;
+	assert(!recursive);
 	recursive = true;
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
-	va_end (argptr);
+	char msg[MAXPRINTMSG] = {};
+	va_list argptr = 0;
+	va_start(argptr, fmt);
+	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+	va_end(argptr);
 
-	if (code == ERR_DISCONNECT)
-	{
-		CL_Drop ();
-		recursive = false;
-		longjmp (abortframe, -1);
-	}
-	else if (code == ERR_DROP)
-	{
-		Com_Printf ("********************\nERROR: %s\n********************\n", msg);
-		SV_Shutdown (va("Server crashed: %s\n", msg), false);
-		CL_Drop ();
-		recursive = false;
-		longjmp (abortframe, -1);
-	}
-	else
-	{
-		SV_Shutdown (va("Server fatal crashed: %s\n", msg), false);
-		CL_Shutdown ();
-	}
+	SV_Shutdown(va("Server fatal crashed: %s\n", msg), false);
+	CL_Shutdown();
 
-	if (logfile)
-	{
+	if (logfile) {
 		fclose (logfile);
 		logfile = NULL;
 	}
 
-	Sys_Error ("%s", msg);
+	Sys_Error("%s", msg);
 }
 
 // Both client and server can use this, and it will do the apropriate things.
@@ -7831,94 +7648,6 @@ test error shutdown procedures
 void Com_Error_f (void)
 {
 	Com_Error (ERR_FATAL, "%s", Cmd_Argv(1));
-}
-
-/*
-=================
-Qcommon_Frame
-=================
-*/
-void Qcommon_Frame (int msec)
-{
-	int		time_before, time_between, time_after;
-
-	if (setjmp (abortframe) )
-		return;			// an ERR_DROP was thrown
-
-	if ( log_stats->modified )
-	{
-		log_stats->modified = false;
-		if ( log_stats->value )
-		{
-			if ( log_stats_file )
-			{
-				fclose( log_stats_file );
-				log_stats_file = 0;
-			}
-			log_stats_file = fopen( "stats.log", "w" );
-			if ( log_stats_file )
-				fprintf( log_stats_file, "entities,dlights,parts,frame time\n" );
-		}
-		else
-		{
-			if ( log_stats_file )
-			{
-				fclose( log_stats_file );
-				log_stats_file = 0;
-			}
-		}
-	}
-
-	if (fixedtime->value)
-		msec = fixedtime->value;
-	else if (timescale->value)
-	{
-		msec *= timescale->value;
-		if (msec < 1)
-			msec = 1;
-	}
-
-	if (showtrace->value)
-	{
-		extern	int c_traces, c_brush_traces;
-		extern	int	c_pointcontents;
-
-		Com_Printf ("%4i traces  %4i points\n", c_traces, c_pointcontents);
-		c_traces = 0;
-		c_brush_traces = 0;
-		c_pointcontents = 0;
-	}
-
-	Cmd_ExecuteCbuf ();
-
-	if (host_speeds->value)
-		time_before = Sys_Milliseconds ();
-
-	SV_Frame (msec);
-
-	if (host_speeds->value)
-		time_between = Sys_Milliseconds ();
-
-	CL_Frame (msec);
-
-	if (host_speeds->value)
-		time_after = Sys_Milliseconds ();
-
-
-	if (host_speeds->value)
-	{
-		int			all, sv, gm, cl, rf;
-
-		all = time_after - time_before;
-		sv = time_between - time_before;
-		cl = time_after - time_between;
-		gm = time_after_game - time_before_game;
-		rf = time_after_ref - time_before_ref;
-		sv -= gm;
-		cl -= rf;
-		Com_Printf ("all:%3i sv:%3i gm:%3i cl:%3i rf:%3i\n",
-			all, sv, gm, cl, rf);
-	}
 }
 
 /*
@@ -12445,7 +12174,7 @@ void SV_FatPVS (vec3_t org)
 	count = CM_BoxLeafnums (mins, maxs, leafs, 64, NULL);
 	if (count < 1)
 		Com_Error (ERR_FATAL, "SV_FatPVS: count < 1");
-	longs = (CM_NumClusters()+31)>>5;
+	longs = (numclusters + 31)>>5;
 
 	// convert leafs to clusters
 	for (i=0 ; i<count ; i++)
@@ -13283,7 +13012,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	//
 	SV_ClearWorld ();
 
-	for (i=1 ; i< CM_NumInlineModels() ; i++)
+	for (i=1 ; i< numcmodels ; i++)
 	{
 		Com_sprintf (sv.configstrings[CS_MODELS+1+i], sizeof(sv.configstrings[CS_MODELS+1+i]),
 			"*%i", i);
@@ -13300,7 +13029,7 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	Com_SetServerState (sv.state);
 
 	// load and spawn all other entities
-	ge->SpawnEntities ( sv.name, CM_EntityString(), spawnpoint );
+	ge->SpawnEntities ( sv.name, map_entitystring, spawnpoint );
 
 	// run two frames to allow everything to settle
 	ge->RunFrame ();
@@ -14239,64 +13968,6 @@ void SV_RunGameFrame (void)
 
 	if (host_speeds->value)
 		time_after_game = Sys_Milliseconds ();
-
-}
-
-/*
-==================
-SV_Frame
-
-==================
-*/
-void SV_Frame (int msec)
-{
-	time_before_game = time_after_game = 0;
-
-	// if server is not active, do nothing
-	if (!svs.initialized)
-		return;
-
-    svs.realtime += msec;
-
-	// keep the random time dependent
-	rand ();
-
-	// check timeouts
-	SV_CheckTimeouts ();
-
-	// get packets from clients
-	SV_ReadPackets ();
-
-	// move autonomous things around if enough time has passed
-	if (!sv_timedemo->value && svs.realtime < (int)sv.time)
-	{
-		// never let the time get too far off
-		if (sv.time - svs.realtime > 100)
-		{
-			if (sv_showclamp->value)
-				Com_Printf ("sv lowclamp\n");
-			svs.realtime = sv.time - 100;
-		}
-		return;
-	}
-
-	// update ping based on the last known frame from all clients
-	SV_CalcPings ();
-
-	// give the clients some timeslices
-	SV_GiveMsec ();
-
-	// let everything in the world think and move
-	SV_RunGameFrame ();
-
-	// send messages back to the clients that had packets read this frame
-	SV_SendClientMessages ();
-
-	// save the entire world state if recording a serverdemo
-	SV_RecordDemoMessage ();
-
-	// clear teleport flags, etc for next frame
-	SV_PrepWorldFrame ();
 
 }
 
@@ -23859,98 +23530,6 @@ void CL_SendCommand (void)
 	CL_CheckForResend ();
 }
 
-void VID_CheckChanges();
-void CL_Frame (int msec)
-{
-	static int	extratime;
-	static int  lasttimecalled;
-
-	extratime += msec;
-
-	if (!cl_timedemo->value)
-	{
-		if (cls.state == ca_connected && extratime < 100)
-			return;			// don't flood packets out while connecting
-		if (extratime < 1000/cl_maxfps->value)
-			return;			// framerate is too high
-	}
-
-	// let the mouse activate or deactivate
-	IN_Frame ();
-
-	// decide the simulation time
-	cls.frametime = extratime/1000.0;
-	cl.time += extratime;
-	cls.realtime = curtime;
-
-	extratime = 0;
-#if 0
-	if (cls.frametime > (1.0 / cl_minfps->value))
-		cls.frametime = (1.0 / cl_minfps->value);
-#else
-	if (cls.frametime > (1.0 / 5))
-		cls.frametime = (1.0 / 5);
-#endif
-
-	// if in the debugger last frame, don't timeout
-	if (msec > 5000)
-		cls.netchan.last_received = Sys_Milliseconds ();
-
-	// fetch results from server
-	CL_ReadPackets ();
-
-	// send a new command message to the server
-	CL_SendCommand ();
-
-	// predict all unacknowledged movements
-	CL_PredictMovement ();
-
-	// allow rendering DLL change
-	VID_CheckChanges ();
-	if (!cl.refresh_prepped && cls.state == ca_active)
-		CL_PrepRefresh ();
-
-	// update the screen
-	if (host_speeds->value)
-		time_before_ref = Sys_Milliseconds ();
-	SCR_UpdateScreen ();
-	if (host_speeds->value)
-		time_after_ref = Sys_Milliseconds ();
-
-	// update audio
-	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
-
-	// advance local effects for next frame
-	CL_RunDLights ();
-	CL_RunLightStyles ();
-	SCR_RunCinematic ();
-	SCR_RunConsole ();
-
-	cls.framecount++;
-
-	if ( log_stats->value )
-	{
-		if ( cls.state == ca_active )
-		{
-			if ( !lasttimecalled )
-			{
-				lasttimecalled = Sys_Milliseconds();
-				if ( log_stats_file )
-					fprintf( log_stats_file, "0\n" );
-			}
-			else
-			{
-				int now = Sys_Milliseconds();
-
-				if ( log_stats_file )
-					fprintf( log_stats_file, "%d\n", now - lasttimecalled );
-				lasttimecalled = now;
-			}
-		}
-	}
-}
-
-
 //============================================================================
 
 static qboolean reflib_active = 0;
@@ -25916,7 +25495,7 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_disconnect:
-			Com_Error (ERR_DISCONNECT,"Server disconnected\n");
+			Com_Printf("Server disconnected\n");
 			break;
 
 		case svc_reconnect:
@@ -100298,9 +99877,208 @@ void GLimp_EnableLogging( qboolean enable )
 	}
 }
 
-void GLimp_LogNewFrame( void )
-{
+static void GLimp_LogNewFrame() {
 	fprintf( glw_state.log_fp, "*** R_BeginFrame ***\n" );
+}
+
+static void SV_Frame(int msec) {
+	time_before_game = time_after_game = 0;
+
+	// if server is not active, do nothing
+	if (!svs.initialized)
+		return;
+
+    svs.realtime += msec;
+
+	// keep the random time dependent
+	rand ();
+
+	// check timeouts
+	SV_CheckTimeouts ();
+
+	// get packets from clients
+	SV_ReadPackets ();
+
+	// move autonomous things around if enough time has passed
+	if (!sv_timedemo->value && svs.realtime < (int)sv.time)
+	{
+		// never let the time get too far off
+		if (sv.time - svs.realtime > 100)
+		{
+			if (sv_showclamp->value)
+				Com_Printf ("sv lowclamp\n");
+			svs.realtime = sv.time - 100;
+		}
+		return;
+	}
+
+	// update ping based on the last known frame from all clients
+	SV_CalcPings ();
+
+	// give the clients some timeslices
+	SV_GiveMsec ();
+
+	// let everything in the world think and move
+	SV_RunGameFrame ();
+
+	// send messages back to the clients that had packets read this frame
+	SV_SendClientMessages ();
+
+	// save the entire world state if recording a serverdemo
+	SV_RecordDemoMessage ();
+
+	// clear teleport flags, etc for next frame
+	SV_PrepWorldFrame ();
+
+}
+
+void CL_Frame (int msec) {
+	static int	extratime;
+	static int  lasttimecalled;
+
+	extratime += msec;
+
+	if (!cl_timedemo->value)
+	{
+		if (cls.state == ca_connected && extratime < 100)
+			return;			// don't flood packets out while connecting
+		if (extratime < 1000/cl_maxfps->value)
+			return;			// framerate is too high
+	}
+
+	// let the mouse activate or deactivate
+	IN_Frame ();
+
+	// decide the simulation time
+	cls.frametime = extratime/1000.0;
+	cl.time += extratime;
+	cls.realtime = curtime;
+
+	extratime = 0;
+	if (cls.frametime > (1.0 / 5))
+		cls.frametime = (1.0 / 5);
+
+	// if in the debugger last frame, don't timeout
+	if (msec > 5000)
+		cls.netchan.last_received = Sys_Milliseconds ();
+
+	// fetch results from server
+	CL_ReadPackets ();
+
+	// send a new command message to the server
+	CL_SendCommand ();
+
+	// predict all unacknowledged movements
+	CL_PredictMovement ();
+
+	// allow rendering DLL change
+	VID_CheckChanges ();
+	if (!cl.refresh_prepped && cls.state == ca_active)
+		CL_PrepRefresh ();
+
+	// update the screen
+	if (host_speeds->value)
+		time_before_ref = Sys_Milliseconds ();
+	SCR_UpdateScreen ();
+	if (host_speeds->value)
+		time_after_ref = Sys_Milliseconds ();
+
+	// update audio
+	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
+
+	// advance local effects for next frame
+	CL_RunDLights ();
+	CL_RunLightStyles ();
+	SCR_RunCinematic ();
+	SCR_RunConsole ();
+
+	cls.framecount++;
+
+	if ( log_stats->value )
+	{
+		if ( cls.state == ca_active )
+		{
+			if ( !lasttimecalled )
+			{
+				lasttimecalled = Sys_Milliseconds();
+				if ( log_stats_file )
+					fprintf( log_stats_file, "0\n" );
+			}
+			else
+			{
+				int now = Sys_Milliseconds();
+
+				if ( log_stats_file )
+					fprintf( log_stats_file, "%d\n", now - lasttimecalled );
+				lasttimecalled = now;
+			}
+		}
+	}
+}
+
+static void Qcommon_Frame(int delta_time_msec) {
+	if (log_stats->modified) {
+		log_stats->modified = false;
+		if (log_stats->value) {
+			if (log_stats_file) {
+				fclose( log_stats_file );
+				log_stats_file = 0;
+			}
+			log_stats_file = fopen("stats.log", "w");
+			if (log_stats_file) {
+				fprintf( log_stats_file, "entities,dlights,parts,frame time\n" );
+			}
+		} else {
+			if (log_stats_file){
+				fclose( log_stats_file );
+				log_stats_file = 0;
+			}
+		}
+	}
+
+	if (fixedtime->value) {
+		delta_time_msec = fixedtime->value;
+	} else if (timescale->value) {
+		delta_time_msec *= timescale->value;
+		if (delta_time_msec < 1) {
+			delta_time_msec = 1;
+		}
+	}
+
+	if (showtrace->value) {
+		Com_Printf ("%4i traces  %4i points\n", c_traces, c_pointcontents);
+		c_traces = 0;
+		c_brush_traces = 0;
+		c_pointcontents = 0;
+	}
+
+	Cmd_ExecuteCbuf();
+
+	int time_before = 0;
+	if (host_speeds->value) {
+		time_before = Sys_Milliseconds();
+	}
+
+	SV_Frame(delta_time_msec);
+
+	int time_between = 0;
+	if (host_speeds->value) {
+		time_between = Sys_Milliseconds();
+	}
+
+	CL_Frame(delta_time_msec);
+
+	if (host_speeds->value) {
+		int time_after = Sys_Milliseconds();
+		int all = time_after - time_before;
+		int sv = time_between - time_before;
+		int cl = time_after - time_between;
+		int gm = time_after_game - time_before_game;
+		int rf = time_after_ref - time_before_ref;
+		sv -= gm;
+		cl -= rf;
+		Com_Printf ("all:%3i sv:%3i gm:%3i cl:%3i rf:%3i\n", all, sv, gm, cl, rf);
+	}
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -100341,10 +100119,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Init
 	{
-		if (setjmp(abortframe)) {
-			Sys_Error("Error during initialization");
-		}
-
 		z_chain.next = z_chain.prev = &z_chain;
 
 		// NOTE: Init COM argc/argv
@@ -100729,17 +100503,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
    			DispatchMessage(&msg);
 		}
 
-		int delta_time = 0;
+		int delta_time_msec = 0;
 		{
 			int newtime = 0;
-			while (delta_time < 1) {
+			while (delta_time_msec < 1) {
 				newtime = Sys_Milliseconds();
-				delta_time = newtime - oldtime;
+				delta_time_msec = newtime - oldtime;
 			}
 			oldtime = newtime;
 		}
 
-		Qcommon_Frame(delta_time);
+		Qcommon_Frame(delta_time_msec);
 	}
 
 	// never gets here
