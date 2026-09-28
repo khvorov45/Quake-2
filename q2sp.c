@@ -49040,41 +49040,41 @@ void G_RunEntity (edict_t *ent)
 
 #define Function(f) {#f, f}
 
-mmove_t mmove_reloc;
+static mmove_t mmove_reloc;
 
-field_t fields[] = {
-	{"classname", FOFS(classname), F_LSTRING},
-	{"model", FOFS(model), F_LSTRING},
-	{"spawnflags", FOFS(spawnflags), F_INT},
-	{"speed", FOFS(speed), F_FLOAT},
-	{"accel", FOFS(accel), F_FLOAT},
-	{"decel", FOFS(decel), F_FLOAT},
-	{"target", FOFS(target), F_LSTRING},
-	{"targetname", FOFS(targetname), F_LSTRING},
-	{"pathtarget", FOFS(pathtarget), F_LSTRING},
-	{"deathtarget", FOFS(deathtarget), F_LSTRING},
-	{"killtarget", FOFS(killtarget), F_LSTRING},
-	{"combattarget", FOFS(combattarget), F_LSTRING},
-	{"message", FOFS(message), F_LSTRING},
-	{"team", FOFS(team), F_LSTRING},
-	{"wait", FOFS(wait), F_FLOAT},
-	{"delay", FOFS(delay), F_FLOAT},
-	{"random", FOFS(random), F_FLOAT},
-	{"move_origin", FOFS(move_origin), F_VECTOR},
-	{"move_angles", FOFS(move_angles), F_VECTOR},
-	{"style", FOFS(style), F_INT},
-	{"count", FOFS(count), F_INT},
-	{"health", FOFS(health), F_INT},
-	{"sounds", FOFS(sounds), F_INT},
-	{"light", 0, F_IGNORE},
-	{"dmg", FOFS(dmg), F_INT},
-	{"mass", FOFS(mass), F_INT},
-	{"volume", FOFS(volume), F_FLOAT},
-	{"attenuation", FOFS(attenuation), F_FLOAT},
-	{"map", FOFS(map), F_LSTRING},
-	{"origin", FOFS(s.origin), F_VECTOR},
-	{"angles", FOFS(s.angles), F_VECTOR},
-	{"angle", FOFS(s.angles), F_ANGLEHACK},
+static field_t fields[] = {
+	{"classname", FOFS(classname), F_LSTRING, 0},
+	{"model", FOFS(model), F_LSTRING, 0},
+	{"spawnflags", FOFS(spawnflags), F_INT, 0},
+	{"speed", FOFS(speed), F_FLOAT, 0},
+	{"accel", FOFS(accel), F_FLOAT, 0},
+	{"decel", FOFS(decel), F_FLOAT, 0},
+	{"target", FOFS(target), F_LSTRING, 0},
+	{"targetname", FOFS(targetname), F_LSTRING, 0},
+	{"pathtarget", FOFS(pathtarget), F_LSTRING, 0},
+	{"deathtarget", FOFS(deathtarget), F_LSTRING, 0},
+	{"killtarget", FOFS(killtarget), F_LSTRING, 0},
+	{"combattarget", FOFS(combattarget), F_LSTRING, 0},
+	{"message", FOFS(message), F_LSTRING, 0},
+	{"team", FOFS(team), F_LSTRING, 0},
+	{"wait", FOFS(wait), F_FLOAT, 0},
+	{"delay", FOFS(delay), F_FLOAT, 0},
+	{"random", FOFS(random), F_FLOAT, 0},
+	{"move_origin", FOFS(move_origin), F_VECTOR, 0},
+	{"move_angles", FOFS(move_angles), F_VECTOR, 0},
+	{"style", FOFS(style), F_INT, 0},
+	{"count", FOFS(count), F_INT, 0},
+	{"health", FOFS(health), F_INT, 0},
+	{"sounds", FOFS(sounds), F_INT, 0},
+	{"light", 0, F_IGNORE, 0},
+	{"dmg", FOFS(dmg), F_INT, 0},
+	{"mass", FOFS(mass), F_INT, 0},
+	{"volume", FOFS(volume), F_FLOAT, 0},
+	{"attenuation", FOFS(attenuation), F_FLOAT, 0},
+	{"map", FOFS(map), F_LSTRING, 0},
+	{"origin", FOFS(s.origin), F_VECTOR, 0},
+	{"angles", FOFS(s.angles), F_VECTOR, 0},
+	{"angle", FOFS(s.angles), F_ANGLEHACK, 0},
 
 	{"goalentity", FOFS(goalentity), F_EDICT, FFL_NOSPAWN},
 	{"movetarget", FOFS(movetarget), F_EDICT, FFL_NOSPAWN},
@@ -49120,8 +49120,8 @@ field_t fields[] = {
 	{"pausetime", STOFS(pausetime), F_FLOAT, FFL_SPAWNTEMP},
 	{"item", STOFS(item), F_LSTRING, FFL_SPAWNTEMP},
 
-//need for item field in edict struct, FFL_SPAWNTEMP item will be skipped on saves
-	{"item", FOFS(item), F_ITEM},
+	//need for item field in edict struct, FFL_SPAWNTEMP item will be skipped on saves
+	{"item", FOFS(item), F_ITEM, 0},
 
 	{"gravity", STOFS(gravity), F_LSTRING, FFL_SPAWNTEMP},
 	{"sky", STOFS(sky), F_LSTRING, FFL_SPAWNTEMP},
@@ -49137,38 +49137,28 @@ field_t fields[] = {
 
 };
 
-field_t		levelfields[] =
-{
-	{"changemap", LLOFS(changemap), F_LSTRING},
+static field_t levelfields[] = {
+	{"changemap", LLOFS(changemap), F_LSTRING, 0},
 
-	{"sight_client", LLOFS(sight_client), F_EDICT},
-	{"sight_entity", LLOFS(sight_entity), F_EDICT},
-	{"sound_entity", LLOFS(sound_entity), F_EDICT},
-	{"sound2_entity", LLOFS(sound2_entity), F_EDICT},
+	{"sight_client", LLOFS(sight_client), F_EDICT, 0},
+	{"sight_entity", LLOFS(sight_entity), F_EDICT, 0},
+	{"sound_entity", LLOFS(sound_entity), F_EDICT, 0},
+	{"sound2_entity", LLOFS(sound2_entity), F_EDICT, 0},
 
-	{NULL, 0, F_INT}
+	{NULL, 0, F_INT, 0}
 };
 
-field_t		clientfields[] =
-{
-	{"pers.weapon", CLOFS(pers.weapon), F_ITEM},
-	{"pers.lastweapon", CLOFS(pers.lastweapon), F_ITEM},
-	{"newweapon", CLOFS(newweapon), F_ITEM},
+static field_t clientfields[] = {
+	{"pers.weapon", CLOFS(pers.weapon), F_ITEM, 0},
+	{"pers.lastweapon", CLOFS(pers.lastweapon), F_ITEM, 0},
+	{"newweapon", CLOFS(newweapon), F_ITEM, 0},
 
-	{NULL, 0, F_INT}
+	{NULL, 0, F_INT, 0}
 };
 
-/*
-============
-InitGame
-
-This will be called when the dll is first loaded, which
-only happens when a new game is started or a save game
-is loaded.
-============
-*/
-void InitGame (void)
-{
+// This will be called when the dll is first loaded,
+// which only happens when a new game is started or a save game is loaded.
+static void InitGame() {
 	gi.dprintf ("==== InitGame ====\n");
 
 	gun_x = gi.cvar ("gun_x", "0", 0);
@@ -93672,7 +93662,7 @@ void Sys_Mkdir (char *path)
 
 char	findbase[MAX_OSPATH];
 char	findpath[MAX_OSPATH];
-int		findhandle;
+intptr_t		findhandle;
 
 static qboolean CompareAttributes( unsigned found, unsigned musthave, unsigned canthave )
 {
