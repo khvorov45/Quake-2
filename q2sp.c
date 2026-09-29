@@ -20,7 +20,7 @@
 #define UNUSED(x) ((x)=(x))
 
 // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
-#define assert(x) do {if (!(x)) __debugbreak();} while (0)
+#define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0)
 
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
