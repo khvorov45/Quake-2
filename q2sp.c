@@ -1335,7 +1335,6 @@ static int curtime;		// time returned by last Sys_Milliseconds
 
 static int Sys_Milliseconds(void);
 static void Sys_Mkdir(char *path);
-static void Sys_Error(char *error, ...);
 
 // large block stack allocation routines
 static void* Hunk_Begin(int maxsize);
@@ -7395,31 +7394,6 @@ void Com_DPrintf (char *fmt, ...)
 #define	ERR_DISCONNECT		2		// don't kill server
 
 // Both client and server can use this, and it will do the apropriate things.
-static void Com_Error(int code, char *fmt, ...) {
-	assert(code != ERR_DISCONNECT && code != ERR_DROP);
-
-	static qboolean recursive = false;
-	assert(!recursive);
-	recursive = true;
-
-	char msg[MAXPRINTMSG] = {};
-	va_list argptr = 0;
-	va_start(argptr, fmt);
-	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
-	va_end(argptr);
-
-	SV_Shutdown(va("Server fatal crashed: %s\n", msg), false);
-	CL_Shutdown();
-
-	if (logfile) {
-		fclose (logfile);
-		logfile = NULL;
-	}
-
-	Sys_Error("%s", msg);
-}
-
-// Both client and server can use this, and it will do the apropriate things.
 void Com_Quit (void) {
 	SV_Shutdown("Server quit\n", false);
 	CL_Shutdown();
@@ -7576,14 +7550,8 @@ static byte chktbl[1024] = {
 0x39, 0x4f, 0xdd, 0xe4, 0xb6, 0x19, 0x27, 0xfb, 0xb8, 0xf5, 0x32, 0x73, 0xe5, 0xcb, 0x32
 };
 
-/*
-====================
-COM_BlockSequenceCRCByte
-
-For proxy protecting
-====================
-*/
-byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
+// For proxy protecting
+byte COM_BlockSequenceCRCByte(byte *base, int length, int sequence)
 {
 	int		n;
 	byte	*p;
@@ -7591,9 +7559,7 @@ byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
 	byte chkb[60 + 4];
 	unsigned short crc;
 
-
-	if (sequence < 0)
-		Sys_Error("sequence < 0, this shouldn't happen\n");
+	assert(sequence >= 0);
 
 	p = chktbl + (sequence % (sizeof(chktbl) - 4));
 
@@ -13809,16 +13775,7 @@ void SV_FinalMessage (char *message, qboolean reconnect)
 			, net_message.data);
 }
 
-
-
-/*
-================
-SV_Shutdown
-
-Called when each game quits,
-before Sys_Quit or Sys_Error
-================
-*/
+// Called when each game quits, before Sys_Quit
 void SV_Shutdown (char *finalmsg, qboolean reconnect)
 {
 	if (svs.clients)
@@ -15840,8 +15797,6 @@ typedef struct
 //
 typedef struct
 {
-	void	(*Sys_Error) (int err_level, char *str, ...);
-
 	void	(*Cmd_AddCommand) (char *name, void(*cmd)(void));
 	void	(*Cmd_RemoveCommand) (char *name);
 	int		(*Cmd_Argc) (void);
@@ -36692,8 +36647,6 @@ void FindNextChunk(char *name)
 			data_p = NULL;
 			return;
 		}
-//		if (iff_chunk_len > 1024*1024)
-//			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
 		data_p -= 8;
 		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
 		if (!strncmp((char*)data_p, name, 4))
@@ -81933,8 +81886,7 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 		byte		v[4];
 	} color;
 
-	if ( (unsigned)c > 255)
-		ri.Sys_Error (ERR_FATAL, "Draw_Fill: bad color");
+	assert((unsigned)c <= 255);
 
 	qglDisable (GL_TEXTURE_2D);
 
@@ -82455,7 +82407,6 @@ int Scrap_AllocBlock (int w, int h, int *x, int *y)
 	}
 
 	return -1;
-//	Sys_Error ("Scrap_AllocBlock: full");
 }
 
 int	scrap_uploads;
@@ -82649,13 +82600,8 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	targa_header.pixel_size = *buf_p++;
 	targa_header.attributes = *buf_p++;
 
-	if (targa_header.image_type!=2
-		&& targa_header.image_type!=10)
-		ri.Sys_Error (ERR_DROP, "LoadTGA: Only type 2 and 10 targa RGB images supported\n");
-
-	if (targa_header.colormap_type !=0
-		|| (targa_header.pixel_size!=32 && targa_header.pixel_size!=24))
-		ri.Sys_Error (ERR_DROP, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+	assert(targa_header.image_type == 2 || targa_header.image_type == 10);
+	assert(targa_header.colormap_type == 0 || (targa_header.pixel_size == 32 || targa_header.pixel_size == 24));
 
 	columns = targa_header.width;
 	rows = targa_header.height;
@@ -83058,8 +83004,7 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	upload_width = scaled_width;
 	upload_height = scaled_height;
 
-	if (scaled_width * scaled_height > (int)sizeof(scaled) / 4)
-		ri.Sys_Error (ERR_DROP, "GL_Upload32: too big");
+	assert(scaled_width * scaled_height <= (int)sizeof(scaled) / 4);
 
 	// scan the texture for any non-255 alpha
 	c = width*height;
@@ -83204,13 +83149,11 @@ done: ;
 // Returns has_alpha
 static qboolean GL_Upload8(byte *data, int width, int height,  qboolean mipmap, qboolean is_sky) {
 	unsigned	trans[512*256];
-	int			i, s;
+	int			i;
 	int			p;
 
-	s = width*height;
-
-	if (s > (int)sizeof(trans)/4)
-		ri.Sys_Error (ERR_DROP, "GL_Upload8: too large");
+	int s = width * height;
+	assert(s <= (int)sizeof(trans) / 4);
 
 	if ( qglColorTableEXT &&
 		 gl_ext_palettedtexture->value &&
@@ -83284,14 +83227,12 @@ image_t *GL_LoadPic (char *name, byte *pic, int width, int height, imagetype_t t
 	}
 	if (i == numgltextures)
 	{
-		if (numgltextures == MAX_GLTEXTURES)
-			ri.Sys_Error (ERR_DROP, "MAX_GLTEXTURES");
+		assert(numgltextures != MAX_GLTEXTURES);
 		numgltextures++;
 	}
 	image = &gltextures[i];
 
-	if (strlen(name) >= sizeof(image->name))
-		ri.Sys_Error (ERR_DROP, "Draw_LoadPic: \"%s\" is too long", name);
+	assert(strlen(name) < sizeof(image->name));
 	strcpy (image->name, name);
 	image->registration_sequence = registration_sequence;
 
@@ -83395,10 +83336,10 @@ image_t	*GL_FindImage (char *name, imagetype_t type)
 	int		width, height;
 
 	if (!name)
-		return NULL;	//	ri.Sys_Error (ERR_DROP, "GL_FindImage: NULL name");
+		return NULL;
 	len = strlen(name);
 	if (len<5)
-		return NULL;	//	ri.Sys_Error (ERR_DROP, "GL_FindImage: bad name: %s", name);
+		return NULL;
 
 	// look for it
 	for (i=0, image=gltextures ; i<numgltextures ; i++,image++)
@@ -83419,7 +83360,7 @@ image_t	*GL_FindImage (char *name, imagetype_t type)
 	{
 		LoadPCX (name, &pic, &palette, &width, &height);
 		if (!pic)
-			return NULL; // ri.Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
+			return NULL;
 		image = GL_LoadPic (name, pic, width, height, type, 8);
 	}
 	else if (!strcmp(name+len-4, ".wal"))
@@ -83430,11 +83371,11 @@ image_t	*GL_FindImage (char *name, imagetype_t type)
 	{
 		LoadTGA (name, &pic, &width, &height);
 		if (!pic)
-			return NULL; // ri.Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
+			return NULL;
 		image = GL_LoadPic (name, pic, width, height, type, 32);
 	}
 	else
-		return NULL;	//	ri.Sys_Error (ERR_DROP, "GL_FindImage: bad extension on: %s", name);
+		return NULL;
 
 
 	if (pic)
@@ -83506,8 +83447,7 @@ int Draw_GetPalette (void)
 	// get the palette
 
 	LoadPCX ("pics/colormap.pcx", &pic, &pal, &width, &height);
-	if (!pal)
-		ri.Sys_Error (ERR_FATAL, "Couldn't load pics/colormap.pcx");
+	assert(pal);
 
 	for (i=0 ; i<256 ; i++)
 	{
@@ -83553,8 +83493,7 @@ void	GL_InitImages (void)
 	if ( qglColorTableEXT )
 	{
 		ri.FS_LoadFile( "pics/16to8.dat", (void**)&gl_state.d_16to8table );
-		if ( !gl_state.d_16to8table )
-			ri.Sys_Error( ERR_FATAL, "Couldn't load pics/16to8.pcx");
+		assert(gl_state.d_16to8table);
 	}
 
 	if ( gl_config.renderer & ( GL_RENDERER_VOODOO | GL_RENDERER_VOODOO2 ) )
@@ -84023,16 +83962,14 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	float		*bl;
 	int monolightmap;
 
-	if ( surf->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP) )
-		ri.Sys_Error (ERR_DROP, "R_BuildLightMap called for non-lit surface");
+	assert(!(surf->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP)));
 
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
 	size = smax*tmax;
-	if (size > ((int)sizeof(s_blocklights)>>4) )
-		ri.Sys_Error (ERR_DROP, "Bad s_blocklights size");
+	assert(size <= ((int)sizeof(s_blocklights)>>4));
 
-// set to full bright if no light data
+	// set to full bright if no light data
 	if (!surf->samples)
 	{
 		for (i=0 ; i<size*3 ; i++)
@@ -85305,8 +85242,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 	float		d;
 	cplane_t	*plane;
 
-	if (!model || !model->nodes)
-		ri.Sys_Error (ERR_DROP, "Mod_PointInLeaf: bad model");
+	assert(model && model->nodes);
 
 	node = model->nodes;
 	while (1)
@@ -85434,8 +85370,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	unsigned *buf;
 	int		i;
 
-	if (!name[0])
-		ri.Sys_Error (ERR_DROP, "Mod_ForName: NULL name");
+	assert(name[0]);
 
 	//
 	// inline models are grabbed only from worldmodel
@@ -85443,8 +85378,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	if (name[0] == '*')
 	{
 		i = atoi(name+1);
-		if (i < 1 || !r_worldmodel || i >= r_worldmodel->numsubmodels)
-			ri.Sys_Error (ERR_DROP, "bad inline model number");
+		assert(i >= 1 && r_worldmodel && i < r_worldmodel->numsubmodels);
 		return &mod_inline[i];
 	}
 
@@ -85469,8 +85403,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	}
 	if (i == mod_numknown)
 	{
-		if (mod_numknown == MAX_MOD_KNOWN)
-			ri.Sys_Error (ERR_DROP, "mod_numknown == MAX_MOD_KNOWN");
+		assert(mod_numknown != MAX_MOD_KNOWN);
 		mod_numknown++;
 	}
 	strcpy (mod->name, name);
@@ -85481,8 +85414,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	modfilelen = ri.FS_LoadFile (mod->name, (void**)&buf);
 	if (!buf)
 	{
-		if (crash)
-			ri.Sys_Error (ERR_DROP, "Mod_NumForName: %s not found", mod->name);
+		assert(!crash);
 		memset (mod->name, 0, sizeof(mod->name));
 		return NULL;
 	}
@@ -85513,9 +85445,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 		Mod_LoadBrushModel (mod, buf);
 		break;
 
-	default:
-		ri.Sys_Error (ERR_DROP,"Mod_NumForName: unknown fileid for %s", mod->name);
-		break;
+	default: assert(!"unreachable");
 	}
 
 	loadmodel->extradatasize = Hunk_End ();
@@ -85591,8 +85521,7 @@ void Mod_LoadVertexes (lump_t *l)
 	int			i, count;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -85638,8 +85567,7 @@ void Mod_LoadSubmodels (lump_t *l)
 	int			i, j, count;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -85673,8 +85601,7 @@ void Mod_LoadEdges (lump_t *l)
 	int 	i, count;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( (count + 1) * sizeof(*out));
 
@@ -85702,8 +85629,7 @@ void Mod_LoadTexinfo (lump_t *l)
 	int		next;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -85790,8 +85716,6 @@ void CalcSurfaceExtents (msurface_t *s)
 		s->texturemins[i] = bmins[i] * 16;
 		s->extents[i] = (bmaxs[i] - bmins[i]) * 16;
 
-//		if ( !(tex->flags & TEX_SPECIAL) && s->extents[i] > 512 /* 256 */ )
-//			ri.Sys_Error (ERR_DROP, "Bad surface extents");
 	}
 }
 
@@ -85809,8 +85733,7 @@ static void Mod_LoadFaces(lump_t *l) {
 	int			ti;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -85836,8 +85759,7 @@ static void Mod_LoadFaces(lump_t *l) {
 		out->plane = loadmodel->planes + planenum;
 
 		ti = LittleShort (in->texinfo);
-		if (ti < 0 || ti >= loadmodel->numtexinfo)
-			ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: bad texinfo number");
+		assert(ti >= 0 && ti < loadmodel->numtexinfo);
 		out->texinfo = loadmodel->texinfo + ti;
 
 		CalcSurfaceExtents (out);
@@ -85904,8 +85826,7 @@ void Mod_LoadNodes (lump_t *l)
 	mnode_t 	*out;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -85940,21 +85861,14 @@ void Mod_LoadNodes (lump_t *l)
 	Mod_SetParent (loadmodel->nodes, NULL);	// sets nodes and leafs
 }
 
-/*
-=================
-Mod_LoadLeafs
-=================
-*/
 void Mod_LoadLeafs (lump_t *l)
 {
 	dleaf_t 	*in;
 	mleaf_t 	*out;
 	int			i, j, count, p;
-//	glpoly_t	*poly;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -86006,8 +85920,7 @@ void Mod_LoadMarksurfaces (lump_t *l)
 	msurface_t **out;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -86017,8 +85930,7 @@ void Mod_LoadMarksurfaces (lump_t *l)
 	for ( i=0 ; i<count ; i++)
 	{
 		j = LittleShort(in[i]);
-		if (j < 0 ||  j >= loadmodel->numsurfaces)
-			ri.Sys_Error (ERR_DROP, "Mod_ParseMarksurfaces: bad surface number");
+		assert(j >= 0 &&  j < loadmodel->numsurfaces);
 		out[i] = loadmodel->surfaces + j;
 	}
 }
@@ -86034,12 +85946,9 @@ void Mod_LoadSurfedges (lump_t *l)
 	int		*in, *out;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
-	if (count < 1 || count >= MAX_MAP_SURFEDGES)
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: bad surfedges count in %s: %i",
-		loadmodel->name, count);
+	assert(count >= 1 && count < MAX_MAP_SURFEDGES);
 
 	out = Hunk_Alloc ( count*sizeof(*out));
 
@@ -86065,8 +85974,7 @@ void Mod_LoadPlanes (lump_t *l)
 	int			bits;
 
 	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 	out = Hunk_Alloc ( count*2*sizeof(*out));
 
@@ -86101,22 +86009,20 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	mmodel_t 	*bm;
 
 	loadmodel->type = mod_brush;
-	if (loadmodel != mod_known)
-		ri.Sys_Error (ERR_DROP, "Loaded a brush model after the world");
+	assert(loadmodel == mod_known);
 
 	header = (dheader_t *)buffer;
 
 	i = LittleLong (header->version);
-	if (i != BSPVERSION)
-		ri.Sys_Error (ERR_DROP, "Mod_LoadBrushModel: %s has wrong version number (%i should be %i)", mod->name, i, BSPVERSION);
+	assert(i == BSPVERSION);
 
-// swap all the lumps
+	// swap all the lumps
 	mod_base = (byte *)header;
 
 	for (i=0 ; i<(int)sizeof(dheader_t)/4 ; i++)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 
-// load into heap
+	// load into heap
 
 	Mod_LoadVertexes (&header->lumps[LUMP_VERTEXES]);
 	Mod_LoadEdges (&header->lumps[LUMP_EDGES]);
@@ -86147,8 +86053,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		starmod->firstmodelsurface = bm->firstface;
 		starmod->nummodelsurfaces = bm->numfaces;
 		starmod->firstnode = bm->headnode;
-		if (starmod->firstnode >= loadmodel->numnodes)
-			ri.Sys_Error (ERR_DROP, "Inline model %i has bad firstnode", i);
+		assert(starmod->firstnode < loadmodel->numnodes);
 
 		VectorCopy (bm->maxs, starmod->maxs);
 		VectorCopy (bm->mins, starmod->mins);
@@ -86187,9 +86092,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	pinmodel = (dmdl_t *)buffer;
 
 	version = LittleLong (pinmodel->version);
-	if (version != ALIAS_VERSION)
-		ri.Sys_Error (ERR_DROP, "%s has wrong version number (%i should be %i)",
-				 mod->name, version, ALIAS_VERSION);
+	assert(version == ALIAS_VERSION);
 
 	pheader = Hunk_Alloc (LittleLong(pinmodel->ofs_end));
 
@@ -86197,28 +86100,13 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	for (i=0 ; i<(int)sizeof(dmdl_t)/4 ; i++)
 		((int *)pheader)[i] = LittleLong (((int *)buffer)[i]);
 
-	if (pheader->skinheight > MAX_LBM_HEIGHT)
-		ri.Sys_Error (ERR_DROP, "model %s has a skin taller than %d", mod->name,
-				   MAX_LBM_HEIGHT);
+	assert(pheader->skinheight <= MAX_LBM_HEIGHT);
+	assert(pheader->num_xyz > 0 && pheader->num_xyz <= MAX_VERTS);
+	assert(pheader->num_st > 0);
+	assert(pheader->num_tris > 0);
+	assert(pheader->num_frames > 0);
 
-	if (pheader->num_xyz <= 0)
-		ri.Sys_Error (ERR_DROP, "model %s has no vertices", mod->name);
-
-	if (pheader->num_xyz > MAX_VERTS)
-		ri.Sys_Error (ERR_DROP, "model %s has too many vertices", mod->name);
-
-	if (pheader->num_st <= 0)
-		ri.Sys_Error (ERR_DROP, "model %s has no st vertices", mod->name);
-
-	if (pheader->num_tris <= 0)
-		ri.Sys_Error (ERR_DROP, "model %s has no triangles", mod->name);
-
-	if (pheader->num_frames <= 0)
-		ri.Sys_Error (ERR_DROP, "model %s has no frames", mod->name);
-
-//
-// load base s and t vertices (not used in gl version)
-//
+	// load base s and t vertices (not used in gl version)
 	pinst = (dstvert_t *) ((byte *)pinmodel + pheader->ofs_st);
 	poutst = (dstvert_t *) ((byte *)pheader + pheader->ofs_st);
 
@@ -86228,9 +86116,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		poutst[i].t = LittleShort (pinst[i].t);
 	}
 
-//
-// load triangle lists
-//
+	// load triangle lists
 	pintri = (dtriangle_t *) ((byte *)pinmodel + pheader->ofs_tris);
 	pouttri = (dtriangle_t *) ((byte *)pheader + pheader->ofs_tris);
 
@@ -86243,9 +86129,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		}
 	}
 
-//
-// load the frames
-//
+	// load the frames
 	for (i=0 ; i<pheader->num_frames ; i++)
 	{
 		pinframe = (daliasframe_t *) ((byte *)pinmodel
@@ -86318,13 +86202,8 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	sprout->version = LittleLong (sprin->version);
 	sprout->numframes = LittleLong (sprin->numframes);
 
-	if (sprout->version != SPRITE_VERSION)
-		ri.Sys_Error (ERR_DROP, "%s has wrong version number (%i should be %i)",
-				 mod->name, sprout->version, SPRITE_VERSION);
-
-	if (sprout->numframes > MAX_MD2SKINS)
-		ri.Sys_Error (ERR_DROP, "%s has too many frames (%i > %i)",
-				 mod->name, sprout->numframes, MAX_MD2SKINS);
+	assert(sprout->version == SPRITE_VERSION);
+	assert(sprout->numframes <= MAX_MD2SKINS);
 
 	// byte swap everything
 	for (i=0 ; i<sprout->numframes ; i++)
@@ -86805,9 +86684,7 @@ void R_DrawEntitiesOnList (void)
 			case mod_sprite:
 				R_DrawSpriteModel (currententity);
 				break;
-			default:
-				ri.Sys_Error (ERR_DROP, "Bad modeltype");
-				break;
+			default: assert(!"unreachable");
 			}
 		}
 	}
@@ -86845,9 +86722,7 @@ void R_DrawEntitiesOnList (void)
 			case mod_sprite:
 				R_DrawSpriteModel (currententity);
 				break;
-			default:
-				ri.Sys_Error (ERR_DROP, "Bad modeltype");
-				break;
+			default: assert(!"unreachable");
 			}
 		}
 	}
@@ -87269,8 +87144,7 @@ void R_RenderView (refdef_t *fd)
 
 	r_newrefdef = *fd;
 
-	if (!r_worldmodel && !( r_newrefdef.rdflags & RDF_NOWORLDMODEL ) )
-		ri.Sys_Error (ERR_DROP, "R_RenderView: NULL worldmodel");
+	assert(r_worldmodel && ( r_newrefdef.rdflags & RDF_NOWORLDMODEL));
 
 	if (r_speeds->value)
 	{
@@ -88662,10 +88536,8 @@ void R_BlendLightmaps (void)
 				LM_InitBlock();
 
 				// try uploading the block now
-				if ( !LM_AllocBlock( smax, tmax, &surf->dlight_s, &surf->dlight_t ) )
-				{
-					ri.Sys_Error( ERR_FATAL, "Consecutive calls to LM_AllocBlock(%d,%d) failed (dynamic)\n", smax, tmax );
-				}
+				qboolean lm_alloc_block_result = LM_AllocBlock(smax, tmax, &surf->dlight_s, &surf->dlight_t);
+				assert(lm_alloc_block_result);
 
 				base = gl_lms.lightmap_buffer;
 				base += ( surf->dlight_t * BLOCK_WIDTH + surf->dlight_s ) * LIGHTMAP_BYTES;
@@ -89625,8 +89497,8 @@ static void LM_UploadBlock( qboolean dynamic )
 					   GL_LIGHTMAP_FORMAT,
 					   GL_UNSIGNED_BYTE,
 					   gl_lms.lightmap_buffer );
-		if ( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
-			ri.Sys_Error( ERR_DROP, "LM_UploadBlock() - MAX_LIGHTMAPS exceeded\n" );
+		++gl_lms.current_lightmap_texture;
+		assert(gl_lms.current_lightmap_texture != MAX_LIGHTMAPS);
 	}
 }
 
@@ -89760,10 +89632,8 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	{
 		LM_UploadBlock( false );
 		LM_InitBlock();
-		if ( !LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t ) )
-		{
-			ri.Sys_Error( ERR_FATAL, "Consecutive calls to LM_AllocBlock(%d,%d) failed\n", smax, tmax );
-		}
+		qboolean lm_alloc_block_result = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
+		assert(lm_alloc_block_result);
 	}
 
 	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
@@ -89925,8 +89795,7 @@ void SubdividePolygon (int numverts, float *verts)
 	vec3_t	total;
 	float	total_s, total_t;
 
-	if (numverts > 60)
-		ri.Sys_Error (ERR_DROP, "numverts = %i", numverts);
+	assert(numverts <= 60);
 
 	BoundPoly (numverts, verts, mins, maxs);
 
@@ -90283,8 +90152,7 @@ void ClipSkyPolygon (int nump, vec3_t vecs, int stage)
 	int		newc[2];
 	int		i, j;
 
-	if (nump > MAX_CLIP_VERTS-2)
-		ri.Sys_Error (ERR_DROP, "ClipSkyPolygon: MAX_CLIP_VERTS");
+	assert(nump <= MAX_CLIP_VERTS - 2);
 	if (stage == 6)
 	{	// fully clipped, so draw it
 		DrawSkyPolygon (nump, vecs);
@@ -92592,93 +92460,47 @@ char *NET_ErrorString (void)
 	default: return "NO ERROR";
 	}
 }
-/* ============ end source: win32/net_wins.c ============ */
-/* ============ begin source: win32/q_shwin.c ============ */
 
-
-/* already inlined above: qcommon/qcommon.h */
-/* already inlined above: win32/winquake.h */
 #include <fcntl.h>
 #include <direct.h>
 #include <conio.h>
 
-//===============================================================================
+static int hunkcount;
+static byte* membase;
+static int hunkmaxsize;
+static int cursize;
 
-int		hunkcount;
-
-
-byte	*membase;
-int		hunkmaxsize;
-int		cursize;
-
-#define	VIRTUAL_ALLOC
-
-void *Hunk_Begin (int maxsize)
-{
+static void* Hunk_Begin(int maxsize) {
 	// reserve a huge chunk of memory, but don't commit any yet
 	cursize = 0;
 	hunkmaxsize = maxsize;
-#ifdef VIRTUAL_ALLOC
-	membase = VirtualAlloc (NULL, maxsize, MEM_RESERVE, PAGE_NOACCESS);
-#else
-	membase = malloc (maxsize);
-	memset (membase, 0, maxsize);
-#endif
-	if (!membase)
-		Sys_Error ("VirtualAlloc reserve failed");
+	membase = VirtualAlloc(NULL, maxsize, MEM_RESERVE, PAGE_NOACCESS);
+	assert(membase);
 	return (void *)membase;
 }
 
-void *Hunk_Alloc (int size)
-{
-	void	*buf;
-
+static void* Hunk_Alloc(int size) {
 	// round to cacheline
-	size = (size+31)&~31;
+	size = (size + 31) & ~31;
 
-#ifdef VIRTUAL_ALLOC
-	// commit pages as needed
-//	buf = VirtualAlloc (membase+cursize, size, MEM_COMMIT, PAGE_READWRITE);
-	buf = VirtualAlloc (membase, cursize+size, MEM_COMMIT, PAGE_READWRITE);
-	if (!buf)
-	{
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &buf, 0, NULL);
-		Sys_Error ("VirtualAlloc commit failed.\n%s", buf);
-	}
-#endif
+	void* buf = VirtualAlloc(membase, cursize+size, MEM_COMMIT, PAGE_READWRITE);
+	assert(buf);
+
 	cursize += size;
-	if (cursize > hunkmaxsize)
-		Sys_Error ("Hunk_Alloc overflow");
+	assert(cursize <= hunkmaxsize);
 
-	return (void *)(membase+cursize-size);
+	return (void*)(membase+cursize-size);
 }
 
-int Hunk_End (void)
-{
-
-	// free the remaining unused virtual memory
-#if 0
-	void	*buf;
-
-	// write protect it
-	buf = VirtualAlloc (membase, cursize, MEM_COMMIT, PAGE_READONLY);
-	if (!buf)
-		Sys_Error ("VirtualAlloc commit failed");
-#endif
-
+static int Hunk_End() {
 	hunkcount++;
-//Com_Printf ("hunkcount: %i\n", hunkcount);
 	return cursize;
 }
 
-void Hunk_Free (void *base)
-{
-	if ( base )
-#ifdef VIRTUAL_ALLOC
+static void Hunk_Free(void* base) {
+	if (base) {
 		VirtualFree (base, 0, MEM_RELEASE);
-#else
-		free (base);
-#endif
+	}
 
 	hunkcount--;
 }
@@ -92748,10 +92570,7 @@ static qboolean CompareAttributes( unsigned found, unsigned musthave, unsigned c
 char *Sys_FindFirst (char *path, unsigned musthave, unsigned canthave )
 {
 	struct _finddata_t findinfo;
-
-	if (findhandle)
-		Sys_Error ("Sys_BeginFind without close");
-	findhandle = 0;
+	assert(findhandle == 0);
 
 	COM_FilePath (path, findbase);
 	findhandle = _findfirst (path, &findinfo);
@@ -93470,14 +93289,9 @@ int SNDDMA_GetDMAPos(void)
 	return s;
 }
 
-/*
-==============
-SNDDMA_BeginPainting
+DWORD locksize;
 
-Makes sure dma.buffer is valid
-===============
-*/
-DWORD	locksize;
+// Makes sure dma.buffer is valid
 void SNDDMA_BeginPainting (void)
 {
 	int		reps;
@@ -93668,38 +93482,6 @@ static HANDLE		qwclsemaphore;
 int			argc;
 char		*argv[MAX_NUM_ARGVS];
 
-
-/*
-===============================================================================
-
-SYSTEM IO
-
-===============================================================================
-*/
-
-
-void Sys_Error (char *error, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-
-	CL_Shutdown ();
-
-	va_start (argptr, error);
-	Q_vsnprintf (text, sizeof(text), error, argptr);
-	va_end (argptr);
-
-	MessageBox(NULL, text, "Error", 0 /* MB_OK */ );
-
-	if (qwclsemaphore)
-		CloseHandle (qwclsemaphore);
-
-// shut down QHOST hooks if necessary
-	DeinitConProc ();
-
-	exit (1);
-}
-
 void Sys_Quit (void)
 {
 	timeEndPeriod( 1 );
@@ -93707,77 +93489,11 @@ void Sys_Quit (void)
 	CL_Shutdown();
 	CloseHandle (qwclsemaphore);
 
-// shut down QHOST hooks if necessary
+	// shut down QHOST hooks if necessary
 	DeinitConProc ();
 
 	exit (0);
 }
-
-
-void WinError (void)
-{
-	LPVOID lpMsgBuf;
-
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL,
-		GetLastError(),
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-		(LPTSTR) &lpMsgBuf,
-		0,
-		NULL
-	);
-
-	// Display the string.
-	MessageBox( NULL, lpMsgBuf, "GetLastError", MB_OK|MB_ICONINFORMATION );
-
-	// Free the buffer.
-	LocalFree( lpMsgBuf );
-}
-
-//================================================================
-
-char *Sys_ScanForCD (void) {
-	static char	cddir[MAX_OSPATH];
-	static qboolean	done;
-	char		drive[4];
-	FILE		*f;
-	char		test[MAX_QPATH];
-
-	if (done)		// don't re-check
-		return cddir;
-
-	// no abort/retry/fail errors
-	SetErrorMode (SEM_FAILCRITICALERRORS);
-
-	drive[0] = 'c';
-	drive[1] = ':';
-	drive[2] = '\\';
-	drive[3] = 0;
-
-	done = true;
-
-	// scan the drives
-	for (drive[0] = 'c' ; drive[0] <= 'z' ; drive[0]++)
-	{
-		// where activision put the stuff...
-		sprintf (cddir, "%sinstall\\data", drive);
-		sprintf (test, "%sinstall\\data\\quake2.exe", drive);
-		f = fopen(test, "r");
-		if (f)
-		{
-			fclose (f);
-			if (GetDriveType (drive) == DRIVE_CDROM)
-				return cddir;
-		}
-	}
-
-	cddir[0] = 0;
-
-	return NULL;
-}
-
-//================================================================
 
 // Send Key_Event calls
 void Sys_SendKeyEvents (void)
@@ -93992,17 +93708,6 @@ void VID_Printf (int print_level, char *fmt, ...)
 		MessageBox( 0, msg, "PRINT_ALERT", MB_ICONWARNING );
 		OutputDebugString( msg );
 	}
-}
-
-void VID_Error (int err_level, char *fmt, ...)
-{
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
-	va_end (argptr);
-
-	Com_Error (err_level,"%s", msg);
 }
 
 //==========================================================================
@@ -94394,7 +94099,6 @@ static void VID_CheckChanges() {
 			ri.Cmd_Argc = Cmd_Argc;
 			ri.Cmd_Argv = Cmd_Argv;
 			ri.Con_Printf = VID_Printf;
-			ri.Sys_Error = VID_Error;
 			ri.FS_LoadFile = FS_LoadFile;
 			ri.FS_FreeFile = FS_FreeFile;
 			ri.FS_Gamedir = FS_Gamedir;
@@ -94797,27 +94501,27 @@ static qboolean VerifyDriver( void )
 
 qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 {
-	WNDCLASS		wc;
 	RECT			r;
 	cvar_t			*vid_xpos, *vid_ypos;
 	int				stylebits;
 	int				x, y, w, h;
 	int				exstyle;
 
-	/* Register the frame class */
-    wc.style         = 0;
-    wc.lpfnWndProc   = (WNDPROC)glw_state.wndproc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = glw_state.hInstance;
-    wc.hIcon         = 0;
-    wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
-	wc.hbrBackground = (void *)COLOR_GRAYTEXT;
-    wc.lpszMenuName  = 0;
-    wc.lpszClassName = WINDOW_CLASS_NAME;
+	WNDCLASS wc = {
+		.style         = 0,
+		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
+		.cbClsExtra    = 0,
+		.cbWndExtra    = 0,
+		.hInstance     = glw_state.hInstance,
+		.hIcon         = 0,
+		.hCursor       = LoadCursor (NULL,IDC_ARROW),
+		.hbrBackground = (void *)COLOR_GRAYTEXT,
+		.lpszMenuName  = 0,
+		.lpszClassName = WINDOW_CLASS_NAME,
+	};
 
-    if (!RegisterClass (&wc) )
-		ri.Sys_Error (ERR_FATAL, "Couldn't register window class");
+	ATOM register_class_result = RegisterClass(&wc);
+    assert(register_class_result);
 
 	if (fullscreen)
 	{
@@ -94864,8 +94568,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		 glw_state.hInstance,
 		 NULL);
 
-	if (!glw_state.hWnd)
-		ri.Sys_Error (ERR_FATAL, "Couldn't create window");
+	assert(glw_state.hWnd);
 
 	ShowWindow( glw_state.hWnd, SW_SHOW );
 	UpdateWindow( glw_state.hWnd );
@@ -95265,24 +94968,12 @@ void GLimp_BeginFrame( float camera_separation )
 	}
 }
 
-/*
-** GLimp_EndFrame
-**
-** Responsible for doing a swapbuffers and possibly for other stuff
-** as yet to be determined.  Probably better not to make this a GLimp
-** function and instead do a call to GLimp_SwapBuffers.
-*/
-void GLimp_EndFrame (void)
-{
-	int		err;
-
-	err = qglGetError();
-	assert( err == GL_NO_ERROR );
-
-	if ( _stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0 )
-	{
-		if ( !qwglSwapBuffers( glw_state.hDC ) )
-			ri.Sys_Error( ERR_FATAL, "GLimp_EndFrame() - SwapBuffers() failed!\n" );
+static void GLimp_EndFrame() {
+	int err = qglGetError();
+	assert(err == GL_NO_ERROR);
+	if (_stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0) {
+		BOOL swap_buffers_result = qwglSwapBuffers(glw_state.hDC);
+		assert(swap_buffers_result);
 	}
 }
 
