@@ -1347,7 +1347,6 @@ static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
 static char	*Sys_FindNext(unsigned musthave, unsigned canthave);
 static void	Sys_FindClose();
 
-static char* FS_Gamedir();
 static void FS_SetGamedir(char* dir);
 
 static char* FS_NextPath(char* prevpath);
@@ -1574,16 +1573,13 @@ static struct {
 // SECTION Con (console)
 //
 
-#define	NUM_CON_TIMES 4
-#define CON_TEXTSIZE 32768
-
 #define	PRINT_MEDIUM	1	// death messages
 #define	PRINT_HIGH		2	// critical messages
 #define	PRINT_CHAT		3	// chat messages
 
 static struct {
 	qboolean	initialized;
-	char		text[CON_TEXTSIZE];
+	char		text[32768];
 	int			current;		// line where next message will be printed
 	int			x;				// offset in current line for next print
 	int			display;		// bottom of console displays this line
@@ -1592,7 +1588,7 @@ static struct {
 	int			totallines;		// total lines in console scrollback
 	float		cursorspeed;
 	int			vislines;
-	float		times[NUM_CON_TIMES];	// cls.realtime time the line was generated
+	float		line_timestamps[4];	// cls.realtime time the line was generated
 } con;
 
 // Handles cursor positioning, line wrapping, etc
@@ -1647,7 +1643,8 @@ static void Con_Print(char *txt) {
 
 			// mark time for transparent overlay
 			if (con.current >= 0) {
-				con.times[con.current % NUM_CON_TIMES] = cls.realtime;
+				int timestamp_index = con.current % (int)carray_count(con.line_timestamps);
+				con.line_timestamps[timestamp_index] = cls.realtime;
 			}
 		}
 
@@ -1725,6 +1722,8 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	strncpy(dest, bigbuffer, size - 1);
 }
 
+char fs_gamedir[MAX_OSPATH];
+
 // Both client and server can use this, and it will output to the apropriate place.
 static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
@@ -1749,7 +1748,7 @@ static void Com_Printf(char *fmt, ...) {
 		char name[MAX_QPATH];
 
 		if (!logfile) {
-			Com_sprintf(name, sizeof(name), "%s/qconsole.log", FS_Gamedir());
+			Com_sprintf(name, sizeof(name), "%s/qconsole.log", fs_gamedir);
 			logfile = fopen (name, "w");
 		}
 
@@ -7638,7 +7637,7 @@ typedef struct pack_s
 	packfile_t	*files;
 } pack_t;
 
-char	fs_gamedir[MAX_OSPATH];
+
 cvar_t	*fs_basedir;
 cvar_t	*fs_gamedirvar;
 
@@ -7970,23 +7969,6 @@ void FS_AddGameDirectory (char *dir)
 
 }
 
-/*
-============
-FS_Gamedir
-
-Called to find where to write a file (demos, savegames, etc)
-============
-*/
-char *FS_Gamedir (void)
-{
-	return fs_gamedir;
-}
-
-/*
-=============
-FS_ExecAutoexec
-=============
-*/
 void FS_ExecAutoexec (void)
 {
 	char *dir;
@@ -10607,22 +10589,7 @@ qboolean SV_SetPlayer (void)
 	return false;
 }
 
-
-/*
-===============================================================================
-
-SAVEGAME FILES
-
-===============================================================================
-*/
-
-/*
-=====================
-SV_WipeSavegame
-
-Delete save/<XXX>/
-=====================
-*/
+// Delete save/<XXX>/
 void SV_WipeSavegame (char *savename)
 {
 	char	name[MAX_OSPATH];
@@ -10630,12 +10597,12 @@ void SV_WipeSavegame (char *savename)
 
 	Com_DPrintf("SV_WipeSaveGame(%s)\n", savename);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", FS_Gamedir (), savename);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, savename);
 	remove (name);
-	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", FS_Gamedir (), savename);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", fs_gamedir, savename);
 	remove (name);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", FS_Gamedir (), savename);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", fs_gamedir, savename);
 	s = Sys_FindFirst( name, 0, 0 );
 	while (s)
 	{
@@ -10643,7 +10610,7 @@ void SV_WipeSavegame (char *savename)
 		s = Sys_FindNext( 0, 0 );
 	}
 	Sys_FindClose ();
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sv2", FS_Gamedir (), savename);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sv2", fs_gamedir, savename);
 	s = Sys_FindFirst(name, 0, 0 );
 	while (s)
 	{
@@ -10706,24 +10673,24 @@ void SV_CopySaveGame (char *src, char *dst)
 	SV_WipeSavegame (dst);
 
 	// copy the savegame over
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", FS_Gamedir(), src);
-	Com_sprintf (name2, sizeof(name2), "%s/save/%s/server.ssv", FS_Gamedir(), dst);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, src);
+	Com_sprintf (name2, sizeof(name2), "%s/save/%s/server.ssv", fs_gamedir, dst);
 	FS_CreatePath (name2);
 	CopyFile (name, name2);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", FS_Gamedir(), src);
-	Com_sprintf (name2, sizeof(name2), "%s/save/%s/game.ssv", FS_Gamedir(), dst);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", fs_gamedir, src);
+	Com_sprintf (name2, sizeof(name2), "%s/save/%s/game.ssv", fs_gamedir, dst);
 	CopyFile (name, name2);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/", FS_Gamedir(), src);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/", fs_gamedir, src);
 	len = strlen(name);
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", FS_Gamedir(), src);
+	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", fs_gamedir, src);
 	found = Sys_FindFirst(name, 0, 0 );
 	while (found)
 	{
 		strcpy (name+len, found+len);
 
-		Com_sprintf (name2, sizeof(name2), "%s/save/%s/%s", FS_Gamedir(), dst, found+len);
+		Com_sprintf (name2, sizeof(name2), "%s/save/%s/%s", fs_gamedir, dst, found+len);
 		CopyFile (name, name2);
 
 		// change sav to sv2
@@ -10752,7 +10719,7 @@ void SV_WriteLevelFile (void)
 
 	Com_DPrintf("SV_WriteLevelFile()\n");
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", FS_Gamedir(), sv.name);
+	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
 	f = fopen(name, "wb");
 	if (!f)
 	{
@@ -10763,7 +10730,7 @@ void SV_WriteLevelFile (void)
 	CM_WritePortalState (f);
 	fclose (f);
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", FS_Gamedir(), sv.name);
+	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
 	ge->WriteLevel (name);
 }
 
@@ -10780,7 +10747,7 @@ void SV_ReadLevelFile (void)
 
 	Com_DPrintf("SV_ReadLevelFile()\n");
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", FS_Gamedir(), sv.name);
+	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
 	f = fopen(name, "rb");
 	if (!f)
 	{
@@ -10792,7 +10759,7 @@ void SV_ReadLevelFile (void)
 	FloodAreaConnections();
 	fclose (f);
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", FS_Gamedir(), sv.name);
+	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
 	ge->ReadLevel (name);
 }
 
@@ -10813,7 +10780,7 @@ void SV_WriteServerFile (qboolean autosave)
 
 	Com_DPrintf("SV_WriteServerFile(%s)\n", autosave ? "true" : "false");
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", FS_Gamedir());
+	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", fs_gamedir);
 	f = fopen (name, "wb");
 	if (!f)
 	{
@@ -10865,7 +10832,7 @@ void SV_WriteServerFile (qboolean autosave)
 	fclose (f);
 
 	// write game state
-	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", FS_Gamedir());
+	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
 	ge->WriteGame (name, autosave);
 }
 
@@ -10876,7 +10843,7 @@ void SV_ReadServerFile (void)
 	char	comment[32];
 	char	mapcmd[MAX_TOKEN_CHARS];
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", FS_Gamedir());
+	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", fs_gamedir);
 	f = fopen (name, "rb");
 	if (!f)
 	{
@@ -10908,7 +10875,7 @@ void SV_ReadServerFile (void)
 	strcpy (svs.mapcmd, mapcmd);
 
 	// read game state
-	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", FS_Gamedir());
+	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
 	ge->ReadGame (name);
 }
 
@@ -10963,7 +10930,7 @@ void SV_GameMap_f (void)
 
 	Com_DPrintf("SV_GameMap(%s)\n", Cmd_Argv(1));
 
-	FS_CreatePath (va("%s/save/current/", FS_Gamedir()));
+	FS_CreatePath (va("%s/save/current/", fs_gamedir));
 
 	// check for clearing the current savegame
 	map = Cmd_Argv(1);
@@ -11059,7 +11026,7 @@ void SV_Loadgame_f (void)
 	}
 
 	// make sure the server.ssv file exists
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", FS_Gamedir(), Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, Cmd_Argv(1));
 	f = fopen (name, "rb");
 	if (!f)
 	{
@@ -11355,7 +11322,7 @@ void SV_ServerRecord_f (void)
 	//
 	// open the demo file
 	//
-	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", FS_Gamedir(), Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", fs_gamedir, Cmd_Argv(1));
 
 	Com_Printf ("recording to %s.\n", name);
 	FS_CreatePath (name);
@@ -12588,7 +12555,7 @@ void SV_CheckForSavegame (void)
 	if (Cvar_VariableValue ("deathmatch"))
 		return;
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", FS_Gamedir(), sv.name);
+	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
 	f = fopen (name, "rb");
 	if (!f)
 		return;		// no savegame
@@ -15783,10 +15750,6 @@ typedef struct
 	int		(*FS_LoadFile) (char *name, void **buf);
 	void	(*FS_FreeFile) (void *buf);
 
-	// gamedir will be the current directory that generated
-	// files should be stored to, ie: "f:\quake\id1"
-	char	*(*FS_Gamedir) (void);
-
 	cvar_t	*(*Cvar_Get) (char *name, char *value, int flags);
 	cvar_t	*(*Cvar_Set)( char *name, char *value );
 	void	 (*Cvar_SetValue)( char *name, float value );
@@ -16060,7 +16023,6 @@ void Con_Print (char *txt);
 void Con_CenteredPrint (char *text);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
-void Con_ClearNotify (void);
 void Con_ToggleConsole_f (void);
 
 
@@ -17047,14 +17009,7 @@ void SCR_RunCinematic (void)
 	}
 }
 
-/*
-==================
-SCR_DrawCinematic
-
-Returns true if a cinematic is active, meaning the view rendering
-should be skipped
-==================
-*/
+// Returns true if a cinematic is active, meaning the view rendering should be skipped
 qboolean SCR_DrawCinematic (void)
 {
 	if (cl.cinematictime <= 0)
@@ -17084,9 +17039,15 @@ qboolean SCR_DrawCinematic (void)
 	return true;
 }
 
+static void console_reset_line_timestamps() {
+	for (int i = 0; i < (int)carray_count(con.line_timestamps); i++) {
+		con.line_timestamps[i] = 0;
+	}
+}
+
 static void SCR_EndLoadingPlaque() {
 	cls.disable_screen = 0;
-	Con_ClearNotify();
+	console_reset_line_timestamps();
 }
 
 void SCR_PlayCinematic (char *arg)
@@ -21722,7 +21683,7 @@ void CL_Record_f (void)
 	//
 	// open the demo file
 	//
-	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", FS_Gamedir(), Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", fs_gamedir, Cmd_Argv(1));
 
 	Com_Printf ("recording to %s.\n", name);
 	FS_CreatePath (name);
@@ -23023,7 +22984,7 @@ static void CL_WriteConfiguration() {
 	}
 
 	char path[MAX_QPATH];
-	Com_sprintf(path, sizeof(path),"%s/config.cfg", FS_Gamedir());
+	Com_sprintf(path, sizeof(path),"%s/config.cfg", fs_gamedir);
 
 	{
 		FILE* f = fopen(path, "w");
@@ -24459,7 +24420,7 @@ void CL_DownloadFileName(char *dest, int destlen, char *fn)
 	if (strncmp(fn, "players", 7) == 0)
 		Com_sprintf (dest, destlen, "%s/%s", BASEDIRNAME, fn);
 	else
-		Com_sprintf (dest, destlen, "%s/%s", FS_Gamedir(), fn);
+		Com_sprintf (dest, destlen, "%s/%s", fs_gamedir, fn);
 }
 
 /*
@@ -25573,28 +25534,13 @@ void SCR_DrawDebugGraph (void)
 	}
 }
 
-/*
-===============================================================================
-
-CENTER PRINTING
-
-===============================================================================
-*/
-
 char		scr_centerstring[1024];
 float		scr_centertime_start;	// for slow victory printing
 float		scr_centertime_off;
 int			scr_center_lines;
 int			scr_erase_center;
 
-/*
-==============
-SCR_CenterPrint
-
-Called for important messages that should stay in the center of the screen
-for a few moments
-==============
-*/
+// Called for important messages that should stay in the center of the screen for a few moments
 void SCR_CenterPrint (char *str)
 {
 	char	*s;
@@ -25646,7 +25592,7 @@ void SCR_CenterPrint (char *str)
 		s++;		// skip the \n
 	} while (1);
 	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-	Con_ClearNotify ();
+	console_reset_line_timestamps ();
 }
 
 
@@ -25886,7 +25832,50 @@ void SCR_RunConsole (void)
 
 }
 
-void Con_CheckResize (void);
+// If the line width has changed, reformat the buffer.
+static void Con_CheckResize() {
+	int width = (viddef.width >> 3) - 2;
+
+	if (width == con.linewidth) {
+		return;
+	}
+
+	int con_textsize = carray_count(con.text);
+
+	// video hasn't been initialized yet
+	if (width < 1) {
+		con.linewidth = 38;
+		con.totallines = con_textsize / con.linewidth;
+		memset(con.text, ' ', con_textsize);
+	} else {
+		int oldwidth = con.linewidth;
+		con.linewidth = width;
+
+		int oldtotallines = con.totallines;
+		con.totallines = con_textsize / con.linewidth;
+
+		int numlines = min(con.totallines, oldtotallines);
+		int numchars = min(con.linewidth, oldwidth);
+
+		// NOTE: save and clear
+		char tbuf[con_textsize] = {};
+		memcpy(tbuf, con.text, con_textsize);
+		memset(con.text, ' ', con_textsize);
+
+		// NOTE: copy back
+		for (int i = 0; i < numlines; i++) {
+			for (int j = 0; j < numchars; j++) {
+				con.text[(con.totallines - 1 - i) * con.linewidth + j] = tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
+			}
+		}
+
+		console_reset_line_timestamps();
+	}
+
+	con.current = con.totallines - 1;
+	con.display = con.current;
+}
+
 void SCR_DrawConsole (void)
 {
 	Con_CheckResize ();
@@ -26587,13 +26576,6 @@ void SCR_DrawStats (void)
 	SCR_ExecuteLayoutString (cl.configstrings[CS_STATUSBAR]);
 }
 
-
-/*
-================
-SCR_DrawLayout
-
-================
-*/
 #define	STAT_LAYOUTS		13
 
 void SCR_DrawLayout (void)
@@ -26603,16 +26585,13 @@ void SCR_DrawLayout (void)
 	SCR_ExecuteLayoutString (cl.layout);
 }
 
-//=======================================================
-
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 static void SCR_UpdateScreen() {
 	int numframes;
 	int i;
 	float separation[2] = { 0, 0 };
 
-	// if the screen is disabled (loading plaque is up, or vid mode changing)
-	// do nothing at all
+	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
 	if (cls.disable_screen)
 	{
 		if (Sys_Milliseconds() - cls.disable_screen > 120000)
@@ -26626,10 +26605,7 @@ static void SCR_UpdateScreen() {
 	if (!scr_initialized || !con.initialized)
 		return;				// not initialized yet
 
-	/*
-	** range check cl_camera_separation so we don't inadvertently fry someone's
-	** brain
-	*/
+	// range check cl_camera_separation so we don't inadvertently fry someone's brain
 	if ( cl_stereo_separation->value > 1.0 )
 		COM_SetValueCvar( "cl_stereo_separation", 1.0 );
 	else if ( cl_stereo_separation->value < 0 )
@@ -26660,11 +26636,8 @@ static void SCR_UpdateScreen() {
 			scr_draw_loading = false;
 			re.DrawGetPicSize (&w, &h, "loading");
 			re.DrawPic ((viddef.width-w)/2, (viddef.height-h)/2, "loading");
-//			re.EndFrame();
-//			return;
 		}
-		// if a cinematic is supposed to be running, handle menus
-		// and console specially
+		// if a cinematic is supposed to be running, handle menus and console specially
 		else if (cl.cinematictime > 0)
 		{
 			if (cls.key_dest == key_menu)
@@ -26675,8 +26648,6 @@ static void SCR_UpdateScreen() {
 					cl.cinematicpalette_active = false;
 				}
 				M_Draw ();
-//				re.EndFrame();
-//				return;
 			}
 			else if (cls.key_dest == key_console)
 			{
@@ -26686,14 +26657,10 @@ static void SCR_UpdateScreen() {
 					cl.cinematicpalette_active = false;
 				}
 				SCR_DrawConsole ();
-//				re.EndFrame();
-//				return;
 			}
 			else
 			{
 				SCR_DrawCinematic();
-//				re.EndFrame();
-//				return;
 			}
 		}
 		else
@@ -26740,12 +26707,6 @@ static void SCR_UpdateScreen() {
 	}
 	re.EndFrame();
 }
-/* ============ end source: client/cl_scrn.c ============ */
-/* ============ begin source: client/cl_tent.c ============ */
-
-// cl_tent.c -- client side temporary entities
-
-/* already inlined above: client/client.h */
 
 typedef enum
 {
@@ -28789,7 +28750,7 @@ static void CL_PrepRefresh() {
 	re.EndRegistration ();
 
 	// clear any lines of console text
-	Con_ClearNotify ();
+	console_reset_line_timestamps ();
 
 	SCR_UpdateScreen ();
 	cl.refresh_prepped = true;
@@ -29065,7 +29026,7 @@ void Con_ToggleConsole_f (void)
 	}
 
 	Key_ClearTyping ();
-	Con_ClearNotify ();
+	console_reset_line_timestamps ();
 
 	if (cls.key_dest == key_console)
 	{
@@ -29103,19 +29064,12 @@ void Con_ToggleChat_f (void)
 	else
 		cls.key_dest = key_console;
 
-	Con_ClearNotify ();
+	console_reset_line_timestamps ();
 }
 
-/*
-================
-Con_Clear_f
-================
-*/
-void Con_Clear_f (void)
-{
-	memset (con.text, ' ', CON_TEXTSIZE);
+static void Con_Clear_f() {
+	memset(con.text, ' ', carray_count(con.text));
 }
-
 
 /*
 ================
@@ -29138,7 +29092,7 @@ void Con_Dump_f (void)
 		return;
 	}
 
-	Com_sprintf (name, sizeof(name), "%s/%s.txt", FS_Gamedir(), Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "%s/%s.txt", fs_gamedir, Cmd_Argv(1));
 
 	Com_Printf ("Dumped console text to %s.\n", name);
 	FS_CreatePath (name);
@@ -29182,26 +29136,6 @@ void Con_Dump_f (void)
 	fclose (f);
 }
 
-
-/*
-================
-Con_ClearNotify
-================
-*/
-void Con_ClearNotify (void)
-{
-	int		i;
-
-	for (i=0 ; i<NUM_CON_TIMES ; i++)
-		con.times[i] = 0;
-}
-
-
-/*
-================
-Con_MessageMode_f
-================
-*/
 void Con_MessageMode_f (void)
 {
 	chat_team = false;
@@ -29217,60 +29151,6 @@ void Con_MessageMode2_f (void)
 {
 	chat_team = true;
 	cls.key_dest = key_message;
-}
-
-// If the line width has changed, reformat the buffer.
-void Con_CheckResize (void)
-{
-	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
-	char	tbuf[CON_TEXTSIZE];
-
-	width = (viddef.width >> 3) - 2;
-
-	if (width == con.linewidth)
-		return;
-
-	if (width < 1)			// video hasn't been initialized yet
-	{
-		width = 38;
-		con.linewidth = width;
-		con.totallines = CON_TEXTSIZE / con.linewidth;
-		memset (con.text, ' ', CON_TEXTSIZE);
-	}
-	else
-	{
-		oldwidth = con.linewidth;
-		con.linewidth = width;
-		oldtotallines = con.totallines;
-		con.totallines = CON_TEXTSIZE / con.linewidth;
-		numlines = oldtotallines;
-
-		if (con.totallines < numlines)
-			numlines = con.totallines;
-
-		numchars = oldwidth;
-
-		if (con.linewidth < numchars)
-			numchars = con.linewidth;
-
-		memcpy (tbuf, con.text, CON_TEXTSIZE);
-		memset (con.text, ' ', CON_TEXTSIZE);
-
-		for (i=0 ; i<numlines ; i++)
-		{
-			for (j=0 ; j<numchars ; j++)
-			{
-				con.text[(con.totallines - 1 - i) * con.linewidth + j] =
-						tbuf[((con.current - i + oldtotallines) %
-							  oldtotallines) * oldwidth + j];
-			}
-		}
-
-		Con_ClearNotify ();
-	}
-
-	con.current = con.totallines - 1;
-	con.display = con.current;
 }
 
 /*
@@ -29358,11 +29238,11 @@ void Con_DrawNotify (void)
 	int		skip;
 
 	v = 0;
-	for (i= con.current-NUM_CON_TIMES+1 ; i<=con.current ; i++)
+	for (i= con.current-(int)carray_count(con.line_timestamps)+1 ; i<=con.current ; i++)
 	{
 		if (i < 0)
 			continue;
-		time = con.times[i % NUM_CON_TIMES];
+		time = con.line_timestamps[i % (int)carray_count(con.line_timestamps)];
 		if (time == 0)
 			continue;
 		time = cls.realtime - time;
@@ -31662,7 +31542,7 @@ static void ConsoleFunc(void* unused)
 	}
 
 	Key_ClearTyping ();
-	Con_ClearNotify ();
+	console_reset_line_timestamps ();
 
 	M_ForceMenuOff ();
 	cls.key_dest = key_console;
@@ -32526,7 +32406,7 @@ void Create_Savestrings (void)
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 	{
-		Com_sprintf (name, sizeof(name), "%s/save/save%i/server.ssv", FS_Gamedir(), i);
+		Com_sprintf (name, sizeof(name), "%s/save/save%i/server.ssv", fs_gamedir, i);
 		f = fopen (name, "rb");
 		if (!f)
 		{
@@ -32998,7 +32878,7 @@ void StartServer_MenuInit( void )
 	/*
 	** load the list of map names
 	*/
-	Com_sprintf( mapsname, sizeof( mapsname ), "%s/maps.lst", FS_Gamedir() );
+	Com_sprintf( mapsname, sizeof( mapsname ), "%s/maps.lst", fs_gamedir );
 	if ( ( fp = fopen( mapsname, "rb" ) ) == 0 )
 	{
 		length = FS_LoadFile( "maps.lst", ( void ** ) &buffer );
@@ -87914,21 +87794,7 @@ void R_InitParticleTexture (void)
 	r_notexture = GL_LoadPic ("***r_notexture***", (byte *)data, 8, 8, it_wall, 32);
 }
 
-
-/*
-==============================================================================
-
-						SCREEN SHOTS
-
-==============================================================================
-*/
-
-/*
-==================
-GL_ScreenShot_f
-==================
-*/
-void GL_ScreenShot_f (void)
+void GL_ScreenShot_f(void)
 {
 	byte		*buffer;
 	char		picname[80];
@@ -87937,19 +87803,17 @@ void GL_ScreenShot_f (void)
 	FILE		*f;
 
 	// create the scrnshots directory if it doesn't exist
-	Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot", ri.FS_Gamedir());
-	Sys_Mkdir (checkname);
+	Com_sprintf(checkname, sizeof(checkname), "%s/scrnshot", fs_gamedir);
+	Sys_Mkdir(checkname);
 
-//
-// find a file name to save it to
-//
+	// find a file name to save it to
 	strcpy(picname,"quake00.tga");
 
 	for (i=0 ; i<=99 ; i++)
 	{
 		picname[5] = i/10 + '0';
 		picname[6] = i%10 + '0';
-		Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot/%s", ri.FS_Gamedir(), picname);
+		Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot/%s", fs_gamedir, picname);
 		f = fopen (checkname, "rb");
 		if (!f)
 			break;	// file doesn't exist
@@ -94049,7 +93913,6 @@ static void VID_CheckChanges() {
 			ri.Con_Printf = VID_Printf;
 			ri.FS_LoadFile = FS_LoadFile;
 			ri.FS_FreeFile = FS_FreeFile;
-			ri.FS_Gamedir = FS_Gamedir;
 			ri.Cvar_Get = COM_GetCvar;
 			ri.Cvar_Set = COM_SetCvar;
 			ri.Cvar_SetValue = COM_SetValueCvar;
@@ -98332,7 +98195,7 @@ void GLimp_EnableLogging( qboolean enable )
 
 			asctime( newtime );
 
-			Com_sprintf( buffer, sizeof(buffer), "%s/gl.log", ri.FS_Gamedir() );
+			Com_sprintf( buffer, sizeof(buffer), "%s/gl.log", fs_gamedir );
 			glw_state.log_fp = fopen( buffer, "wt" );
 
 			fprintf( glw_state.log_fp, "%s\n", asctime( newtime ) );
@@ -99419,8 +99282,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		showtrace = COM_GetCvar("showtrace", "0", 0);
 
 		{
-			char* s = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
-			COM_GetCvar("version", s, CVAR_SERVERINFO|CVAR_NOSET);
+			char* version_text = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
+			COM_GetCvar("version", version_text, CVAR_SERVERINFO|CVAR_NOSET);
 		}
 
 		timeBeginPeriod(1);
@@ -99495,7 +99358,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
 			COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
 
-			SZ_Init (&net_message, net_message_buffer, sizeof(net_message_buffer));
+			SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
 		}
 
 		// NOTE: client init
