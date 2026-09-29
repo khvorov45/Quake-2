@@ -5515,8 +5515,6 @@ typedef struct
 	// they connect, and changes are sent to all connected clients.
 	void	(*configstring) (int num, char *string);
 
-	void	(*error) (char *fmt, ...);
-
 	// the *index functions create configstrings and some internal server state
 	int		(*modelindex) (char *name);
 	int		(*soundindex) (char *name);
@@ -12280,14 +12278,7 @@ void PF_dprintf (char *fmt, ...)
 	Com_Printf ("%s", msg);
 }
 
-
-/*
-===============
-PF_cprintf
-
-Print to a single client
-===============
-*/
+// Print to a single client
 void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 {
 	char		msg[1024];
@@ -12310,14 +12301,7 @@ void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 		Com_Printf ("%s", msg);
 }
 
-
-/*
-===============
-PF_centerprintf
-
-centerprint to a single client
-===============
-*/
+// centerprint to a single client
 void PF_centerprintf (edict_t *ent, char *fmt, ...)
 {
 	char		msg[1024];
@@ -12337,27 +12321,7 @@ void PF_centerprintf (edict_t *ent, char *fmt, ...)
 	PF_Unicast (ent, true);
 }
 
-// Abort the server with a game error
-void PF_error (char *fmt, ...)
-{
-	char		msg[1024];
-	va_list		argptr;
-
-	va_start (argptr,fmt);
-	vsprintf (msg, fmt, argptr);
-	va_end (argptr);
-
-	Com_Error (ERR_DROP, "Game Error: %s", msg);
-}
-
-
-/*
-=================
-PF_setmodel
-
-Also sets mins and maxs for inline bmodels
-=================
-*/
+// Also sets mins and maxs for inline bmodels
 void PF_setmodel (edict_t *ent, char *name)
 {
 	int		i;
@@ -12529,7 +12493,6 @@ void SV_InitGameProgs (void)
 	import.dprintf = PF_dprintf;
 	import.cprintf = PF_cprintf;
 	import.centerprintf = PF_centerprintf;
-	import.error = PF_error;
 
 	import.linkentity = SV_LinkEdict;
 	import.unlinkentity = SV_UnlinkEdict;
@@ -48632,7 +48595,7 @@ static void WriteField1(field_t *field, byte *base) {
 		break;
 
 	default:
-		gi.error ("WriteEdict: unknown field type");
+		assert(!"unreachable");
 	}
 }
 
@@ -48730,7 +48693,7 @@ void ReadField (FILE *f, field_t *field, byte *base)
 		break;
 
 	default:
-		gi.error ("ReadEdict: unknown field type");
+		assert(!"unreachable");
 	}
 }
 
@@ -48810,8 +48773,7 @@ void WriteGame (char *filename, qboolean autosave)
 		SaveClientData ();
 
 	f = fopen (filename, "wb");
-	if (!f)
-		gi.error ("Couldn't open %s", filename);
+	assert(f);
 
 	memset (str, 0, sizeof(str));
 	strcpy (str, __DATE__);
@@ -48836,15 +48798,10 @@ void ReadGame (char *filename)
 	gi.FreeTags (TAG_GAME);
 
 	f = fopen (filename, "rb");
-	if (!f)
-		gi.error ("Couldn't open %s", filename);
+	assert(f);
 
 	fread (str, sizeof(str), 1, f);
-	if (strcmp (str, __DATE__))
-	{
-		fclose (f);
-		gi.error ("Savegame from an older version.\n");
-	}
+	assert(!strcmp(str, __DATE__));
 
 	g_edicts =  gi.TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 	globals.edicts = g_edicts;
@@ -48976,8 +48933,7 @@ void WriteLevel (char *filename)
 	void	*base;
 
 	f = fopen (filename, "wb");
-	if (!f)
-		gi.error ("Couldn't open %s", filename);
+	assert(f);
 
 	// write out edict size for checking
 	i = sizeof(edict_t);
@@ -49031,8 +48987,7 @@ void ReadLevel (char *filename)
 	edict_t	*ent;
 
 	f = fopen (filename, "rb");
-	if (!f)
-		gi.error ("Couldn't open %s", filename);
+	assert(f);
 
 	// free any dynamic memory allocated by loading the level
 	// base state
@@ -49044,23 +48999,11 @@ void ReadLevel (char *filename)
 
 	// check edict size
 	fread (&i, sizeof(i), 1, f);
-	if (i != sizeof(edict_t))
-	{
-		fclose (f);
-		gi.error ("ReadLevel: mismatched edict size");
-	}
+	assert(i == sizeof(edict_t));
 
 	// check function pointer base address
 	fread (&base, sizeof(base), 1, f);
-#ifdef _WIN32
-	if (base != (void *)InitGame)
-	{
-		fclose (f);
-		gi.error ("ReadLevel: function pointers have moved");
-	}
-#else
-	gi.dprintf("Function offsets %d\n", ((byte *)base) - ((byte *)InitGame));
-#endif
+	assert(base == (void*)InitGame);
 
 	// load the level locals
 	ReadLevelLocals (f);
@@ -49068,11 +49011,9 @@ void ReadLevel (char *filename)
 	// load all the entities
 	while (1)
 	{
-		if (fread (&entnum, sizeof(entnum), 1, f) != 1)
-		{
-			fclose (f);
-			gi.error ("ReadLevel: failed to read entnum");
-		}
+		int fread_result = fread(&entnum, sizeof(entnum), 1, f);
+		assert(fread_result == 1);
+
 		if (entnum == -1)
 			break;
 		if (entnum >= globals.num_edicts)
@@ -49499,14 +49440,8 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 	gi.dprintf ("%s is not a field\n", key);
 }
 
-/*
-====================
-ED_ParseEdict
-
-Parses an edict out of the given string, returning the new position
-ed should be a properly initialized empty edict.
-====================
-*/
+// Parses an edict out of the given string, returning the new position
+// edict should be a properly initialized empty edict.
 char *ED_ParseEdict (char *data, edict_t *ent)
 {
 	qboolean	init;
@@ -49516,30 +49451,26 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 	init = false;
 	memset (&st, 0, sizeof(st));
 
-// go through all the dictionary pairs
+	// go through all the dictionary pairs
 	while (1)
 	{
-	// parse key
+		// parse key
 		com_token = COM_Parse (&data);
 		if (com_token[0] == '}')
 			break;
-		if (!data)
-			gi.error ("ED_ParseEntity: EOF without closing brace");
+		assert(data);
 
 		strncpy (keyname, com_token, sizeof(keyname)-1);
 
-	// parse value
+		// parse value
 		com_token = COM_Parse (&data);
-		if (!data)
-			gi.error ("ED_ParseEntity: EOF without closing brace");
-
-		if (com_token[0] == '}')
-			gi.error ("ED_ParseEntity: closing brace without data");
+		assert(data);
+		assert(com_token[0] != '}');
 
 		init = true;
 
-	// keynames with a leading underscore are used for utility comments,
-	// and are immediately discarded by quake
+		// keynames with a leading underscore are used for utility comments,
+		// and are immediately discarded by quake
 		if (keyname[0] == '_')
 			continue;
 
@@ -49653,8 +49584,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		com_token = COM_Parse (&entities);
 		if (!entities)
 			break;
-		if (com_token[0] != '{')
-			gi.error ("ED_LoadFromFile: found %s when expecting {",com_token);
+		assert(com_token[0] == '{');
 
 		if (!ent)
 			ent = g_edicts;
@@ -52584,8 +52514,7 @@ edict_t *G_Spawn (void)
 		}
 	}
 
-	if (i == game.maxentities)
-		gi.error ("ED_Alloc: no free edicts");
+	assert(i != game.maxentities);
 
 	globals.num_edicts++;
 	G_InitEdict (e);
@@ -76716,14 +76645,7 @@ edict_t *SelectCoopSpawnPoint (edict_t *ent)
 	return spot;
 }
 
-
-/*
-===========
-SelectSpawnPoint
-
-Chooses a player start, deathmatch start, coop start, etc
-============
-*/
+// Chooses a player start, deathmatch start, coop start, etc
 void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
 {
 	edict_t	*spot = NULL;
@@ -76754,8 +76676,7 @@ void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
 			{	// there wasn't a spawnpoint without a target, so use any
 				spot = G_Find (spot, FOFS(classname), "info_player_start");
 			}
-			if (!spot)
-				gi.error ("Couldn't find spawn point %s\n", game.spawnpoint);
+			assert(spot);
 		}
 	}
 
