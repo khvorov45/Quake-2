@@ -12327,8 +12327,7 @@ void PF_setmodel (edict_t *ent, char *name)
 	int		i;
 	cmodel_t	*mod;
 
-	if (!name)
-		Com_Error (ERR_DROP, "PF_setmodel: NULL");
+	assert(name);
 
 	i = SV_ModelIndex (name);
 
@@ -12346,16 +12345,9 @@ void PF_setmodel (edict_t *ent, char *name)
 
 }
 
-/*
-===============
-PF_Configstring
-
-===============
-*/
 void PF_Configstring (int index, char *val)
 {
-	if (index < 0 || index >= MAX_CONFIGSTRINGS)
-		Com_Error (ERR_DROP, "configstring: bad index %i\n", index);
+	assert(index >= 0 && index < MAX_CONFIGSTRINGS);
 
 	if (!val)
 		val = "";
@@ -12541,11 +12533,8 @@ void SV_InitGameProgs (void)
 
 	ge = (game_export_t *)Sys_GetGameAPI (&import);
 
-	if (!ge)
-		Com_Error (ERR_DROP, "failed to load game DLL");
-	if (ge->apiversion != GAME_API_VERSION)
-		Com_Error (ERR_DROP, "game is version %i, not %i", ge->apiversion,
-		GAME_API_VERSION);
+	assert(ge);
+	assert(ge->apiversion == GAME_API_VERSION);
 
 	ge->Init ();
 }
@@ -12579,8 +12568,7 @@ int SV_FindIndex (char *name, int start, int max, qboolean create)
 	if (!create)
 		return 0;
 
-	if (i == max)
-		Com_Error (ERR_DROP, "*Index: overflow");
+	assert((i != max));
 
 	strncpy (sv.configstrings[start+i], name, sizeof(sv.configstrings[i]));
 
@@ -14049,8 +14037,7 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 		break;
 
 	default:
-		mask = NULL;
-		Com_Error (ERR_FATAL, "SV_Multicast: bad to:%i", to);
+		assert(!"unreachable");
 	}
 
 	// send the data to all relevent clients
@@ -14119,17 +14106,9 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 	vec3_t		origin_v;
 	qboolean	use_phs;
 
-	if (volume < 0 || volume > 1.0)
-		Com_Error (ERR_FATAL, "SV_StartSound: volume = %f", volume);
-
-	if (attenuation < 0 || attenuation > 4)
-		Com_Error (ERR_FATAL, "SV_StartSound: attenuation = %f", attenuation);
-
-//	if (channel < 0 || channel > 15)
-//		Com_Error (ERR_FATAL, "SV_StartSound: channel = %i", channel);
-
-	if (timeofs < 0 || timeofs > 0.255)
-		Com_Error (ERR_FATAL, "SV_StartSound: timeofs = %f", timeofs);
+	assert(volume >= 0 && volume <= 1.0);
+	assert(attenuation >= 0 && attenuation <= 4);
+	assert(timeofs >= 0 && timeofs <= 0.255);
 
 	ent = NUM_FOR_EDICT(entity);
 
@@ -14356,8 +14335,8 @@ void SV_SendClientMessages (void)
 				SV_DemoCompleted ();
 				return;
 			}
-			if (msglen > MAX_MSGLEN)
-				Com_Error (ERR_DROP, "SV_SendClientMessages: msglen > MAX_MSGLEN");
+
+			assert(msglen <= MAX_MSGLEN);
 			r = fread (msgbuf, msglen, 1, sv.demofile);
 			if (r != 1)
 			{
@@ -14422,19 +14401,13 @@ sv_client and sv_player will be valid.
 ============================================================
 */
 
-/*
-==================
-SV_BeginDemoServer
-==================
-*/
 void SV_BeginDemoserver (void)
 {
 	char		name[MAX_OSPATH];
 
 	Com_sprintf (name, sizeof(name), "demos/%s", sv.name);
 	FS_FOpenFile (name, &sv.demofile);
-	if (!sv.demofile)
-		Com_Error (ERR_DROP, "Couldn't open %s\n", name);
+	assert(sv.demofile);
 }
 
 /*
@@ -15504,29 +15477,18 @@ typedef struct
 	int			contentmask;
 } moveclip_t;
 
-
-
-/*
-================
-SV_HullForEntity
-
-Returns a headnode that can be used for testing or clipping an
-object of mins/maxs size.
-Offset is filled in to contain the adjustment that must be added to the
-testing object's origin to get a point to use with the returned hull.
-================
-*/
+// Returns a headnode that can be used for testing or clipping an  object of mins/maxs size.
+// Offset is filled in to contain the adjustment that must be added to the
+// testing object's origin to get a point to use with the returned hull.
 int SV_HullForEntity (edict_t *ent)
 {
 	cmodel_t	*model;
 
-// decide which clipping hull to use, based on the size
+	// decide which clipping hull to use, based on the size
 	if (ent->solid == SOLID_BSP)
 	{	// explicit hulls in the BSP model
 		model = sv.models[ ent->s.modelindex ];
-
-		if (!model)
-			Com_Error (ERR_FATAL, "MOVETYPE_PUSH with a non bsp model");
+		assert(model);
 
 		return model->headnode;
 	}
@@ -16529,7 +16491,6 @@ extern	refexport_t	re;		// interface to refresh .dll
 
 void CL_FixUpGender(void);
 void CL_Disconnect (void);
-void CL_Disconnect_f (void);
 void CL_GetChallengePacket (void);
 void CL_PingServers_f (void);
 void CL_Snd_Restart_f (void);
@@ -17084,10 +17045,9 @@ byte *SCR_ReadNextFrame (void)
 	}
 
 	// decompress the next frame
-	FS_Read (&size, 4, cl.cinematic_file);
+	FS_Read(&size, 4, cl.cinematic_file);
 	size = LittleLong(size);
-	if (size > (int)sizeof(compressed) || size < 1)
-		Com_Error (ERR_DROP, "Bad compressed frame size");
+	assert(size >= 1 && size <= (int)sizeof(compressed));
 	FS_Read (compressed, size, cl.cinematic_file);
 
 	// read sound
@@ -17237,7 +17197,6 @@ void SCR_PlayCinematic (char *arg)
 	FS_FOpenFile (name, &cl.cinematic_file);
 	if (!cl.cinematic_file)
 	{
-//		Com_Error (ERR_DROP, "Cinematic %s not found.\n", name);
 		SCR_FinishCinematic ();
 		cl.cinematictime = 0;	// done
 		return;
@@ -17674,11 +17633,8 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 	while (1)
 	{
 		newnum = CL_ParseEntityBits ((unsigned*)&bits);
-		if (newnum >= MAX_EDICTS)
-			Com_Error (ERR_DROP,"CL_ParsePacketEntities: bad number:%i", newnum);
-
-		if (net_message.readcount > net_message.cursize)
-			Com_Error (ERR_DROP,"CL_ParsePacketEntities: end of message");
+		assert(newnum < MAX_EDICTS);
+		assert(net_message.readcount <= net_message.cursize);
 
 		if (!newnum)
 			break;
@@ -17990,15 +17946,13 @@ void CL_ParseFrame (void)
 	// read playerinfo
 	cmd = MSG_ReadByte (&net_message);
 	SHOWNET(svc_strings[cmd]);
-	if (cmd != svc_playerinfo)
-		Com_Error (ERR_DROP, "CL_ParseFrame: not playerinfo");
+	assert(cmd == svc_playerinfo);
 	CL_ParsePlayerstate (old, &cl.frame);
 
 	// read packet entities
 	cmd = MSG_ReadByte (&net_message);
 	SHOWNET(svc_strings[cmd]);
-	if (cmd != svc_packetentities)
-		Com_Error (ERR_DROP, "CL_ParseFrame: not packetentities");
+	assert(cmd == svc_packetentities);
 	CL_ParsePacketEntities (old, &cl.frame);
 
 #if 0
@@ -18739,32 +18693,19 @@ void CL_AddEntities (void)
 	CL_AddLightStyles ();
 }
 
-
-
-/*
-===============
-CL_GetEntitySoundOrigin
-
-Called to get the sound spatialization origin
-===============
-*/
+// Called to get the sound spatialization origin
 void CL_GetEntitySoundOrigin (int ent, vec3_t org)
 {
 	centity_t	*old;
 
-	if (ent < 0 || ent >= MAX_EDICTS)
-		Com_Error (ERR_DROP, "CL_GetEntitySoundOrigin: bad ent");
+	assert(ent >= 0 && ent < MAX_EDICTS);
 	old = &cl_entities[ent];
 	VectorCopy (old->lerp_origin, org);
 
 	// FIXME: bmodel issues...
 }
-/* ============ end source: client/cl_ents.c ============ */
-/* ============ begin source: client/cl_fx.c ============ */
 
 // cl_fx.c -- entity effects parsing and management
-
-/* already inlined above: client/client.h */
 
 void CL_LogoutEffect (vec3_t org, int type);
 void CL_ItemRespawnParticles (vec3_t org);
@@ -18842,8 +18783,7 @@ void CL_SetLightstyle (int i)
 	s = cl.configstrings[i+CS_LIGHTS];
 
 	j = strlen (s);
-	if (j >= MAX_QPATH)
-		Com_Error (ERR_DROP, "svc_lightstyle length=%i", j);
+	assert(j < MAX_QPATH);
 
 	cl_lightstyle[i].length = j;
 
@@ -18991,8 +18931,7 @@ void CL_ParseMuzzleFlash (void)
 	char		soundname[64];
 
 	i = MSG_ReadShort (&net_message);
-	if (i < 1 || i >= MAX_EDICTS)
-		Com_Error (ERR_DROP, "CL_ParseMuzzleFlash: bad entity");
+	assert(i >= 1 && i < MAX_EDICTS);
 
 	weapon = MSG_ReadByte (&net_message);
 	silenced = weapon & MZ_SILENCED;
@@ -19181,8 +19120,7 @@ void CL_ParseMuzzleFlash2 (void)
 	char		soundname[64];
 
 	ent = MSG_ReadShort (&net_message);
-	if (ent < 1 || ent >= MAX_EDICTS)
-		Com_Error (ERR_DROP, "CL_ParseMuzzleFlash2: bad entity");
+	assert(ent >= 1 && ent < MAX_EDICTS);
 
 	flash_number = MSG_ReadByte (&net_message);
 
@@ -22246,7 +22184,6 @@ void CL_ClearState (void)
 
 // Goes from a connected state to full screen console state
 // Sends a disconnect message to the server
-// This is also called on Com_Error, so it shouldn't cause any errors
 void CL_Disconnect() {
 	if (cls.state == ca_disconnected) {
 		return;
@@ -22286,10 +22223,6 @@ void CL_Disconnect() {
 	}
 
 	cls.state = ca_disconnected;
-}
-
-static void CL_Disconnect_f() {
-	Com_Error(ERR_DROP, "Disconnected from server");
 }
 
 /*
@@ -22929,14 +22862,8 @@ void CL_RequestNextDownload (void)
 
 	if (precache_check == ENV_CNT) {
 		precache_check = ENV_CNT + 1;
-
 		CM_LoadMap (cl.configstrings[CS_MODELS+1], true, &map_checksum);
-
-		if ((int)map_checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {
-			Com_Error (ERR_DROP, "Local map version differs from server: %i != '%s'\n",
-				map_checksum, cl.configstrings[CS_MAPCHECKSUM]);
-			return;
-		}
+		assert((int)map_checksum == atoi(cl.configstrings[CS_MAPCHECKSUM]));
 	}
 
 	if (precache_check > ENV_CNT && precache_check < TEXTURE_CNT) {
@@ -23118,7 +23045,6 @@ void CL_InitLocal (void)
 	Cmd_AddCommand ("snd_restart", CL_Snd_Restart_f);
 
 	Cmd_AddCommand ("changing", CL_Changing_f);
-	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("stop", CL_Stop_f);
 
@@ -23298,8 +23224,7 @@ static void VID_FreeReflib() {
 	reflib_active  = false;
 }
 
-// FIXME: this is a callback from Sys_Quit and Com_Error.  It would be better
-// to run quit through here before the final handoff to the sys code.
+// FIXME: remove
 static void CL_Shutdown() {
 	static qboolean isdown = false;
 
@@ -24834,20 +24759,6 @@ void CL_ParseDownload (void)
 	}
 }
 
-
-/*
-=====================================================================
-
-  SERVER CONNECTING MESSAGES
-
-=====================================================================
-*/
-
-/*
-==================
-CL_ParseServerData
-==================
-*/
 void CL_ParseServerData (void)
 {
 	extern cvar_t	*fs_gamedirvar;
@@ -24855,22 +24766,17 @@ void CL_ParseServerData (void)
 	int		i;
 
 	Com_DPrintf ("Serverdata packet received.\n");
-//
-// wipe the client_state_t struct
-//
+
+	// wipe the client_state_t struct
 	CL_ClearState ();
 	cls.state = ca_connected;
 
-// parse protocol version number
+	// parse protocol version number
 	i = MSG_ReadLong (&net_message);
 	cls.serverProtocol = i;
 
 	// BIG HACK to let demos from release work with the 3.0x patch!!!
-	if (Com_ServerState() && PROTOCOL_VERSION == 34)
-	{
-	}
-	else if (i != PROTOCOL_VERSION)
-		Com_Error (ERR_DROP,"Server returned version %i, not %i", i, PROTOCOL_VERSION);
+	assert((Com_ServerState() && PROTOCOL_VERSION == 34) || i == PROTOCOL_VERSION);
 
 	cl.servercount = MSG_ReadLong (&net_message);
 	cl.attractloop = MSG_ReadByte (&net_message);
@@ -24904,11 +24810,6 @@ void CL_ParseServerData (void)
 	}
 }
 
-/*
-==================
-CL_ParseBaseline
-==================
-*/
 void CL_ParseBaseline (void)
 {
 	entity_state_t	*es;
@@ -25063,20 +24964,14 @@ void CL_ParseClientinfo (int player)
 	CL_LoadClientinfo (ci, s);
 }
 
-
-/*
-================
-CL_ParseConfigString
-================
-*/
 void CL_ParseConfigString (void)
 {
 	int		i;
 	char	*s;
 
 	i = MSG_ReadShort (&net_message);
-	if (i < 0 || i >= MAX_CONFIGSTRINGS)
-		Com_Error (ERR_DROP, "configstring > MAX_CONFIGSTRINGS");
+	assert(i >= 0 && i < MAX_CONFIGSTRINGS);
+
 	s = MSG_ReadString(&net_message);
 	strcpy (cl.configstrings[i], s);
 
@@ -25161,8 +25056,7 @@ void CL_ParseStartSoundPacket(void)
 	{	// entity reletive
 		channel = MSG_ReadShort(&net_message);
 		ent = channel>>3;
-		if (ent > MAX_EDICTS)
-			Com_Error (ERR_DROP,"CL_ParseStartSoundPacket: ent = %i", ent);
+		assert(ent <= MAX_EDICTS);
 
 		channel &= 7;
 	}
@@ -25194,36 +25088,22 @@ void SHOWNET(char *s)
 		Com_Printf ("%3i:%s\n", net_message.readcount-1, s);
 }
 
-/*
-=====================
-CL_ParseServerMessage
-=====================
-*/
 void CL_ParseServerMessage (void)
 {
 	int			cmd;
 	char		*s;
 	int			i;
 
-//
-// if recording demos, copy the message out
-//
+	// if recording demos, copy the message out
 	if (cl_shownet->value == 1)
 		Com_Printf ("%i ",net_message.cursize);
 	else if (cl_shownet->value >= 2)
 		Com_Printf ("------------------\n");
 
 
-//
-// parse the message
-//
-	while (1)
-	{
-		if (net_message.readcount > net_message.cursize)
-		{
-			Com_Error (ERR_DROP,"CL_ParseServerMessage: Bad server message");
-			break;
-		}
+	// parse the message
+	for (;;) {
+		assert(net_message.readcount <= net_message.cursize);
 
 		cmd = MSG_ReadByte (&net_message);
 
@@ -25241,15 +25121,9 @@ void CL_ParseServerMessage (void)
 				SHOWNET(svc_strings[cmd]);
 		}
 
-	// other commands
-		switch (cmd)
-		{
-		default:
-			Com_Error (ERR_DROP,"CL_ParseServerMessage: Illegible server message\n");
-			break;
-
+		// other commands
+		switch (cmd) {
 		case svc_nop:
-//			Com_Printf ("svc_nop\n");
 			break;
 
 		case svc_disconnect:
@@ -25337,9 +25211,10 @@ void CL_ParseServerMessage (void)
 		case svc_playerinfo:
 		case svc_packetentities:
 		case svc_deltapacketentities:
-			Com_Error (ERR_DROP, "Out of place frame data");
-			break;
+		default:
+			assert(!"unreachable");
 		}
+
 	}
 
 	CL_AddNetgraph ();
@@ -26554,8 +26429,8 @@ void SCR_ExecuteLayoutString (char *s)
 		{	// draw a pic from a stat number
 			token = COM_Parse (&s);
 			value = cl.frame.playerstate.stats[atoi(token)];
-			if (value >= MAX_IMAGES)
-				Com_Error (ERR_DROP, "Pic >= MAX_IMAGES");
+			assert(value < MAX_IMAGES);
+
 			if (cl.configstrings[CS_IMAGES+value])
 			{
 				SCR_AddDirtyPoint (x, y);
@@ -26578,8 +26453,7 @@ void SCR_ExecuteLayoutString (char *s)
 
 			token = COM_Parse (&s);
 			value = atoi(token);
-			if (value >= MAX_CLIENTS || value < 0)
-				Com_Error (ERR_DROP, "client >= MAX_CLIENTS");
+			assert(value >= 0 && value < MAX_CLIENTS);
 			ci = &cl.clientinfo[value];
 
 			token = COM_Parse (&s);
@@ -26617,8 +26491,7 @@ void SCR_ExecuteLayoutString (char *s)
 
 			token = COM_Parse (&s);
 			value = atoi(token);
-			if (value >= MAX_CLIENTS || value < 0)
-				Com_Error (ERR_DROP, "client >= MAX_CLIENTS");
+			assert(value >= 0 && value < MAX_CLIENTS);
 			ci = &cl.clientinfo[value];
 
 			token = COM_Parse (&s);
@@ -26720,11 +26593,9 @@ void SCR_ExecuteLayoutString (char *s)
 		{
 			token = COM_Parse (&s);
 			index = atoi(token);
-			if (index < 0 || index >= MAX_CONFIGSTRINGS)
-				Com_Error (ERR_DROP, "Bad stat_string index");
+			assert(index >= 0 && index < MAX_CONFIGSTRINGS);
 			index = cl.frame.playerstate.stats[index];
-			if (index < 0 || index >= MAX_CONFIGSTRINGS)
-				Com_Error (ERR_DROP, "Bad stat_string index");
+			assert(index >= 0 && index < MAX_CONFIGSTRINGS);
 			DrawString (x, y, cl.configstrings[index]);
 			continue;
 		}
@@ -28119,11 +27990,8 @@ void CL_ParseTEnt (void)
 		MSG_ReadPos (&net_message, pos);
 		CL_WidowSplash (pos);
 		break;
-//PGM
-//==============
 
-	default:
-		Com_Error (ERR_DROP, "CL_ParseTEnt: bad type");
+	default: assert(!"unreachable");
 	}
 }
 
@@ -28791,8 +28659,7 @@ void V_AddLightStyle (int style, float r, float g, float b)
 {
 	lightstyle_t	*ls;
 
-	if (style < 0 || style > MAX_LIGHTSTYLES)
-		Com_Error (ERR_DROP, "Bad light style %i", style);
+	assert(style >= 0 && style < MAX_LIGHTSTYLES);
 	ls = &r_lightstyles[style];
 
 	ls->white = r+g+b;
@@ -29013,8 +28880,7 @@ float CalcFov (float fov_x, float width, float height)
 	float	a;
 	float	x;
 
-	if (fov_x < 1 || fov_x > 179)
-		Com_Error (ERR_DROP, "Bad fov: %f", fov_x);
+	assert(fov_x >= 1 && fov_x <= 179);
 
 	x = width/tan(fov_x/360*M_PI);
 
@@ -30491,8 +30357,7 @@ void Key_Event (int key, qboolean down, unsigned time)
 		case key_console:
 			M_Menu_Main_f ();
 			break;
-		default:
-			Com_Error (ERR_FATAL, "Bad cls.key_dest");
+		default: assert(!"unreachable");
 		}
 		return;
 	}
@@ -30581,8 +30446,7 @@ void Key_Event (int key, qboolean down, unsigned time)
 	case key_console:
 		Key_Console (key);
 		break;
-	default:
-		Com_Error (ERR_FATAL, "Bad cls.key_dest");
+	default: assert(!"unreachable");
 	}
 }
 
@@ -33211,8 +33075,8 @@ void StartServer_MenuInit( void )
 	Com_sprintf( mapsname, sizeof( mapsname ), "%s/maps.lst", FS_Gamedir() );
 	if ( ( fp = fopen( mapsname, "rb" ) ) == 0 )
 	{
-		if ( ( length = FS_LoadFile( "maps.lst", ( void ** ) &buffer ) ) == -1 )
-			Com_Error( ERR_DROP, "couldn't find maps.lst\n" );
+		length = FS_LoadFile( "maps.lst", ( void ** ) &buffer );
+		assert(length != -1);
 	}
 	else
 	{
@@ -33237,8 +33101,7 @@ void StartServer_MenuInit( void )
 		i++;
 	}
 
-	if ( nummaps == 0 )
-		Com_Error( ERR_DROP, "no maps in maps.lst\n" );
+	assert(nummaps != 0);
 
 	mapnames = malloc( sizeof( char * ) * ( nummaps + 1 ) );
 	memset( mapnames, 0, sizeof( char * ) * ( nummaps + 1 ) );
@@ -35430,7 +35293,7 @@ extern cvar_t	*s_mixahead;
 extern cvar_t	*s_testsound;
 extern cvar_t	*s_primary;
 
-wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength);
+wavinfo_t GetWavinfo (byte *wav, int wavlength);
 
 void S_InitScaletable (void);
 
@@ -35615,24 +35478,12 @@ void S_Shutdown(void)
 // Load a sound
 // =======================================================================
 
-/*
-==================
-S_FindName
-
-==================
-*/
 sfx_t *S_FindName (char *name, qboolean create)
 {
 	int		i;
 	sfx_t	*sfx;
 
-	if (!name)
-		Com_Error (ERR_FATAL, "S_FindName: NULL\n");
-	if (!name[0])
-		Com_Error (ERR_FATAL, "S_FindName: empty name\n");
-
-	if (strlen(name) >= MAX_QPATH)
-		Com_Error (ERR_FATAL, "Sound name too long: %s", name);
+	assert(name && name[0] && strlen(name) < MAX_QPATH);
 
 	// see if already loaded
 	for (i=0 ; i < num_sfx ; i++)
@@ -35652,8 +35503,7 @@ sfx_t *S_FindName (char *name, qboolean create)
 
 	if (i == num_sfx)
 	{
-		if (num_sfx == MAX_SFX)
-			Com_Error (ERR_FATAL, "S_FindName: out of sfx_t");
+		assert(num_sfx != MAX_SFX);
 		num_sfx++;
 	}
 
@@ -35688,8 +35538,7 @@ sfx_t *S_AliasName (char *aliasname, char *truename)
 
 	if (i == num_sfx)
 	{
-		if (num_sfx == MAX_SFX)
-			Com_Error (ERR_FATAL, "S_FindName: out of sfx_t");
+		assert(num_sfx != MAX_SFX);
 		num_sfx++;
 	}
 
@@ -35803,10 +35652,9 @@ channel_t *S_PickChannel(int entnum, int entchannel)
     int			life_left;
 	channel_t	*ch;
 
-	if (entchannel<0)
-		Com_Error (ERR_DROP, "S_PickChannel: entchannel<0");
+	assert(entchannel >= 0);
 
-// Check for replacement sound, or find the best one to replace
+	// Check for replacement sound, or find the best one to replace
     first_to_die = -1;
     life_left = 0x7fffffff;
     for (ch_idx=0 ; ch_idx < MAX_CHANNELS ; ch_idx++)
@@ -36754,7 +36602,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		return NULL;
 	}
 
-	info = GetWavinfo (s->name, data, size);
+	info = GetWavinfo (data, size);
 	if (info.channels != 1)
 	{
 		Com_Printf ("%s is a stereo sample\n",s->name);
@@ -36876,12 +36724,7 @@ void DumpChunks(void)
 	} while (data_p < iff_end);
 }
 
-/*
-============
-GetWavinfo
-============
-*/
-wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
+wavinfo_t GetWavinfo(byte *wav, int wavlength)
 {
 	wavinfo_t	info;
 	int     i;
@@ -36964,8 +36807,7 @@ wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
 
 	if (info.samples)
 	{
-		if (samples < info.samples)
-			Com_Error (ERR_DROP, "Sound %s has a bad loop length", name);
+		assert(samples >= info.samples);
 	}
 	else
 		info.samples = samples;
@@ -92357,11 +92199,7 @@ qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_messag
 		if (ret == -1)
 		{
 			err = WSAGetLastError();
-
-			if (err == WSAEWOULDBLOCK)
-				continue;
-			Com_Error (ERR_DROP, "NET_GetPacket: %s", NET_ErrorString());
-			continue;
+			assert(err == WSAEWOULDBLOCK);
 		}
 
 		SockadrToNetadr (&from, net_from);
@@ -92417,8 +92255,7 @@ void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
 		if (!net_socket)
 			return;
 	}
-	else
-		Com_Error (ERR_FATAL, "NET_SendPacket: bad address type");
+	else assert(!"unreachable");
 
 	NetadrToSockadr (&to, &addr);
 
@@ -92435,14 +92272,8 @@ void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
 		if ((err == WSAEADDRNOTAVAIL) && ((to.type == NA_BROADCAST) || (to.type == NA_BROADCAST_IPX)))
 			return;
 
-		if (err == WSAEADDRNOTAVAIL)
-		{
-			Com_DPrintf ("NET_SendPacket Warning: %s : %s\n", NET_ErrorString(), NET_AdrToString (to));
-		}
-		else
-		{
-			Com_Error (ERR_DROP, "NET_SendPacket ERROR: %s\n", NET_ErrorString());
-		}
+		assert(err == WSAEADDRNOTAVAIL);
+		Com_DPrintf ("NET_SendPacket Warning: %s : %s\n", NET_ErrorString(), NET_AdrToString (to));
 	}
 }
 
