@@ -5327,7 +5327,6 @@ void Sys_Quit (void);
 char* Sys_GetClipboardData( void );
 
 void CL_Drop (void);
-void CL_Shutdown (void);
 
 void SCR_BeginLoadingPlaque (void);
 
@@ -7388,6 +7387,7 @@ void Com_DPrintf (char *fmt, ...)
 // Both client and server can use this, and it will do the apropriate things.
 void Com_Quit (void) {
 	SV_Shutdown("Server quit\n", false);
+	void CL_Shutdown();
 	CL_Shutdown();
 
 	if (logfile)
@@ -15540,16 +15540,7 @@ typedef struct
 	particle_t	*particles;
 } refdef_t;
 
-#define	API_VERSION 3
-
-// these are the functions exported by the refresh module
 typedef struct {
-	// if api_version is different, the dll cannot be used
-	int api_version;
-
-	// called before the library is unloaded
-	void	(*Shutdown) (void);
-
 	// All data that will be used in a level should be
 	// registered before rendering any frames to prevent disk hits,
 	// but they can still be registered at a later time
@@ -16182,7 +16173,6 @@ void CL_ParseLayout (void);
 //
 // cl_main
 //
-extern	refexport_t	re;		// interface to refresh .dll
 
 void CL_FixUpGender(void);
 void CL_Disconnect (void);
@@ -16431,11 +16421,8 @@ void SCR_LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *h
 
 //=============================================================
 
-/*
-==================
-SCR_StopCinematic
-==================
-*/
+refexport_t	re;
+
 void SCR_StopCinematic (void)
 {
 	cl.cinematictime = 0;	// done
@@ -22923,7 +22910,8 @@ static void CL_Shutdown() {
 	IN_Shutdown();
 
 	if (reflib_active) {
-		re.Shutdown();
+		void R_Shutdown (void);
+		R_Shutdown();
 		VID_FreeReflib();
 	}
 }
@@ -34085,7 +34073,6 @@ static void	 SpinControl_DoSlide( menulist_s *s, int dir );
 #define RCOLUMN_OFFSET  16
 #define LCOLUMN_OFFSET -16
 
-extern refexport_t re;
 
 #define VID_WIDTH viddef.width
 #define VID_HEIGHT viddef.height
@@ -81052,8 +81039,6 @@ extern	int		registration_sequence;
 
 void V_AddBlend (float r, float g, float b, float a, float *v_blend);
 
-void	R_Shutdown( void );
-
 void R_RenderView (refdef_t *fd);
 void GL_ScreenShot_f (void);
 void R_DrawAliasModel (Entity *e);
@@ -87115,11 +87100,6 @@ static int R_Init(void* hinstance, void* hWnd) {
 	return true;
 }
 
-/*
-===============
-R_Shutdown
-===============
-*/
 void R_Shutdown (void)
 {
 	Cmd_RemoveCommand ("modellist");
@@ -93005,20 +92985,9 @@ void* Sys_GetGameAPI(void* parms) {
 	return GetGameAPI((game_import_t *)parms);
 }
 
-//=======================================================================
-
-/* ============ end source: win32/sys_win.c ============ */
-/* ============ begin source: win32/vid_dll.c ============ */
-
 // Main windowed and fullscreen graphics interface module. This module
 // is used for both the software and OpenGL rendering versions of the
 // Quake refresh engine.
-
-/* already inlined above: client/client.h */
-/* already inlined above: win32/winquake.h */
-
-// Structure containing functions exported from refresh DLL
-refexport_t	re;
 
 cvar_t *win_noalttab;
 
@@ -93451,12 +93420,11 @@ static void VID_CheckChanges() {
 
 		{
 			if (reflib_active) {
-				re.Shutdown();
+				R_Shutdown();
 				VID_FreeReflib();
 			}
 
 			re = (refexport_t){
-				.api_version = API_VERSION,
 				.BeginRegistration = R_BeginRegistration,
 				.RegisterModel = R_RegisterModel,
 				.RegisterSkin = R_RegisterSkin,
@@ -93472,14 +93440,12 @@ static void VID_CheckChanges() {
 				.DrawFill = Draw_Fill,
 				.DrawFadeScreen= Draw_FadeScreen,
 				.DrawStretchRaw = Draw_StretchRaw,
-				.Shutdown = R_Shutdown,
 				.CinematicSetPalette = R_SetPalette,
 				.BeginFrame = R_BeginFrame,
 				.EndFrame = GLimp_EndFrame,
 				.AppActivate = GLimp_AppActivate,
 			};
 
-			assert(re.api_version == API_VERSION);
 
 			int init_result = R_Init(global_hInstance, MainWndProc);
 			assert(init_result != -1);
