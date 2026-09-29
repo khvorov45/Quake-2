@@ -8,7 +8,6 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
-#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -19,6 +18,9 @@
 
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
 #define UNUSED(x) ((x)=(x))
+
+// NOTE: the do/while is here because it's the only thing I found that generates correct debug info
+#define assert(x) do {if (!(x)) __debugbreak();} while (0)
 
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
@@ -832,7 +834,6 @@ static void MSG_WriteByte (sizebuf_t* sb, int c) {
 }
 
 static void MSG_WriteShort(sizebuf_t* sb, int c) {
-	// assert(c >= ((short)0x8000) && c <= (short)0x7fff);
 	byte* buf = SZ_GetSpace(sb, 2);
 	buf[0] = c & 0xff;
 	buf[1] = c >> 8;
@@ -946,8 +947,7 @@ static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* c
 
 // Writes part of a packetentities message. Can delta from either a baseline or a previous packet_entity
 static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, qboolean force, qboolean newentity) {
-	assert(to->number);
-	assert(to->number < MAX_EDICTS);
+	assert(to->number > 0 && to->number < MAX_EDICTS);
 
 	// send an update
 	int bits = 0;
@@ -1714,17 +1714,18 @@ static void COM_FilePath(char *in, char *out) {
 }
 
 static void Com_sprintf(char *dest, int size, char *fmt, ...) {
-	char bigbuffer[0x10000];
+	char bigbuffer[0x10000] = {};
+
 	va_list argptr;
 	va_start(argptr, fmt);
-	int len = vsprintf (bigbuffer, fmt, argptr);
+	int len = vsprintf(bigbuffer, fmt, argptr);
 	va_end (argptr);
+
 	assert(len < size);
-	strncpy (dest, bigbuffer, size-1);
+	strncpy(dest, bigbuffer, size - 1);
 }
 
-// Both client and server can use this, and it will output
-// to the apropriate place.
+// Both client and server can use this, and it will output to the apropriate place.
 static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
 	va_list argptr;
@@ -4340,7 +4341,7 @@ static int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
 		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 		break;
 	default:
-		assert(0);
+		assert(!"unreachable");
 		break;
 	}
 
@@ -4369,8 +4370,7 @@ void CMod_LoadSubmodels (lump_t *l)
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 
-	assert (count >= 1);
-	assert(count <= MAX_MAP_MODELS);
+	assert(count >= 1 && count <= MAX_MAP_MODELS);
 
 	numcmodels = count;
 
@@ -4397,8 +4397,7 @@ void CMod_LoadSurfaces (lump_t *l)
 	in = (void *)(cmod_base + l->fileofs);
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
-	assert(count >= 1);
-	assert(count <= MAX_MAP_TEXINFO);
+	assert(count >= 1 && count <= MAX_MAP_TEXINFO);
 
 	numtexinfo = count;
 	out = map_surfaces;
@@ -4423,8 +4422,7 @@ void CMod_LoadNodes (lump_t *l)
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 
-	assert(count >= 1);
-	assert(count <= MAX_MAP_NODES);
+	assert(count >= 1 && count <= MAX_MAP_NODES);
 
 	out = map_nodes;
 
@@ -4478,9 +4476,8 @@ void CMod_LoadLeafs (lump_t *l)
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 
-	assert(count >= 1);
 	// need to save space for box planes
-	assert(count <= MAX_MAP_PLANES);
+	assert(count >= 1 && count <= MAX_MAP_PLANES);
 
 	out = map_leafs;
 	numleafs = count;
@@ -4524,9 +4521,8 @@ void CMod_LoadPlanes (lump_t *l)
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 
-	assert(count >= 1);
 	// need to save space for box planes
-	assert(count <= MAX_MAP_PLANES);
+	assert(count >= 1 && count <= MAX_MAP_PLANES);
 
 	out = map_planes;
 	numplanes = count;
@@ -4558,9 +4554,8 @@ void CMod_LoadLeafBrushes (lump_t *l)
 	assert(l->filelen % sizeof(*in) == 0);
 	count = l->filelen / sizeof(*in);
 
-	assert(count >= 1);
 	// need to save space for box planes
-	assert(count <= MAX_MAP_LEAFBRUSHES);
+	assert(count >= 1 && count <= MAX_MAP_LEAFBRUSHES);
 
 	out = map_leafbrushes;
 	numleafbrushes = count;
@@ -4703,7 +4698,7 @@ static cmodel_t* CM_LoadMap(char* name, qboolean clientload, unsigned* checksum)
 	}
 
 	unsigned* buf = 0;
-	length = FS_LoadFile (name, (void **)&buf);
+	length = FS_LoadFile(name, (void **)&buf);
 	assert(buf);
 
 	last_checksum = LittleLong(Com_BlockChecksum (buf, length));
@@ -5324,8 +5319,6 @@ static int time_after_ref;
 void SCR_DebugGraph (float value, int color);
 
 void Sys_AppActivate (void);
-
-void Sys_UnloadGame (void);
 
 // loads the game dll and calls the api init function
 void	*Sys_GetGameAPI (void *parms);
@@ -7823,14 +7816,7 @@ int FS_FOpenFile (char *filename, FILE **file)
 	return -1;
 }
 
-/*
-============
-FS_LoadFile
-
-Filename are reletive to the quake search path
-a null buffer will just return the file length without loading
-============
-*/
+// Filename are reletive to the quake search path a null buffer will just return the file length without loading
 int FS_LoadFile (char *path, void **buffer)
 {
 	FILE	*h;
@@ -7839,7 +7825,7 @@ int FS_LoadFile (char *path, void **buffer)
 
 	buf = NULL;	// quiet compiler warning
 
-// look for it in the filesystem or pack files
+	// look for it in the filesystem or pack files
 	len = FS_FOpenFile (path, &h);
 	if (!h)
 	{
@@ -10493,7 +10479,6 @@ void SV_Error (char *error, ...);
 //
 extern	game_export_t	*ge;
 
-void SV_ShutdownGameProgs (void);
 void SV_InitEdict (edict_t *e);
 
 
@@ -12413,35 +12398,22 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 	SV_StartSound (NULL, entity, channel, sound_num, volume, attenuation, timeofs);
 }
 
-//==============================================
-
-/*
-===============
-SV_ShutdownGameProgs
-
-Called when either the entire server is being killed, or
-it is changing to a different game directory.
-===============
-*/
-void SV_ShutdownGameProgs (void)
-{
-	if (!ge)
-		return;
-	ge->Shutdown ();
-	Sys_UnloadGame ();
-	ge = NULL;
+// Called when either the entire server is being killed, or it is changing to a different game directory.
+static void SV_ShutdownGameProgs() {
+	if (ge) {
+		ge->Shutdown();
+		ge = NULL;
+	}
 }
 
 // Init the game subsystem for a new map
 void SCR_DebugGraph (float value, int color);
 
-void SV_InitGameProgs (void)
-{
+void SV_InitGameProgs() {
 	game_import_t	import;
 
 	// unload anything we have now
-	if (ge)
-		SV_ShutdownGameProgs ();
+	SV_ShutdownGameProgs();
 
 
 	// load a new game dll
@@ -12534,7 +12506,7 @@ int SV_FindIndex (char *name, int start, int max, qboolean create)
 	if (!create)
 		return 0;
 
-	assert((i != max));
+	assert(i != max);
 
 	strncpy (sv.configstrings[start+i], name, sizeof(sv.configstrings[i]));
 
@@ -13993,8 +13965,7 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 		mask = CM_ClusterPVS (cluster);
 		break;
 
-	default:
-		assert(!"unreachable");
+	default: assert(!"unreachable");
 	}
 
 	// send the data to all relevent clients
@@ -33035,13 +33006,7 @@ void StartServer_MenuInit( void )
 	}
 	else
 	{
-#ifdef _WIN32
 		length = _filelength(_fileno( fp  ));
-#else
-		fseek(fp, 0, SEEK_END);
-		length = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-#endif
 		buffer = malloc( length );
 		fread( buffer, length, 1, fp );
 	}
@@ -35453,7 +35418,6 @@ sfx_t *S_FindName (char *name, qboolean create)
 	// find a free sfx
 	for (i=0 ; i < num_sfx ; i++)
 		if (!known_sfx[i].name[0])
-//			registration_sequence < s_registration_sequence)
 			break;
 
 	if (i == num_sfx)
@@ -48130,8 +48094,8 @@ void G_RunEntity (edict_t *ent)
 	case MOVETYPE_FLYMISSILE:
 		SV_Physics_Toss (ent);
 		break;
-	default:
-		assert(!"unreachable");
+
+	default: assert(!"unreachable");
 	}
 }
 
@@ -48389,8 +48353,7 @@ static void WriteField1(field_t *field, byte *base) {
 		*(int *)p = index;
 		break;
 
-	default:
-		assert(!"unreachable");
+	default: assert(!"unreachable");
 	}
 }
 
@@ -48487,8 +48450,7 @@ void ReadField (FILE *f, field_t *field, byte *base)
 			*(byte **)p = (byte *)&mmove_reloc + index;
 		break;
 
-	default:
-		assert(!"unreachable");
+	default: assert(!"unreachable");
 	}
 }
 
@@ -87144,7 +87106,7 @@ void R_RenderView (refdef_t *fd)
 
 	r_newrefdef = *fd;
 
-	assert(r_worldmodel && ( r_newrefdef.rdflags & RDF_NOWORLDMODEL));
+	assert(r_worldmodel || (r_newrefdef.rdflags & RDF_NOWORLDMODEL));
 
 	if (r_speeds->value)
 	{
@@ -93576,20 +93538,6 @@ engine-side entry points are thin shims over the game's GetGameAPI.
 */
 
 extern game_export_t *GetGameAPI (game_import_t *import);
-
-#if 0	// original gamex86.dll machinery
-static HINSTANCE	game_library;
-#endif
-
-/*
-=================
-Sys_UnloadGame
-=================
-*/
-void Sys_UnloadGame (void)
-{
-	// statically linked — nothing to unload
-}
 
 void* Sys_GetGameAPI(void* parms) {
 	return GetGameAPI((game_import_t *)parms);
