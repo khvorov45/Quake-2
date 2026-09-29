@@ -15594,30 +15594,6 @@ typedef struct {
 
 } refexport_t;
 
-// these are the functions imported by the refresh module
-static struct {
-	void	(*Cmd_AddCommand) (char *name, void(*cmd)(void));
-	void	(*Cmd_RemoveCommand) (char *name);
-	int		(*Cmd_Argc) (void);
-	char	*(*Cmd_Argv) (int i);
-
-	// files will be memory mapped read only
-	// the returned buffer may be part of a larger pak file,
-	// or a discrete file from anywhere in the quake search path
-	// a -1 return means the file does not exist
-	// NULL can be passed for buf to just determine existance
-	int		(*FS_LoadFile) (char *name, void **buf);
-	void	(*FS_FreeFile) (void *buf);
-
-	cvar_t	*(*Cvar_Get) (char *name, char *value, int flags);
-	cvar_t	*(*Cvar_Set)( char *name, char *value );
-	void	 (*Cvar_SetValue)( char *name, float value );
-
-	void	(*Vid_GetModeInfo)( int *width, int *height, int mode );
-	void	(*Vid_MenuInit)( void );
-	void	(*Vid_NewWindow)( int width, int height );
-} ri;
-
 typedef struct {
 	int x, y, width, height;
 } vrect_t;
@@ -82021,7 +81997,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 	//
 	// load the file
 	//
-	len = ri.FS_LoadFile (filename, (void **)&raw);
+	len = FS_LoadFile (filename, (void **)&raw);
 	if (!raw) {
 		Com_Printf("Bad pcx file %s\n", filename);
 		return;
@@ -82098,7 +82074,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 		*pic = NULL;
 	}
 
-	ri.FS_FreeFile (pcx);
+	FS_FreeFile (pcx);
 }
 
 /*
@@ -82139,7 +82115,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	//
 	// load the file
 	//
-	ri.FS_LoadFile (name, (void **)&buffer);
+	FS_LoadFile (name, (void **)&buffer);
 	if (!buffer)
 	{
 		Com_Printf("Bad tga file %s\n", name);
@@ -82298,7 +82274,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 		}
 	}
 
-	ri.FS_FreeFile (buffer);
+	FS_FreeFile (buffer);
 }
 
 
@@ -82874,7 +82850,7 @@ image_t *GL_LoadWal (char *name)
 	int			width, height, ofs;
 	image_t		*image;
 
-	ri.FS_LoadFile (name, (void **)&mt);
+	FS_LoadFile (name, (void **)&mt);
 	if (!mt)
 	{
 		Com_Printf("GL_FindImage: can't load %s\n", name);
@@ -82887,7 +82863,7 @@ image_t *GL_LoadWal (char *name)
 
 	image = GL_LoadPic (name, (byte *)mt + ofs, width, height, it_wall, 8);
 
-	ri.FS_FreeFile ((void *)mt);
+	FS_FreeFile ((void *)mt);
 
 	return image;
 }
@@ -83052,10 +83028,10 @@ void	GL_InitImages (void)
 	registration_sequence = 1;
 
 	// init intensity conversions
-	intensity = ri.Cvar_Get ("intensity", "2", 0);
+	intensity = COM_GetCvar("intensity", "2", 0);
 
 	if ( intensity->value <= 1 )
-		ri.Cvar_Set( "intensity", "1" );
+		COM_SetCvar( "intensity", "1" );
 
 	gl_state.inverse_intensity = 1 / intensity->value;
 
@@ -83063,7 +83039,7 @@ void	GL_InitImages (void)
 
 	if ( qglColorTableEXT )
 	{
-		ri.FS_LoadFile( "pics/16to8.dat", (void**)&gl_state.d_16to8table );
+		FS_LoadFile( "pics/16to8.dat", (void**)&gl_state.d_16to8table );
 		assert(gl_state.d_16to8table);
 	}
 
@@ -84982,7 +84958,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	//
 	// load the file
 	//
-	modfilelen = ri.FS_LoadFile (mod->name, (void**)&buf);
+	modfilelen = FS_LoadFile (mod->name, (void**)&buf);
 	if (!buf)
 	{
 		assert(!crash);
@@ -85021,7 +84997,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 
 	loadmodel->extradatasize = Hunk_End ();
 
-	ri.FS_FreeFile (buf);
+	FS_FreeFile (buf);
 
 	return mod;
 }
@@ -85791,15 +85767,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	mod->type = mod_sprite;
 }
 
-//=============================================================================
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-R_BeginRegistration
-
-Specifies the model that will be used as the world
-@@@@@@@@@@@@@@@@@@@@@
-*/
+// Specifies the model that will be used as the world
 void R_BeginRegistration (char *model)
 {
 	char	fullname[MAX_QPATH];
@@ -85812,7 +85780,7 @@ void R_BeginRegistration (char *model)
 
 	// explicitly free the old map if different
 	// this guarantees that mod_known[0] is the world map
-	flushmap = ri.Cvar_Get ("flushmap", "0", 0);
+	flushmap = COM_GetCvar ("flushmap", "0", 0);
 	if ( strcmp(mod_known[0].name, fullname) || flushmap->value)
 		Mod_Free (&mod_known[0]);
 	r_worldmodel = Mod_ForName(fullname, true);
@@ -85820,13 +85788,6 @@ void R_BeginRegistration (char *model)
 	r_viewcluster = -1;
 }
 
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-R_RegisterModel
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
 struct model_s *R_RegisterModel (char *name)
 {
 	model_t	*mod;
@@ -86807,84 +86768,79 @@ void R_RenderFrame (refdef_t *fd)
 
 void R_Register( void )
 {
-	r_lefthand = ri.Cvar_Get( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-	r_norefresh = ri.Cvar_Get ("r_norefresh", "0", 0);
-	r_fullbright = ri.Cvar_Get ("r_fullbright", "0", 0);
-	r_drawentities = ri.Cvar_Get ("r_drawentities", "1", 0);
-	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", 0);
-	r_novis = ri.Cvar_Get ("r_novis", "0", 0);
-	r_nocull = ri.Cvar_Get ("r_nocull", "0", 0);
-	r_lerpmodels = ri.Cvar_Get ("r_lerpmodels", "1", 0);
-	r_speeds = ri.Cvar_Get ("r_speeds", "0", 0);
+	r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
+	r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
+	r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
+	r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
+	r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
+	r_novis = COM_GetCvar ("r_novis", "0", 0);
+	r_nocull = COM_GetCvar ("r_nocull", "0", 0);
+	r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
+	r_speeds = COM_GetCvar ("r_speeds", "0", 0);
 
-	r_lightlevel = ri.Cvar_Get ("r_lightlevel", "0", 0);
+	r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 
-	gl_nosubimage = ri.Cvar_Get( "gl_nosubimage", "0", 0 );
-	gl_allow_software = ri.Cvar_Get( "gl_allow_software", "0", 0 );
+	gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
+	gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
 
-	gl_particle_min_size = ri.Cvar_Get( "gl_particle_min_size", "2", CVAR_ARCHIVE );
-	gl_particle_max_size = ri.Cvar_Get( "gl_particle_max_size", "40", CVAR_ARCHIVE );
-	gl_particle_size = ri.Cvar_Get( "gl_particle_size", "40", CVAR_ARCHIVE );
-	gl_particle_att_a = ri.Cvar_Get( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
-	gl_particle_att_b = ri.Cvar_Get( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
-	gl_particle_att_c = ri.Cvar_Get( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
+	gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
+	gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
+	gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
+	gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
+	gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
+	gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
 
-	gl_modulate = ri.Cvar_Get ("gl_modulate", "1", CVAR_ARCHIVE );
-	gl_log = ri.Cvar_Get( "gl_log", "0", 0 );
-	gl_bitdepth = ri.Cvar_Get( "gl_bitdepth", "0", 0 );
-	gl_mode = ri.Cvar_Get( "gl_mode", "3", CVAR_ARCHIVE );
-	gl_lightmap = ri.Cvar_Get ("gl_lightmap", "0", 0);
-	gl_shadows = ri.Cvar_Get ("gl_shadows", "0", CVAR_ARCHIVE );
-	gl_dynamic = ri.Cvar_Get ("gl_dynamic", "1", 0);
-	gl_nobind = ri.Cvar_Get ("gl_nobind", "0", 0);
-	gl_round_down = ri.Cvar_Get ("gl_round_down", "1", 0);
-	gl_picmip = ri.Cvar_Get ("gl_picmip", "0", 0);
-	gl_skymip = ri.Cvar_Get ("gl_skymip", "0", 0);
-	gl_showtris = ri.Cvar_Get ("gl_showtris", "0", 0);
-	gl_ztrick = ri.Cvar_Get ("gl_ztrick", "0", 0);
-	gl_finish = ri.Cvar_Get ("gl_finish", "0", CVAR_ARCHIVE);
-	gl_clear = ri.Cvar_Get ("gl_clear", "0", 0);
-	gl_cull = ri.Cvar_Get ("gl_cull", "1", 0);
-	gl_polyblend = ri.Cvar_Get ("gl_polyblend", "1", 0);
-	gl_flashblend = ri.Cvar_Get ("gl_flashblend", "0", 0);
-	gl_playermip = ri.Cvar_Get ("gl_playermip", "0", 0);
-	gl_monolightmap = ri.Cvar_Get( "gl_monolightmap", "0", 0 );
-	gl_driver = ri.Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE );
-	gl_texturemode = ri.Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-	gl_texturealphamode = ri.Cvar_Get( "gl_texturealphamode", "default", CVAR_ARCHIVE );
-	gl_texturesolidmode = ri.Cvar_Get( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
-	gl_lockpvs = ri.Cvar_Get( "gl_lockpvs", "0", 0 );
+	gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
+	gl_log = COM_GetCvar( "gl_log", "0", 0 );
+	gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
+	gl_mode = COM_GetCvar( "gl_mode", "3", CVAR_ARCHIVE );
+	gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
+	gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
+	gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
+	gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
+	gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
+	gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
+	gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
+	gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
+	gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
+	gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
+	gl_clear = COM_GetCvar ("gl_clear", "0", 0);
+	gl_cull = COM_GetCvar ("gl_cull", "1", 0);
+	gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
+	gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
+	gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
+	gl_monolightmap = COM_GetCvar( "gl_monolightmap", "0", 0 );
+	gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
+	gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+	gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
+	gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
+	gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
 
-	gl_vertex_arrays = ri.Cvar_Get( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
+	gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
 
-	gl_ext_swapinterval = ri.Cvar_Get( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-	gl_ext_palettedtexture = ri.Cvar_Get( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
-	gl_ext_multitexture = ri.Cvar_Get( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-	gl_ext_pointparameters = ri.Cvar_Get( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-	gl_ext_compiled_vertex_array = ri.Cvar_Get( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
+	gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
+	gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
+	gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
+	gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
+	gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
 
-	gl_drawbuffer = ri.Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
-	gl_swapinterval = ri.Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
+	gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
+	gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
-	gl_saturatelighting = ri.Cvar_Get( "gl_saturatelighting", "0", 0 );
+	gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 
-	gl_3dlabs_broken = ri.Cvar_Get( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
+	gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
 
-	vid_fullscreen = ri.Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
-	vid_gamma = ri.Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE );
-	vid_ref = ri.Cvar_Get( "vid_ref", "gl", CVAR_ARCHIVE );
+	vid_fullscreen = COM_GetCvar( "vid_fullscreen", "0", CVAR_ARCHIVE );
+	vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
+	vid_ref = COM_GetCvar( "vid_ref", "gl", CVAR_ARCHIVE );
 
-	ri.Cmd_AddCommand( "imagelist", GL_ImageList_f );
-	ri.Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
-	ri.Cmd_AddCommand( "modellist", Mod_Modellist_f );
-	ri.Cmd_AddCommand( "gl_strings", GL_Strings_f );
+	Cmd_AddCommand( "imagelist", GL_ImageList_f );
+	Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
+	Cmd_AddCommand( "modellist", Mod_Modellist_f );
+	Cmd_AddCommand( "gl_strings", GL_Strings_f );
 }
 
-/*
-==================
-R_SetMode
-==================
-*/
 qboolean R_SetMode (void)
 {
 	rserr_t err;
@@ -86893,7 +86849,7 @@ qboolean R_SetMode (void)
 	if ( vid_fullscreen->modified && !gl_config.allow_cds )
 	{
 		Com_Printf("R_SetMode() - CDS not allowed with this driver\n");
-		ri.Cvar_SetValue( "vid_fullscreen", !vid_fullscreen->value );
+		COM_SetValueCvar( "vid_fullscreen", !vid_fullscreen->value );
 		vid_fullscreen->modified = false;
 	}
 
@@ -86910,7 +86866,7 @@ qboolean R_SetMode (void)
 	{
 		if ( err == rserr_invalid_fullscreen )
 		{
-			ri.Cvar_SetValue( "vid_fullscreen", 0);
+			COM_SetValueCvar( "vid_fullscreen", 0);
 			vid_fullscreen->modified = false;
 			Com_Printf("ref_gl::R_SetMode() - fullscreen unavailable in this mode\n");
 			if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_mode->value, false ) ) == rserr_ok )
@@ -86918,7 +86874,7 @@ qboolean R_SetMode (void)
 		}
 		else if ( err == rserr_invalid_mode )
 		{
-			ri.Cvar_SetValue( "gl_mode", gl_state.prev_mode );
+			COM_SetValueCvar( "gl_mode", gl_state.prev_mode );
 			gl_mode->modified = false;
 			Com_Printf("ref_gl::R_SetMode() - invalid mode\n");
 		}
@@ -86971,7 +86927,7 @@ static int R_Init(void* hinstance, void* hWnd) {
 		return -1;
 	}
 
-	ri.Vid_MenuInit();
+	VID_MenuInit();
 
 	/*
 	** get our various GL strings
@@ -87019,16 +86975,16 @@ static int R_Init(void* hinstance, void* hWnd) {
 	{
 		if ( gl_config.renderer == GL_RENDERER_PERMEDIA2 )
 		{
-			ri.Cvar_Set( "gl_monolightmap", "A" );
+			COM_SetCvar( "gl_monolightmap", "A" );
 			Com_Printf("...using gl_monolightmap 'a'\n");
 		}
 		else if ( gl_config.renderer & GL_RENDERER_POWERVR )
 		{
-			ri.Cvar_Set( "gl_monolightmap", "0" );
+			COM_SetCvar( "gl_monolightmap", "0" );
 		}
 		else
 		{
-			ri.Cvar_Set( "gl_monolightmap", "0" );
+			COM_SetCvar( "gl_monolightmap", "0" );
 		}
 	}
 
@@ -87036,17 +86992,17 @@ static int R_Init(void* hinstance, void* hWnd) {
 	// the screen needs to redraw the tiled background every frame
 	if ( gl_config.renderer & GL_RENDERER_POWERVR )
 	{
-		ri.Cvar_Set( "scr_drawall", "1" );
+		COM_SetCvar( "scr_drawall", "1" );
 	}
 	else
 	{
-		ri.Cvar_Set( "scr_drawall", "0" );
+		COM_SetCvar( "scr_drawall", "0" );
 	}
 
 	// MCD has buffering issues
 	if ( gl_config.renderer == GL_RENDERER_MCD )
 	{
-		ri.Cvar_SetValue( "gl_finish", 1 );
+		COM_SetValueCvar( "gl_finish", 1 );
 	}
 
 	if ( gl_config.renderer & GL_RENDERER_3DLABS )
@@ -87166,10 +87122,10 @@ R_Shutdown
 */
 void R_Shutdown (void)
 {
-	ri.Cmd_RemoveCommand ("modellist");
-	ri.Cmd_RemoveCommand ("screenshot");
-	ri.Cmd_RemoveCommand ("imagelist");
-	ri.Cmd_RemoveCommand ("gl_strings");
+	Cmd_RemoveCommand ("modellist");
+	Cmd_RemoveCommand ("screenshot");
+	Cmd_RemoveCommand ("imagelist");
+	Cmd_RemoveCommand ("gl_strings");
 
 	Mod_FreeAll ();
 
@@ -87196,7 +87152,7 @@ static void R_BeginFrame(float camera_separation) {
 	{	// FIXME: only restart if CDS is required
 		cvar_t	*ref;
 
-		ref = ri.Cvar_Get ("vid_ref", "gl", 0);
+		ref = COM_GetCvar ("vid_ref", "gl", 0);
 		ref->modified = true;
 	}
 
@@ -93440,22 +93396,6 @@ void VID_Front_f( void )
 	SetForegroundWindow( cl_hwnd );
 }
 
-static struct {
-	const char *description;
-	int width, height;
-	int mode;
-} vid_modes[] = {
-	{"Mode 0: 1024x768", 1024, 768, 0 },
-	{"Mode 1: 1280x960", 1280, 960, 1 },
-	{"Mode 2: 1600x1200", 1600, 1200, 2 }
-};
-
-static void VID_GetModeInfo(int* width, int* height, int mode) {
-	assert(mode >= 0 && mode < (int)carray_count(vid_modes));
-	*width  = vid_modes[mode].width;
-	*height = vid_modes[mode].height;
-}
-
 static void VID_UpdateWindowPosAndSize() {
 	RECT r;
 	int		style;
@@ -93514,19 +93454,6 @@ static void VID_CheckChanges() {
 				re.Shutdown();
 				VID_FreeReflib();
 			}
-
-			ri.Cmd_AddCommand = Cmd_AddCommand;
-			ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
-			ri.Cmd_Argc = Cmd_Argc;
-			ri.Cmd_Argv = Cmd_Argv;
-			ri.FS_LoadFile = FS_LoadFile;
-			ri.FS_FreeFile = FS_FreeFile;
-			ri.Cvar_Get = COM_GetCvar;
-			ri.Cvar_Set = COM_SetCvar;
-			ri.Cvar_SetValue = COM_SetValueCvar;
-			ri.Vid_GetModeInfo = VID_GetModeInfo;
-			ri.Vid_MenuInit = VID_MenuInit;
-			ri.Vid_NewWindow = VID_NewWindow;
 
 			re = (refexport_t){
 				.api_version = API_VERSION,
@@ -93912,13 +93839,8 @@ static qboolean VerifyDriver( void )
 	return true;
 }
 
-/*
-** VID_CreateWindow
-*/
 #define	WINDOW_CLASS_NAME	"Quake 2"
-
-qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
-{
+qboolean VID_CreateWindow( int width, int height, qboolean fullscreen ) {
 	RECT			r;
 	cvar_t			*vid_xpos, *vid_ypos;
 	int				stylebits;
@@ -93969,8 +93891,8 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	}
 	else
 	{
-		vid_xpos = ri.Cvar_Get ("vid_xpos", "0", 0);
-		vid_ypos = ri.Cvar_Get ("vid_ypos", "0", 0);
+		vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
+		vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
 		x = vid_xpos->value;
 		y = vid_ypos->value;
 	}
@@ -94002,15 +93924,28 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	SetFocus( glw_state.hWnd );
 
 	// let the sound and input subsystems know about the new window
-	ri.Vid_NewWindow (width, height);
+	VID_NewWindow (width, height);
 
 	return true;
 }
 
+static struct {
+	char* description;
+	int width;
+	int height;
+	int mode;
+} vid_modes[] = {
+	{"Mode 0: 1024x768", 1024, 768, 0 },
+	{"Mode 1: 1280x960", 1280, 960, 1 },
+	{"Mode 2: 1600x1200", 1600, 1200, 2 }
+};
 
-/*
-** GLimp_SetMode
-*/
+static void VID_GetModeInfo(int* width, int* height, int mode) {
+	assert(mode >= 0 && mode < (int)carray_count(vid_modes));
+	*width  = vid_modes[mode].width;
+	*height = vid_modes[mode].height;
+}
+
 rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen )
 {
 	int width, height;
@@ -94020,7 +93955,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 
 	Com_Printf("...setting mode %d:", mode );
 
-	ri.Vid_GetModeInfo(&width, &height, mode);
+	VID_GetModeInfo(&width, &height, mode);
 
 	Com_Printf(" %d %d %s\n", width, height, win_fs[fullscreen]);
 
@@ -94170,15 +94105,13 @@ void GLimp_Shutdown() {
 		glw_state.log_fp = 0;
 	}
 
-	UnregisterClass (WINDOW_CLASS_NAME, glw_state.hInstance);
+	UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
 
-	if ( gl_state.fullscreen )
-	{
-		ChangeDisplaySettings( 0, 0 );
+	if (gl_state.fullscreen) {
+		ChangeDisplaySettings(0, 0);
 		gl_state.fullscreen = false;
 	}
 }
-
 
 // This routine is responsible for initializing the OS specific portions of OpenGL.
 // Under Win32 this means dealing with the pixelformats and doing the wgl interface stuff.
@@ -94215,7 +94148,7 @@ qboolean GLimp_InitGL (void)
     int  pixelformat;
 	cvar_t *stereo;
 
-	stereo = ri.Cvar_Get( "cl_stereo", "0", 0 );
+	stereo = COM_GetCvar( "cl_stereo", "0", 0 );
 
 	/*
 	** set PFD_STEREO if necessary
@@ -94300,7 +94233,7 @@ qboolean GLimp_InitGL (void)
 	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
 	{
 		Com_Printf("...failed to select stereo pixel format\n");
-		ri.Cvar_SetValue( "cl_stereo", 0 );
+		COM_SetValueCvar( "cl_stereo", 0 );
 		gl_state.stereo_enabled = false;
 	}
 
@@ -94359,7 +94292,7 @@ void GLimp_BeginFrame( float camera_separation )
 	{
 		if ( gl_bitdepth->value != 0 && !glw_state.allowdisplaydepthchange )
 		{
-			ri.Cvar_SetValue( "gl_bitdepth", 0 );
+			COM_SetValueCvar( "gl_bitdepth", 0 );
 			Com_Printf("gl_bitdepth requires Win95 OSR2.x or WinNT 4.x\n");
 		}
 		gl_bitdepth->modified = false;
