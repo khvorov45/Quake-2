@@ -10193,18 +10193,6 @@ void Pmove (pmove_t *pmove)
 
 /* ============ begin inlined header: server/server.h ============ */
 
-#ifndef SERVER_H
-#define SERVER_H
-
-// server.h
-
-
-//define	PARANOID			// speed sapping error checking
-
-/* already inlined above: qcommon/qcommon.h */
-/* already inlined above: game/game.h */
-
-//=============================================================================
 
 #define	MAX_MASTERS	8				// max recipients for heartbeat packets
 
@@ -10514,10 +10502,6 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
-#endif	// SERVER_H
-
-/* ============ end inlined header: server/server.h ============ */
-
 /*
 ===============================================================================
 
@@ -10526,12 +10510,6 @@ OPERATOR CONSOLE ONLY COMMANDS
 These commands can only be entered from stdin or by a remote operator datagram
 ===============================================================================
 */
-
-// Specify a list of master servers
-static void SV_SetMaster_f() {
-	Com_Printf("Only dedicated servers use masters.\n");
-	return;
-}
 
 /*
 ==================
@@ -11234,41 +11212,18 @@ void SV_ConSay_f(void)
 	}
 }
 
-
-/*
-==================
-SV_Heartbeat_f
-==================
-*/
-void SV_Heartbeat_f (void)
-{
+static void SV_Heartbeat_f() {
 	svs.last_heartbeat = -9999999;
 }
 
-
-/*
-===========
-SV_Serverinfo_f
-
-  Examine or change the serverinfo string
-===========
-*/
-void SV_Serverinfo_f (void)
-{
-	Com_Printf ("Server info settings:\n");
-	Info_Print (Info_Cvar_Server());
+// Examine or change the serverinfo string
+static void SV_Serverinfo_f() {
+	Com_Printf("Server info settings:\n");
+	Info_Print(Info_Cvar_Server());
 }
 
-
-/*
-===========
-SV_DumpUser_f
-
-Examine all a users info strings
-===========
-*/
-void SV_DumpUser_f (void)
-{
+// Examine all a users info strings
+static void SV_DumpUser_f() {
 	if (cmd_argc != 2)
 	{
 		Com_Printf ("Usage: info <userid>\n");
@@ -11284,15 +11239,8 @@ void SV_DumpUser_f (void)
 
 }
 
-
-/*
-==============
-SV_ServerRecord_f
-
-Begins server demo recording.  Every entity and every message will be
-recorded, but no playerinfo will be stored.  Primarily for demo merging.
-==============
-*/
+// Begins server demo recording.  Every entity and every message will be
+// recorded, but no playerinfo will be stored.  Primarily for demo merging.
 void SV_ServerRecord_f (void)
 {
 	char	name[MAX_OSPATH];
@@ -12951,25 +12899,8 @@ void SV_DropClient (client_t *drop)
 	drop->name[0] = 0;
 }
 
-
-
-/*
-==============================================================================
-
-CONNECTIONLESS COMMANDS
-
-==============================================================================
-*/
-
-/*
-===============
-SV_StatusString
-
-Builds the string that is sent as heartbeats and status replies
-===============
-*/
-char	*SV_StatusString (void)
-{
+// Builds the string that is sent as heartbeats and status replies
+char* SV_StatusString() {
 	char	player[1024];
 	static char	status[MAX_MSGLEN - 16];
 	int		i;
@@ -12999,15 +12930,8 @@ char	*SV_StatusString (void)
 	return status;
 }
 
-/*
-================
-SVC_Status
-
-Responds with all the info that qplug or qspy can see
-================
-*/
-void SVC_Status (void)
-{
+// Responds with all the info that qplug or qspy can see
+void SVC_Status (void) {
 	Netchan_OutOfBandPrint (NS_SERVER, net_from, "print\n%s", SV_StatusString());
 }
 
@@ -13335,18 +13259,9 @@ void SVC_RemoteCommand (void)
 	}
 }
 
-/*
-=================
-SV_ConnectionlessPacket
-
-A connectionless packet has four leading 0xff
-characters to distinguish it from a game channel.
-Clients that are in the game can still send
-connectionless packets.
-=================
-*/
-void SV_ConnectionlessPacket (void)
-{
+// A connectionless packet has four leading 0xff characters to distinguish it from a game channel.
+// Clients that are in the game can still send connectionless packets.
+void SV_ConnectionlessPacket() {
 	char	*s;
 	char	*c;
 
@@ -13379,18 +13294,8 @@ void SV_ConnectionlessPacket (void)
 		, NET_AdrToString (net_from), s);
 }
 
-
-//============================================================================
-
-/*
-===================
-SV_CalcPings
-
-Updates the cl->ping variables
-===================
-*/
-void SV_CalcPings (void)
-{
+// Updates the cl->ping variables
+void SV_CalcPings() {
 	int			i, j;
 	client_t	*cl;
 	int			total, count;
@@ -13400,13 +13305,6 @@ void SV_CalcPings (void)
 		cl = &svs.clients[i];
 		if (cl->state != cs_spawned )
 			continue;
-
-#if 0
-		if (cl->lastframe > 0)
-			cl->frame_latency[sv.framenum&(LATENCY_COUNTS-1)] = sv.framenum - cl->lastframe + 1;
-		else
-			cl->frame_latency[sv.framenum&(LATENCY_COUNTS-1)] = 0;
-#endif
 
 		total = 0;
 		count = 0;
@@ -13421,17 +13319,12 @@ void SV_CalcPings (void)
 		if (!count)
 			cl->ping = 0;
 		else
-#if 0
-			cl->ping = total*100/count - 100;
-#else
 			cl->ping = total / count;
-#endif
 
 		// let the game dll know about the ping
 		cl->edict->client->ping = cl->ping;
 	}
 }
-
 
 /*
 ===================
@@ -15559,13 +15452,6 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 //define	PARANOID			// speed sapping error checking
 
 
-/* ============ begin inlined header: client/ref.h ============ */
-
-
-#ifndef CLIENT_REF_H
-#define CLIENT_REF_H
-
-/* already inlined above: qcommon/qcommon.h */
 
 #define	MAX_DLIGHTS		32
 #define	MAX_ENTITIES	128
@@ -15579,38 +15465,28 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 #define SHELL_BLUE_COLOR	0xF3
 
 #define SHELL_RG_COLOR		0xDC
-//#define SHELL_RB_COLOR		0x86
 #define SHELL_RB_COLOR		0x68
 #define SHELL_BG_COLOR		0x78
 
-//ROGUE
 #define SHELL_DOUBLE_COLOR	0xDF // 223
 #define	SHELL_HALF_DAM_COLOR	0x90
 #define SHELL_CYAN_COLOR	0x72
-//ROGUE
 
 #define SHELL_WHITE_COLOR	0xD7
 
-typedef struct entity_s
-{
+typedef struct {
 	struct model_s		*model;			// opaque type outside refresh
 	float				angles[3];
 
-	/*
-	** most recent data
-	*/
+	// most recent data
 	float				origin[3];		// also used as RF_BEAM's "from"
 	int					frame;			// also used as RF_BEAM's diameter
 
-	/*
-	** previous data for lerping
-	*/
+	// ** previous data for lerping
 	float				oldorigin[3];	// also used as RF_BEAM's "to"
 	int					oldframe;
 
-	/*
-	** misc
-	*/
+	// misc
 	float	backlerp;				// 0.0 = current, 1.0 = old
 	int		skinnum;				// also used as RF_BEAM's palette index
 
@@ -15619,13 +15495,9 @@ typedef struct entity_s
 
 	struct image_s	*skin;			// NULL for inline skin
 	int		flags;
+} Entity;
 
-} entity_t;
-
-#define ENTITY_FLAGS  68
-
-typedef struct
-{
+typedef struct {
 	vec3_t	origin;
 	vec3_t	color;
 	float	intensity;
@@ -15659,7 +15531,7 @@ typedef struct
 	lightstyle_t	*lightstyles;	// [MAX_LIGHTSTYLES]
 
 	int			num_entities;
-	entity_t	*entities;
+	Entity	*entities;
 
 	int			num_dlights;
 	dlight_t	*dlights;
@@ -15668,20 +15540,12 @@ typedef struct
 	particle_t	*particles;
 } refdef_t;
 
+#define	API_VERSION 3
 
-
-#define	API_VERSION		3
-
-//
 // these are the functions exported by the refresh module
-//
-typedef struct
-{
+typedef struct {
 	// if api_version is different, the dll cannot be used
-	int		api_version;
-
-	// called when the library is loaded
-	qboolean	(*Init) ( void *hinstance, void *wndproc );
+	int api_version;
 
 	// called before the library is unloaded
 	void	(*Shutdown) (void);
@@ -15730,17 +15594,12 @@ typedef struct
 
 } refexport_t;
 
-//
 // these are the functions imported by the refresh module
-//
-typedef struct
-{
+static struct {
 	void	(*Cmd_AddCommand) (char *name, void(*cmd)(void));
 	void	(*Cmd_RemoveCommand) (char *name);
 	int		(*Cmd_Argc) (void);
 	char	*(*Cmd_Argv) (int i);
-
-	void	(*Con_Printf) (int print_level, char *str, ...);
 
 	// files will be memory mapped read only
 	// the returned buffer may be part of a larger pak file,
@@ -15755,44 +15614,17 @@ typedef struct
 	void	 (*Cvar_SetValue)( char *name, float value );
 
 	void	(*Vid_GetModeInfo)( int *width, int *height, int mode );
-	void		(*Vid_MenuInit)( void );
-	void		(*Vid_NewWindow)( int width, int height );
-} refimport_t;
+	void	(*Vid_MenuInit)( void );
+	void	(*Vid_NewWindow)( int width, int height );
+} ri;
 
-
-// this is the only function actually exported at the linker level
-typedef	refexport_t	(*GetRefAPI_t) (refimport_t);
-
-#endif	// CLIENT_REF_H
-/* ============ end inlined header: client/ref.h ============ */
-
-/* ============ begin inlined header: client/vid.h ============ */
-
-// vid.h -- video driver defs
-
-typedef struct vrect_s
-{
-	int				x,y,width,height;
+typedef struct {
+	int x, y, width, height;
 } vrect_t;
-
-typedef struct
-{
-	int		width;
-	int		height;
-} viddef_t;
-
-extern	viddef_t	viddef;				// global video state
-
-// Video module initialisation etc
 
 void	VID_MenuInit( void );
 void	VID_MenuDraw( void );
 const char *VID_MenuKey( int );
-/* ============ end inlined header: client/vid.h ============ */
-/* ============ begin inlined header: client/screen.h ============ */
-
-// screen.h
-
 
 void	SCR_UpdateScreen (void);
 
@@ -15828,7 +15660,6 @@ void SCR_DirtyScreen (void);
 // scr_cin.c
 //
 void SCR_PlayCinematic (char *name);
-qboolean SCR_DrawCinematic (void);
 void SCR_RunCinematic (void);
 void SCR_StopCinematic (void);
 void SCR_FinishCinematic (void);
@@ -16441,7 +16272,7 @@ extern	int			gun_frame;
 extern	struct model_s	*gun_model;
 
 void V_RenderView( float stereo_separation );
-void V_AddEntity (entity_t *ent);
+void V_AddEntity (Entity *ent);
 void V_AddParticle (vec3_t org, int color, float alpha);
 void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
 void V_AddLightStyle (int style, float r, float g, float b);
@@ -16469,11 +16300,11 @@ void CL_BigTeleportParticles (vec3_t org);
 void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old);
 void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags);
 void CL_FlyEffect (centity_t *ent, vec3_t origin);
-void CL_BfgParticles (entity_t *ent);
+void CL_BfgParticles (Entity *ent);
 void CL_AddParticles (void);
 void CL_EntityEvent (entity_state_t *ent);
 // RAFAEL
-void CL_TrapParticles (entity_t *ent);
+void CL_TrapParticles (Entity *ent);
 
 //
 // menus
@@ -16489,7 +16320,6 @@ void M_AddToServerList (netadr_t adr, char *info);
 //
 void CL_ParseInventory (void);
 void CL_KeyInventory (int key);
-void CL_DrawInventory (void);
 
 //
 // cl_pred.c
@@ -16959,13 +16789,6 @@ byte *SCR_ReadNextFrame (void)
 	return pic;
 }
 
-
-/*
-==================
-SCR_RunCinematic
-
-==================
-*/
 void SCR_RunCinematic (void)
 {
 	int		frame;
@@ -17009,32 +16832,34 @@ void SCR_RunCinematic (void)
 	}
 }
 
+static struct {
+	int width;
+	int height;
+} viddef;
+
 // Returns true if a cinematic is active, meaning the view rendering should be skipped
-qboolean SCR_DrawCinematic (void)
-{
-	if (cl.cinematictime <= 0)
-	{
+static qboolean SCR_DrawCinematic() {
+	if (cl.cinematictime <= 0) {
 		return false;
 	}
 
-	if (cls.key_dest == key_menu)
-	{	// blank screen and pause if menu is up
+	// blank screen and pause if menu is up
+	if (cls.key_dest == key_menu) {
 		re.CinematicSetPalette(NULL);
 		cl.cinematicpalette_active = false;
 		return true;
 	}
 
-	if (!cl.cinematicpalette_active)
-	{
+	if (!cl.cinematicpalette_active) {
 		re.CinematicSetPalette((unsigned char*)cl.cinematicpalette);
 		cl.cinematicpalette_active = true;
 	}
 
-	if (!cin.pic)
+	if (!cin.pic) {
 		return true;
+	}
 
-	re.DrawStretchRaw (0, 0, viddef.width, viddef.height,
-		cin.width, cin.height, cin.pic);
+	re.DrawStretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
 
 	return true;
 }
@@ -17937,7 +17762,7 @@ CL_AddPacketEntities
 */
 void CL_AddPacketEntities (frame_t *frame)
 {
-	entity_t			ent;
+	Entity			ent;
 	entity_state_t		*s1;
 	float				autorotate;
 	int					i;
@@ -18396,7 +18221,7 @@ CL_AddViewWeapon
 */
 void CL_AddViewWeapon (player_state_t *ps, player_state_t *ops)
 {
-	entity_t	gun;		// view model
+	Entity	gun;		// view model
 	int			i;
 
 	// allow the gun to be completely removed
@@ -20484,7 +20309,7 @@ CL_BfgParticles
 */
 
 #define	BEAMLENGTH			16
-void CL_BfgParticles (entity_t *ent)
+void CL_BfgParticles (Entity *ent)
 {
 	int			i;
 	cparticle_t	*p;
@@ -20549,7 +20374,7 @@ CL_TrapParticles
 ===============
 */
 // RAFAEL
-void CL_TrapParticles (entity_t *ent)
+void CL_TrapParticles (Entity *ent)
 {
 	vec3_t		move;
 	vec3_t		vec;
@@ -21426,11 +21251,6 @@ void SetStringHighBit (char *s)
 		*s++ |= 128;
 }
 
-/*
-================
-CL_DrawInventory
-================
-*/
 #define	DISPLAY_ITEMS	17
 
 void CL_DrawInventory (void)
@@ -25947,7 +25767,7 @@ void SCR_Loading_f (void)
 SCR_TimeRefresh_f
 ================
 */
-int entitycmpfnc( const entity_t *a, const entity_t *b )
+int entitycmpfnc( const Entity *a, const Entity *b )
 {
 	/*
 	** all other models are sorted by model then skin
@@ -26562,178 +26382,147 @@ void SCR_ExecuteLayoutString (char *s)
 	}
 }
 
-
-/*
-================
-SCR_DrawStats
-
-The status bar is a small layout program that
-is based on the stats array
-================
-*/
-void SCR_DrawStats (void)
-{
-	SCR_ExecuteLayoutString (cl.configstrings[CS_STATUSBAR]);
-}
-
-#define	STAT_LAYOUTS		13
-
-void SCR_DrawLayout (void)
-{
-	if (!cl.frame.playerstate.stats[STAT_LAYOUTS])
-		return;
-	SCR_ExecuteLayoutString (cl.layout);
-}
+#define	STAT_LAYOUTS 13
 
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 static void SCR_UpdateScreen() {
-	int numframes;
-	int i;
-	float separation[2] = { 0, 0 };
 
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
-	if (cls.disable_screen)
-	{
-		if (Sys_Milliseconds() - cls.disable_screen > 120000)
-		{
+	if (cls.disable_screen) {
+		if (Sys_Milliseconds() - cls.disable_screen > 120000) {
 			cls.disable_screen = 0;
-			Com_Printf ("Loading plaque timed out.\n");
+			Com_Printf("Loading plaque timed out.\n");
 		}
 		return;
 	}
 
-	if (!scr_initialized || !con.initialized)
-		return;				// not initialized yet
+	if (!scr_initialized || !con.initialized) {
+		return;
+	}
 
 	// range check cl_camera_separation so we don't inadvertently fry someone's brain
-	if ( cl_stereo_separation->value > 1.0 )
-		COM_SetValueCvar( "cl_stereo_separation", 1.0 );
-	else if ( cl_stereo_separation->value < 0 )
-		COM_SetValueCvar( "cl_stereo_separation", 0.0 );
+	if (cl_stereo_separation->value > 1.0) {
+		COM_SetValueCvar("cl_stereo_separation", 1.0);
+	} else if (cl_stereo_separation->value < 0) {
+		COM_SetValueCvar("cl_stereo_separation", 0.0);
+	}
 
-	if ( cl_stereo->value )
-	{
+	int numframes = 0;
+	float separation[2] = {0, 0};
+	if (cl_stereo->value) {
 		numframes = 2;
 		separation[0] = -cl_stereo_separation->value / 2;
 		separation[1] =  cl_stereo_separation->value / 2;
-	}
-	else
-	{
+	} else {
 		separation[0] = 0;
 		separation[1] = 0;
 		numframes = 1;
 	}
 
-	for ( i = 0; i < numframes; i++ )
-	{
+	for (int i = 0; i < numframes; i++) {
 		re.BeginFrame( separation[i] );
 
-		if (scr_draw_loading == 2)
-		{	//  loading plaque over black screen
-			int		w, h;
+		if (scr_draw_loading == 2) {
+			//  loading plaque over black screen
 
 			re.CinematicSetPalette(NULL);
 			scr_draw_loading = false;
-			re.DrawGetPicSize (&w, &h, "loading");
-			re.DrawPic ((viddef.width-w)/2, (viddef.height-h)/2, "loading");
-		}
-		// if a cinematic is supposed to be running, handle menus and console specially
-		else if (cl.cinematictime > 0)
-		{
-			if (cls.key_dest == key_menu)
-			{
-				if (cl.cinematicpalette_active)
-				{
+
+			int w = 0;
+			int h = 0;
+			re.DrawGetPicSize(&w, &h, "loading");
+			re.DrawPic((viddef.width - w) / 2, (viddef.height - h) / 2, "loading");
+
+		} else if (cl.cinematictime > 0) {
+			// if a cinematic is supposed to be running, handle menus and console specially
+
+			if (cls.key_dest == key_menu) {
+				if (cl.cinematicpalette_active) {
 					re.CinematicSetPalette(NULL);
 					cl.cinematicpalette_active = false;
 				}
-				M_Draw ();
-			}
-			else if (cls.key_dest == key_console)
-			{
-				if (cl.cinematicpalette_active)
-				{
+				M_Draw();
+			} else if (cls.key_dest == key_console) {
+				if (cl.cinematicpalette_active) {
 					re.CinematicSetPalette(NULL);
 					cl.cinematicpalette_active = false;
 				}
-				SCR_DrawConsole ();
-			}
-			else
-			{
+				SCR_DrawConsole();
+			} else {
 				SCR_DrawCinematic();
 			}
-		}
-		else
-		{
+
+		} else {
 
 			// make sure the game palette is active
-			if (cl.cinematicpalette_active)
-			{
+			if (cl.cinematicpalette_active) {
 				re.CinematicSetPalette(NULL);
 				cl.cinematicpalette_active = false;
 			}
 
 			// do 3D refresh drawing, and then update the screen
-			SCR_CalcVrect ();
+			SCR_CalcVrect();
 
 			// clear any dirty part of the background
-			SCR_TileClear ();
+			SCR_TileClear();
 
-			V_RenderView ( separation[i] );
+			V_RenderView(separation[i]);
 
-			SCR_DrawStats ();
-			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1)
-				SCR_DrawLayout ();
-			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2)
-				CL_DrawInventory ();
+			SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 
-			SCR_DrawNet ();
-			SCR_CheckDrawCenterString ();
+			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
+				SCR_ExecuteLayoutString(cl.layout);
+			}
 
-			if (scr_timegraph->value)
+			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
+				CL_DrawInventory();
+			}
+
+			SCR_DrawNet();
+			SCR_CheckDrawCenterString();
+
+			if (scr_timegraph->value) {
 				SCR_DebugGraph (cls.frametime*300, 0);
+			}
 
-			if (scr_debuggraph->value || scr_timegraph->value || scr_netgraph->value)
-				SCR_DrawDebugGraph ();
+			if (scr_debuggraph->value || scr_timegraph->value || scr_netgraph->value) {
+				SCR_DrawDebugGraph();
+			}
 
-			SCR_DrawPause ();
-
-			SCR_DrawConsole ();
-
-			M_Draw ();
-
-			SCR_DrawLoading ();
+			SCR_DrawPause();
+			SCR_DrawConsole();
+			M_Draw();
+			SCR_DrawLoading();
 		}
 	}
+
 	re.EndFrame();
 }
 
-typedef enum
-{
-	ex_free, ex_explosion, ex_misc, ex_flash, ex_mflash, ex_poly, ex_poly2
-} exptype_t;
+typedef struct {
+	enum {
+		ex_free,
+		ex_explosion,
+		ex_misc,
+		ex_flash,
+		ex_mflash,
+		ex_poly,
+		ex_poly2
+	} type;
 
-typedef struct
-{
-	exptype_t	type;
-	entity_t	ent;
+	Entity ent;
 
 	int			frames;
 	float		light;
 	vec3_t		lightcolor;
 	float		start;
 	int			baseframe;
-} explosion_t;
+} Explosion;
 
-
-
-#define	MAX_EXPLOSIONS	32
-explosion_t	cl_explosions[MAX_EXPLOSIONS];
-
+static Explosion cl_explosions[32];
 
 #define	MAX_BEAMS	32
-typedef struct
-{
+typedef struct {
 	int		entity;
 	int		dest_entity;
 	struct model_s	*model;
@@ -26741,15 +26530,15 @@ typedef struct
 	vec3_t	offset;
 	vec3_t	start, end;
 } beam_t;
-beam_t		cl_beams[MAX_BEAMS];
-//PMM - added this for player-linked beams.  Currently only used by the plasma beam
-beam_t		cl_playerbeams[MAX_BEAMS];
+
+beam_t cl_beams[MAX_BEAMS];
+beam_t cl_playerbeams[MAX_BEAMS];
 
 
 #define	MAX_LASERS	32
 typedef struct
 {
-	entity_t	ent;
+	Entity	ent;
 	int			endtime;
 } laser_t;
 laser_t		cl_lasers[MAX_LASERS];
@@ -26892,54 +26681,37 @@ re.RegisterPic ("a_grenades");
 //ROGUE
 }
 
-/*
-=================
-CL_ClearTEnts
-=================
-*/
 void CL_ClearTEnts (void)
 {
 	memset (cl_beams, 0, sizeof(cl_beams));
 	memset (cl_explosions, 0, sizeof(cl_explosions));
 	memset (cl_lasers, 0, sizeof(cl_lasers));
 
-//ROGUE
 	memset (cl_playerbeams, 0, sizeof(cl_playerbeams));
 	memset (cl_sustains, 0, sizeof(cl_sustains));
-//ROGUE
 }
 
-/*
-=================
-CL_AllocExplosion
-=================
-*/
-explosion_t *CL_AllocExplosion (void)
-{
-	int		i;
-	int		time;
-	int		index;
+// Uses a free slot or the oldest one
+static Explosion* CL_AllocExplosion() {
 
-	for (i=0 ; i<MAX_EXPLOSIONS ; i++)
+	Explosion* result = 0;
 	{
-		if (cl_explosions[i].type == ex_free)
-		{
-			memset (&cl_explosions[i], 0, sizeof (cl_explosions[i]));
-			return &cl_explosions[i];
+		int current_oldest_time = cl.time;
+		for (int index = 0; index < (int)carray_count(cl_explosions); index++) {
+			Explosion* explosion = cl_explosions + index;
+			if (explosion->type == ex_free) {
+				result = explosion;
+				break;
+			} else if (explosion->start < current_oldest_time) {
+				current_oldest_time = explosion->start;
+				result = explosion;
+			}
 		}
 	}
-// find the oldest explosion
-	time = cl.time;
-	index = 0;
+	assert(result);
 
-	for (i=0 ; i<MAX_EXPLOSIONS ; i++)
-		if (cl_explosions[i].start < time)
-		{
-			time = cl_explosions[i].start;
-			index = i;
-		}
-	memset (&cl_explosions[index], 0, sizeof (cl_explosions[index]));
-	return &cl_explosions[index];
+	memset(result, 0, sizeof(*result));
+	return result;
 }
 
 /*
@@ -26949,7 +26721,7 @@ CL_SmokeAndFlash
 */
 void CL_SmokeAndFlash(vec3_t origin)
 {
-	explosion_t	*ex;
+	Explosion	*ex;
 
 	ex = CL_AllocExplosion ();
 	VectorCopy (origin, ex->ent.origin);
@@ -27382,7 +27154,7 @@ void CL_ParseTEnt (void)
 {
 	int		type;
 	vec3_t	pos, pos2, dir;
-	explosion_t	*ex;
+	Explosion	*ex;
 	int		cnt;
 	int		color;
 	int		r;
@@ -27893,7 +27665,7 @@ void CL_AddBeams (void)
 	beam_t		*b;
 	vec3_t		dist, org;
 	float		d;
-	entity_t	ent;
+	Entity	ent;
 	float		yaw, pitch;
 	float		forward;
 	float		len, steps;
@@ -28033,7 +27805,7 @@ void CL_AddPlayerBeams (void)
 	beam_t		*b;
 	vec3_t		dist, org;
 	float		d;
-	entity_t	ent;
+	Entity	ent;
 	float		yaw, pitch;
 	float		forward;
 	float		len, steps;
@@ -28279,13 +28051,13 @@ CL_AddExplosions
 */
 void CL_AddExplosions (void)
 {
-	entity_t	*ent = 0;
+	Entity	*ent = 0;
 	int			i;
-	explosion_t	*ex;
+	Explosion	*ex;
 	float		frac;
 	int			f;
 
-	for (i=0, ex=cl_explosions ; i< MAX_EXPLOSIONS ; i++, ex++)
+	for (i=0, ex=cl_explosions ; i< (int)carray_count(cl_explosions) ; i++, ex++)
 	{
 		if (ex->type == ex_free)
 			continue;
@@ -28458,7 +28230,7 @@ int			r_numdlights;
 dlight_t	r_dlights[MAX_DLIGHTS];
 
 int			r_numentities;
-entity_t	r_entities[MAX_ENTITIES];
+Entity	r_entities[MAX_ENTITIES];
 
 int			r_numparticles;
 particle_t	r_particles[MAX_PARTICLES];
@@ -28489,7 +28261,7 @@ V_AddEntity
 
 =====================
 */
-void V_AddEntity (entity_t *ent)
+void V_AddEntity (Entity *ent)
 {
 	if (r_numentities >= MAX_ENTITIES)
 		return;
@@ -28596,7 +28368,7 @@ void V_TestEntities (void)
 {
 	int			i, j;
 	float		f, r;
-	entity_t	*ent;
+	Entity	*ent;
 
 	r_numentities = 32;
 	memset (r_entities, 0, sizeof(r_entities));
@@ -28842,7 +28614,7 @@ V_RenderView
 */
 void V_RenderView( float stereo_separation )
 {
-	extern int entitycmpfnc( const entity_t *, const entity_t * );
+	extern int entitycmpfnc( const Entity *, const Entity * );
 
 	if (cls.state != ca_active)
 		return;
@@ -34125,7 +33897,7 @@ void PlayerConfig_MenuDraw( void )
 	if ( s_pmi[s_player_model_box.curvalue].skindisplaynames )
 	{
 		static int yaw;
-		entity_t entity;
+		Entity entity;
 
 		memset( &entity, 0, sizeof( entity ) );
 
@@ -34338,7 +34110,6 @@ static void	 SpinControl_DoSlide( menulist_s *s, int dir );
 #define LCOLUMN_OFFSET -16
 
 extern refexport_t re;
-extern viddef_t viddef;
 
 #define VID_WIDTH viddef.width
 #define VID_HEIGHT viddef.height
@@ -81183,7 +80954,7 @@ extern	int			numgltextures;
 
 extern	image_t		*r_notexture;
 extern	image_t		*r_particletexture;
-extern	entity_t	*currententity;
+extern	Entity	*currententity;
 extern	model_t		*currentmodel;
 extern	int			r_visframecount;
 extern	int			r_framecount;
@@ -81305,15 +81076,14 @@ extern	int		registration_sequence;
 
 void V_AddBlend (float r, float g, float b, float a, float *v_blend);
 
-int 	R_Init( void *hinstance, void *hWnd );
 void	R_Shutdown( void );
 
 void R_RenderView (refdef_t *fd);
 void GL_ScreenShot_f (void);
-void R_DrawAliasModel (entity_t *e);
-void R_DrawBrushModel (entity_t *e);
-void R_DrawSpriteModel (entity_t *e);
-void R_DrawBeam( entity_t *e );
+void R_DrawAliasModel (Entity *e);
+void R_DrawBrushModel (Entity *e);
+void R_DrawSpriteModel (Entity *e);
+void R_DrawBeam( Entity *e );
 void R_DrawWorld (void);
 void R_RenderDlights (void);
 void R_DrawAlphaSurfaces (void);
@@ -81322,7 +81092,7 @@ void R_InitParticleTexture (void);
 void Draw_InitLocal (void);
 void GL_SubdivideSurface (msurface_t *fa);
 qboolean R_CullBox (vec3_t mins, vec3_t maxs);
-void R_RotateForEntity (entity_t *e);
+void R_RotateForEntity (Entity *e);
 void R_MarkLeaves (void);
 
 glpoly_t *WaterWarpPolyVerts (glpoly_t *p);
@@ -81461,25 +81231,6 @@ typedef struct
 extern glconfig_t  gl_config;
 extern glstate_t   gl_state;
 
-/*
-====================================================================
-
-IMPORTED FUNCTIONS
-
-====================================================================
-*/
-
-extern	refimport_t	ri;
-
-
-/*
-====================================================================
-
-IMPLEMENTATION SPECIFIC FUNCTIONS
-
-====================================================================
-*/
-
 void		GLimp_BeginFrame( float camera_separation );
 void		GLimp_EndFrame( void );
 int 		GLimp_Init( void *hinstance, void *hWnd );
@@ -81598,11 +81349,6 @@ void Draw_GetPicSize (int *w, int *h, char *pic)
 	*h = gl->height;
 }
 
-/*
-=============
-Draw_StretchPic
-=============
-*/
 void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 {
 	image_t *gl;
@@ -81610,7 +81356,7 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 	gl = Draw_FindPic (pic);
 	if (!gl)
 	{
-		ri.Con_Printf (PRINT_ALL, "Can't find pic: %s\n", pic);
+		Com_Printf("Can't find pic: %s\n", pic);
 		return;
 	}
 
@@ -81649,7 +81395,7 @@ void Draw_Pic (int x, int y, char *pic)
 	gl = Draw_FindPic (pic);
 	if (!gl)
 	{
-		ri.Con_Printf (PRINT_ALL, "Can't find pic: %s\n", pic);
+		Com_Printf("Can't find pic: %s\n", pic);
 		return;
 	}
 	if (scrap_dirty)
@@ -81689,7 +81435,7 @@ void Draw_TileClear (int x, int y, int w, int h, char *pic)
 	image = Draw_FindPic (pic);
 	if (!image)
 	{
-		ri.Con_Printf (PRINT_ALL, "Can't find pic: %s\n", pic);
+		Com_Printf("Can't find pic: %s\n", pic);
 		return;
 	}
 
@@ -82074,7 +81820,7 @@ void GL_TextureMode( char *string )
 
 	if (i == (int)carray_count(modes))
 	{
-		ri.Con_Printf (PRINT_ALL, "bad filter name\n");
+		Com_Printf("bad filter name\n");
 		return;
 	}
 
@@ -82110,7 +81856,7 @@ void GL_TextureAlphaMode( char *string )
 
 	if (i == (int)carray_count(gl_alpha_modes))
 	{
-		ri.Con_Printf (PRINT_ALL, "bad alpha texture mode name\n");
+		Com_Printf("bad alpha texture mode name\n");
 		return;
 	}
 
@@ -82134,7 +81880,7 @@ void GL_TextureSolidMode( char *string )
 
 	if (i == (int)carray_count(gl_solid_modes))
 	{
-		ri.Con_Printf (PRINT_ALL, "bad solid texture mode name\n");
+		Com_Printf("bad solid texture mode name\n");
 		return;
 	}
 
@@ -82157,7 +81903,7 @@ void	GL_ImageList_f (void)
 		"PAL"
 	};
 
-	ri.Con_Printf (PRINT_ALL, "------------------\n");
+	Com_Printf("------------------\n");
 	texels = 0;
 
 	for (i=0, image=gltextures ; i<numgltextures ; i++, image++)
@@ -82168,26 +81914,26 @@ void	GL_ImageList_f (void)
 		switch (image->type)
 		{
 		case it_skin:
-			ri.Con_Printf (PRINT_ALL, "M");
+			Com_Printf("M");
 			break;
 		case it_sprite:
-			ri.Con_Printf (PRINT_ALL, "S");
+			Com_Printf("S");
 			break;
 		case it_wall:
-			ri.Con_Printf (PRINT_ALL, "W");
+			Com_Printf("W");
 			break;
 		case it_pic:
-			ri.Con_Printf (PRINT_ALL, "P");
+			Com_Printf("P");
 			break;
 		default:
-			ri.Con_Printf (PRINT_ALL, " ");
+			Com_Printf(" ");
 			break;
 		}
 
-		ri.Con_Printf (PRINT_ALL,  " %3i %3i %s: %s\n",
+		Com_Printf( " %3i %3i %s: %s\n",
 			image->upload_width, image->upload_height, palstrings[image->paletted], image->name);
 	}
-	ri.Con_Printf (PRINT_ALL, "Total texel count (not counting mipmaps): %i\n", texels);
+	Com_Printf("Total texel count (not counting mipmaps): %i\n", texels);
 }
 
 
@@ -82261,22 +82007,7 @@ void Scrap_Upload (void)
 	scrap_dirty = false;
 }
 
-/*
-=================================================================
-
-PCX LOADING
-
-=================================================================
-*/
-
-
-/*
-==============
-LoadPCX
-==============
-*/
-void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height)
-{
+void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height) {
 	byte	*raw;
 	pcx_t	*pcx;
 	int		x, y;
@@ -82291,9 +82022,8 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 	// load the file
 	//
 	len = ri.FS_LoadFile (filename, (void **)&raw);
-	if (!raw)
-	{
-		ri.Con_Printf (PRINT_DEVELOPER, "Bad pcx file %s\n", filename);
+	if (!raw) {
+		Com_Printf("Bad pcx file %s\n", filename);
 		return;
 	}
 
@@ -82320,7 +82050,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 		|| pcx->xmax >= 640
 		|| pcx->ymax >= 480)
 	{
-		ri.Con_Printf (PRINT_ALL, "Bad pcx file %s\n", filename);
+		Com_Printf("Bad pcx file %s\n", filename);
 		return;
 	}
 
@@ -82363,7 +82093,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 
 	if ( raw - (byte *)pcx > len)
 	{
-		ri.Con_Printf (PRINT_DEVELOPER, "PCX file %s was malformed", filename);
+		Com_Printf("PCX file %s was malformed", filename);
 		free (*pic);
 		*pic = NULL;
 	}
@@ -82412,7 +82142,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 	ri.FS_LoadFile (name, (void **)&buffer);
 	if (!buffer)
 	{
-		ri.Con_Printf (PRINT_DEVELOPER, "Bad tga file %s\n", name);
+		Com_Printf("Bad tga file %s\n", name);
 		return;
 	}
 
@@ -82866,8 +82596,7 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	else if (samples == gl_alpha_format)
 	    comp = gl_tex_alpha_format;
 	else {
-	    ri.Con_Printf (PRINT_ALL,
-			   "Unknown number of texture components %i\n",
+	    Com_Printf(			   "Unknown number of texture components %i\n",
 			   samples);
 	    comp = samples;
 	}
@@ -83148,7 +82877,7 @@ image_t *GL_LoadWal (char *name)
 	ri.FS_LoadFile (name, (void **)&mt);
 	if (!mt)
 	{
-		ri.Con_Printf (PRINT_ALL, "GL_FindImage: can't load %s\n", name);
+		Com_Printf("GL_FindImage: can't load %s\n", name);
 		return r_notexture;
 	}
 
@@ -84580,7 +84309,7 @@ static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 /*
 ** R_CullAliasModel
 */
-static qboolean R_CullAliasModel( vec3_t bbox[8], entity_t *e )
+static qboolean R_CullAliasModel( vec3_t bbox[8], Entity *e )
 {
 	int i;
 	vec3_t		mins, maxs;
@@ -84594,13 +84323,13 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], entity_t *e )
 
 	if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
 	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n",
+		Com_Printf("R_CullAliasModel %s: no such frame %d\n",
 			currentmodel->name, e->frame);
 		e->frame = 0;
 	}
 	if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
 	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n",
+		Com_Printf("R_CullAliasModel %s: no such oldframe %d\n",
 			currentmodel->name, e->oldframe);
 		e->oldframe = 0;
 	}
@@ -84726,7 +84455,7 @@ R_DrawAliasModel
 
 =================
 */
-void R_DrawAliasModel (entity_t *e)
+void R_DrawAliasModel (Entity *e)
 {
 	int			i;
 	dmdl_t		*paliashdr;
@@ -84974,7 +84703,7 @@ void R_DrawAliasModel (entity_t *e)
 	if ( (currententity->frame >= paliashdr->num_frames)
 		|| (currententity->frame < 0) )
 	{
-		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such frame %d\n",
+		Com_Printf("R_DrawAliasModel %s: no such frame %d\n",
 			currentmodel->name, currententity->frame);
 		currententity->frame = 0;
 		currententity->oldframe = 0;
@@ -84983,7 +84712,7 @@ void R_DrawAliasModel (entity_t *e)
 	if ( (currententity->oldframe >= paliashdr->num_frames)
 		|| (currententity->oldframe < 0))
 	{
-		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such oldframe %d\n",
+		Com_Printf("R_DrawAliasModel %s: no such oldframe %d\n",
 			currentmodel->name, currententity->oldframe);
 		currententity->frame = 0;
 		currententity->oldframe = 0;
@@ -85176,15 +84905,15 @@ void Mod_Modellist_f (void)
 	int		total;
 
 	total = 0;
-	ri.Con_Printf (PRINT_ALL,"Loaded models:\n");
+	Com_Printf("Loaded models:\n");
 	for (i=0, mod=mod_known ; i < mod_numknown ; i++, mod++)
 	{
 		if (!mod->name[0])
 			continue;
-		ri.Con_Printf (PRINT_ALL, "%8i : %s\n",mod->extradatasize, mod->name);
+		Com_Printf("%8i : %s\n",mod->extradatasize, mod->name);
 		total += mod->extradatasize;
 	}
-	ri.Con_Printf (PRINT_ALL, "Total resident: %i\n", total);
+	Com_Printf("Total resident: %i\n", total);
 }
 
 /*
@@ -85494,7 +85223,7 @@ void Mod_LoadTexinfo (lump_t *l)
 		out->image = GL_FindImage (name, it_wall);
 		if (!out->image)
 		{
-			ri.Con_Printf (PRINT_ALL, "Couldn't load %s\n", name);
+			Com_Printf("Couldn't load %s\n", name);
 			out->image = r_notexture;
 		}
 	}
@@ -86200,8 +85929,6 @@ void R_Clear (void);
 
 rviddef_t	vid;
 
-refimport_t	ri;
-
 model_t		*r_worldmodel;
 
 float		gldepthmin, gldepthmax;
@@ -86212,7 +85939,7 @@ glstate_t  gl_state;
 image_t		*r_notexture;		// use for bad textures
 image_t		*r_particletexture;	// little dot for particles
 
-entity_t	*currententity;
+Entity	*currententity;
 model_t		*currentmodel;
 
 cplane_t	frustum[4];
@@ -86330,7 +86057,7 @@ qboolean R_CullBox (vec3_t mins, vec3_t maxs)
 }
 
 
-void R_RotateForEntity (entity_t *e)
+void R_RotateForEntity (Entity *e)
 {
     qglTranslatef (e->origin[0],  e->origin[1],  e->origin[2]);
 
@@ -86354,7 +86081,7 @@ R_DrawSpriteModel
 
 =================
 */
-void R_DrawSpriteModel (entity_t *e)
+void R_DrawSpriteModel (Entity *e)
 {
 	float alpha = 1.0F;
 	vec3_t	point;
@@ -86367,28 +86094,10 @@ void R_DrawSpriteModel (entity_t *e)
 
 	psprite = (dsprite_t *)currentmodel->extradata;
 
-#if 0
-	if (e->frame < 0 || e->frame >= psprite->numframes)
-	{
-		ri.Con_Printf (PRINT_ALL, "no such sprite frame %i\n", e->frame);
-		e->frame = 0;
-	}
-#endif
 	e->frame %= psprite->numframes;
 
 	frame = &psprite->frames[e->frame];
 
-#if 0
-	if (psprite->type == SPR_ORIENTED)
-	{	// bullet marks on walls
-	vec3_t		v_forward, v_right, v_up;
-
-	AngleVectors (currententity->angles, v_forward, v_right, v_up);
-		up = v_up;
-		right = v_right;
-	}
-	else
-#endif
 	{	// normal sprite
 		up = vup;
 		right = vright;
@@ -87021,7 +86730,7 @@ void R_RenderView (refdef_t *fd)
 
 	if (r_speeds->value)
 	{
-		ri.Con_Printf (PRINT_ALL, "%4i wpoly %4i epoly %i tex %i lmaps\n",
+		Com_Printf("%4i wpoly %4i epoly %i tex %i lmaps\n",
 			c_brush_polys,
 			c_alias_polys,
 			c_visible_textures,
@@ -87183,7 +86892,7 @@ qboolean R_SetMode (void)
 
 	if ( vid_fullscreen->modified && !gl_config.allow_cds )
 	{
-		ri.Con_Printf( PRINT_ALL, "R_SetMode() - CDS not allowed with this driver\n" );
+		Com_Printf("R_SetMode() - CDS not allowed with this driver\n");
 		ri.Cvar_SetValue( "vid_fullscreen", !vid_fullscreen->value );
 		vid_fullscreen->modified = false;
 	}
@@ -87203,7 +86912,7 @@ qboolean R_SetMode (void)
 		{
 			ri.Cvar_SetValue( "vid_fullscreen", 0);
 			vid_fullscreen->modified = false;
-			ri.Con_Printf( PRINT_ALL, "ref_gl::R_SetMode() - fullscreen unavailable in this mode\n" );
+			Com_Printf("ref_gl::R_SetMode() - fullscreen unavailable in this mode\n");
 			if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_mode->value, false ) ) == rserr_ok )
 				return true;
 		}
@@ -87211,35 +86920,26 @@ qboolean R_SetMode (void)
 		{
 			ri.Cvar_SetValue( "gl_mode", gl_state.prev_mode );
 			gl_mode->modified = false;
-			ri.Con_Printf( PRINT_ALL, "ref_gl::R_SetMode() - invalid mode\n" );
+			Com_Printf("ref_gl::R_SetMode() - invalid mode\n");
 		}
 
 		// try setting it back to something safe
 		if ( ( err = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_state.prev_mode, false ) ) != rserr_ok )
 		{
-			ri.Con_Printf( PRINT_ALL, "ref_gl::R_SetMode() - could not revert to safe mode\n" );
+			Com_Printf("ref_gl::R_SetMode() - could not revert to safe mode\n");
 			return false;
 		}
 	}
 	return true;
 }
 
-static qboolean QGL_Init( const char *dllname );
+static qboolean QGL_Init(const char *dllname);
 
-int R_Init( void *hinstance, void *hWnd )
-{
+static int R_Init(void* hinstance, void* hWnd) {
 	char renderer_buffer[1000];
 	char vendor_buffer[1000];
-	int		err;
-	int		j;
-	extern float r_turbsin[256];
 
-	for ( j = 0; j < 256; j++ )
-	{
-		r_turbsin[j] *= 0.5;
-	}
-
-	ri.Con_Printf (PRINT_ALL, "ref_gl version: "REF_VERSION"\n");
+	Com_Printf("ref_gl version: "REF_VERSION"\n");
 
 	Draw_GetPalette ();
 
@@ -87249,7 +86949,7 @@ int R_Init( void *hinstance, void *hWnd )
 	if (!QGL_Init( gl_driver->string))
 	{
 		QGL_Shutdown();
-        ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not load \"%s\"\n", gl_driver->string );
+        Com_Printf("ref_gl::R_Init() - could not load \"%s\"\n", gl_driver->string );
 		return -1;
 	}
 
@@ -87267,7 +86967,7 @@ int R_Init( void *hinstance, void *hWnd )
 	if ( !R_SetMode () )
 	{
 		QGL_Shutdown();
-        ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not R_SetMode()\n" );
+        Com_Printf("ref_gl::R_Init() - could not R_SetMode()\n" );
 		return -1;
 	}
 
@@ -87277,13 +86977,13 @@ int R_Init( void *hinstance, void *hWnd )
 	** get our various GL strings
 	*/
 	gl_config.vendor_string = (char*)qglGetString (GL_VENDOR);
-	ri.Con_Printf (PRINT_ALL, "GL_VENDOR: %s\n", gl_config.vendor_string );
+	Com_Printf("GL_VENDOR: %s\n", gl_config.vendor_string );
 	gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
-	ri.Con_Printf (PRINT_ALL, "GL_RENDERER: %s\n", gl_config.renderer_string );
+	Com_Printf("GL_RENDERER: %s\n", gl_config.renderer_string );
 	gl_config.version_string = (char*)qglGetString (GL_VERSION);
-	ri.Con_Printf (PRINT_ALL, "GL_VERSION: %s\n", gl_config.version_string );
+	Com_Printf("GL_VERSION: %s\n", gl_config.version_string );
 	gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
-	ri.Con_Printf (PRINT_ALL, "GL_EXTENSIONS: %s\n", gl_config.extensions_string );
+	Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 
 	strcpy( renderer_buffer, gl_config.renderer_string );
 	_strlwr( renderer_buffer );
@@ -87320,7 +87020,7 @@ int R_Init( void *hinstance, void *hWnd )
 		if ( gl_config.renderer == GL_RENDERER_PERMEDIA2 )
 		{
 			ri.Cvar_Set( "gl_monolightmap", "A" );
-			ri.Con_Printf( PRINT_ALL, "...using gl_monolightmap 'a'\n" );
+			Com_Printf("...using gl_monolightmap 'a'\n");
 		}
 		else if ( gl_config.renderer & GL_RENDERER_POWERVR )
 		{
@@ -87362,34 +87062,31 @@ int R_Init( void *hinstance, void *hWnd )
 	}
 
 	if ( gl_config.allow_cds )
-		ri.Con_Printf( PRINT_ALL, "...allowing CDS\n" );
+		Com_Printf("...allowing CDS\n");
 	else
-		ri.Con_Printf( PRINT_ALL, "...disabling CDS\n" );
+		Com_Printf("...disabling CDS\n");
 
-	/*
-	** grab extensions
-	*/
-#ifdef _WIN32
+	// grab extensions
 	if ( strstr( gl_config.extensions_string, "GL_EXT_compiled_vertex_array" ) ||
 		 strstr( gl_config.extensions_string, "GL_SGI_compiled_vertex_array" ) )
 	{
-		ri.Con_Printf( PRINT_ALL, "...enabling GL_EXT_compiled_vertex_array\n" );
+		Com_Printf("...enabling GL_EXT_compiled_vertex_array\n");
 		qglLockArraysEXT = ( void * ) qwglGetProcAddress( "glLockArraysEXT" );
 		qglUnlockArraysEXT = ( void * ) qwglGetProcAddress( "glUnlockArraysEXT" );
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
+		Com_Printf("...GL_EXT_compiled_vertex_array not found\n");
 	}
 
 	if ( strstr( gl_config.extensions_string, "WGL_EXT_swap_control" ) )
 	{
 		qwglSwapIntervalEXT = ( BOOL (WINAPI *)(int)) qwglGetProcAddress( "wglSwapIntervalEXT" );
-		ri.Con_Printf( PRINT_ALL, "...enabling WGL_EXT_swap_control\n" );
+		Com_Printf("...enabling WGL_EXT_swap_control\n");
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...WGL_EXT_swap_control not found\n" );
+		Com_Printf("...WGL_EXT_swap_control not found\n");
 	}
 
 	if ( strstr( gl_config.extensions_string, "GL_EXT_point_parameters" ) )
@@ -87398,16 +87095,16 @@ int R_Init( void *hinstance, void *hWnd )
 		{
 			qglPointParameterfEXT = ( void (APIENTRY *)( GLenum, GLfloat ) ) qwglGetProcAddress( "glPointParameterfEXT" );
 			qglPointParameterfvEXT = ( void (APIENTRY *)( GLenum, const GLfloat * ) ) qwglGetProcAddress( "glPointParameterfvEXT" );
-			ri.Con_Printf( PRINT_ALL, "...using GL_EXT_point_parameters\n" );
+			Com_Printf("...using GL_EXT_point_parameters\n");
 		}
 		else
 		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring GL_EXT_point_parameters\n" );
+			Com_Printf("...ignoring GL_EXT_point_parameters\n");
 		}
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...GL_EXT_point_parameters not found\n" );
+		Com_Printf("...GL_EXT_point_parameters not found\n");
 	}
 
 	if ( strstr( gl_config.extensions_string, "GL_EXT_paletted_texture" ) &&
@@ -87415,55 +87112,49 @@ int R_Init( void *hinstance, void *hWnd )
 	{
 		if ( gl_ext_palettedtexture->value )
 		{
-			ri.Con_Printf( PRINT_ALL, "...using GL_EXT_shared_texture_palette\n" );
+			Com_Printf("...using GL_EXT_shared_texture_palette\n");
 			qglColorTableEXT = ( void ( APIENTRY * ) ( int, int, int, int, int, const void * ) ) qwglGetProcAddress( "glColorTableEXT" );
 		}
 		else
 		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring GL_EXT_shared_texture_palette\n" );
+			Com_Printf("...ignoring GL_EXT_shared_texture_palette\n");
 		}
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...GL_EXT_shared_texture_palette not found\n" );
+		Com_Printf("...GL_EXT_shared_texture_palette not found\n");
 	}
 
 	if ( strstr( gl_config.extensions_string, "GL_SGIS_multitexture" ) )
 	{
 		if ( gl_ext_multitexture->value )
 		{
-			ri.Con_Printf( PRINT_ALL, "...using GL_SGIS_multitexture\n" );
+			Com_Printf("...using GL_SGIS_multitexture\n");
 			qglMTexCoord2fSGIS = ( void * ) qwglGetProcAddress( "glMTexCoord2fSGIS" );
 			qglSelectTextureSGIS = ( void * ) qwglGetProcAddress( "glSelectTextureSGIS" );
 		}
 		else
 		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring GL_SGIS_multitexture\n" );
+			Com_Printf("...ignoring GL_SGIS_multitexture\n");
 		}
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...GL_SGIS_multitexture not found\n" );
+		Com_Printf("...GL_SGIS_multitexture not found\n");
 	}
-#endif
 
 	GL_SetDefaultState();
+	GL_InitImages();
+	Mod_Init();
+	R_InitParticleTexture();
+	Draw_InitLocal();
 
-	/*
-	** draw our stereo patterns
-	*/
-#if 0 // commented out until H3D pays us the money they owe us
-	GL_DrawStereoPattern();
-#endif
-
-	GL_InitImages ();
-	Mod_Init ();
-	R_InitParticleTexture ();
-	Draw_InitLocal ();
-
-	err = qglGetError();
-	if ( err != GL_NO_ERROR )
-		ri.Con_Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
+	{
+		int err = qglGetError();
+		if (err != GL_NO_ERROR) {
+			Com_Printf("glGetError() = 0x%x\n", err);
+		}
+	}
 
 	return true;
 }
@@ -87649,7 +87340,7 @@ void R_SetPalette ( const unsigned char *palette)
 /*
 ** R_DrawBeam
 */
-void R_DrawBeam( entity_t *e )
+void R_DrawBeam( Entity *e )
 {
 #define NUM_BEAM_SEGS 6
 
@@ -87821,7 +87512,7 @@ void GL_ScreenShot_f(void)
 	}
 	if (i==100)
 	{
-		ri.Con_Printf (PRINT_ALL, "SCR_ScreenShot_f: Couldn't create a file\n");
+		Com_Printf("SCR_ScreenShot_f: Couldn't create a file\n");
 		return;
  	}
 
@@ -87851,7 +87542,7 @@ void GL_ScreenShot_f(void)
 	fclose (f);
 
 	free (buffer);
-	ri.Con_Printf (PRINT_ALL, "Wrote %s\n", picname);
+	Com_Printf("Wrote %s\n", picname);
 }
 
 /*
@@ -87859,10 +87550,10 @@ void GL_ScreenShot_f(void)
 */
 void GL_Strings_f( void )
 {
-	ri.Con_Printf (PRINT_ALL, "GL_VENDOR: %s\n", gl_config.vendor_string );
-	ri.Con_Printf (PRINT_ALL, "GL_RENDERER: %s\n", gl_config.renderer_string );
-	ri.Con_Printf (PRINT_ALL, "GL_VERSION: %s\n", gl_config.version_string );
-	ri.Con_Printf (PRINT_ALL, "GL_EXTENSIONS: %s\n", gl_config.extensions_string );
+	Com_Printf("GL_VENDOR: %s\n", gl_config.vendor_string );
+	Com_Printf("GL_RENDERER: %s\n", gl_config.renderer_string );
+	Com_Printf("GL_VERSION: %s\n", gl_config.version_string );
+	Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 }
 
 /*
@@ -88875,7 +88566,7 @@ void R_DrawInlineBModel (void)
 R_DrawBrushModel
 =================
 */
-void R_DrawBrushModel (entity_t *e)
+void R_DrawBrushModel (Entity *e)
 {
 	vec3_t		mins, maxs;
 	int			i;
@@ -89117,7 +88808,7 @@ R_DrawWorld
 */
 void R_DrawWorld (void)
 {
-	entity_t	ent;
+	Entity	ent;
 
 	if (!r_drawworld->value)
 		return;
@@ -89744,58 +89435,7 @@ void GL_SubdivideSurface (msurface_t *fa)
 	SubdividePolygon (numverts, verts[0]);
 }
 
-//=========================================================
-
-
-
-// speed up sin calculations - Ed
-float	r_turbsin[] =
-{
-/* ============ begin inlined header: ref_gl/warpsin.h ============ */
-
- 0, 0.19633, 0.392541, 0.588517, 0.784137, 0.979285, 1.17384, 1.3677,
- 1.56072, 1.75281, 1.94384, 2.1337, 2.32228, 2.50945, 2.69512, 2.87916,
- 3.06147, 3.24193, 3.42044, 3.59689, 3.77117, 3.94319, 4.11282, 4.27998,
- 4.44456, 4.60647, 4.76559, 4.92185, 5.07515, 5.22538, 5.37247, 5.51632,
- 5.65685, 5.79398, 5.92761, 6.05767, 6.18408, 6.30677, 6.42566, 6.54068,
- 6.65176, 6.75883, 6.86183, 6.9607, 7.05537, 7.14579, 7.23191, 7.31368,
- 7.39104, 7.46394, 7.53235, 7.59623, 7.65552, 7.71021, 7.76025, 7.80562,
- 7.84628, 7.88222, 7.91341, 7.93984, 7.96148, 7.97832, 7.99036, 7.99759,
- 8, 7.99759, 7.99036, 7.97832, 7.96148, 7.93984, 7.91341, 7.88222,
- 7.84628, 7.80562, 7.76025, 7.71021, 7.65552, 7.59623, 7.53235, 7.46394,
- 7.39104, 7.31368, 7.23191, 7.14579, 7.05537, 6.9607, 6.86183, 6.75883,
- 6.65176, 6.54068, 6.42566, 6.30677, 6.18408, 6.05767, 5.92761, 5.79398,
- 5.65685, 5.51632, 5.37247, 5.22538, 5.07515, 4.92185, 4.76559, 4.60647,
- 4.44456, 4.27998, 4.11282, 3.94319, 3.77117, 3.59689, 3.42044, 3.24193,
- 3.06147, 2.87916, 2.69512, 2.50945, 2.32228, 2.1337, 1.94384, 1.75281,
- 1.56072, 1.3677, 1.17384, 0.979285, 0.784137, 0.588517, 0.392541, 0.19633,
- 9.79717e-16, -0.19633, -0.392541, -0.588517, -0.784137, -0.979285, -1.17384, -1.3677,
- -1.56072, -1.75281, -1.94384, -2.1337, -2.32228, -2.50945, -2.69512, -2.87916,
- -3.06147, -3.24193, -3.42044, -3.59689, -3.77117, -3.94319, -4.11282, -4.27998,
- -4.44456, -4.60647, -4.76559, -4.92185, -5.07515, -5.22538, -5.37247, -5.51632,
- -5.65685, -5.79398, -5.92761, -6.05767, -6.18408, -6.30677, -6.42566, -6.54068,
- -6.65176, -6.75883, -6.86183, -6.9607, -7.05537, -7.14579, -7.23191, -7.31368,
- -7.39104, -7.46394, -7.53235, -7.59623, -7.65552, -7.71021, -7.76025, -7.80562,
- -7.84628, -7.88222, -7.91341, -7.93984, -7.96148, -7.97832, -7.99036, -7.99759,
- -8, -7.99759, -7.99036, -7.97832, -7.96148, -7.93984, -7.91341, -7.88222,
- -7.84628, -7.80562, -7.76025, -7.71021, -7.65552, -7.59623, -7.53235, -7.46394,
- -7.39104, -7.31368, -7.23191, -7.14579, -7.05537, -6.9607, -6.86183, -6.75883,
- -6.65176, -6.54068, -6.42566, -6.30677, -6.18408, -6.05767, -5.92761, -5.79398,
- -5.65685, -5.51632, -5.37247, -5.22538, -5.07515, -4.92185, -4.76559, -4.60647,
- -4.44456, -4.27998, -4.11282, -3.94319, -3.77117, -3.59689, -3.42044, -3.24193,
- -3.06147, -2.87916, -2.69512, -2.50945, -2.32228, -2.1337, -1.94384, -1.75281,
- -1.56072, -1.3677, -1.17384, -0.979285, -0.784137, -0.588517, -0.392541, -0.19633,
-/* ============ end inlined header: ref_gl/warpsin.h ============ */
-};
-#define TURBSCALE (256.0 / (2 * M_PI))
-
-/*
-=============
-EmitWaterPolys
-
-Does a water warp on the pre-fragmented glpoly_t chain
-=============
-*/
+// Does a water warp on the pre-fragmented glpoly_t chain
 void EmitWaterPolys (msurface_t *fa)
 {
 	glpoly_t	*p, *bp;
@@ -89819,11 +89459,13 @@ void EmitWaterPolys (msurface_t *fa)
 			os = v[3];
 			ot = v[4];
 
-			s = os + r_turbsin[(int)((ot*0.125+r_newrefdef.time) * TURBSCALE) & 255];
+			float amplitude = 4.0f;
+
+			s = os + amplitude * sinf(ot * 0.125 + r_newrefdef.time);
 			s += scroll;
 			s *= (1.0/64);
 
-			t = ot + r_turbsin[(int)((os*0.125+rdt) * TURBSCALE) & 255];
+			t = ot + amplitude * sinf(os * 0.125 + rdt);
 			t *= (1.0/64);
 
 			qglTexCoord2f (s, t);
@@ -93438,7 +93080,7 @@ cvar_t		*vid_ypos;			// Y coordinate of window position
 cvar_t		*vid_fullscreen;
 
 // Global variables used internally by this module
-viddef_t	viddef;				// global video state; used by other modules
+
 HINSTANCE	reflib_library;		// Handle to refresh DLL
 
 
@@ -93486,39 +93128,6 @@ static void WIN_EnableAltTab( void )
 		}
 
 		s_alttab_disabled = false;
-	}
-}
-
-/*
-==========================================================================
-
-DLL GLUE
-
-==========================================================================
-*/
-
-#define PRINT_ALERT			2
-#define	MAXPRINTMSG	4096
-void VID_Printf (int print_level, char *fmt, ...)
-{
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
-	va_end (argptr);
-
-	if (print_level == PRINT_ALL)
-	{
-		Com_Printf ("%s", msg);
-	}
-	else if ( print_level == PRINT_DEVELOPER )
-	{
-		Com_DPrintf ("%s", msg);
-	}
-	else if ( print_level == PRINT_ALERT )
-	{
-		MessageBox( 0, msg, "PRINT_ALERT", MB_ICONWARNING );
-		OutputDebugString( msg );
 	}
 }
 
@@ -93910,7 +93519,6 @@ static void VID_CheckChanges() {
 			ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
 			ri.Cmd_Argc = Cmd_Argc;
 			ri.Cmd_Argv = Cmd_Argv;
-			ri.Con_Printf = VID_Printf;
 			ri.FS_LoadFile = FS_LoadFile;
 			ri.FS_FreeFile = FS_FreeFile;
 			ri.Cvar_Get = COM_GetCvar;
@@ -93937,7 +93545,6 @@ static void VID_CheckChanges() {
 				.DrawFill = Draw_Fill,
 				.DrawFadeScreen= Draw_FadeScreen,
 				.DrawStretchRaw = Draw_StretchRaw,
-				.Init = R_Init,
 				.Shutdown = R_Shutdown,
 				.CinematicSetPalette = R_SetPalette,
 				.BeginFrame = R_BeginFrame,
@@ -93947,7 +93554,7 @@ static void VID_CheckChanges() {
 
 			assert(re.api_version == API_VERSION);
 
-			int init_result = re.Init(global_hInstance, MainWndProc);
+			int init_result = R_Init(global_hInstance, MainWndProc);
 			assert(init_result != -1);
 
 			reflib_active = true;
@@ -94387,7 +93994,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	// init all the gl stuff for the window
 	if (!GLimp_InitGL ())
 	{
-		ri.Con_Printf( PRINT_ALL, "VID_CreateWindow() - GLimp_InitGL failed\n");
+		Com_Printf("VID_CreateWindow() - GLimp_InitGL failed\n");
 		return false;
 	}
 
@@ -94409,13 +94016,13 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 	int width, height;
 	const char *win_fs[] = { "W", "FS" };
 
-	ri.Con_Printf( PRINT_ALL, "Initializing OpenGL display\n");
+	Com_Printf("Initializing OpenGL display\n");
 
-	ri.Con_Printf (PRINT_ALL, "...setting mode %d:", mode );
+	Com_Printf("...setting mode %d:", mode );
 
 	ri.Vid_GetModeInfo(&width, &height, mode);
 
-	ri.Con_Printf(PRINT_ALL, " %d %d %s\n", width, height, win_fs[fullscreen]);
+	Com_Printf(" %d %d %s\n", width, height, win_fs[fullscreen]);
 
 	// destroy the existing window
 	if (glw_state.hWnd) {
@@ -94427,7 +94034,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 	{
 		DEVMODE dm;
 
-		ri.Con_Printf( PRINT_ALL, "...attempting fullscreen\n" );
+		Com_Printf("...attempting fullscreen\n");
 
 		memset( &dm, 0, sizeof( dm ) );
 
@@ -94441,19 +94048,19 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 		{
 			dm.dmBitsPerPel = gl_bitdepth->value;
 			dm.dmFields |= DM_BITSPERPEL;
-			ri.Con_Printf( PRINT_ALL, "...using gl_bitdepth of %d\n", ( int ) gl_bitdepth->value );
+			Com_Printf("...using gl_bitdepth of %d\n", ( int ) gl_bitdepth->value);
 		}
 		else
 		{
 			HDC hdc = GetDC( NULL );
 			int bitspixel = GetDeviceCaps( hdc, BITSPIXEL );
 
-			ri.Con_Printf( PRINT_ALL, "...using desktop display depth of %d\n", bitspixel );
+			Com_Printf("...using desktop display depth of %d\n", bitspixel);
 
 			ReleaseDC( 0, hdc );
 		}
 
-		ri.Con_Printf( PRINT_ALL, "...calling CDS: " );
+		Com_Printf("...calling CDS: ");
 		if ( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) == DISP_CHANGE_SUCCESSFUL )
 		{
 			*pwidth = width;
@@ -94461,7 +94068,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 
 			gl_state.fullscreen = true;
 
-			ri.Con_Printf( PRINT_ALL, "ok\n" );
+			Com_Printf("ok\n");
 
 			if ( !VID_CreateWindow (width, height, true) )
 				return rserr_invalid_mode;
@@ -94473,9 +94080,9 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 			*pwidth = width;
 			*pheight = height;
 
-			ri.Con_Printf( PRINT_ALL, "failed\n" );
+			Com_Printf("failed\n");
 
-			ri.Con_Printf( PRINT_ALL, "...calling CDS assuming dual monitors:" );
+			Com_Printf("...calling CDS assuming dual monitors:");
 
 			dm.dmPelsWidth = width * 2;
 			dm.dmPelsHeight = height;
@@ -94493,9 +94100,9 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 			*/
 			if ( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
 			{
-				ri.Con_Printf( PRINT_ALL, " failed\n" );
+				Com_Printf(" failed\n");
 
-				ri.Con_Printf( PRINT_ALL, "...setting windowed mode\n" );
+				Com_Printf("...setting windowed mode\n");
 
 				ChangeDisplaySettings( 0, 0 );
 
@@ -94508,7 +94115,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 			}
 			else
 			{
-				ri.Con_Printf( PRINT_ALL, " ok\n" );
+				Com_Printf(" ok\n");
 				if ( !VID_CreateWindow (width, height, true) )
 					return rserr_invalid_mode;
 
@@ -94519,7 +94126,7 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 	}
 	else
 	{
-		ri.Con_Printf( PRINT_ALL, "...setting windowed mode\n" );
+		Com_Printf("...setting windowed mode\n");
 
 		ChangeDisplaySettings( 0, 0 );
 
@@ -94533,29 +94140,22 @@ rserr_t GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen 
 	return rserr_ok;
 }
 
-/*
-** GLimp_Shutdown
-**
-** This routine does all OS specific shutdown procedures for the OpenGL
-** subsystem.  Under OpenGL this means NULLing out the current DC and
-** HGLRC, deleting the rendering context, and releasing the DC acquired
-** for the window.  The state structure is also nulled out.
-**
-*/
-void GLimp_Shutdown( void )
-{
+// This routine does all OS specific shutdown procedures for the OpenGL subsystem.
+// Under OpenGL this means NULLing out the current DC and HGLRC, deleting the rendering context, and releasing the DC acquired for the window.
+// The state structure is also nulled out.
+void GLimp_Shutdown() {
 	if ( qwglMakeCurrent && !qwglMakeCurrent( NULL, NULL ) )
-		ri.Con_Printf( PRINT_ALL, "ref_gl::R_Shutdown() - wglMakeCurrent failed\n");
+		Com_Printf("ref_gl::R_Shutdown() - wglMakeCurrent failed\n");
 	if ( glw_state.hGLRC )
 	{
 		if (  qwglDeleteContext && !qwglDeleteContext( glw_state.hGLRC ) )
-			ri.Con_Printf( PRINT_ALL, "ref_gl::R_Shutdown() - wglDeleteContext failed\n");
+			Com_Printf("ref_gl::R_Shutdown() - wglDeleteContext failed\n");
 		glw_state.hGLRC = NULL;
 	}
 	if (glw_state.hDC)
 	{
 		if ( !ReleaseDC( glw_state.hWnd, glw_state.hDC ) )
-			ri.Con_Printf( PRINT_ALL, "ref_gl::R_Shutdown() - ReleaseDC failed\n" );
+			Com_Printf("ref_gl::R_Shutdown() - ReleaseDC failed\n");
 		glw_state.hDC   = NULL;
 	}
 	if (glw_state.hWnd)
@@ -94622,7 +94222,7 @@ qboolean GLimp_InitGL (void)
 	*/
 	if ( stereo->value != 0 )
 	{
-		ri.Con_Printf( PRINT_ALL, "...attempting to use stereo\n" );
+		Com_Printf("...attempting to use stereo\n");
 		pfd.dwFlags |= PFD_STEREO;
 		gl_state.stereo_enabled = true;
 	}
@@ -94643,11 +94243,11 @@ qboolean GLimp_InitGL (void)
 	** Get a DC for the specified window
 	*/
 	if ( glw_state.hDC != NULL )
-		ri.Con_Printf( PRINT_ALL, "GLimp_Init() - non-NULL DC exists\n" );
+		Com_Printf("GLimp_Init() - non-NULL DC exists\n");
 
     if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
 	{
-		ri.Con_Printf( PRINT_ALL, "GLimp_Init() - GetDC failed\n" );
+		Com_Printf("GLimp_Init() - GetDC failed\n");
 		return false;
 	}
 
@@ -94655,12 +94255,12 @@ qboolean GLimp_InitGL (void)
 	{
 		if ( (pixelformat = qwglChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
 		{
-			ri.Con_Printf (PRINT_ALL, "GLimp_Init() - qwglChoosePixelFormat failed\n");
+			Com_Printf("GLimp_Init() - qwglChoosePixelFormat failed\n");
 			return false;
 		}
 		if ( qwglSetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
 		{
-			ri.Con_Printf (PRINT_ALL, "GLimp_Init() - qwglSetPixelFormat failed\n");
+			Com_Printf("GLimp_Init() - qwglSetPixelFormat failed\n");
 			return false;
 		}
 		qwglDescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
@@ -94669,12 +94269,12 @@ qboolean GLimp_InitGL (void)
 	{
 		if ( ( pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
 		{
-			ri.Con_Printf (PRINT_ALL, "GLimp_Init() - ChoosePixelFormat failed\n");
+			Com_Printf("GLimp_Init() - ChoosePixelFormat failed\n");
 			return false;
 		}
 		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
 		{
-			ri.Con_Printf (PRINT_ALL, "GLimp_Init() - SetPixelFormat failed\n");
+			Com_Printf("GLimp_Init() - SetPixelFormat failed\n");
 			return false;
 		}
 		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
@@ -94699,7 +94299,7 @@ qboolean GLimp_InitGL (void)
 	*/
 	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
 	{
-		ri.Con_Printf( PRINT_ALL, "...failed to select stereo pixel format\n" );
+		Com_Printf("...failed to select stereo pixel format\n");
 		ri.Cvar_SetValue( "cl_stereo", 0 );
 		gl_state.stereo_enabled = false;
 	}
@@ -94710,28 +94310,28 @@ qboolean GLimp_InitGL (void)
 	*/
 	if ( ( glw_state.hGLRC = qwglCreateContext( glw_state.hDC ) ) == 0 )
 	{
-		ri.Con_Printf (PRINT_ALL, "GLimp_Init() - qwglCreateContext failed\n");
+		Com_Printf("GLimp_Init() - qwglCreateContext failed\n");
 
 		goto fail;
 	}
 
     if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
 	{
-		ri.Con_Printf (PRINT_ALL, "GLimp_Init() - qwglMakeCurrent failed\n");
+		Com_Printf("GLimp_Init() - qwglMakeCurrent failed\n");
 
 		goto fail;
 	}
 
 	if ( !VerifyDriver() )
 	{
-		ri.Con_Printf( PRINT_ALL, "GLimp_Init() - no hardware acceleration detected\n" );
+		Com_Printf("GLimp_Init() - no hardware acceleration detected\n");
 		goto fail;
 	}
 
 	/*
 	** print out PFD specifics
 	*/
-	ri.Con_Printf( PRINT_ALL, "GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits );
+	Com_Printf("GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits);
 
 	return true;
 
@@ -94760,7 +94360,7 @@ void GLimp_BeginFrame( float camera_separation )
 		if ( gl_bitdepth->value != 0 && !glw_state.allowdisplaydepthchange )
 		{
 			ri.Cvar_SetValue( "gl_bitdepth", 0 );
-			ri.Con_Printf( PRINT_ALL, "gl_bitdepth requires Win95 OSR2.x or WinNT 4.x\n" );
+			Com_Printf("gl_bitdepth requires Win95 OSR2.x or WinNT 4.x\n");
 		}
 		gl_bitdepth->modified = false;
 	}
@@ -97804,7 +97404,7 @@ static qboolean QGL_Init( const char *dllname ) {
 		char *buf = NULL;
 
 		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &buf, 0, NULL);
-		ri.Con_Printf( PRINT_ALL, "%s\n", buf );
+		Com_Printf("%s\n", buf);
 		return false;
 	}
 
@@ -99321,7 +98921,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Cmd_AddCommand("map", SV_Map_f);
 				Cmd_AddCommand("demomap", SV_DemoMap_f);
 				Cmd_AddCommand("gamemap", SV_GameMap_f);
-				Cmd_AddCommand("setmaster", SV_SetMaster_f);
 				Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
 				Cmd_AddCommand("serverstop", SV_ServerStop_f);
 				Cmd_AddCommand("save", SV_Savegame_f);
