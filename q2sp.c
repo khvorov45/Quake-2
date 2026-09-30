@@ -2,12 +2,12 @@
 // SECTION Init
 //
 
-#define _CRT_SECURE_NO_WARNINGS 1
 #pragma comment(lib, "winmm")
 #pragma comment(lib, "wsock32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -25,9 +25,16 @@
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
+//
+// SECTION Context
+//
+
+typedef void (*ExitProcessProc)(void);
+
+// Platform is responsible for initialising this
+static struct {
+	ExitProcessProc exit_process;
+} context = {};
 
 //
 // SECTION Byte order
@@ -5323,8 +5330,6 @@ void	*Sys_GetGameAPI (void *parms);
 
 char* Sys_GetClipboardData( void );
 
-void CL_Drop (void);
-
 void SCR_BeginLoadingPlaque (void);
 
 void SV_Shutdown (char *finalmsg, qboolean reconnect);
@@ -8312,41 +8317,41 @@ static unsigned char PADDING[64] = {
 
 
 /* MD4 initialization. Begins an MD4 operation, writing a new context. */
-void MD4Init (MD4_CTX *context)
+void MD4Init (MD4_CTX *md4_context)
 {
-	context->count[0] = context->count[1] = 0;
+	md4_context->count[0] = md4_context->count[1] = 0;
 
 /* Load magic initialization constants.*/
-context->state[0] = 0x67452301;
-context->state[1] = 0xefcdab89;
-context->state[2] = 0x98badcfe;
-context->state[3] = 0x10325476;
+md4_context->state[0] = 0x67452301;
+md4_context->state[1] = 0xefcdab89;
+md4_context->state[2] = 0x98badcfe;
+md4_context->state[3] = 0x10325476;
 }
 
 /* MD4 block update operation. Continues an MD4 message-digest operation, processing another message block, and updating the context. */
-void MD4Update (MD4_CTX *context, unsigned char *input, unsigned int inputLen)
+void MD4Update (MD4_CTX *md4_context, unsigned char *input, unsigned int inputLen)
 {
 	unsigned int i, index, partLen;
 
 	/* Compute number of bytes mod 64 */
-	index = (unsigned int)((context->count[0] >> 3) & 0x3F);
+	index = (unsigned int)((md4_context->count[0] >> 3) & 0x3F);
 
 	/* Update number of bits */
-	if ((context->count[0] += ((UINT4)inputLen << 3))< ((UINT4)inputLen << 3))
-		context->count[1]++;
+	if ((md4_context->count[0] += ((UINT4)inputLen << 3))< ((UINT4)inputLen << 3))
+		md4_context->count[1]++;
 
-	context->count[1] += ((UINT4)inputLen >> 29);
+	md4_context->count[1] += ((UINT4)inputLen >> 29);
 
 	partLen = 64 - index;
 
 	/* Transform as many times as possible.*/
 	if (inputLen >= partLen)
 	{
- 		memcpy((POINTER)&context->buffer[index], (POINTER)input, partLen);
- 		MD4Transform (context->state, context->buffer);
+ 		memcpy((POINTER)&md4_context->buffer[index], (POINTER)input, partLen);
+ 		MD4Transform (md4_context->state, md4_context->buffer);
 
  		for (i = partLen; i + 63 < inputLen; i += 64)
- 			MD4Transform (context->state, &input[i]);
+ 			MD4Transform (md4_context->state, &input[i]);
 
  		index = 0;
 	}
@@ -8354,32 +8359,32 @@ void MD4Update (MD4_CTX *context, unsigned char *input, unsigned int inputLen)
  		i = 0;
 
 	/* Buffer remaining input */
-	memcpy ((POINTER)&context->buffer[index], (POINTER)&input[i], inputLen-i);
+	memcpy ((POINTER)&md4_context->buffer[index], (POINTER)&input[i], inputLen-i);
 }
 
 
 /* MD4 finalization. Ends an MD4 message-digest operation, writing the the message digest and zeroizing the context. */
-void MD4Final (unsigned char digest[16], MD4_CTX *context)
+void MD4Final (unsigned char digest[16], MD4_CTX *md4_context)
 {
 	unsigned char bits[8];
 	unsigned int index, padLen;
 
 	/* Save number of bits */
-	Encode (bits, context->count, 8);
+	Encode (bits, md4_context->count, 8);
 
 	/* Pad out to 56 mod 64.*/
-	index = (unsigned int)((context->count[0] >> 3) & 0x3f);
+	index = (unsigned int)((md4_context->count[0] >> 3) & 0x3f);
 	padLen = (index < 56) ? (56 - index) : (120 - index);
-	MD4Update (context, PADDING, padLen);
+	MD4Update (md4_context, PADDING, padLen);
 
 	/* Append length (before padding) */
-	MD4Update (context, bits, 8);
+	MD4Update (md4_context, bits, 8);
 
 	/* Store state in digest */
-	Encode (digest, context->state, 16);
+	Encode (digest, md4_context->state, 16);
 
 	/* Zeroize sensitive information.*/
-	memset ((POINTER)context, 0, sizeof (*context));
+	memset ((POINTER)md4_context, 0, sizeof (*md4_context));
 }
 
 
@@ -10313,8 +10318,6 @@ typedef struct
 	int			next_client_entities;		// next client_entity to use
 	entity_state_t	*client_entities;		// [num_client_entities]
 
-	int			last_heartbeat;
-
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 
 	// serverrecord values
@@ -11062,15 +11065,7 @@ void SV_Savegame_f (void)
 	Com_Printf ("Done.\n");
 }
 
-//===============================================================
-
-/*
-==================
-SV_Kick_f
-
-Kick a user off of the server
-==================
-*/
+// Kick a user off of the server
 void SV_Kick_f (void)
 {
 	if (!svs.initialized)
@@ -11186,10 +11181,6 @@ void SV_ConSay_f(void)
 			continue;
 		SV_ClientPrintf(client, PRINT_CHAT, "%s\n", text);
 	}
-}
-
-static void SV_Heartbeat_f() {
-	svs.last_heartbeat = -9999999;
 }
 
 // Examine or change the serverinfo string
@@ -11317,15 +11308,7 @@ void SV_ServerStop_f (void)
 	Com_Printf ("Recording completed.\n");
 }
 
-
-/*
-===============
-SV_KillServer_f
-
-Kick everyone off, possibly in preparation for a new game
-
-===============
-*/
+// Kick everyone off, possibly in preparation for a new game
 void SV_KillServer_f (void)
 {
 	if (!svs.initialized)
@@ -12632,22 +12615,39 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	Com_Printf ("-------------------------------------\n");
 }
 
+void CL_Disconnect(void);
+
+static void console_reset_line_timestamps() {
+	for (int i = 0; i < (int)carray_count(con.line_timestamps); i++) {
+		con.line_timestamps[i] = 0;
+	}
+}
+
+static void SCR_EndLoadingPlaque() {
+	cls.disable_screen = 0;
+	console_reset_line_timestamps();
+}
+
 // A brand new game has been started
-void SV_InitGame (void)
-{
+void SV_InitGame(void) {
 	int		i;
 	edict_t	*ent;
 	char	idmaster[32];
 
-	if (svs.initialized)
-	{
+	if (svs.initialized) {
 		// cause any connected clients to reconnect
 		SV_Shutdown ("Server restarted\n", true);
-	}
-	else
-	{
+	} else {
 		// make sure the client is down
-		CL_Drop ();
+		if (cls.state != ca_uninitialized && cls.state != ca_disconnected) {
+			CL_Disconnect();
+
+			// drop loading plaque unless this is the initial game start
+			if (cls.disable_servercount != -1) {
+				SCR_EndLoadingPlaque();	// get rid of loading plaque
+			}
+		}
+
 		SCR_BeginLoadingPlaque ();
 	}
 
@@ -12701,7 +12701,6 @@ void SV_InitGame (void)
 	NET_Config ( (maxclients->value > 1) );
 
 	// heartbeats will always be sent to the id master
-	svs.last_heartbeat = -99999;		// send immediately
 	Com_sprintf(idmaster, sizeof(idmaster), "192.246.40.37:%i", PORT_MASTER);
 	NET_StringToAdr (idmaster, &master_adr[0]);
 
@@ -16102,7 +16101,7 @@ void CL_ParseLayout (void);
 //
 
 void CL_FixUpGender(void);
-void CL_Disconnect (void);
+
 void CL_GetChallengePacket (void);
 void CL_PingServers_f (void);
 void CL_Snd_Restart_f (void);
@@ -16751,17 +16750,6 @@ static qboolean SCR_DrawCinematic() {
 	Draw_StretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
 
 	return true;
-}
-
-static void console_reset_line_timestamps() {
-	for (int i = 0; i < (int)carray_count(con.line_timestamps); i++) {
-		con.line_timestamps[i] = 0;
-	}
-}
-
-static void SCR_EndLoadingPlaque() {
-	cls.disable_screen = 0;
-	console_reset_line_timestamps();
 }
 
 void SCR_PlayCinematic (char *arg)
@@ -21525,28 +21513,6 @@ void CL_Pause_f (void)
 }
 
 /*
-================
-CL_Drop
-
-Called after an ERR_DROP was thrown
-================
-*/
-void CL_Drop (void)
-{
-	if (cls.state == ca_uninitialized)
-		return;
-	if (cls.state == ca_disconnected)
-		return;
-
-	CL_Disconnect ();
-
-	// drop loading plaque unless this is the initial game start
-	if (cls.disable_servercount != -1)
-		SCR_EndLoadingPlaque ();	// get rid of loading plaque
-}
-
-
-/*
 =======================
 CL_SendConnectPacket
 
@@ -21743,44 +21709,42 @@ void CL_ClearState (void)
 // Goes from a connected state to full screen console state
 // Sends a disconnect message to the server
 void CL_Disconnect() {
-	if (cls.state == ca_disconnected) {
-		return;
-	}
-
-	if (cl_timedemo && cl_timedemo->value) {
-		int time = Sys_Milliseconds() - cl.timedemo_start;
-		if (time > 0)
+	if (cls.state != ca_disconnected) {
+		if (cl_timedemo && cl_timedemo->value) {
+			int time = Sys_Milliseconds() - cl.timedemo_start;
+			if (time > 0)
 			Com_Printf ("%i frames, %3.1f seconds: %3.1f fps\n", cl.timedemo_frames,
 			time/1000.0, cl.timedemo_frames*1000.0 / time);
+		}
+
+		VectorClear(cl.refdef.blend);
+		R_SetPalette(NULL);
+
+		M_ForceMenuOff();
+		cls.connect_time = 0;
+		SCR_StopCinematic();
+		if (cls.demorecording) {
+			CL_Stop_f();
+		}
+
+		// send a disconnect message to the server
+		char final[32] = {};
+		final[0] = clc_stringcmd;
+		strcpy((char *)final+1, "disconnect");
+		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+
+		CL_ClearState();
+
+		// stop download
+		if (cls.download) {
+			fclose(cls.download);
+			cls.download = NULL;
+		}
+
+		cls.state = ca_disconnected;
 	}
-
-	VectorClear(cl.refdef.blend);
-	R_SetPalette(NULL);
-
-	M_ForceMenuOff();
-	cls.connect_time = 0;
-	SCR_StopCinematic();
-	if (cls.demorecording) {
-		CL_Stop_f();
-	}
-
-	// send a disconnect message to the server
-	char final[32] = {};
-	final[0] = clc_stringcmd;
-	strcpy((char *)final+1, "disconnect");
-	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
-	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
-	Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
-
-	CL_ClearState();
-
-	// stop download
-	if (cls.download) {
-		fclose(cls.download);
-		cls.download = NULL;
-	}
-
-	cls.state = ca_disconnected;
 }
 
 /*
@@ -22500,9 +22464,7 @@ static void CL_Quit_f() {
 	void DeinitConProc (void);
 	DeinitConProc();
 
-	// FIXME platform call
-	void ExitProcess(unsigned uExitCode);
-	ExitProcess(0);
+	context.exit_process();
 }
 
 void CL_InitLocal (void)
@@ -98238,13 +98200,15 @@ static void Qcommon_Frame(int delta_time_msec) {
 	}
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-	UNUSED(nCmdShow);
+static void exit_process() {
+	ExitProcess(0);
+}
 
-	// previous instances do not exist in Win32
-	if (hPrevInstance) {
-		return 0;
-	}
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
+	UNUSED(hPrevInstance); // NOTE: always zero
+
+	context.exit_process = exit_process;
 
 	global_hInstance = hInstance;
 
@@ -98468,7 +98432,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			// NOTE: Init operator commands
 			{
-				Cmd_AddCommand("heartbeat", SV_Heartbeat_f);
 				Cmd_AddCommand("kick", SV_Kick_f);
 				Cmd_AddCommand("status", SV_Status_f);
 				Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
