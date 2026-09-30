@@ -5672,12 +5672,6 @@ game_export_t *GetGameApi (game_import_t *import);
 #define BODY_QUEUE_SIZE		8
 
 typedef enum {
-	DAMAGE_NO,
-	DAMAGE_YES,			// will take damage if hit
-	DAMAGE_AIM			// auto targeting recognizes this
-} damage_t;
-
-typedef enum {
 	AMMO_BULLETS,
 	AMMO_SHELLS,
 	AMMO_ROCKETS,
@@ -15541,51 +15535,6 @@ typedef struct
 } refdef_t;
 
 typedef struct {
-	// All data that will be used in a level should be
-	// registered before rendering any frames to prevent disk hits,
-	// but they can still be registered at a later time
-	// if necessary.
-	//
-	// EndRegistration will free any remaining data that wasn't registered.
-	// Any model_s or skin_s pointers from before the BeginRegistration
-	// are no longer valid after EndRegistration.
-	//
-	// Skins and images need to be differentiated, because skins
-	// are flood filled to eliminate mip map edge errors, and pics have
-	// an implicit "pics/" prepended to the name. (a pic name that starts with a
-	// slash will not use the "pics/" prefix or the ".pcx" postfix)
-	void	(*BeginRegistration) (char *map);
-	struct model_s *(*RegisterModel) (char *name);
-	struct image_s *(*RegisterSkin) (char *name);
-	struct image_s *(*RegisterPic) (char *name);
-	void	(*SetSky) (char *name, float rotate, vec3_t axis);
-	void	(*EndRegistration) (void);
-
-	void	(*RenderFrame) (refdef_t *fd);
-
-	void	(*DrawGetPicSize) (int *w, int *h, char *name);	// will return 0 0 if not found
-	void	(*DrawPic) (int x, int y, char *name);
-	void	(*DrawStretchPic) (int x, int y, int w, int h, char *name);
-	void	(*DrawChar) (int x, int y, int c);
-	void	(*DrawTileClear) (int x, int y, int w, int h, char *name);
-	void	(*DrawFill) (int x, int y, int w, int h, int c);
-	void	(*DrawFadeScreen) (void);
-
-	// Draw images for cinematic rendering (which can have a different palette). Note that calls
-	void	(*DrawStretchRaw) (int x, int y, int w, int h, int cols, int rows, byte *data);
-
-	/*
-	** video mode and refresh state management entry points
-	*/
-	void	(*CinematicSetPalette)( const unsigned char *palette);	// NULL = game palette
-	void	(*BeginFrame)( float camera_separation );
-	void	(*EndFrame) (void);
-
-	void	(*AppActivate)( qboolean activate );
-
-} refexport_t;
-
-typedef struct {
 	int x, y, width, height;
 } vrect_t;
 
@@ -16419,9 +16368,7 @@ void SCR_LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *h
 	FS_FreeFile (pcx);
 }
 
-//=============================================================
-
-refexport_t	re;
+void R_SetPalette ( const unsigned char *palette);
 
 void SCR_StopCinematic (void)
 {
@@ -16438,7 +16385,7 @@ void SCR_StopCinematic (void)
 	}
 	if (cl.cinematicpalette_active)
 	{
-		re.CinematicSetPalette(NULL);
+		R_SetPalette(NULL);
 		cl.cinematicpalette_active = false;
 	}
 	if (cl.cinematic_file)
@@ -16808,13 +16755,13 @@ static qboolean SCR_DrawCinematic() {
 
 	// blank screen and pause if menu is up
 	if (cls.key_dest == key_menu) {
-		re.CinematicSetPalette(NULL);
+		R_SetPalette(NULL);
 		cl.cinematicpalette_active = false;
 		return true;
 	}
 
 	if (!cl.cinematicpalette_active) {
-		re.CinematicSetPalette((unsigned char*)cl.cinematicpalette);
+		R_SetPalette((unsigned char*)cl.cinematicpalette);
 		cl.cinematicpalette_active = true;
 	}
 
@@ -16822,7 +16769,8 @@ static qboolean SCR_DrawCinematic() {
 		return true;
 	}
 
-	re.DrawStretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
+	void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data);
+	Draw_StretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
 
 	return true;
 }
@@ -17669,6 +17617,7 @@ INTERPOLATE BETWEEN FRAMES TO GET RENDERING PARMS
 ==========================================================================
 */
 
+struct model_s *R_RegisterModel (char *name);
 struct model_s *S_RegisterSexedModel (entity_state_t *ent, char *base)
 {
 	int				n;
@@ -17697,19 +17646,20 @@ struct model_s *S_RegisterSexedModel (entity_state_t *ent, char *base)
 		strcpy(model, "male");
 
 	Com_sprintf (buffer, sizeof(buffer), "players/%s/%s", model, base+1);
-	mdl = re.RegisterModel(buffer);
+
+	mdl = R_RegisterModel(buffer);
 	if (!mdl) {
 		// not found, try default weapon model
 		Com_sprintf (buffer, sizeof(buffer), "players/%s/weapon.md2", model);
-		mdl = re.RegisterModel(buffer);
+		mdl = R_RegisterModel(buffer);
 		if (!mdl) {
 			// no, revert to the male model
 			Com_sprintf (buffer, sizeof(buffer), "players/%s/%s", "male", base+1);
-			mdl = re.RegisterModel(buffer);
+			mdl = R_RegisterModel(buffer);
 			if (!mdl) {
 				// last try, default male weapon.md2
 				Com_sprintf (buffer, sizeof(buffer), "players/male/weapon.md2");
-				mdl = re.RegisterModel(buffer);
+				mdl = R_RegisterModel(buffer);
 			}
 		}
 	}
@@ -17723,6 +17673,7 @@ CL_AddPacketEntities
 
 ===============
 */
+struct image_s *R_RegisterSkin (char *name);
 void CL_AddPacketEntities (frame_t *frame)
 {
 	Entity			ent;
@@ -17843,18 +17794,18 @@ void CL_AddPacketEntities (frame_t *frame)
 				{
 					if(!strncmp((char *)ent.skin, "players/male", 12))
 					{
-						ent.skin = re.RegisterSkin ("players/male/disguise.pcx");
-						ent.model = re.RegisterModel ("players/male/tris.md2");
+						ent.skin = R_RegisterSkin ("players/male/disguise.pcx");
+						ent.model = R_RegisterModel ("players/male/tris.md2");
 					}
 					else if(!strncmp((char *)ent.skin, "players/female", 14))
 					{
-						ent.skin = re.RegisterSkin ("players/female/disguise.pcx");
-						ent.model = re.RegisterModel ("players/female/tris.md2");
+						ent.skin = R_RegisterSkin ("players/female/disguise.pcx");
+						ent.model = R_RegisterModel ("players/female/tris.md2");
 					}
 					else if(!strncmp((char *)ent.skin, "players/cyborg", 14))
 					{
-						ent.skin = re.RegisterSkin ("players/cyborg/disguise.pcx");
-						ent.model = re.RegisterModel ("players/cyborg/tris.md2");
+						ent.skin = R_RegisterSkin ("players/cyborg/disguise.pcx");
+						ent.model = R_RegisterModel ("players/cyborg/tris.md2");
 					}
 				}
 //PGM
@@ -21171,19 +21122,6 @@ void CL_SendCmd (void)
 	Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
 }
 
-
-/* ============ end source: client/cl_input.c ============ */
-/* ============ begin source: client/cl_inv.c ============ */
-
-// cl_inv.c -- client inventory screen
-
-/* already inlined above: client/client.h */
-
-/*
-================
-CL_ParseInventory
-================
-*/
 void CL_ParseInventory (void)
 {
 	int		i;
@@ -21192,17 +21130,12 @@ void CL_ParseInventory (void)
 		cl.inventory[i] = MSG_ReadShort (&net_message);
 }
 
-
-/*
-================
-Inv_DrawString
-================
-*/
+void Draw_Char (int x, int y, int num);
 void Inv_DrawString (int x, int y, char *string)
 {
 	while (*string)
 	{
-		re.DrawChar (x, y, *string);
+		Draw_Char (x, y, *string);
 		x+=8;
 		string++;
 	}
@@ -21215,6 +21148,8 @@ void SetStringHighBit (char *s)
 }
 
 #define	DISPLAY_ITEMS	17
+
+void Draw_Pic (int x, int y, char *pic);
 
 void CL_DrawInventory (void)
 {
@@ -21256,7 +21191,7 @@ void CL_DrawInventory (void)
 	// repaint everything next frame
 	SCR_DirtyScreen ();
 
-	re.DrawPic (x, y+8, "inventory");
+	Draw_Pic (x, y+8, "inventory");
 
 	y += 24;
 	x += 24;
@@ -21283,7 +21218,7 @@ void CL_DrawInventory (void)
 		else	// draw a blinky cursor by the selected item
 		{
 			if ( (int)(cls.realtime*10) & 1)
-				re.DrawChar (x-8, y, 15);
+				Draw_Char (x-8, y, 15);
 		}
 		Inv_DrawString (x, y, string);
 		y += 8;
@@ -21291,14 +21226,6 @@ void CL_DrawInventory (void)
 
 
 }
-
-
-/* ============ end source: client/cl_inv.c ============ */
-/* ============ begin source: client/cl_main.c ============ */
-
-// cl_main.c  -- client main loop
-
-/* already inlined above: client/client.h */
 
 cvar_t	*freelook;
 
@@ -21867,7 +21794,7 @@ void CL_Disconnect() {
 	}
 
 	VectorClear(cl.refdef.blend);
-	re.CinematicSetPalette(NULL);
+	R_SetPalette(NULL);
 
 	M_ForceMenuOff();
 	cls.connect_time = 0;
@@ -22889,9 +22816,7 @@ void CL_SendCommand (void)
 static qboolean reflib_active = 0;
 
 static void VID_FreeReflib() {
-	// statically linked renderer — nothing to FreeLibrary
-	memset(&re, 0, sizeof(re));
-	reflib_active  = false;
+	reflib_active = false;
 }
 
 // FIXME: remove
@@ -22910,18 +22835,11 @@ static void CL_Shutdown() {
 	IN_Shutdown();
 
 	if (reflib_active) {
-		void R_Shutdown (void);
+		void R_Shutdown(void);
 		R_Shutdown();
 		VID_FreeReflib();
 	}
 }
-
-/* ============ end source: client/cl_main.c ============ */
-/* ============ begin source: client/cl_newfx.c ============ */
-
-// cl_newfx.c -- MORE entity effects parsing and management
-
-/* already inlined above: client/client.h */
 
 extern cparticle_t	*active_particles, *free_particles;
 extern cparticle_t	particles[MAX_PARTICLES];
@@ -24495,13 +24413,38 @@ void CL_ParseBaseline (void)
 	CL_ParseDelta (&nullstate, es, newnum, bits);
 }
 
+typedef enum {
+	DAMAGE_NO,
+	DAMAGE_YES,			// will take damage if hit
+	DAMAGE_AIM			// auto targeting recognizes this
+} damage_t;
 
-/*
-================
-CL_LoadClientinfo
+typedef enum
+{
+	it_skin,
+	it_sprite,
+	it_wall,
+	it_pic,
+	it_sky
+} imagetype_t;
 
-================
-*/
+typedef struct image_s
+{
+	char	name[MAX_QPATH];			// game path, including extension
+	imagetype_t	type;
+	int		width, height;				// source image
+	int		upload_width, upload_height;	// after power of two and picmip
+	int		registration_sequence;		// 0 = free
+	struct msurface_s	*texturechain;	// for sort-by-texture world drawing
+	int		texnum;						// gl texture binding
+	float	sl, tl, sh, th;				// 0,0 - 1,1 unless part of the scrap
+	qboolean	scrap;
+	qboolean	has_alpha;
+
+	qboolean paletted;
+} image_t;
+
+image_t	*Draw_FindPic (char *name);
 void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 {
 	int i;
@@ -24531,11 +24474,11 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 		Com_sprintf (weapon_filename, sizeof(weapon_filename), "players/male/weapon.md2");
 		Com_sprintf (skin_filename, sizeof(skin_filename), "players/male/grunt.pcx");
 		Com_sprintf (ci->iconname, sizeof(ci->iconname), "/players/male/grunt_i.pcx");
-		ci->model = re.RegisterModel (model_filename);
+		ci->model = R_RegisterModel (model_filename);
 		memset(ci->weaponmodel, 0, sizeof(ci->weaponmodel));
-		ci->weaponmodel[0] = re.RegisterModel (weapon_filename);
-		ci->skin = re.RegisterSkin (skin_filename);
-		ci->icon = re.RegisterPic (ci->iconname);
+		ci->weaponmodel[0] = R_RegisterModel (weapon_filename);
+		ci->skin = R_RegisterSkin (skin_filename);
+		ci->icon = Draw_FindPic (ci->iconname);
 	}
 	else
 	{
@@ -24553,17 +24496,17 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 
 		// model file
 		Com_sprintf (model_filename, sizeof(model_filename), "players/%s/tris.md2", model_name);
-		ci->model = re.RegisterModel (model_filename);
+		ci->model = R_RegisterModel (model_filename);
 		if (!ci->model)
 		{
 			strcpy(model_name, "male");
 			Com_sprintf (model_filename, sizeof(model_filename), "players/male/tris.md2");
-			ci->model = re.RegisterModel (model_filename);
+			ci->model = R_RegisterModel (model_filename);
 		}
 
 		// skin file
 		Com_sprintf (skin_filename, sizeof(skin_filename), "players/%s/%s.pcx", model_name, skin_name);
-		ci->skin = re.RegisterSkin (skin_filename);
+		ci->skin = R_RegisterSkin (skin_filename);
 
 		// if we don't have the skin and the model wasn't male,
 		// see if the male has it (this is for CTF's skins)
@@ -24572,11 +24515,11 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 			// change model to male
 			strcpy(model_name, "male");
 			Com_sprintf (model_filename, sizeof(model_filename), "players/male/tris.md2");
-			ci->model = re.RegisterModel (model_filename);
+			ci->model = R_RegisterModel (model_filename);
 
 			// see if the skin exists for the male model
 			Com_sprintf (skin_filename, sizeof(skin_filename), "players/%s/%s.pcx", model_name, skin_name);
-			ci->skin = re.RegisterSkin (skin_filename);
+			ci->skin = R_RegisterSkin (skin_filename);
 		}
 
 		// if we still don't have a skin, it means that the male model didn't have
@@ -24584,17 +24527,17 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 		if (!ci->skin) {
 			// see if the skin exists for the male model
 			Com_sprintf (skin_filename, sizeof(skin_filename), "players/%s/grunt.pcx", model_name, skin_name);
-			ci->skin = re.RegisterSkin (skin_filename);
+			ci->skin = R_RegisterSkin (skin_filename);
 		}
 
 		// weapon file
 		for (i = 0; i < num_cl_weaponmodels; i++) {
 			Com_sprintf (weapon_filename, sizeof(weapon_filename), "players/%s/%s", model_name, cl_weaponmodels[i]);
-			ci->weaponmodel[i] = re.RegisterModel(weapon_filename);
+			ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
 			if (!ci->weaponmodel[i] && strcmp(model_name, "cyborg") == 0) {
 				// try male
 				Com_sprintf (weapon_filename, sizeof(weapon_filename), "players/male/%s", cl_weaponmodels[i]);
-				ci->weaponmodel[i] = re.RegisterModel(weapon_filename);
+				ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
 			}
 			if (!cl_vwep->value)
 				break; // only one when vwep is off
@@ -24602,7 +24545,7 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 
 		// icon file
 		Com_sprintf (ci->iconname, sizeof(ci->iconname), "/players/%s/%s_i.pcx", model_name, skin_name);
-		ci->icon = re.RegisterPic (ci->iconname);
+		ci->icon = Draw_FindPic (ci->iconname);
 	}
 
 	// must have loaded all data types to be valud
@@ -24653,7 +24596,7 @@ void CL_ParseConfigString (void)
 	} else if (i >= CS_MODELS && i < CS_MODELS+MAX_MODELS) {
 		if (cl.refresh_prepped)
 		{
-			cl.model_draw[i-CS_MODELS] = re.RegisterModel (cl.configstrings[i]);
+			cl.model_draw[i-CS_MODELS] = R_RegisterModel (cl.configstrings[i]);
 			if (cl.configstrings[i][0] == '*')
 				cl.model_clip[i-CS_MODELS] = CM_InlineModel (cl.configstrings[i]);
 			else
@@ -24668,7 +24611,7 @@ void CL_ParseConfigString (void)
 	else if (i >= CS_IMAGES && i < CS_IMAGES+MAX_MODELS)
 	{
 		if (cl.refresh_prepped)
-			cl.image_precache[i-CS_IMAGES] = re.RegisterPic (cl.configstrings[i]);
+			cl.image_precache[i-CS_IMAGES] = Draw_FindPic (cl.configstrings[i]);
 	}
 	else if (i >= CS_PLAYERSKINS && i < CS_PLAYERSKINS+MAX_CLIENTS)
 	{
@@ -25271,11 +25214,6 @@ typedef struct
 static	int			current;
 static	graphsamp_t	values[1024];
 
-/*
-==============
-SCR_DebugGraph
-==============
-*/
 void SCR_DebugGraph (float value, int color)
 {
 	values[current&1023].value = value;
@@ -25283,11 +25221,8 @@ void SCR_DebugGraph (float value, int color)
 	current++;
 }
 
-/*
-==============
-SCR_DrawDebugGraph
-==============
-*/
+void Draw_Fill (int x, int y, int w, int h, int c);
+
 void SCR_DrawDebugGraph (void)
 {
 	int		a, x, y, w, i, h;
@@ -25301,8 +25236,7 @@ void SCR_DrawDebugGraph (void)
 
 	x = scr_vrect.x;
 	y = scr_vrect.y+scr_vrect.height;
-	re.DrawFill (x, y-scr_graphheight->value,
-		w, scr_graphheight->value, 8);
+	Draw_Fill (x, y-scr_graphheight->value, w, scr_graphheight->value, 8);
 
 	for (a=0 ; a<w ; a++)
 	{
@@ -25314,7 +25248,7 @@ void SCR_DrawDebugGraph (void)
 		if (v < 0)
 			v += scr_graphheight->value * (1+(int)(-v/scr_graphheight->value));
 		h = (int)v % (int)scr_graphheight->value;
-		re.DrawFill (x+w-1-a, y - h, 1,	h, color);
+		Draw_Fill (x+w-1-a, y - h, 1,	h, color);
 	}
 }
 
@@ -25409,7 +25343,7 @@ void SCR_DrawCenterString (void)
 		SCR_AddDirtyPoint (x, y);
 		for (j=0 ; j<l ; j++, x+=8)
 		{
-			re.DrawChar (x, y, start[j]);
+			Draw_Char (x, y, start[j]);
 			if (!remaining--)
 				return;
 		}
@@ -25480,26 +25414,15 @@ void SCR_SizeUp_f (void)
 	COM_SetValueCvar ("viewsize",scr_viewsize->value+10);
 }
 
-
-/*
-=================
-SCR_SizeDown_f
-
-Keybinding command
-=================
-*/
+// Keybinding command
 void SCR_SizeDown_f (void)
 {
 	COM_SetValueCvar ("viewsize",scr_viewsize->value-10);
 }
 
-/*
-=================
-SCR_Sky_f
+void R_SetSky (char *name, float rotate, vec3_t axis);
 
-Set a specific sky and rotation speed
-=================
-*/
+// Set a specific sky and rotation speed
 void SCR_Sky_f (void)
 {
 	float	rotate;
@@ -25527,31 +25450,20 @@ void SCR_Sky_f (void)
 		axis[2] = 1;
 	}
 
-	re.SetSky (Cmd_Argv(1), rotate, axis);
+	R_SetSky (Cmd_Argv(1), rotate, axis);
 }
 
-//============================================================================
-
-
-/*
-==============
-SCR_DrawNet
-==============
-*/
 void SCR_DrawNet (void)
 {
 	if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged
 		< CMD_BACKUP-1)
 		return;
 
-	re.DrawPic (scr_vrect.x+64, scr_vrect.y, "net");
+	Draw_Pic (scr_vrect.x+64, scr_vrect.y, "net");
 }
 
-/*
-==============
-SCR_DrawPause
-==============
-*/
+void Draw_GetPicSize (int *w, int *h, char *name);
+
 void SCR_DrawPause (void)
 {
 	int		w, h;
@@ -25562,15 +25474,10 @@ void SCR_DrawPause (void)
 	if (!cl_paused->value)
 		return;
 
-	re.DrawGetPicSize (&w, &h, "pause");
-	re.DrawPic ((viddef.width-w)/2, viddef.height/2 + 8, "pause");
+	Draw_GetPicSize (&w, &h, "pause");
+	Draw_Pic ((viddef.width-w)/2, viddef.height/2 + 8, "pause");
 }
 
-/*
-==============
-SCR_DrawLoading
-==============
-*/
 void SCR_DrawLoading (void)
 {
 	int		w, h;
@@ -25579,19 +25486,11 @@ void SCR_DrawLoading (void)
 		return;
 
 	scr_draw_loading = false;
-	re.DrawGetPicSize (&w, &h, "loading");
-	re.DrawPic ((viddef.width-w)/2, (viddef.height-h)/2, "loading");
+	Draw_GetPicSize (&w, &h, "loading");
+	Draw_Pic ((viddef.width-w)/2, (viddef.height-h)/2, "loading");
 }
 
-//=============================================================================
-
-/*
-==================
-SCR_RunConsole
-
-Scroll it up or down
-==================
-*/
+// Scroll it up or down
 void SCR_RunConsole (void)
 {
 // decide on the height of the console
@@ -25673,7 +25572,7 @@ void SCR_DrawConsole (void)
 	if (cls.state != ca_active || !cl.refresh_prepped)
 	{	// connected, but can't render
 		Con_DrawConsole (0.5);
-		re.DrawFill (0, viddef.height/2, viddef.width, viddef.height/2, 0);
+		Draw_Fill (0, viddef.height/2, viddef.width, viddef.height/2, 0);
 		return;
 	}
 
@@ -25688,13 +25587,6 @@ void SCR_DrawConsole (void)
 	}
 }
 
-//=============================================================================
-
-/*
-================
-SCR_BeginLoadingPlaque
-================
-*/
 void SCR_BeginLoadingPlaque (void)
 {
 	S_StopAllSounds ();
@@ -25716,21 +25608,11 @@ void SCR_BeginLoadingPlaque (void)
 	cls.disable_servercount = cl.servercount;
 }
 
-/*
-================
-SCR_Loading_f
-================
-*/
 void SCR_Loading_f (void)
 {
 	SCR_BeginLoadingPlaque ();
 }
 
-/*
-================
-SCR_TimeRefresh_f
-================
-*/
 int entitycmpfnc( const Entity *a, const Entity *b )
 {
 	/*
@@ -25746,6 +25628,10 @@ int entitycmpfnc( const Entity *a, const Entity *b )
 	}
 }
 
+void R_RenderFrame (refdef_t *fd);
+void R_BeginFrame( float camera_separation );
+void GLimp_EndFrame( void );
+
 void SCR_TimeRefresh_f (void)
 {
 	int		i;
@@ -25759,13 +25645,13 @@ void SCR_TimeRefresh_f (void)
 
 	if (cmd_argc == 2)
 	{	// run without page flipping
-		re.BeginFrame( 0 );
+		R_BeginFrame( 0 );
 		for (i=0 ; i<128 ; i++)
 		{
 			cl.refdef.viewangles[1] = i/128.0*360.0;
-			re.RenderFrame (&cl.refdef);
+			R_RenderFrame (&cl.refdef);
 		}
-		re.EndFrame();
+		GLimp_EndFrame();
 	}
 	else
 	{
@@ -25773,9 +25659,9 @@ void SCR_TimeRefresh_f (void)
 		{
 			cl.refdef.viewangles[1] = i/128.0*360.0;
 
-			re.BeginFrame( 0 );
-			re.RenderFrame (&cl.refdef);
-			re.EndFrame();
+			R_BeginFrame( 0 );
+			R_RenderFrame (&cl.refdef);
+			GLimp_EndFrame();
 		}
 	}
 
@@ -25866,31 +25752,33 @@ void SCR_TileClear (void)
 	left = scr_vrect.x;
 	right = left + scr_vrect.width-1;
 
+	void	Draw_TileClear (int x, int y, int w, int h, char *name);
+
 	if (clear.y1 < top)
 	{	// clear above view screen
 		i = clear.y2 < top-1 ? clear.y2 : top-1;
-		re.DrawTileClear (clear.x1 , clear.y1,
+		Draw_TileClear (clear.x1 , clear.y1,
 			clear.x2 - clear.x1 + 1, i - clear.y1+1, "backtile");
 		clear.y1 = top;
 	}
 	if (clear.y2 > bottom)
 	{	// clear below view screen
 		i = clear.y1 > bottom+1 ? clear.y1 : bottom+1;
-		re.DrawTileClear (clear.x1, i,
+		Draw_TileClear (clear.x1, i,
 			clear.x2-clear.x1+1, clear.y2-i+1, "backtile");
 		clear.y2 = bottom;
 	}
 	if (clear.x1 < left)
 	{	// clear left of view screen
 		i = clear.x2 < left-1 ? clear.x2 : left-1;
-		re.DrawTileClear (clear.x1, clear.y1,
+		Draw_TileClear (clear.x1, clear.y1,
 			i-clear.x1+1, clear.y2 - clear.y1 + 1, "backtile");
 		clear.x1 = left;
 	}
 	if (clear.x2 > right)
 	{	// clear left of view screen
 		i = clear.x1 > right+1 ? clear.x1 : right+1;
-		re.DrawTileClear (i, clear.y1,
+		Draw_TileClear (i, clear.y1,
 			clear.x2-i+1, clear.y2 - clear.y1 + 1, "backtile");
 		clear.x2 = right;
 	}
@@ -25975,7 +25863,7 @@ void DrawHUDString (char *string, int x, int y, int centerwidth, int xor)
 			x = margin;
 		for (i=0 ; i<width ; i++)
 		{
-			re.DrawChar (x, y, line[i]^xor);
+			Draw_Char (x, y, line[i]^xor);
 			x += 8;
 		}
 		if (*string)
@@ -26023,7 +25911,7 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 		else
 			frame = *ptr -'0';
 
-		re.DrawPic (x,y,sb_nums[color][frame]);
+		Draw_Pic (x,y,sb_nums[color][frame]);
 		x += CHAR_WIDTH;
 		ptr++;
 		l--;
@@ -26044,7 +25932,7 @@ void SCR_TouchPics (void)
 
 	for (i=0 ; i<2 ; i++)
 		for (j=0 ; j<11 ; j++)
-			re.RegisterPic (sb_nums[i][j]);
+			Draw_FindPic (sb_nums[i][j]);
 
 	if (crosshair->value)
 	{
@@ -26052,7 +25940,7 @@ void SCR_TouchPics (void)
 			crosshair->value = 3;
 
 		Com_sprintf (crosshair_pic, sizeof(crosshair_pic), "ch%i", (int)(crosshair->value));
-		re.DrawGetPicSize (&crosshair_width, &crosshair_height, crosshair_pic);
+		Draw_GetPicSize (&crosshair_width, &crosshair_height, crosshair_pic);
 		if (!crosshair_width)
 			crosshair_pic[0] = 0;
 	}
@@ -26134,7 +26022,7 @@ void SCR_ExecuteLayoutString (char *s)
 			{
 				SCR_AddDirtyPoint (x, y);
 				SCR_AddDirtyPoint (x+23, y+23);
-				re.DrawPic (x, y, cl.configstrings[CS_IMAGES+value]);
+				Draw_Pic (x, y, cl.configstrings[CS_IMAGES+value]);
 			}
 			continue;
 		}
@@ -26172,7 +26060,7 @@ void SCR_ExecuteLayoutString (char *s)
 
 			if (!ci->icon)
 				ci = &cl.baseclientinfo;
-			re.DrawPic (x, y, ci->iconname);
+			Draw_Pic (x, y, ci->iconname);
 			continue;
 		}
 
@@ -26215,7 +26103,7 @@ void SCR_ExecuteLayoutString (char *s)
 			token = COM_Parse (&s);
 			SCR_AddDirtyPoint (x, y);
 			SCR_AddDirtyPoint (x+23, y+23);
-			re.DrawPic (x, y, token);
+			Draw_Pic (x, y, token);
 			continue;
 		}
 
@@ -26243,7 +26131,7 @@ void SCR_ExecuteLayoutString (char *s)
 				color = 1;
 
 			if (cl.frame.playerstate.stats[STAT_FLASHES] & 1)
-				re.DrawPic (x, y, "field_3");
+				Draw_Pic (x, y, "field_3");
 
 			SCR_DrawField (x, y, color, width, value);
 			continue;
@@ -26263,7 +26151,7 @@ void SCR_ExecuteLayoutString (char *s)
 				continue;	// negative number = don't show
 
 			if (cl.frame.playerstate.stats[STAT_FLASHES] & 4)
-				re.DrawPic (x, y, "field_3");
+				Draw_Pic (x, y, "field_3");
 
 			SCR_DrawField (x, y, color, width, value);
 			continue;
@@ -26281,7 +26169,7 @@ void SCR_ExecuteLayoutString (char *s)
 			color = 0;	// green
 
 			if (cl.frame.playerstate.stats[STAT_FLASHES] & 2)
-				re.DrawPic (x, y, "field_3");
+				Draw_Pic (x, y, "field_3");
 
 			SCR_DrawField (x, y, color, width, value);
 			continue;
@@ -26384,31 +26272,31 @@ static void SCR_UpdateScreen() {
 	}
 
 	for (int i = 0; i < numframes; i++) {
-		re.BeginFrame( separation[i] );
+		R_BeginFrame( separation[i] );
 
 		if (scr_draw_loading == 2) {
 			//  loading plaque over black screen
 
-			re.CinematicSetPalette(NULL);
+			R_SetPalette(NULL);
 			scr_draw_loading = false;
 
 			int w = 0;
 			int h = 0;
-			re.DrawGetPicSize(&w, &h, "loading");
-			re.DrawPic((viddef.width - w) / 2, (viddef.height - h) / 2, "loading");
+			Draw_GetPicSize(&w, &h, "loading");
+			Draw_Pic((viddef.width - w) / 2, (viddef.height - h) / 2, "loading");
 
 		} else if (cl.cinematictime > 0) {
 			// if a cinematic is supposed to be running, handle menus and console specially
 
 			if (cls.key_dest == key_menu) {
 				if (cl.cinematicpalette_active) {
-					re.CinematicSetPalette(NULL);
+					R_SetPalette(NULL);
 					cl.cinematicpalette_active = false;
 				}
 				M_Draw();
 			} else if (cls.key_dest == key_console) {
 				if (cl.cinematicpalette_active) {
-					re.CinematicSetPalette(NULL);
+					R_SetPalette(NULL);
 					cl.cinematicpalette_active = false;
 				}
 				SCR_DrawConsole();
@@ -26420,7 +26308,7 @@ static void SCR_UpdateScreen() {
 
 			// make sure the game palette is active
 			if (cl.cinematicpalette_active) {
-				re.CinematicSetPalette(NULL);
+				R_SetPalette(NULL);
 				cl.cinematicpalette_active = false;
 			}
 
@@ -26460,7 +26348,7 @@ static void SCR_UpdateScreen() {
 		}
 	}
 
-	re.EndFrame();
+	GLimp_EndFrame();
 }
 
 typedef struct {
@@ -26611,37 +26499,37 @@ CL_RegisterTEntModels
 */
 void CL_RegisterTEntModels (void)
 {
-	cl_mod_explode = re.RegisterModel ("models/objects/explode/tris.md2");
-	cl_mod_smoke = re.RegisterModel ("models/objects/smoke/tris.md2");
-	cl_mod_flash = re.RegisterModel ("models/objects/flash/tris.md2");
-	cl_mod_parasite_segment = re.RegisterModel ("models/monsters/parasite/segment/tris.md2");
-	cl_mod_grapple_cable = re.RegisterModel ("models/ctf/segment/tris.md2");
-	cl_mod_parasite_tip = re.RegisterModel ("models/monsters/parasite/tip/tris.md2");
-	cl_mod_explo4 = re.RegisterModel ("models/objects/r_explode/tris.md2");
-	cl_mod_bfg_explo = re.RegisterModel ("sprites/s_bfg2.sp2");
-	cl_mod_powerscreen = re.RegisterModel ("models/items/armor/effect/tris.md2");
+	cl_mod_explode = R_RegisterModel ("models/objects/explode/tris.md2");
+	cl_mod_smoke = R_RegisterModel ("models/objects/smoke/tris.md2");
+	cl_mod_flash = R_RegisterModel ("models/objects/flash/tris.md2");
+	cl_mod_parasite_segment = R_RegisterModel ("models/monsters/parasite/segment/tris.md2");
+	cl_mod_grapple_cable = R_RegisterModel ("models/ctf/segment/tris.md2");
+	cl_mod_parasite_tip = R_RegisterModel ("models/monsters/parasite/tip/tris.md2");
+	cl_mod_explo4 = R_RegisterModel ("models/objects/r_explode/tris.md2");
+	cl_mod_bfg_explo = R_RegisterModel ("sprites/s_bfg2.sp2");
+	cl_mod_powerscreen = R_RegisterModel ("models/items/armor/effect/tris.md2");
 
-re.RegisterModel ("models/objects/laser/tris.md2");
-re.RegisterModel ("models/objects/grenade2/tris.md2");
-re.RegisterModel ("models/weapons/v_machn/tris.md2");
-re.RegisterModel ("models/weapons/v_handgr/tris.md2");
-re.RegisterModel ("models/weapons/v_shotg2/tris.md2");
-re.RegisterModel ("models/objects/gibs/bone/tris.md2");
-re.RegisterModel ("models/objects/gibs/sm_meat/tris.md2");
-re.RegisterModel ("models/objects/gibs/bone2/tris.md2");
+R_RegisterModel ("models/objects/laser/tris.md2");
+R_RegisterModel ("models/objects/grenade2/tris.md2");
+R_RegisterModel ("models/weapons/v_machn/tris.md2");
+R_RegisterModel ("models/weapons/v_handgr/tris.md2");
+R_RegisterModel ("models/weapons/v_shotg2/tris.md2");
+R_RegisterModel ("models/objects/gibs/bone/tris.md2");
+R_RegisterModel ("models/objects/gibs/sm_meat/tris.md2");
+R_RegisterModel ("models/objects/gibs/bone2/tris.md2");
 // RAFAEL
-// re.RegisterModel ("models/objects/blaser/tris.md2");
+// R_RegisterModel ("models/objects/blaser/tris.md2");
 
-re.RegisterPic ("w_machinegun");
-re.RegisterPic ("a_bullets");
-re.RegisterPic ("i_health");
-re.RegisterPic ("a_grenades");
+Draw_FindPic ("w_machinegun");
+Draw_FindPic ("a_bullets");
+Draw_FindPic ("i_health");
+Draw_FindPic ("a_grenades");
 
 //ROGUE
-	cl_mod_explo4_big = re.RegisterModel ("models/objects/r_explode2/tris.md2");
-	cl_mod_lightning = re.RegisterModel ("models/proj/lightning/tris.md2");
-	cl_mod_heatbeam = re.RegisterModel ("models/proj/beam/tris.md2");
-	cl_mod_monster_heatbeam = re.RegisterModel ("models/proj/widowbeam/tris.md2");
+	cl_mod_explo4_big = R_RegisterModel ("models/objects/r_explode2/tris.md2");
+	cl_mod_lightning = R_RegisterModel ("models/proj/lightning/tris.md2");
+	cl_mod_heatbeam = R_RegisterModel ("models/proj/beam/tris.md2");
+	cl_mod_monster_heatbeam = R_RegisterModel ("models/proj/widowbeam/tris.md2");
 //ROGUE
 }
 
@@ -28407,7 +28295,9 @@ static void CL_PrepRefresh() {
 	// register models, pics, and skins
 	Com_Printf ("Map: %s\r", mapname);
 	SCR_UpdateScreen ();
-	re.BeginRegistration (mapname);
+
+	void R_BeginRegistration (char *model);
+	R_BeginRegistration(mapname);
 	Com_Printf ("                                     \r");
 
 	// precache status bar pics
@@ -28441,7 +28331,7 @@ static void CL_PrepRefresh() {
 		}
 		else
 		{
-			cl.model_draw[i] = re.RegisterModel (cl.configstrings[CS_MODELS+i]);
+			cl.model_draw[i] = R_RegisterModel (cl.configstrings[CS_MODELS+i]);
 			if (name[0] == '*')
 				cl.model_clip[i] = CM_InlineModel (cl.configstrings[CS_MODELS+i]);
 			else
@@ -28455,7 +28345,7 @@ static void CL_PrepRefresh() {
 	SCR_UpdateScreen ();
 	for (i=1 ; i<MAX_IMAGES && cl.configstrings[CS_IMAGES+i][0] ; i++)
 	{
-		cl.image_precache[i] = re.RegisterPic (cl.configstrings[CS_IMAGES+i]);
+		cl.image_precache[i] = Draw_FindPic (cl.configstrings[CS_IMAGES+i]);
 		Sys_SendKeyEvents ();	// pump message loop
 	}
 
@@ -28479,11 +28369,13 @@ static void CL_PrepRefresh() {
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f",
 		&axis[0], &axis[1], &axis[2]);
-	re.SetSky (cl.configstrings[CS_SKY], rotate, axis);
+	R_SetSky (cl.configstrings[CS_SKY], rotate, axis);
 	Com_Printf ("                                     \r");
 
 	// the renderer can now free unneeded stuff
-	re.EndRegistration ();
+
+	void R_EndRegistration (void);
+	R_EndRegistration ();
 
 	// clear any lines of console text
 	console_reset_line_timestamps ();
@@ -28541,7 +28433,7 @@ void V_Gun_Model_f (void)
 		return;
 	}
 	Com_sprintf (name, sizeof(name), "models/%s/tris.md2", Cmd_Argv(1));
-	gun_model = re.RegisterModel (name);
+	gun_model = R_RegisterModel (name);
 }
 
 //============================================================================
@@ -28566,7 +28458,7 @@ void SCR_DrawCrosshair (void)
 	if (!crosshair_pic[0])
 		return;
 
-	re.DrawPic (scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1)
+	Draw_Pic (scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1)
 	, scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
 
@@ -28670,7 +28562,7 @@ void V_RenderView( float stereo_separation )
         qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (*)(const void *, const void *))entitycmpfnc );
 	}
 
-	re.RenderFrame (&cl.refdef);
+	R_RenderFrame (&cl.refdef);
 	if (cl_stats->value)
 		Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
 	if ( log_stats->value && ( log_stats_file != 0 ) )
@@ -28717,7 +28609,7 @@ void DrawString (int x, int y, char *s)
 {
 	while (*s)
 	{
-		re.DrawChar (x, y, *s);
+		Draw_Char (x, y, *s);
 		x+=8;
 		s++;
 	}
@@ -28727,7 +28619,7 @@ void DrawAltString (int x, int y, char *s)
 {
 	while (*s)
 	{
-		re.DrawChar (x, y, *s ^ 0x80);
+		Draw_Char (x, y, *s ^ 0x80);
 		x+=8;
 		s++;
 	}
@@ -28950,7 +28842,7 @@ void Con_DrawInput (void)
 
 // draw it
 	for (i=0 ; i<con.linewidth ; i++)
-		re.DrawChar ( (i+1)<<3, con.vislines - 22, text[i]);
+		Draw_Char ( (i+1)<<3, con.vislines - 22, text[i]);
 
 // remove cursor
 	key_lines[edit_line][key_linepos] = 0;
@@ -28987,7 +28879,7 @@ void Con_DrawNotify (void)
 		text = con.text + (i % con.totallines)*con.linewidth;
 
 		for (x = 0 ; x < con.linewidth ; x++)
-			re.DrawChar ( (x+1)<<3, v, text[x]);
+			Draw_Char ( (x+1)<<3, v, text[x]);
 
 		v += 8;
 	}
@@ -29012,10 +28904,10 @@ void Con_DrawNotify (void)
 		x = 0;
 		while(s[x])
 		{
-			re.DrawChar ( (x+skip)<<3, v, s[x]);
+			Draw_Char ( (x+skip)<<3, v, s[x]);
 			x++;
 		}
-		re.DrawChar ( (x+skip)<<3, v, 10+((cls.realtime>>8)&1));
+		Draw_Char ( (x+skip)<<3, v, 10+((cls.realtime>>8)&1));
 		v += 8;
 	}
 
@@ -29050,14 +28942,15 @@ void Con_DrawConsole (float frac)
 	if (lines > viddef.height)
 		lines = viddef.height;
 
-// draw the background
-	re.DrawStretchPic (0, -viddef.height+lines, viddef.width, viddef.height, "conback");
+	// draw the background
+	void Draw_StretchPic(int x, int y, int w, int h, char *name);
+	Draw_StretchPic (0, -viddef.height+lines, viddef.width, viddef.height, "conback");
 	SCR_AddDirtyPoint (0,0);
 	SCR_AddDirtyPoint (viddef.width-1,lines-1);
 
 	Com_sprintf (version, sizeof(version), "v%4.2f", VERSION);
 	for (x=0 ; x<5 ; x++)
-		re.DrawChar (viddef.width-44+x*8, lines-12, 128 + version[x] );
+		Draw_Char (viddef.width-44+x*8, lines-12, 128 + version[x] );
 
 // draw the text
 	con.vislines = lines;
@@ -29077,7 +28970,7 @@ void Con_DrawConsole (float frac)
 	{
 	// draw arrows to show the buffer is backscrolled
 		for (x=0 ; x<con.linewidth ; x+=4)
-			re.DrawChar ( (x+1)<<3, y, '^');
+			Draw_Char ( (x+1)<<3, y, '^');
 
 		y -= 8;
 		rows--;
@@ -29094,7 +28987,7 @@ void Con_DrawConsole (float frac)
 		text = con.text + (row % con.totallines)*con.linewidth;
 
 		for (x=0 ; x<con.linewidth ; x++)
-			re.DrawChar ( (x+1)<<3, y, text[x]);
+			Draw_Char ( (x+1)<<3, y, text[x]);
 	}
 
 //ZOID
@@ -29138,7 +29031,7 @@ void Con_DrawConsole (float frac)
 		// draw it
 		y = con.vislines-12;
 		for (i = 0; i < (int)strlen(dlbar); i++)
-			re.DrawChar ( (i+1)<<3, y, dlbar[i]);
+			Draw_Char ( (i+1)<<3, y, dlbar[i]);
 	}
 //ZOID
 
@@ -30202,8 +30095,8 @@ static int m_menudepth = 0;
 static void M_Banner(char* name) {
 	int w = 0;
 	int h = 0;
-	re.DrawGetPicSize(&w, &h, name);
-	re.DrawPic(viddef.width / 2 - w / 2, viddef.height / 2 - 110, name);
+	Draw_GetPicSize(&w, &h, name);
+	Draw_Pic(viddef.width / 2 - w / 2, viddef.height / 2 - 110, name);
 }
 
 static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
@@ -30387,7 +30280,7 @@ higher res screens.
 */
 void M_DrawCharacter (int cx, int cy, int num)
 {
-	re.DrawChar ( cx + ((viddef.width - 320)>>1), cy + ((viddef.height - 240)>>1), num);
+	Draw_Char ( cx + ((viddef.width - 320)>>1), cy + ((viddef.height - 240)>>1), num);
 }
 
 void M_Print (int cx, int cy, char *str)
@@ -30412,7 +30305,7 @@ void M_PrintWhite (int cx, int cy, char *str)
 
 void M_DrawPic (int x, int y, char *pic)
 {
-	re.DrawPic (x + ((viddef.width - 320)>>1), y + ((viddef.height - 240)>>1), pic);
+	Draw_Pic (x + ((viddef.width - 320)>>1), y + ((viddef.height - 240)>>1), pic);
 }
 
 
@@ -30438,13 +30331,13 @@ void M_DrawCursor( int x, int y, int f )
 		{
 			Com_sprintf( cursorname, sizeof( cursorname ), "m_cursor%d", i );
 
-			re.RegisterPic( cursorname );
+			Draw_FindPic( cursorname );
 		}
 		cached = true;
 	}
 
 	Com_sprintf( cursorname, sizeof(cursorname), "m_cursor%d", f );
-	re.DrawPic( x, y, cursorname );
+	Draw_Pic( x, y, cursorname );
 }
 
 void M_DrawTextBox (int x, int y, int width, int lines)
@@ -30521,7 +30414,7 @@ void M_Main_Draw (void)
 
 	for ( i = 0; names[i] != 0; i++ )
 	{
-		re.DrawGetPicSize( &w, &h, names[i] );
+		Draw_GetPicSize( &w, &h, names[i] );
 
 		if ( w > widest )
 			widest = w;
@@ -30533,18 +30426,18 @@ void M_Main_Draw (void)
 	for ( i = 0; names[i] != 0; i++ )
 	{
 		if ( i != m_main_cursor )
-			re.DrawPic( xoffset, ystart + i * 40 + 13, names[i] );
+			Draw_Pic( xoffset, ystart + i * 40 + 13, names[i] );
 	}
 	strcpy( litname, names[m_main_cursor] );
 	strcat( litname, "_sel" );
-	re.DrawPic( xoffset, ystart + m_main_cursor * 40 + 13, litname );
+	Draw_Pic( xoffset, ystart + m_main_cursor * 40 + 13, litname );
 
 	M_DrawCursor( xoffset - 25, ystart + m_main_cursor * 40 + 11, (int)(cls.realtime / 100)%NUM_CURSOR_FRAMES );
 
-	re.DrawGetPicSize( &w, &h, "m_main_plaque" );
-	re.DrawPic( xoffset - 30 - w, ystart, "m_main_plaque" );
+	Draw_GetPicSize( &w, &h, "m_main_plaque" );
+	Draw_Pic( xoffset - 30 - w, ystart, "m_main_plaque" );
 
-	re.DrawPic( xoffset - 30 - w, ystart + h + 5, "m_main_logo" );
+	Draw_Pic( xoffset - 30 - w, ystart + h + 5, "m_main_logo" );
 }
 
 
@@ -30801,9 +30694,9 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 static void KeyCursorDrawFunc( menuframework_s *menu )
 {
 	if ( bind_grab )
-		re.DrawChar( menu->x, menu->y + menu->cursor * 9, '=' );
+		Draw_Char( menu->x, menu->y + menu->cursor * 9, '=' );
 	else
-		re.DrawChar( menu->x, menu->y + menu->cursor * 9, 12 + ( ( int ) ( Sys_Milliseconds() / 250 ) & 1 ) );
+		Draw_Char( menu->x, menu->y + menu->cursor * 9, 12 + ( ( int ) ( Sys_Milliseconds() / 250 ) & 1 ) );
 }
 
 static void DrawKeyBindingFunc( void *self )
@@ -31306,7 +31199,7 @@ static void UpdateSoundQualityFunc(void* unused)
 	M_Print( 16 + 16, 120 - 48 + 24, "please be patient." );
 
 	// the text box won't show up unless we do a buffer swap
-	re.EndFrame();
+	GLimp_EndFrame();
 
 	CL_Snd_Restart_f();
 }
@@ -31897,9 +31790,9 @@ void M_Credits_MenuDraw( void )
 			x = ( viddef.width - strlen( credits[i] ) * 8 - stringoffset * 8 ) / 2 + ( j + stringoffset ) * 8;
 
 			if ( bold )
-				re.DrawChar( x, y, credits[i][j+stringoffset] + 128 );
+				Draw_Char( x, y, credits[i][j+stringoffset] + 128 );
 			else
-				re.DrawChar( x, y, credits[i][j+stringoffset] );
+				Draw_Char( x, y, credits[i][j+stringoffset] );
 		}
 	}
 
@@ -32375,7 +32268,7 @@ void SearchLocalGames( void )
 	M_Print( 16 + 16, 120 - 48 + 24, "please be patient." );
 
 	// the text box won't show up unless we do a buffer swap
-	re.EndFrame();
+	GLimp_EndFrame();
 
 	// send out info packets
 	CL_PingServers_f();
@@ -33866,9 +33759,9 @@ void PlayerConfig_MenuDraw( void )
 		memset( &entity, 0, sizeof( entity ) );
 
 		Com_sprintf( scratch, sizeof( scratch ), "players/%s/tris.md2", s_pmi[s_player_model_box.curvalue].directory );
-		entity.model = re.RegisterModel( scratch );
+		entity.model = R_RegisterModel( scratch );
 		Com_sprintf( scratch, sizeof( scratch ), "players/%s/%s.pcx", s_pmi[s_player_model_box.curvalue].directory, s_pmi[s_player_model_box.curvalue].skindisplaynames[s_player_skin_box.curvalue] );
-		entity.skin = re.RegisterSkin( scratch );
+		entity.skin = R_RegisterSkin( scratch );
 		entity.flags = RF_FULLBRIGHT;
 		entity.origin[0] = 80;
 		entity.origin[1] = 0;
@@ -33892,12 +33785,12 @@ void PlayerConfig_MenuDraw( void )
 		M_DrawTextBox( ( refdef.x ) * ( 320.0F / viddef.width ) - 8, ( (float)viddef.height / 2.0f ) * ( 240.0F / viddef.height) - 77, refdef.width / 8, refdef.height / 8 );
 		refdef.height += 4;
 
-		re.RenderFrame( &refdef );
+		R_RenderFrame( &refdef );
 
 		Com_sprintf( scratch, sizeof( scratch ), "/players/%s/%s_i.pcx",
 			s_pmi[s_player_model_box.curvalue].directory,
 			s_pmi[s_player_model_box.curvalue].skindisplaynames[s_player_skin_box.curvalue] );
-		re.DrawPic( s_player_config_menu.x - 40, refdef.y, scratch );
+		Draw_Pic( s_player_config_menu.x - 40, refdef.y, scratch );
 	}
 }
 
@@ -34002,8 +33895,8 @@ void M_Quit_Draw (void)
 {
 	int		w, h;
 
-	re.DrawGetPicSize (&w, &h, "quit");
-	re.DrawPic ( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
+	Draw_GetPicSize (&w, &h, "quit");
+	Draw_Pic ( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
 
@@ -34022,9 +33915,10 @@ static void M_Draw() {
 
 	// dim everything behind it down
 	if (cl.cinematictime > 0) {
-		re.DrawFill(0, 0, viddef.width, viddef.height, 0);
+		Draw_Fill(0, 0, viddef.width, viddef.height, 0);
 	} else {
-		re.DrawFadeScreen();
+		void Draw_FadeScreen (void);
+		Draw_FadeScreen();
 	}
 
 	m_drawfunc();
@@ -34076,9 +33970,6 @@ static void	 SpinControl_DoSlide( menulist_s *s, int dir );
 
 #define VID_WIDTH viddef.width
 #define VID_HEIGHT viddef.height
-
-#define Draw_Char re.DrawChar
-#define Draw_Fill re.DrawFill
 
 void Action_DoEnter( menuaction_s *a )
 {
@@ -80599,31 +80490,6 @@ extern	rviddef_t	vid;
 
 */
 
-typedef enum
-{
-	it_skin,
-	it_sprite,
-	it_wall,
-	it_pic,
-	it_sky
-} imagetype_t;
-
-typedef struct image_s
-{
-	char	name[MAX_QPATH];			// game path, including extension
-	imagetype_t	type;
-	int		width, height;				// source image
-	int		upload_width, upload_height;	// after power of two and picmip
-	int		registration_sequence;		// 0 = free
-	struct msurface_s	*texturechain;	// for sort-by-texture world drawing
-	int		texnum;						// gl texture binding
-	float	sl, tl, sh, th;				// 0,0 - 1,1 unless part of the scrap
-	qboolean	scrap;
-	qboolean	has_alpha;
-
-	qboolean paletted;
-} image_t;
-
 #define	TEXNUM_LIGHTMAPS	1024
 #define	TEXNUM_SCRAPS		1152
 #define	TEXNUM_IMAGES		1153
@@ -81073,24 +80939,22 @@ char	*va(char *format, ...);
 // does a varargs printf into a temp buffer
 #endif
 
-void	Draw_GetPicSize (int *w, int *h, char *name);
-void	Draw_Pic (int x, int y, char *name);
-void	Draw_StretchPic (int x, int y, int w, int h, char *name);
-void	Draw_Char (int x, int y, int c);
-void	Draw_TileClear (int x, int y, int w, int h, char *name);
-void	Draw_Fill (int x, int y, int w, int h, int c);
-void	Draw_FadeScreen (void);
-void	Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data);
 
-void	R_BeginFrame( float camera_separation );
+void	Draw_Pic (int x, int y, char *name);
+
+void	Draw_Char (int x, int y, int c);
+
+void	Draw_Fill (int x, int y, int w, int h, int c);
+
+
+
+
 void	R_SwapBuffers( int );
-void	R_SetPalette ( const unsigned char *palette);
+
 
 int		Draw_GetPalette (void);
 
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
-
-struct image_s *R_RegisterSkin (char *name);
 
 void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height);
 image_t *GL_LoadPic (char *name, byte *pic, int width, int height, imagetype_t type, int bits);
@@ -81193,7 +81057,7 @@ extern glconfig_t  gl_config;
 extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame( float camera_separation );
-void		GLimp_EndFrame( void );
+
 int 		GLimp_Init( void *hinstance, void *hWnd );
 void		GLimp_Shutdown( void );
 int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen );
@@ -81270,11 +81134,6 @@ void Draw_Char (int x, int y, int num)
 	qglEnd ();
 }
 
-/*
-=============
-Draw_FindPic
-=============
-*/
 image_t	*Draw_FindPic (char *name)
 {
 	image_t *gl;
@@ -81343,12 +81202,6 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 		qglEnable (GL_ALPHA_TEST);
 }
 
-
-/*
-=============
-Draw_Pic
-=============
-*/
 void Draw_Pic (int x, int y, char *pic)
 {
 	image_t *gl;
@@ -81485,12 +81338,6 @@ void Draw_FadeScreen (void)
 
 //====================================================================
 
-
-/*
-=============
-Draw_StretchRaw
-=============
-*/
 extern unsigned	r_rawpalette[256];
 
 void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data)
@@ -85810,13 +85657,6 @@ struct model_s *R_RegisterModel (char *name)
 	return mod;
 }
 
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-R_EndRegistration
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
 void R_EndRegistration (void)
 {
 	int		i;
@@ -86737,12 +86577,6 @@ void R_SetLightLevel (void)
 
 }
 
-/*
-@@@@@@@@@@@@@@@@@@@@@
-R_RenderFrame
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
 void R_RenderFrame (refdef_t *fd)
 {
 	R_RenderView( fd );
@@ -87100,8 +86934,7 @@ static int R_Init(void* hinstance, void* hWnd) {
 	return true;
 }
 
-void R_Shutdown (void)
-{
+void R_Shutdown(void) {
 	Cmd_RemoveCommand ("modellist");
 	Cmd_RemoveCommand ("screenshot");
 	Cmd_RemoveCommand ("imagelist");
@@ -87345,7 +87178,6 @@ void R_DrawBeam( Entity *e )
 //===================================================================
 
 
-void	R_BeginRegistration (char *map);
 struct model_s	*R_RegisterModel (char *name);
 struct image_s	*R_RegisterSkin (char *name);
 void R_SetSky (char *name, float rotate, vec3_t axis);
@@ -89773,11 +89605,6 @@ glEnable (GL_DEPTH_TEST);
 }
 
 
-/*
-============
-R_SetSky
-============
-*/
 // 3dstudio environment map names
 char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 void R_SetSky (char *name, float rotate, vec3_t axis)
@@ -93178,25 +93005,11 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	}
 }
 
-/*
-====================
-MainWndProc
-
-main window procedure
-====================
-*/
-LONG WINAPI MainWndProc (
-    HWND    hWnd,
-    UINT    uMsg,
-    WPARAM  wParam,
-    LPARAM  lParam)
-{
-	if ( uMsg == MSH_MOUSEWHEEL )
-	{
-		if ( ( ( int ) wParam ) > 0 )
-		{
-			Key_Event( K_MWHEELUP, true, sys_msg_time );
-			Key_Event( K_MWHEELUP, false, sys_msg_time );
+LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (uMsg == MSH_MOUSEWHEEL) {
+		if (((int)wParam) > 0) {
+			Key_Event(K_MWHEELUP, true, sys_msg_time);
+			Key_Event(K_MWHEELUP, false, sys_msg_time);
 		}
 		else
 		{
@@ -93253,8 +93066,10 @@ LONG WINAPI MainWndProc (
 
 			AppActivate( fActive != WA_INACTIVE, fMinimized);
 
-			if ( reflib_active )
-				re.AppActivate( !( fActive == WA_INACTIVE ) );
+			if (reflib_active) {
+				void GLimp_AppActivate( qboolean active );
+				GLimp_AppActivate( !( fActive == WA_INACTIVE ) );
+			}
 		}
         return DefWindowProc (hWnd, uMsg, wParam, lParam);
 
@@ -93423,28 +93238,6 @@ static void VID_CheckChanges() {
 				R_Shutdown();
 				VID_FreeReflib();
 			}
-
-			re = (refexport_t){
-				.BeginRegistration = R_BeginRegistration,
-				.RegisterModel = R_RegisterModel,
-				.RegisterSkin = R_RegisterSkin,
-				.RegisterPic = Draw_FindPic,
-				.SetSky = R_SetSky,
-				.EndRegistration = R_EndRegistration,
-				.RenderFrame = R_RenderFrame,
-				.DrawGetPicSize = Draw_GetPicSize,
-				.DrawPic = Draw_Pic,
-				.DrawStretchPic = Draw_StretchPic,
-				.DrawChar = Draw_Char,
-				.DrawTileClear = Draw_TileClear,
-				.DrawFill = Draw_Fill,
-				.DrawFadeScreen= Draw_FadeScreen,
-				.DrawStretchRaw = Draw_StretchRaw,
-				.CinematicSetPalette = R_SetPalette,
-				.BeginFrame = R_BeginFrame,
-				.EndFrame = GLimp_EndFrame,
-				.AppActivate = GLimp_AppActivate,
-			};
 
 
 			int init_result = R_Init(global_hInstance, MainWndProc);
@@ -93714,8 +93507,8 @@ static void VID_MenuDraw() {
 	// draw the banner
 	int w = 0;
 	int h = 0;
-	re.DrawGetPicSize(&w, &h, "m_banner_video");
-	re.DrawPic(viddef.width/2 - w/2, viddef.height/2 - 110, "m_banner_video");
+	Draw_GetPicSize(&w, &h, "m_banner_video");
+	Draw_Pic(viddef.width/2 - w/2, viddef.height/2 - 110, "m_banner_video");
 
 	// move cursor to a reasonable starting position
 	Menu_AdjustCursor(&s_opengl_menu, 1);
@@ -94287,9 +94080,6 @@ static void GLimp_EndFrame() {
 	}
 }
 
-/*
-** GLimp_AppActivate
-*/
 void GLimp_AppActivate( qboolean active )
 {
 	if ( active )
@@ -98980,8 +98770,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// the user asked for something explicit so drop the loading plaque
 			SCR_EndLoadingPlaque();
 		}
-
-		Com_Printf ("====== Quake2 Initialized ======\n\n");
 	}
 
 	// NOTE: Mainloop
