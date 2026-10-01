@@ -7630,25 +7630,17 @@ searchpath_t	*fs_searchpaths;
 searchpath_t	*fs_base_searchpaths;	// without gamedirs
 
 
-/*
+// All of Quake's data access is through a hierchal file system, but the contents of the file system can be transparently merged from several sources.
+// The "base directory" is the path to the directory holding the quake.exe and all game directories.
+// The sys_* files pass this to host_init in quakeparms_t->basedir.
+// This can be overridden with the "-basedir" command line parm to allow code debugging in a different directory.
+// The base directory is only used during filesystem initialization.
+// The "game directory" is the first tree on the search path and directory that all generated files (savegames, screenshots, demos, config files) will be saved to.
+// This can be overridden with the "-game" command line parameter.
+// The game directory can never be changed while quake is executing.
+// This is a precacution against having a malicious server instruct clients to write files over areas they shouldn't.
 
-All of Quake's data access is through a hierchal file system, but the contents of the file system can be transparently merged from several sources.
-
-The "base directory" is the path to the directory holding the quake.exe and all game directories.  The sys_* files pass this to host_init in quakeparms_t->basedir.  This can be overridden with the "-basedir" command line parm to allow code debugging in a different directory.  The base directory is
-only used during filesystem initialization.
-
-The "game directory" is the first tree on the search path and directory that all generated files (savegames, screenshots, demos, config files) will be saved to.  This can be overridden with the "-game" command line parameter.  The game directory can never be changed while quake is executing.  This is a precacution against having a malicious server instruct clients to write files over areas they shouldn't.
-
-*/
-
-
-/*
-================
-FS_filelength
-================
-*/
-int FS_filelength (FILE *f)
-{
+static int FS_filelength (FILE *f) {
 	int		pos;
 	int		end;
 
@@ -7660,29 +7652,16 @@ int FS_filelength (FILE *f)
 	return end;
 }
 
-
-/*
-============
-FS_CreatePath
-
-Creates any directories needed to store the given filename
-============
-*/
-void	FS_CreatePath (char *path)
-{
-	char	*ofs;
-
-	for (ofs = path+1 ; *ofs ; ofs++)
-	{
-		if (*ofs == '/')
-		{	// create the directory
+// Creates any directories needed to store the given filename
+static void FS_CreatePath(char* path) {
+	for (char* ofs = path + 1; *ofs ; ofs++) {
+		if (*ofs == '/') {
 			*ofs = 0;
-			Sys_Mkdir (path);
+			Sys_Mkdir(path);
 			*ofs = '/';
 		}
 	}
 }
-
 
 /*
 ==============
@@ -10600,26 +10579,17 @@ void CopyFile (char *src, char *dst)
 	fclose (f2);
 }
 
-
-/*
-================
-SV_CopySaveGame
-================
-*/
-void SV_CopySaveGame (char *src, char *dst)
-{
+static void SV_CopySaveGame(char *src, char *dst) {
 	char	name[MAX_OSPATH], name2[MAX_OSPATH];
 	int		l, len;
 	char	*found;
 
-	Com_DPrintf("SV_CopySaveGame(%s, %s)\n", src, dst);
-
 	SV_WipeSavegame (dst);
 
 	// copy the savegame over
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, src);
-	Com_sprintf (name2, sizeof(name2), "%s/save/%s/server.ssv", fs_gamedir, dst);
-	FS_CreatePath (name2);
+	Com_sprintf(name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, src);
+	Com_sprintf(name2, sizeof(name2), "%s/save/%s/server.ssv", fs_gamedir, dst);
+	FS_CreatePath(name2);
 	CopyFile (name, name2);
 
 	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", fs_gamedir, src);
@@ -10823,58 +10793,30 @@ void SV_ReadServerFile (void)
 	ge->ReadGame (name);
 }
 
-
-//=========================================================
-
-
-
-
-/*
-==================
-SV_DemoMap_f
-
-Puts the server in demo mode on a specific map/cinematic
-==================
-*/
-void SV_DemoMap_f (void)
-{
-	SV_Map (true, Cmd_Argv(1), false );
+// Puts the server in demo mode on a specific map/cinematic
+static void SV_DemoMap_f() {
+	SV_Map(true, Cmd_Argv(1), false);
 }
 
-/*
-==================
-SV_GameMap_f
-
-Saves the state of the map just being exited and goes to a new map.
-
-If the initial character of the map string is '*', the next map is
-in a new unit, so the current savegame directory is cleared of
-map files.
-
-Example:
-
-*inter.cin+jail
-
-Clears the archived maps, plays the inter.cin cinematic, then
-goes to map jail.bsp.
-==================
-*/
-void SV_GameMap_f (void)
-{
+// Saves the state of the map just being exited and goes to a new map.
+// If the initial character of the map string is '*', the next map is in a new unit, so the current savegame directory is cleared of map files.
+// Example:
+// *inter.cin+jail
+// Clears the archived maps, plays the inter.cin cinematic, then goes to map jail.bsp.
+static void SV_GameMap_f() {
 	char		*map;
 	int			i;
 	client_t	*cl;
 	qboolean	*savedInuse;
 
-	if (cmd_argc != 2)
-	{
+	if (cmd_argc != 2) {
 		Com_Printf ("USAGE: gamemap <map>\n");
 		return;
 	}
 
 	Com_DPrintf("SV_GameMap(%s)\n", Cmd_Argv(1));
 
-	FS_CreatePath (va("%s/save/current/", fs_gamedir));
+	FS_CreatePath(va("%s/save/current/", fs_gamedir));
 
 	// check for clearing the current savegame
 	map = Cmd_Argv(1);
@@ -10907,7 +10849,7 @@ void SV_GameMap_f (void)
 	}
 
 	// start up the next map
-	SV_Map (false, Cmd_Argv(1), false );
+	SV_Map(false, Cmd_Argv(1), false);
 
 	// archive server state
 	strncpy (svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
@@ -10919,38 +10861,26 @@ void SV_GameMap_f (void)
 	}
 }
 
-/*
-==================
-SV_Map_f
-
-Goes directly to a given map without any savegame archiving.
-For development work
-==================
-*/
-void SV_Map_f (void)
-{
-	char	*map;
-	char	expanded[MAX_QPATH];
-
+// Goes directly to a given map without any savegame archiving.
+// For development work
+static void SV_Map_f() {
 	// if not a pcx, demo, or cinematic, check to make sure the level exists
-	map = Cmd_Argv(1);
-	if (!strstr (map, "."))
-	{
+	char* map = Cmd_Argv(1);
+	if (!strstr(map, ".")) {
+		char expanded[MAX_QPATH] = {};
 		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
-		if (FS_LoadFile (expanded, NULL) == -1)
-		{
+		if (FS_LoadFile (expanded, NULL) == -1) {
 			Com_Printf ("Can't find %s\n", expanded);
 			return;
 		}
 	}
 
-	sv.state = ss_dead;		// don't save current level when changing
+	sv.state = ss_dead; // don't save current level when changing
 	SV_WipeSavegame("current");
-	SV_GameMap_f ();
+	SV_GameMap_f();
 }
 
-void SV_Loadgame_f (void)
-{
+static void SV_Loadgame_f() {
 	char	name[MAX_OSPATH];
 	FILE	*f;
 	char	*dir;
@@ -10964,22 +10894,21 @@ void SV_Loadgame_f (void)
 	Com_Printf ("Loading game...\n");
 
 	dir = Cmd_Argv(1);
-	if (strstr (dir, "..") || strstr (dir, "/") || strstr (dir, "\\") )
+	if (strstr(dir, "..") || strstr (dir, "/") || strstr (dir, "\\"))
 	{
 		Com_Printf ("Bad savedir.\n");
 	}
 
 	// make sure the server.ssv file exists
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, Cmd_Argv(1));
-	f = fopen (name, "rb");
-	if (!f)
-	{
+	Com_sprintf(name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, Cmd_Argv(1));
+	f = fopen(name, "rb");
+	if (!f) {
 		Com_Printf ("No such savegame: %s\n", name);
 		return;
 	}
-	fclose (f);
+	fclose(f);
 
-	SV_CopySaveGame (Cmd_Argv(1), "current");
+	SV_CopySaveGame(Cmd_Argv(1), "current");
 
 	SV_ReadServerFile();
 
@@ -10988,16 +10917,7 @@ void SV_Loadgame_f (void)
 	SV_Map (false, svs.mapcmd, true);
 }
 
-
-
-/*
-==============
-SV_Savegame_f
-
-==============
-*/
-void SV_Savegame_f (void)
-{
+static void SV_Savegame_f() {
 	char	*dir;
 
 	if (sv.state != ss_game)
@@ -80491,7 +80411,6 @@ extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame( float camera_separation );
 
-int 		GLimp_Init( void *hinstance, void *hWnd );
 int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen );
 void		GLimp_AppActivate( qboolean active );
 void		GLimp_EnableLogging( qboolean enable );
@@ -92305,9 +92224,9 @@ void VID_NewWindow( int width, int height) {
 	cl.force_refdef = true;		// can't use a paused refdef
 }
 
-static HINSTANCE global_hInstance;
-
 static qboolean QGL_Init(const char *dllname);
+
+static HINSTANCE global_hInstance;
 
 // This function gets called once just before drawing each frame, and it's sole purpose in life
 // is to check to see if any of the video mode parameters have changed, and if they have to
@@ -92347,8 +92266,11 @@ static void VID_CheckChanges() {
 			assert(QGL_Init_result);
 
 			// initialize OS-specific parts of OpenGL
-			qboolean GLimp_Init_result = GLimp_Init(global_hInstance, MainWndProc);
-			assert(GLimp_Init_result);
+			{
+				glw_state.allowdisplaydepthchange = false;
+				glw_state.hInstance = global_hInstance;
+				glw_state.wndproc = MainWndProc;
+			}
 
 			// set our "safe" modes
 			gl_state.prev_mode = 3;
@@ -92962,15 +92884,6 @@ static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, qboolean fulls
 	return rserr_ok;
 }
 
-// This routine is responsible for initializing the OS specific portions of OpenGL.
-// Under Win32 this means dealing with the pixelformats and doing the wgl interface stuff.
-qboolean GLimp_Init(void* hinstance, void* wndproc) {
-	glw_state.allowdisplaydepthchange = false;
-	glw_state.hInstance = (HINSTANCE)hinstance;
-	glw_state.wndproc = wndproc;
-	return true;
-}
-
 qboolean GLimp_InitGL (void)
 {
     PIXELFORMATDESCRIPTOR pfd =
@@ -93025,11 +92938,11 @@ qboolean GLimp_InitGL (void)
 	** Get a DC for the specified window
 	*/
 	if ( glw_state.hDC != NULL )
-		Com_Printf("GLimp_Init() - non-NULL DC exists\n");
+		Com_Printf("non-NULL DC exists\n");
 
     if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
 	{
-		Com_Printf("GLimp_Init() - GetDC failed\n");
+		Com_Printf("GetDC failed\n");
 		return false;
 	}
 
@@ -93037,12 +92950,12 @@ qboolean GLimp_InitGL (void)
 	{
 		if ( (pixelformat = qwglChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
 		{
-			Com_Printf("GLimp_Init() - qwglChoosePixelFormat failed\n");
+			Com_Printf("qwglChoosePixelFormat failed\n");
 			return false;
 		}
 		if ( qwglSetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
 		{
-			Com_Printf("GLimp_Init() - qwglSetPixelFormat failed\n");
+			Com_Printf("qwglSetPixelFormat failed\n");
 			return false;
 		}
 		qwglDescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
@@ -93051,12 +92964,12 @@ qboolean GLimp_InitGL (void)
 	{
 		if ( ( pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
 		{
-			Com_Printf("GLimp_Init() - ChoosePixelFormat failed\n");
+			Com_Printf("ChoosePixelFormat failed\n");
 			return false;
 		}
 		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
 		{
-			Com_Printf("GLimp_Init() - SetPixelFormat failed\n");
+			Com_Printf("SetPixelFormat failed\n");
 			return false;
 		}
 		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
@@ -93092,21 +93005,21 @@ qboolean GLimp_InitGL (void)
 	*/
 	if ( ( glw_state.hGLRC = qwglCreateContext( glw_state.hDC ) ) == 0 )
 	{
-		Com_Printf("GLimp_Init() - qwglCreateContext failed\n");
+		Com_Printf("qwglCreateContext failed\n");
 
 		goto fail;
 	}
 
     if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
 	{
-		Com_Printf("GLimp_Init() - qwglMakeCurrent failed\n");
+		Com_Printf("qwglMakeCurrent failed\n");
 
 		goto fail;
 	}
 
 	if ( !VerifyDriver() )
 	{
-		Com_Printf("GLimp_Init() - no hardware acceleration detected\n");
+		Com_Printf("no hardware acceleration detected\n");
 		goto fail;
 	}
 
