@@ -8,6 +8,7 @@
 #pragma comment(lib, "gdi32.lib")
 
 #define _CRT_SECURE_NO_WARNINGS 1
+#include <stdint.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -25,16 +26,117 @@
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
 
+typedef uint8_t u8;
+typedef int64_t i64;
+
+#define Byte ((i64)1)
+#define Kilobyte ((i64)(1024 * Byte))
+#define Megabyte ((i64)(1024 * Kilobyte))
+#define Gigabyte ((i64)(1024 * Megabyte))
+
 //
 // SECTION Context
 //
 
-typedef void (*ExitProcessProc)(void);
+typedef struct {char* ptr; i64 len;} String;
+
+typedef struct {
+	void* base;
+	i64 size;
+	i64 used;
+	i64 temp_memory_count;
+} Arena;
+
+typedef void (*Exit_Process_Proc)(void);
+typedef void (*Write_Config_String_Proc)(String text);
 
 // Platform is responsible for initialising this
 static struct {
-	ExitProcessProc exit_process;
+	struct {Arena perm; Arena temp;} memory;
+
+	Exit_Process_Proc exit_process;
+	Write_Config_String_Proc write_config_string;
 } context = {};
+
+//
+// SECTION Memory
+//
+
+static void copy_bytes(void* dest, void* src, i64 len) {
+	assert(dest && src && len >= 0);
+	while (len--) {*(u8*)dest++ = *(u8*)src++;}
+}
+
+static void* arena_alloc_bytes(Arena* arena, i64 size) {
+	assert(arena->base && arena->size >= 0 && arena->used >= 0 && arena->temp_memory_count >= 0 && size >= 0);
+	assert(arena->size >= arena->used + size);
+	void* result = (u8*)arena->base + arena->used;
+	arena->used += size;
+	return result;
+}
+
+typedef struct {
+	Arena* arena;
+	i64 used_when_started;
+	i64 temp_memory_count_when_started;
+} Arena_Temp_Memory;
+
+static Arena_Temp_Memory arena_temp_memory_begin(Arena* arena) {
+	assert(arena->base && arena->size >= 0 && arena->used >= 0 && arena->temp_memory_count >= 0);
+	Arena_Temp_Memory temp = {
+		.arena = arena,
+		.used_when_started = arena->used,
+		.temp_memory_count_when_started = arena->temp_memory_count,
+	};
+	arena->temp_memory_count += 1;
+	return temp;
+}
+
+static void arena_temp_memory_end(Arena_Temp_Memory* temp) {
+	assert(temp->arena->base && temp->arena->size >= 0 && temp->arena->used >= 0);
+	assert(temp->arena->temp_memory_count == temp->temp_memory_count_when_started + 1);
+	assert(temp->arena->used >= temp->used_when_started);
+	temp->arena->used = temp->used_when_started;
+	temp->arena->temp_memory_count = temp->temp_memory_count_when_started;
+	*temp = (Arena_Temp_Memory){};
+}
+
+#define temp_memory_block(__arena__) for (Arena_Temp_Memory __tempororary_memory__ = arena_temp_memory_begin(__arena__); __tempororary_memory__.arena; arena_temp_memory_end(&__tempororary_memory__))
+
+//
+// SECTION Strings
+//
+
+#define STR(text) ((String){.ptr = (char*)(text), .len = sizeof(text) - 1})
+
+typedef struct {String str; i64 max_len;} String_Builder;
+
+static String string_from_cstring(char* cstring) {
+	i64 len = 0;
+	while (cstring[len]) {len++;}
+	String result = {cstring, len};
+	return result;
+}
+
+static String_Builder string_builder_begin(Arena* arena, i64 max_len) {
+	void* base = arena_alloc_bytes(arena, max_len);
+	String_Builder builder = {.str = (String){.ptr = base, .len = 0}, .max_len = max_len};
+	return builder;
+}
+
+static void string_builder_write_string(String_Builder* builder, String text) {
+	assert(text.len >= 0 && builder->max_len >= 0 && builder->str.len >= 0);
+	assert(builder->str.len + text.len <= builder->max_len);
+	copy_bytes((u8*)builder->str.ptr + builder->str.len, text.ptr, text.len);
+	builder->str.len += text.len;
+}
+
+static String string_builder_end(String_Builder* builder) {
+	String result = builder->str;
+	string_builder_write_string(builder, STR("\0"));
+	*builder = (String_Builder){};
+	return result;
+}
 
 //
 // SECTION Byte order
@@ -352,7 +454,7 @@ static unsigned short CRC_Block(byte* start, int count) {
 }
 
 //
-// SECTION Memory
+// SECTION Memory OG
 //
 
 #define	Z_MAGIC 0x1d1d
@@ -468,7 +570,7 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 }
 
 //
-// SECTION Strings
+// SECTION Strings OG
 //
 
 static char* CopyString(char *in) {
@@ -15632,17 +15734,8 @@ extern	int chat_bufferlen;
 extern	qboolean	chat_team;
 
 void Key_Event (int key, qboolean down, unsigned time);
-void Key_WriteBindings (FILE *f);
 void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
-
-/* ============ end inlined header: client/keys.h ============ */
-/* ============ begin inlined header: client/console.h ============ */
-
-
-//
-// console
-//
 
 void Con_DrawCharacter (int cx, int line, int num);
 
@@ -22248,35 +22341,46 @@ void CL_Precache_f (void)
 	CL_RequestNextDownload();
 }
 
-static qboolean reflib_active = false;
-
 // Write key bindings and archived cvars to config file
 static void write_config() {
-	if (cls.state != ca_uninitialized) {
-		FILE* config_file_handle = 0;
-		char config_file_path[MAX_QPATH] = {};
-		{
-			Com_sprintf(config_file_path, sizeof(config_file_path), "%s/config.cfg", fs_gamedir);
-			config_file_handle = fopen(config_file_path, "w");
-		}
+	// TODO kinda wanna get rid of this condition
+	if (cls.state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
+		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
+		string_builder_write_string(&builder, STR("// generated by quake, do not modify\n"));
 
-		if (config_file_handle) {
-			fprintf(config_file_handle, "// generated by quake, do not modify\n");
-			Key_WriteBindings(config_file_handle);
+		// NOTE: Keybindings
+		for (int ind = 0; ind < 256; ind++) {
+			char* value_cstring = keybindings[ind];
+			if (value_cstring && value_cstring[0]) {
+				char* key_cstring = Key_KeynumToString(ind);
+				String key_string = string_from_cstring(key_cstring);
+				String value_string = string_from_cstring(value_cstring);
 
-			// append lines containing "set variable value" for all variables with the archive flag set to true.
-			char temp_buffer[1024] = {};
-			for (cvar_t* var = cvar_vars ; var ; var = var->next) {
-				if (var->flags & CVAR_ARCHIVE) {
-					Com_sprintf(temp_buffer, sizeof(temp_buffer), "set %s \"%s\"\n", var->name, var->string);
-					fprintf(config_file_handle, "%s", temp_buffer);
-				}
+				string_builder_write_string(&builder, STR("bind "));
+				string_builder_write_string(&builder, key_string);
+				string_builder_write_string(&builder, STR(" \""));
+				string_builder_write_string(&builder, value_string);
+				string_builder_write_string(&builder, STR("\"\n"));
 			}
-
-			Com_Printf("config wriiten to %s\n", config_file_path);
-			fclose(config_file_handle);
 		}
-	}
+
+		// NOTE: Variables with "archive" flag
+		for (cvar_t* var = cvar_vars; var; var = var->next) {
+			if (var->flags & CVAR_ARCHIVE) {
+				String name = string_from_cstring(var->name);
+				String value = string_from_cstring(var->string);
+
+				string_builder_write_string(&builder, STR("set "));
+				string_builder_write_string(&builder, name);
+				string_builder_write_string(&builder, STR(" \""));
+				string_builder_write_string(&builder, value);
+				string_builder_write_string(&builder, STR("\"\n"));
+			}
+		}
+
+		String config_string = string_builder_end(&builder);
+		context.write_config_string(config_string);
+	}}
 }
 
 void CL_InitLocal (void)
@@ -28948,16 +29052,10 @@ int Key_StringToKeynum (char *str)
 	return -1;
 }
 
-/*
-===================
-Key_KeynumToString
-
-Returns a string (either a single ascii char, or a K_* name) for the
-given keynum.
-FIXME: handle quote special (general escape sequence?)
-===================
-*/
-char *Key_KeynumToString (int keynum)
+// Returns a string (either a single ascii char, or a K_* name) for the
+// given keynum.
+// FIXME: handle quote special (general escape sequence?)
+char* Key_KeynumToString (int keynum)
 {
 	keyname_t	*kn;
 	static	char	tinystr[2];
@@ -29069,7 +29167,7 @@ void Key_Bind_f (void)
 		return;
 	}
 
-// copy the rest of the command line
+	// copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
 	for (i=2 ; i< c ; i++)
 	{
@@ -29079,22 +29177,6 @@ void Key_Bind_f (void)
 	}
 
 	Key_SetBinding (b, cmd);
-}
-
-/*
-============
-Key_WriteBindings
-
-Writes lines containing "bind key value"
-============
-*/
-void Key_WriteBindings (FILE *f)
-{
-	int		i;
-
-	for (i=0 ; i<256 ; i++)
-		if (keybindings[i] && keybindings[i][0])
-			fprintf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
 
 
@@ -92023,6 +92105,8 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	}
 }
 
+static qboolean reflib_active = false;
+
 LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == MSH_MOUSEWHEEL) {
 		if (((int)wParam) > 0) {
@@ -97373,15 +97457,48 @@ static void Qcommon_Frame(int delta_time_msec) {
 	}
 }
 
-static void exit_process() {
+static void windows_exit_process() {
 	ExitProcess(0);
 }
+
+static void windows_write_config_string(String text) {temp_memory_block(&context.memory.temp) {
+	String file_path = {};
+	{
+		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
+		String gamedir_path = string_from_cstring(fs_gamedir);
+		string_builder_write_string(&builder, gamedir_path);
+		string_builder_write_string(&builder, STR("/config.cfg"));
+		file_path = string_builder_end(&builder);
+	}
+
+	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	assert(file_handle != INVALID_HANDLE_VALUE);
+
+	DWORD written = 0;
+	assert(text.len <= 0xFFFFFFFF);
+	BOOL write_result = WriteFile(file_handle, text.ptr, (DWORD)text.len, &written, 0);
+	assert(write_result && (i64)written == text.len);
+
+	CloseHandle(file_handle);
+}}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
 	UNUSED(hPrevInstance); // NOTE: always zero
 
-	context.exit_process = exit_process;
+	// NOTE: Memory
+	{
+		i64 total_size = (i64)4 * Gigabyte;
+		void* base = VirtualAlloc(0, (SIZE_T)total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+		assert(base);
+
+		i64 perm_size = total_size / 4;
+		context.memory.perm = (Arena){.base = base, .size = perm_size};
+		context.memory.temp = (Arena){.base = (u8*)base + perm_size, .size = total_size - perm_size};
+	}
+
+	context.exit_process = windows_exit_process;
+	context.write_config_string = windows_write_config_string;
 
 	global_hInstance = hInstance;
 
