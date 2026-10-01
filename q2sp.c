@@ -15540,7 +15540,6 @@ void SCR_DirtyScreen (void);
 //
 void SCR_PlayCinematic (char *name);
 void SCR_RunCinematic (void);
-void SCR_StopCinematic (void);
 void SCR_FinishCinematic (void);
 
 /* ============ end inlined header: client/screen.h ============ */
@@ -16108,8 +16107,6 @@ extern 	kbutton_t 	in_speed;
 void CL_InitInput (void);
 void CL_SendCmd (void);
 void CL_SendMove (usercmd_t *cmd);
-
-void CL_ClearState (void);
 
 void CL_ReadPackets (void);
 
@@ -21196,14 +21193,7 @@ void CL_WriteDemoMessage (void)
 	fwrite (net_message.data+8,	len, 1, cls.demofile);
 }
 
-
-/*
-====================
-CL_Stop_f
-
-stop recording a demo
-====================
-*/
+// stop recording a demo
 void CL_Stop_f (void)
 {
 	int		len;
@@ -21214,7 +21204,7 @@ void CL_Stop_f (void)
 		return;
 	}
 
-// finish up
+	// finish up
 	len = -1;
 	fwrite (&len, 4, 1, cls.demofile);
 	fclose (cls.demofile);
@@ -21582,20 +21572,13 @@ void CL_Rcon_f (void)
 	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
 }
 
-
-/*
-=====================
-CL_ClearState
-
-=====================
-*/
 void CL_ClearState (void)
 {
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_ClearTEnts ();
 
-// wipe the entire cl structure
+	// wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
 	memset (&cl_entities, 0, sizeof(cl_entities));
 
@@ -22347,15 +22330,12 @@ void CL_Precache_f (void)
 
 static qboolean reflib_active = false;
 
-static void CL_Quit_f() {
-	CL_Disconnect();
-	SV_Shutdown("Server quit\n", false);
-
-	// Write key bindings and archived cvars to config.cfg
+// Write key bindings and archived cvars to config file
+static void write_config() {
 	if (cls.state != ca_uninitialized) {
 		FILE* config_file_handle = 0;
+		char config_file_path[MAX_QPATH] = {};
 		{
-			char config_file_path[MAX_QPATH];
 			Com_sprintf(config_file_path, sizeof(config_file_path), "%s/config.cfg", fs_gamedir);
 			config_file_handle = fopen(config_file_path, "w");
 		}
@@ -22373,26 +22353,10 @@ static void CL_Quit_f() {
 				}
 			}
 
+			Com_Printf("config wriiten to %s\n", config_file_path);
 			fclose(config_file_handle);
 		}
 	}
-
-	S_Shutdown();
-	IN_Shutdown();
-
-	void R_Shutdown(void);
-	R_Shutdown();
-	reflib_active = false;
-
-	if (logfile) {
-		fclose(logfile);
-		logfile = NULL;
-	}
-
-	void DeinitConProc (void);
-	DeinitConProc();
-
-	context.exit_process();
 }
 
 void CL_InitLocal (void)
@@ -22493,7 +22457,8 @@ void CL_InitLocal (void)
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("stop", CL_Stop_f);
 
-	Cmd_AddCommand ("quit", CL_Quit_f);
+	Cmd_AddCommand ("write_config", write_config);
+	Cmd_AddCommand ("quit", context.exit_process);
 
 	Cmd_AddCommand ("connect", CL_Connect_f);
 	Cmd_AddCommand ("reconnect", CL_Reconnect_f);
@@ -33359,32 +33324,14 @@ void M_Menu_Gallery_f( void )
 }
 #endif
 
-/*
-=======================================================================
+const char* M_Quit_Key(int key) {
+	switch (key){
+		case K_ESCAPE:
+		case 'n':
+		case 'N': {M_PopMenu();} break;
 
-QUIT MENU
-
-=======================================================================
-*/
-
-const char *M_Quit_Key (int key)
-{
-	switch (key)
-	{
-	case K_ESCAPE:
-	case 'n':
-	case 'N':
-		M_PopMenu ();
-		break;
-
-	case 'Y':
-	case 'y':
-		cls.key_dest = key_console;
-		CL_Quit_f ();
-		break;
-
-	default:
-		break;
+		case 'Y':
+		case 'y': {context.exit_process();} break;
 	}
 
 	return NULL;
@@ -89505,14 +89452,7 @@ void IN_ActivateMouse (void)
 		;
 }
 
-
-/*
-===========
-IN_DeactivateMouse
-
-Called when the window loses focus
-===========
-*/
+// Called when the window loses focus
 void IN_DeactivateMouse (void)
 {
 	if (!mouseinitialized)
@@ -89702,11 +89642,6 @@ void IN_Init (void)
 	IN_StartupJoystick ();
 }
 
-/*
-===========
-IN_Shutdown
-===========
-*/
 void IN_Shutdown (void)
 {
 	IN_DeactivateMouse ();
