@@ -85945,8 +85945,6 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-static cvar_t* vid_ref;
-
 static void R_SetMode() {
 	assert(gl_config.allow_cds);
 
@@ -86067,18 +86065,15 @@ static void R_Shutdown() {
 	QGL_Shutdown(); // shutdown our QGL subsystem
 }
 
+static qboolean vid_ref_modified = false;
+
 static void R_BeginFrame(float camera_separation) {
 	gl_state.camera_separation = camera_separation;
 
-	/*
-	** change modes if necessary
-	*/
-	if ( gl_mode->modified || vid_fullscreen->modified )
-	{	// FIXME: only restart if CDS is required
-		cvar_t	*ref;
-
-		ref = COM_GetCvar ("vid_ref", "gl", 0);
-		ref->modified = true;
+	// change modes if necessary
+	if (gl_mode->modified || vid_fullscreen->modified) {
+		// FIXME: only restart if CDS is required
+		vid_ref_modified = true;
 	}
 
 	if ( gl_log->modified )
@@ -92036,18 +92031,8 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return result;
 }
 
-/*
-============
-VID_Restart_f
-
-Console command to re-start the video mode and refresh DLL. We do this
-simply by setting the modified flag for the vid_ref variable, which will
-cause the entire video mode and refresh DLL to be reset on the next frame.
-============
-*/
-void VID_Restart_f (void)
-{
-	vid_ref->modified = true;
+static void VID_Restart_f() {
+	vid_ref_modified = true;
 }
 
 void VID_Front_f( void )
@@ -92090,11 +92075,8 @@ static HINSTANCE global_hInstance;
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
 static void VID_CheckChanges() {
-	assert(vid_ref);
-	assert(!strcmp(vid_ref->string, "gl"));
-
-	if (vid_ref->modified) {
-		vid_ref->modified = false;
+	if (vid_ref_modified) {
+		vid_ref_modified = false;
 		reflib_active = true;
 
 		cl.force_refdef = true; // can't use a paused refdef
@@ -92174,7 +92156,6 @@ static void VID_CheckChanges() {
 
 			vid_fullscreen = COM_GetCvar( "vid_fullscreen", "0", CVAR_ARCHIVE );
 			vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
-			vid_ref = COM_GetCvar( "vid_ref", "gl", CVAR_ARCHIVE );
 
 			Cmd_AddCommand( "imagelist", GL_ImageList_f );
 			Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
@@ -92356,13 +92337,11 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("gl_mode", s_mode_list.curvalue);
 
 	assert(s_ref_list.curvalue == 0);
-	COM_SetCvar("vid_ref", "gl");
 	COM_SetCvar("gl_driver", "opengl32");
 
-	assert(_stricmp(vid_ref->string, "gl" ) == 0);
 	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
 
-	vid_ref->modified = vid_gamma->modified || gl_driver->modified;
+	vid_ref_modified = vid_gamma->modified || gl_driver->modified;
 
 	M_ForceMenuOff();
 }
@@ -92414,7 +92393,6 @@ static void VID_MenuInit() {
 
 	s_screensize_slider.curvalue = scr_viewsize->value/10;
 
-	assert(strcmp(vid_ref->string, "gl") == 0);
 	assert(strcmp(gl_driver->string, "opengl32") == 0);
 
 	s_ref_list.curvalue = 0;
@@ -97624,7 +97602,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// NOTE: Video init
 			{
 				// Create the video variables so we know how to start the graphics drivers
-				vid_ref = COM_GetCvar ("vid_ref", "soft", CVAR_ARCHIVE);
 				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
 				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
 				vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
@@ -97634,6 +97611,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Cmd_AddCommand("vid_front", VID_Front_f);
 
 				// Start the graphics mode
+				vid_ref_modified = true;
 				VID_CheckChanges();
 			}
 
