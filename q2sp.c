@@ -80391,7 +80391,6 @@ static struct {
 	const char* vendor_string;
 	const char* version_string;
 	const char* extensions_string;
-	bool allow_cds;
 } gl_config;
 
 typedef struct
@@ -85726,7 +85725,6 @@ static bool fullscreen_mode = false;
 static bool vid_ref_modified = false;
 
 static void R_SetMode() {
-	assert(gl_config.allow_cds);
 	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
 	assert(GLimp_SetMode_result == rserr_ok);
 }
@@ -91839,8 +91837,6 @@ static void VID_CheckChanges() {
 
 			COM_SetCvar( "scr_drawall", "0" );
 
-			gl_config.allow_cds = true;
-
 			// grab extensions
 
 			{
@@ -95622,8 +95618,6 @@ static bool QGL_Init( const char *dllname ) {
 		Com_Printf("%s\n", buf);
 		return false;
 	}
-
-	gl_config.allow_cds = true;
 
 	qglAccum                     = dllAccum = GPA( "glAccum" );
 	qglAlphaFunc                 = dllAlphaFunc = GPA( "glAlphaFunc" );
