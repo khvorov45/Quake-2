@@ -15609,10 +15609,6 @@ void IN_Frame (void);
 void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
 
-void IN_Activate (qboolean active);
-/* ============ end inlined header: client/input.h ============ */
-/* ============ begin inlined header: client/keys.h ============ */
-
 
 //
 // these are the key numbers that should be passed to Key_Event
@@ -30490,7 +30486,6 @@ CONTROLS MENU
 
 =======================================================================
 */
-extern cvar_t *win_noalttab;	// global lives in vid_dll.c (unity build)
 extern cvar_t *in_joystick;
 
 static menuframework_s	s_options_menu;
@@ -30498,7 +30493,6 @@ static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
 static menuslider_s		s_options_sensitivity_slider;
 static menulist_s		s_options_freelook_box;
-static menulist_s		s_options_noalttab_box;
 static menulist_s		s_options_alwaysrun_box;
 static menulist_s		s_options_invertmouse_box;
 static menulist_s		s_options_lookspring_box;
@@ -30580,8 +30574,6 @@ static void ControlsSetMenuItemValues( void )
 
 	COM_SetValueCvar( "in_joystick", ClampCvar( 0, 1, in_joystick->value ) );
 	s_options_joystick_box.curvalue		= in_joystick->value;
-
-	s_options_noalttab_box.curvalue			= win_noalttab->value;
 }
 
 static void ControlsResetDefaultsFunc(void* unused)
@@ -30700,8 +30692,6 @@ void Options_MenuInit( void )
 		0
 	};
 
-	win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
-
 	/*
 	** configure controls menu and menu items
 	*/
@@ -30783,14 +30773,7 @@ void Options_MenuInit( void )
 	s_options_crosshair_box.generic.name	= "crosshair";
 	s_options_crosshair_box.generic.callback = CrosshairFunc;
 	s_options_crosshair_box.itemnames = crosshair_names;
-/*
-	s_options_noalttab_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_noalttab_box.generic.x	= 0;
-	s_options_noalttab_box.generic.y	= 110;
-	s_options_noalttab_box.generic.name	= "disable alt-tab";
-	s_options_noalttab_box.generic.callback = NoAltTabFunc;
-	s_options_noalttab_box.itemnames = yesno_names;
-*/
+
 	s_options_joystick_box.generic.type = MTYPE_SPINCONTROL;
 	s_options_joystick_box.generic.x	= 0;
 	s_options_joystick_box.generic.y	= 120;
@@ -89282,7 +89265,6 @@ extern DWORD gSndBufSize;
 extern HWND			cl_hwnd;
 extern qboolean		ActiveApp, Minimized;
 
-void IN_Activate (qboolean active);
 void IN_MouseEvent (int mstate);
 
 extern int		window_center_x, window_center_y;
@@ -89648,22 +89630,12 @@ void IN_Shutdown (void)
 	IN_DeactivateMouse ();
 }
 
-
-/*
-===========
-IN_Activate
-
-Called when the main window gains or loses focus.
-The window may have been destroyed and recreated
-between a deactivate and an activate.
-===========
-*/
-void IN_Activate (qboolean active)
-{
+// Called when the main window gains or loses focus.
+// The window may have been destroyed and recreated between a deactivate and an activate.
+void IN_Activate(qboolean active) {
 	in_appactive = active;
-	mouseactive = !active;		// force a new window check or turn off
+	mouseactive = !active;
 }
-
 
 /*
 ==================
@@ -91916,13 +91888,9 @@ void* Sys_GetGameAPI(void* parms) {
 // is used for both the software and OpenGL rendering versions of the
 // Quake refresh engine.
 
-cvar_t *win_noalttab;
-
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL (WM_MOUSELAST+1)  // message that will be supported by the OS
 #endif
-
-static UINT MSH_MOUSEWHEEL;
 
 // Console variables that we need to access from this module
 cvar_t		*vid_gamma;
@@ -91938,52 +91906,8 @@ HINSTANCE	reflib_library;		// Handle to refresh DLL
 
 HWND        cl_hwnd;            // Main window handle for life of program
 
-LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
-
-static qboolean s_alttab_disabled;
 
 extern	unsigned	sys_msg_time;
-
-static void WIN_DisableAltTab( void )
-{
-	if ( s_alttab_disabled )
-		return;
-
-	if ( s_win95 )
-	{
-		BOOL old;
-
-		SystemParametersInfo( SPI_SCREENSAVERRUNNING, 1, &old, 0 );
-	}
-	else
-	{
-		RegisterHotKey( 0, 0, MOD_ALT, VK_TAB );
-		RegisterHotKey( 0, 1, MOD_ALT, VK_RETURN );
-	}
-	s_alttab_disabled = true;
-}
-
-static void WIN_EnableAltTab( void )
-{
-	if ( s_alttab_disabled )
-	{
-		if ( s_win95 )
-		{
-			BOOL old;
-
-			SystemParametersInfo( SPI_SCREENSAVERRUNNING, 0, &old, 0 );
-		}
-		else
-		{
-			UnregisterHotKey( 0, 0 );
-			UnregisterHotKey( 0, 1 );
-		}
-
-		s_alttab_disabled = false;
-	}
-}
-
-//==========================================================================
 
 byte        scantokey[128] =
 					{
@@ -92071,195 +91995,115 @@ int MapKey (int key)
 	}
 }
 
-void AppActivate(BOOL fActive, BOOL minimize)
-{
-	Minimized = minimize;
-
-	Key_ClearStates();
-
-	// we don't want to act like we're active if we're minimized
-	if (fActive && !Minimized)
-		ActiveApp = true;
-	else
-		ActiveApp = false;
-
-	// minimize/restore mouse-capture on demand
-	if (!ActiveApp)
-	{
-		IN_Activate (false);
-		S_Activate (false);
-
-		if ( win_noalttab->value )
-		{
-			WIN_EnableAltTab();
-		}
-	}
-	else
-	{
-		IN_Activate (true);
-		S_Activate (true);
-		if ( win_noalttab->value )
-		{
-			WIN_DisableAltTab();
-		}
-	}
-}
-
 static qboolean reflib_active = false;
 
-LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (uMsg == MSH_MOUSEWHEEL) {
-		if (((int)wParam) > 0) {
-			Key_Event(K_MWHEELUP, true, sys_msg_time);
-			Key_Event(K_MWHEELUP, false, sys_msg_time);
-		}
-		else
-		{
-			Key_Event( K_MWHEELDOWN, true, sys_msg_time );
-			Key_Event( K_MWHEELDOWN, false, sys_msg_time );
-		}
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-	}
-
-	switch (uMsg)
-	{
-	case WM_MOUSEWHEEL:
-		/*
-		** this chunk of code theoretically only works under NT4 and Win98
-		** since this message doesn't exist under Win95
-		*/
-		if ( ( short ) HIWORD( wParam ) > 0 )
-		{
-			Key_Event( K_MWHEELUP, true, sys_msg_time );
-			Key_Event( K_MWHEELUP, false, sys_msg_time );
-		}
-		else
-		{
-			Key_Event( K_MWHEELDOWN, true, sys_msg_time );
-			Key_Event( K_MWHEELDOWN, false, sys_msg_time );
-		}
-		break;
-
-	case WM_HOTKEY:
-		return 0;
-
-	case WM_CREATE:
-		cl_hwnd = hWnd;
-
-		MSH_MOUSEWHEEL = RegisterWindowMessage("MSWHEEL_ROLLMSG");
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-
-	case WM_PAINT:
-		SCR_DirtyScreen ();	// force entire screen to update next frame
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-
-	case WM_DESTROY:
-		// let sound and input know about this?
-		cl_hwnd = NULL;
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-
-	case WM_ACTIVATE:
-		{
-			int	fActive, fMinimized;
-
-			// KJB: Watch this for problems in fullscreen modes with Alt-tabbing.
-			fActive = LOWORD(wParam);
-			fMinimized = (BOOL) HIWORD(wParam);
-
-			AppActivate( fActive != WA_INACTIVE, fMinimized);
-
-			if (reflib_active) {
-				void GLimp_AppActivate( qboolean active );
-				GLimp_AppActivate( !( fActive == WA_INACTIVE ) );
+static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	switch (uMsg) {
+		case WM_MOUSEWHEEL: {
+			if ((short)HIWORD(wParam) > 0) {
+				Key_Event( K_MWHEELUP, true, sys_msg_time );
+				Key_Event( K_MWHEELUP, false, sys_msg_time );
+			} else {
+				Key_Event( K_MWHEELDOWN, true, sys_msg_time );
+				Key_Event( K_MWHEELDOWN, false, sys_msg_time );
 			}
-		}
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
+		} break;
 
-	case WM_MOVE:
-		{
-			int		xPos, yPos;
-			RECT r;
-			int		style;
+		case WM_CREATE: {
+			cl_hwnd = hWnd;
+		} break;
 
-			if (!vid_fullscreen->value)
-			{
-				xPos = (short) LOWORD(lParam);    // horizontal position
-				yPos = (short) HIWORD(lParam);    // vertical position
+		case WM_PAINT: {
+			SCR_DirtyScreen();
+		} break;
 
-				r.left   = 0;
-				r.top    = 0;
-				r.right  = 1;
-				r.bottom = 1;
+		case WM_DESTROY: {
+			cl_hwnd = NULL;
+		} break;
 
-				style = GetWindowLong( hWnd, GWL_STYLE );
-				AdjustWindowRect( &r, style, FALSE );
+		case WM_ACTIVATE: {
+				int fActive = LOWORD(wParam) != WA_INACTIVE;
+				Minimized = (BOOL)HIWORD(wParam);
 
-				COM_SetValueCvar( "vid_xpos", xPos + r.left);
-				COM_SetValueCvar( "vid_ypos", yPos + r.top);
-				vid_xpos->modified = false;
-				vid_ypos->modified = false;
-				if (ActiveApp)
-					IN_Activate (true);
+				Key_ClearStates();
+				ActiveApp = fActive && !Minimized;
+				IN_Activate(ActiveApp);
+				S_Activate(ActiveApp);
+
+
+				if (reflib_active) {
+					void GLimp_AppActivate(qboolean active);
+					GLimp_AppActivate(fActive);
+				}
+			} break;
+
+		case WM_MOVE: {
+				if (!vid_fullscreen->value) {
+					int xPos = (short)LOWORD(lParam);
+					int yPos = (short)HIWORD(lParam);
+
+					RECT r = {.left = 0, .top = 0, .right = 1, .bottom = 1};
+					int style = GetWindowLong(hWnd, GWL_STYLE);
+					AdjustWindowRect(&r, style, FALSE);
+
+					COM_SetValueCvar("vid_xpos", xPos + r.left);
+					COM_SetValueCvar("vid_ypos", yPos + r.top);
+					vid_xpos->modified = false;
+					vid_ypos->modified = false;
+					if (ActiveApp) {
+						IN_Activate(true);
+					}
+				}
+			} break;
+
+		// this is complicated because Win32 seems to pack multiple mouse events into
+		// one update sometimes, so we always check all states and look for events
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MOUSEMOVE: {
+				int mouse_state = 0;
+				if (wParam & MK_LBUTTON) {mouse_state |= 1;}
+				if (wParam & MK_RBUTTON) {mouse_state |= 2;}
+				if (wParam & MK_MBUTTON) {mouse_state |= 4;}
+				IN_MouseEvent (mouse_state);
+			} break;
+
+		case WM_SYSCOMMAND: {
+			// NOTE: Prevent screen turining off when game is active
+			i64 wparam_low = wParam & 0xFFF0;
+			if (wparam_low == SC_SCREENSAVE || wparam_low == SC_MONITORPOWER) {
+				return 0;
 			}
-		}
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
+		} break;
 
-// this is complicated because Win32 seems to pack multiple mouse events into
-// one update sometimes, so we always check all states and look for events
-	case WM_LBUTTONDOWN:
-	case WM_LBUTTONUP:
-	case WM_RBUTTONDOWN:
-	case WM_RBUTTONUP:
-	case WM_MBUTTONDOWN:
-	case WM_MBUTTONUP:
-	case WM_MOUSEMOVE:
-		{
-			int	temp;
-
-			temp = 0;
-
-			if (wParam & MK_LBUTTON)
-				temp |= 1;
-
-			if (wParam & MK_RBUTTON)
-				temp |= 2;
-
-			if (wParam & MK_MBUTTON)
-				temp |= 4;
-
-			IN_MouseEvent (temp);
-		}
-		break;
-
-	case WM_SYSCOMMAND:
-		if ( wParam == SC_SCREENSAVE )
-			return 0;
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-	case WM_SYSKEYDOWN:
-		if ( wParam == 13 )
-		{
-			if ( vid_fullscreen )
-			{
-				COM_SetValueCvar( "vid_fullscreen", !vid_fullscreen->value );
+		case WM_SYSKEYDOWN: {
+			// NOTE: Special case for Alt+Enter
+			if (wParam == VK_RETURN) {
+				if (vid_fullscreen) {
+					COM_SetValueCvar("vid_fullscreen", !vid_fullscreen->value);
+				}
+				return 0;
 			}
-			return 0;
+		} // fall through
+		case WM_KEYDOWN: {
+			Key_Event(MapKey(lParam), true, sys_msg_time);
+			break;
 		}
-		// fall through
-	case WM_KEYDOWN:
-		Key_Event( MapKey( lParam ), true, sys_msg_time);
-		break;
 
-	case WM_SYSKEYUP:
-	case WM_KEYUP:
-		Key_Event( MapKey( lParam ), false, sys_msg_time);
-		break;
+		case WM_SYSKEYUP:
+		case WM_KEYUP: {
+			Key_Event(MapKey(lParam), false, sys_msg_time);
+		} break;
 
-	default:	// pass all unhandled messages to DefWindowProc
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
+		// NOTE: Can't get WM_QUIT here
+		case WM_CLOSE: ExitProcess(0);
     }
 
-    /* return 0 if handled message, 1 if not */
-    return DefWindowProc( hWnd, uMsg, wParam, lParam );
+    return DefWindowProc(hWnd,uMsg, wParam, lParam);
 }
 
 /*
@@ -92316,15 +92160,6 @@ static HINSTANCE global_hInstance;
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
 static void VID_CheckChanges() {
-	if (win_noalttab->modified) {
-		if (win_noalttab->value) {
-			WIN_DisableAltTab();
-		} else {
-			WIN_EnableAltTab();
-		}
-		win_noalttab->modified = false;
-	}
-
 	assert(vid_ref);
 	assert(!strcmp(vid_ref->string, "gl"));
 
@@ -97796,7 +97631,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
 				vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
 				vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
-				win_noalttab = COM_GetCvar( "win_noalttab", "0", CVAR_ARCHIVE );
 
 				Cmd_AddCommand("vid_restart", VID_Restart_f);
 				Cmd_AddCommand("vid_front", VID_Front_f);
@@ -97873,8 +97707,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			cls.disable_screen = true; // don't draw yet
 
-			CL_InitLocal ();
-			IN_Init ();
+			CL_InitLocal();
+			IN_Init();
 
 			FS_ExecAutoexec();
 			Cmd_ExecuteCbuf();
