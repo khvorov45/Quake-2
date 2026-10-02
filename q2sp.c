@@ -23,9 +23,6 @@
 // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
 #define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0)
 
-typedef unsigned char 		byte;
-typedef enum {false, true}	qboolean;
-
 typedef uint8_t u8;
 typedef int64_t i64;
 
@@ -143,8 +140,8 @@ static String string_builder_end(String_Builder* builder) {
 //
 
 static short BigShort(short l){
-	byte b1 = l&255;
-	byte b2 = (l>>8)&255;
+	u8 b1 = l&255;
+	u8 b2 = (l>>8)&255;
 	return (b1<<8) + b2;
 }
 
@@ -445,7 +442,7 @@ static unsigned short crctable[256] = {
 	0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
 };
 
-static unsigned short CRC_Block(byte* start, int count) {
+static unsigned short CRC_Block(u8* start, int count) {
 	unsigned short crc = 0xffff;
 	while (count--) {
 		crc = (crc << 8) ^ crctable[(crc >> 8) ^ *start++];
@@ -519,15 +516,15 @@ static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
 //
 
 typedef struct sizebuf_s {
-	qboolean	allowoverflow;
-	qboolean	overflowed;		// set to true if the buffer size failed
-	byte		*data;
+	bool	allowoverflow;
+	bool	overflowed;		// set to true if the buffer size failed
+	u8		*data;
 	int			maxsize;
 	int			cursize;
 	int			readcount;
 } sizebuf_t;
 
-static void SZ_Init(sizebuf_t* buf, byte* data, int length) {
+static void SZ_Init(sizebuf_t* buf, u8* data, int length) {
 	*buf = (sizebuf_t){.data = data, .maxsize = length};
 }
 
@@ -560,12 +557,12 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 
 	if (buf->cursize) {
 		if (buf->data[buf->cursize - 1]) {
-			memcpy((byte*)SZ_GetSpace(buf, len), data, len); // NOTE: no trailing 0 from previous prints
+			memcpy((u8*)SZ_GetSpace(buf, len), data, len); // NOTE: no trailing 0 from previous prints
 		} else {
-			memcpy((byte*)SZ_GetSpace(buf, len - 1) - 1, data, len); // NOTE: write over trailing 0 from previous prints
+			memcpy((u8*)SZ_GetSpace(buf, len - 1) - 1, data, len); // NOTE: write over trailing 0 from previous prints
 		}
 	} else {
-		memcpy((byte*)SZ_GetSpace(buf, len), data, len);
+		memcpy((u8*)SZ_GetSpace(buf, len), data, len);
 	}
 }
 
@@ -720,26 +717,26 @@ typedef struct entity_state_s {
 #define	CM_BUTTONS	(1<<6)
 #define	CM_IMPULSE	(1<<7)
 
-// try to pack the common update flags into the first byte
+// try to pack the common update flags into the first u8
 #define	U_ORIGIN1	(1<<0)
 #define	U_ORIGIN2	(1<<1)
 #define	U_ANGLE2	(1<<2)
 #define	U_ANGLE3	(1<<3)
-#define	U_FRAME8	(1<<4)		// frame is a byte
+#define	U_FRAME8	(1<<4)		// frame is a u8
 #define	U_EVENT		(1<<5)
 #define	U_REMOVE	(1<<6)		// REMOVE this entity, don't add it
-#define	U_MOREBITS1	(1<<7)		// read one additional byte
+#define	U_MOREBITS1	(1<<7)		// read one additional u8
 
-// second byte
+// second u8
 #define	U_NUMBER16	(1<<8)		// NUMBER8 is implicit if not set
 #define	U_ORIGIN3	(1<<9)
 #define	U_ANGLE1	(1<<10)
 #define	U_MODEL		(1<<11)
 #define U_RENDERFX8	(1<<12)		// fullbright, etc
 #define	U_EFFECTS8	(1<<14)		// autorotate, trails, etc
-#define	U_MOREBITS2	(1<<15)		// read one additional byte
+#define	U_MOREBITS2	(1<<15)		// read one additional u8
 
-// third byte
+// third u8
 #define	U_SKIN8		(1<<16)
 #define	U_FRAME16	(1<<17)		// frame is a short
 #define	U_RENDERFX16 (1<<18)	// 8 + 16 = 32
@@ -747,9 +744,9 @@ typedef struct entity_state_s {
 #define	U_MODEL2	(1<<20)		// weapons, flags, etc
 #define	U_MODEL3	(1<<21)
 #define	U_MODEL4	(1<<22)
-#define	U_MOREBITS3	(1<<23)		// read one additional byte
+#define	U_MOREBITS3	(1<<23)		// read one additional u8
 
-// fourth byte
+// fourth u8
 #define	U_OLDORIGIN	(1<<24)		// FIXME: get rid of this
 #define	U_SKIN16	(1<<25)
 #define	U_SOUND		(1<<26)
@@ -757,12 +754,12 @@ typedef struct entity_state_s {
 
 // usercmd_t is sent to the server each client frame
 typedef struct usercmd_s {
-	byte	msec;
-	byte	buttons;
+	u8	msec;
+	u8	buttons;
 	short	angles[3];
 	short	forwardmove, sidemove, upmove;
-	byte	impulse;		// remove?
-	byte	lightlevel;		// light level the player is standing on
+	u8	impulse;		// remove?
+	u8	lightlevel;		// light level the player is standing on
 } usercmd_t;
 
 static vec3_t bytedirs[NUMVERTEXNORMALS] = {
@@ -932,24 +929,24 @@ static vec3_t bytedirs[NUMVERTEXNORMALS] = {
 
 static void MSG_WriteChar (sizebuf_t* sb, int c) {
 	assert((c >= -128) && (c <= 127));
-	byte* buf = SZ_GetSpace(sb, 1);
+	u8* buf = SZ_GetSpace(sb, 1);
 	buf[0] = c;
 }
 
 static void MSG_WriteByte (sizebuf_t* sb, int c) {
 	assert(c >= 0 && c <= 255);
-	byte* buf = SZ_GetSpace (sb, 1);
+	u8* buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
 }
 
 static void MSG_WriteShort(sizebuf_t* sb, int c) {
-	byte* buf = SZ_GetSpace(sb, 2);
+	u8* buf = SZ_GetSpace(sb, 2);
 	buf[0] = c & 0xff;
 	buf[1] = c >> 8;
 }
 
 static void MSG_WriteLong(sizebuf_t* sb, int c) {
-	byte* buf = SZ_GetSpace(sb, 4);
+	u8* buf = SZ_GetSpace(sb, 4);
 	buf[0] = c & 0xff;
 	buf[1] = (c>>8) & 0xff;
 	buf[2] = (c>>16) & 0xff;
@@ -1055,7 +1052,7 @@ static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* c
 }
 
 // Writes part of a packetentities message. Can delta from either a baseline or a previous packet_entity
-static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, qboolean force, qboolean newentity) {
+static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, bool force, bool newentity) {
 	assert(to->number > 0 && to->number < MAX_EDICTS);
 
 	// send an update
@@ -1488,16 +1485,16 @@ typedef struct cvar_s {
 	char			*string;
 	char			*latched_string; // for CVAR_LATCH vars
 	int				flags;
-	qboolean		modified; // set each time the cvar is changed
+	bool		modified; // set each time the cvar is changed
 	float			value;
 	struct cvar_s 	*next;
 } cvar_t;
 
 static cvar_t*	cvar_vars;
-static qboolean	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
+static bool	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
 static int		server_state;
 
-static qboolean Cvar_InfoValidate(char* s) {
+static bool Cvar_InfoValidate(char* s) {
 	if (strstr(s, "\\")) {
 		return false;
 	}
@@ -1559,13 +1556,13 @@ typedef struct {
 		NA_BROADCAST_IPX
 	} type;
 
-	byte			ip[4];
-	byte			ipx[10];
+	u8			ip[4];
+	u8			ipx[10];
 	unsigned short	port;
 } netadr_t;
 
 typedef struct {
-	qboolean	fatal_error;
+	bool	fatal_error;
 	netsrc_t	sock;
 	int			dropped;			// between last packet and previous
 	int			last_received;		// for timeouts
@@ -1582,11 +1579,11 @@ typedef struct {
 
 	//  reliable staging and holding areas
 	sizebuf_t	message;						// writing buffer to send to server
-	byte		message_buf[MAX_MSGLEN - 16];		// leave space for header
+	u8		message_buf[MAX_MSGLEN - 16];		// leave space for header
 
 	// message is copied to this buffer when it is first transfered
 	int			reliable_length;
-	byte		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
+	u8		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
 } netchan_t;
 
 cvar_t		*showpackets;
@@ -1595,30 +1592,30 @@ cvar_t		*qport;
 
 netadr_t	net_from;
 sizebuf_t	net_message;
-byte		net_message_buffer[MAX_MSGLEN];
+u8		net_message_buffer[MAX_MSGLEN];
 
 void		NET_Shutdown (void);
 
-void		NET_Config (qboolean multiplayer);
+void		NET_Config (bool multiplayer);
 
-qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
+bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
 void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
 
-qboolean	NET_CompareAdr (netadr_t a, netadr_t b);
-qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b);
-qboolean	NET_IsLocalAddress (netadr_t adr);
+bool	NET_CompareAdr (netadr_t a, netadr_t b);
+bool	NET_CompareBaseAdr (netadr_t a, netadr_t b);
+bool	NET_IsLocalAddress (netadr_t adr);
 char		*NET_AdrToString (netadr_t a);
-qboolean	NET_StringToAdr (char *s, netadr_t *a);
+bool	NET_StringToAdr (char *s, netadr_t *a);
 
 void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
 
-qboolean Netchan_NeedReliable (netchan_t *chan);
-void Netchan_Transmit (netchan_t *chan, int length, byte *data);
-void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, byte *data);
+bool Netchan_NeedReliable (netchan_t *chan);
+void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
+void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, u8 *data);
 void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...);
-qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg);
+bool Netchan_Process (netchan_t *chan, sizebuf_t *msg);
 
-qboolean Netchan_CanReliable (netchan_t *chan);
+bool Netchan_CanReliable (netchan_t *chan);
 
 //
 // SECTION User
@@ -1667,8 +1664,8 @@ static struct {
 	int downloadpercent;
 
 	// demo recording info must be here, so it isn't cleared on level change
-	qboolean	demorecording;
-	qboolean	demowaiting;	// don't record until a non-delta message is received
+	bool	demorecording;
+	bool	demowaiting;	// don't record until a non-delta message is received
 	FILE		*demofile;
 } cls;
 
@@ -1681,7 +1678,7 @@ static struct {
 #define	PRINT_CHAT		3	// chat messages
 
 static struct {
-	qboolean	initialized;
+	bool	initialized;
 	char		text[32768];
 	int			current;		// line where next message will be printed
 	int			x;				// offset in current line for next print
@@ -1993,7 +1990,7 @@ static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
 
 // will create the variable if it doesn't exist
 // will set the variable even if NOSET or LATCH when force = true
-static cvar_t* COM_SetCvar_(char* var_name, char* value, qboolean force) {
+static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 	cvar_t* var = Cvar_FindVar (var_name);
 	if (!var) {
 		// create it
@@ -2111,7 +2108,7 @@ int			Com_ServerState (void);		// this should have just been a cvar...
 void		Com_SetServerState (int state);
 
 unsigned	Com_BlockChecksum (void *buffer, int length);
-byte		COM_BlockSequenceCRCByte (byte *base, int length, int sequence);
+u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
 
 //
 // SECTION Cbuf (command buffer)
@@ -2124,7 +2121,7 @@ byte		COM_BlockSequenceCRCByte (byte *base, int length, int sequence);
 // The game starts with a Cbuf_AddText("exec quake.rc\n"); Cmd_ExecuteCbuf();
 
 static sizebuf_t	cmd_text;
-static byte			cmd_text_buf[8192];
+static u8			cmd_text_buf[8192];
 
 // Used to defer any pending commands while a map is being loaded
 static char defer_text_buf[8192];
@@ -2169,7 +2166,7 @@ static void Cbuf_InsertText(char* text) {
 // Commands lead with a +, and continue until another +
 // Set commands are added early, so they are guaranteed to be set before the client and server initialize for the first time.
 // Other commands are added late, after all initialization is complete.
-static void Cbuf_AddEarlyCommands(qboolean clear) {
+static void Cbuf_AddEarlyCommands(bool clear) {
 	for (int i = 0; i < com_argc; i++) {
 		char* s = COM_Argv(i);
 		if (strcmp (s, "+set")) {
@@ -2189,7 +2186,7 @@ static void Cbuf_AddEarlyCommands(qboolean clear) {
 // Commands lead with a + and continue until another + or -
 // quake +map amlev1
 // Returns true if any late commands were added, which will keep the demoloop from immediately starting
-static qboolean Cbuf_AddLateCommands() {
+static bool Cbuf_AddLateCommands() {
 	// build the combined string to parse from
 	int s = 0;
 	int argc = com_argc;
@@ -2230,7 +2227,7 @@ static qboolean Cbuf_AddLateCommands() {
 		}
 	}
 
-	qboolean ret = (build[0] != 0);
+	bool ret = (build[0] != 0);
 	if (ret) {
 		Cbuf_AddText(build);
 	}
@@ -2277,7 +2274,7 @@ static	char	cmd_args[MAX_STRING_CHARS];
 // Causes execution of the remainder of the command buffer to be delayed until next frame.
 // This allows commands like:
 // bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
-static qboolean cmd_wait;
+static bool cmd_wait;
 
 static cmd_function_t*	cmd_functions;	// possible commands to execute
 static cmdalias_t*		cmd_alias;
@@ -2297,7 +2294,7 @@ static char* Cmd_Args() {return cmd_args;}
 // Parses the given string into command line tokens.
 // $Cvars will be expanded unless they are in a quoted token
 // Takes a null terminated string. Does not need to be /n terminated.
-static void Cmd_TokenizeString(char* text, qboolean macroExpand) {
+static void Cmd_TokenizeString(char* text, bool macroExpand) {
 	// clear the args from the last string
 	for (int i = 0; i < cmd_argc; i++) {
 		Z_Free (cmd_argv[i]);
@@ -2311,7 +2308,7 @@ static void Cmd_TokenizeString(char* text, qboolean macroExpand) {
 		static char expanded[MAX_STRING_CHARS] = {};
 		char temporary[MAX_STRING_CHARS] = {};
 
-		qboolean inquote = false;
+		bool inquote = false;
 		char* scan = text;
 
 		int len = strlen(scan);
@@ -2868,7 +2865,7 @@ static void Info_SetValueForKey(char *s, char *key, char *value) {
 }
 
 // Some characters are illegal in info strings because they can mess up the server's parsing
-static qboolean Info_Validate(char *s) {
+static bool Info_Validate(char *s) {
 	if (strstr (s, "\"")) {
 		return false;
 	}
@@ -3015,12 +3012,12 @@ typedef struct {
 } dtriangle_t;
 
 typedef struct {
-	byte	v[3]; // scaled byte to fit in frame mins/maxs
-	byte	lightnormalindex;
+	u8	v[3]; // scaled u8 to fit in frame mins/maxs
+	u8	lightnormalindex;
 } dtrivertx_t;
 
 typedef struct {
-	float		scale[3];		// multiply byte verts by this
+	float		scale[3];		// multiply u8 verts by this
 	float		translate[3];	// then add this
 	char		name[16];		// frame name from grabbing
 	dtrivertx_t	verts[1];		// variable sized
@@ -3032,7 +3029,7 @@ typedef struct {
 
 	int			skinwidth;
 	int			skinheight;
-	int			framesize;		// byte size of each frame
+	int			framesize;		// u8 size of each frame
 
 	int			num_skins;
 	int			num_xyz;
@@ -3042,7 +3039,7 @@ typedef struct {
 	int			num_frames;
 
 	int			ofs_skins;		// each skin is a MAX_SKINNAME string
-	int			ofs_st;			// byte offset from start for stverts
+	int			ofs_st;			// u8 offset from start for stverts
 	int			ofs_tris;		// offset for dtriangles
 	int			ofs_frames;		// offset for first frame
 	int			ofs_glcmds;
@@ -3219,7 +3216,7 @@ typedef struct miptex_s {
 #define	ANGLE_DOWN	-2
 
 // the visibility lump consists of a header with a count, then
-// byte offsets for the PVS and PHS of each cluster, then the raw
+// u8 offsets for the PVS and PHS of each cluster, then the raw
 // compressed bit vectors
 #define	DVIS_PVS	0
 #define	DVIS_PHS	1
@@ -3283,7 +3280,7 @@ typedef struct {
 	short		texinfo;
 
 	// lighting info
-	byte		styles[MAXLIGHTMAPS];
+	u8		styles[MAXLIGHTMAPS];
 	int			lightofs;		// start of [numstyles*surfsize] samples
 } dface_t;
 
@@ -4033,9 +4030,9 @@ typedef enum {
 typedef struct cplane_s {
 	vec3_t	normal;
 	float	dist;
-	byte	type;		// for fast side tests
-	byte	signbits;	// signx + (signy<<1) + (signz<<1)
-	byte	pad[2];
+	u8	type;		// for fast side tests
+	u8	signbits;	// signx + (signy<<1) + (signz<<1)
+	u8	pad[2];
 } cplane_t;
 
 typedef struct csurface_s {
@@ -4047,7 +4044,7 @@ typedef struct csurface_s {
 typedef struct edict_s edict_t;
 typedef struct gitem_s {
 	char		*classname;	// spawning name
-	qboolean	(*pickup)(edict_t *ent, edict_t* other);
+	bool	(*pickup)(edict_t *ent, edict_t* other);
 	void		(*use)(edict_t *ent, struct gitem_s *item);
 	void		(*drop)(edict_t *ent, struct gitem_s *item);
 	void		(*weaponthink)(edict_t *ent);
@@ -4132,7 +4129,7 @@ typedef struct {
 	void		(*attack)(edict_t* self);
 	void		(*melee)(edict_t* self);
 	void		(*sight)(edict_t* self, edict_t* other);
-	qboolean	(*checkattack)(edict_t* self);
+	bool	(*checkattack)(edict_t* self);
 
 	float		pausetime;
 	float		attack_finished;
@@ -4157,7 +4154,7 @@ struct edict_s {
 									// of gclient_s to be a player_state_t
 									// but the rest of it is opaque
 
-	qboolean	inuse;
+	bool	inuse;
 	int			linkcount;
 
 	// FIXME: move these fields to a server private sv_entity_t
@@ -4242,7 +4239,7 @@ struct edict_s {
 	int			max_health;
 	int			gib_health;
 	int			deadflag;
-	qboolean	show_hostile;
+	bool	show_hostile;
 
 	float		powerarmor_time;
 
@@ -4306,8 +4303,8 @@ typedef struct cmodel_s {
 
 // a trace is returned when a box is swept through the world
 typedef struct {
-	qboolean		allsolid;	// if true, plane is not valid
-	qboolean		startsolid;	// if true, the initial point was in a solid area
+	bool		allsolid;	// if true, plane is not valid
+	bool		startsolid;	// if true, the initial point was in a solid area
 	float			fraction;	// time completed, 1.0 = didn't hit anything
 	vec3_t			endpos;		// final position
 	cplane_t		plane;		// surface normal at impact
@@ -4356,7 +4353,7 @@ typedef struct {
 
 static cvar_t*			map_noareas;
 static char				map_name[MAX_QPATH];
-static qboolean			portalopen[MAX_MAP_AREAPORTALS];
+static bool			portalopen[MAX_MAP_AREAPORTALS];
 static cmodel_t			map_cmodels[MAX_MAP_MODELS];
 static int				checkcount;
 static int				numbrushsides;
@@ -4376,7 +4373,7 @@ static int				numcmodels;
 static int				numbrushes;
 static cbrush_t			map_brushes[MAX_MAP_BRUSHES];
 static int				numvisibility;
-static byte				map_visibility[MAX_MAP_VISIBILITY];
+static u8				map_visibility[MAX_MAP_VISIBILITY];
 static dvis_t			*map_vis = (dvis_t *)map_visibility;
 static int				numentitychars;
 static char				map_entitystring[MAX_MAP_ENTSTRING];
@@ -4387,7 +4384,7 @@ static dareaportal_t	map_areaportals[MAX_MAP_AREAPORTALS];
 static int				numclusters = 1;
 static mapsurface_t		nullsurface;
 static int				floodvalid;
-static byte*			cmod_base;
+static u8*			cmod_base;
 static int				c_pointcontents;
 static int				c_traces, c_brush_traces;
 
@@ -4765,7 +4762,7 @@ void CMod_LoadEntityString (lump_t *l)
 	memcpy (map_entitystring, cmod_base + l->fileofs, l->filelen);
 }
 
-static cmodel_t* CM_LoadMap(char* name, qboolean clientload, unsigned* checksum) {
+static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 	int				length;
 	static unsigned	last_checksum;
 
@@ -4812,7 +4809,7 @@ static cmodel_t* CM_LoadMap(char* name, qboolean clientload, unsigned* checksum)
 
 	assert(header.version == BSPVERSION);
 
-	cmod_base = (byte*)buf;
+	cmod_base = (u8*)buf;
 
 	// load into heap
 	CMod_LoadSurfaces (&header.lumps[LUMP_TEXINFO]);
@@ -4859,8 +4856,8 @@ trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
 						  int headnode, int brushmask,
 						  vec3_t origin, vec3_t angles);
 
-byte		*CM_ClusterPVS (int cluster);
-byte		*CM_ClusterPHS (int cluster);
+u8		*CM_ClusterPVS (int cluster);
+u8		*CM_ClusterPHS (int cluster);
 
 int			CM_PointLeafnum (vec3_t p);
 
@@ -4873,11 +4870,11 @@ int			CM_LeafContents (int leafnum);
 int			CM_LeafCluster (int leafnum);
 int			CM_LeafArea (int leafnum);
 
-void		CM_SetAreaPortalState (int portalnum, qboolean open);
-qboolean	CM_AreasConnected (int area1, int area2);
+void		CM_SetAreaPortalState (int portalnum, bool open);
+bool	CM_AreasConnected (int area1, int area2);
 
-int			CM_WriteAreaBits (byte *buffer, int area);
-qboolean	CM_HeadnodeVisible (int headnode, byte *visbits);
+int			CM_WriteAreaBits (u8 *buffer, int area);
+bool	CM_HeadnodeVisible (int headnode, u8 *visbits);
 
 void		CM_WritePortalState (FILE *f);
 
@@ -4908,8 +4905,8 @@ typedef struct {
 	pmtype_t	pm_type;
 	short		origin[3];			// 12.3
 	short		velocity[3];		// 12.3
-	byte		pm_flags;			// ducked, jump_held, etc
-	byte		pm_time;			// each unit = 8 ms
+	u8		pm_flags;			// ducked, jump_held, etc
+	u8		pm_time;			// each unit = 8 ms
 	short		gravity;
 	short		delta_angles[3];	// add to command angles to get view direction changed by spawns, rotating objects, and teleporters
 } pmove_state_t;
@@ -4920,7 +4917,7 @@ typedef struct {
 
 	// command (in)
 	usercmd_t		cmd;
-	qboolean		snapinitial;	// if s has been changed outside pmove
+	bool		snapinitial;	// if s has been changed outside pmove
 
 	// results (out)
 	int				numtouch;
@@ -5243,11 +5240,11 @@ void Pmove (pmove_t *pmove);
 #define	PS_RDFLAGS			(1<<14)
 
 // a sound without an ent or pos will be a local only sound
-#define	SND_VOLUME		(1<<0)		// a byte
-#define	SND_ATTENUATION	(1<<1)		// a byte
+#define	SND_VOLUME		(1<<0)		// a u8
+#define	SND_ATTENUATION	(1<<1)		// a u8
 #define	SND_POS			(1<<2)		// three coordinates
 #define	SND_ENT			(1<<3)		// a short 0-2: channel, 3-12: entity
-#define	SND_OFFSET		(1<<4)		// a byte, msec offset from frame start
+#define	SND_OFFSET		(1<<4)		// a u8, msec offset from frame start
 
 #define DEFAULT_SOUND_PACKET_VOLUME	1.0
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
@@ -5381,7 +5378,7 @@ enum svc_ops_e {
 	svc_disconnect,
 	svc_reconnect,
 	svc_sound,					// <see code>
-	svc_print,					// [byte] id [string] null terminated string
+	svc_print,					// [u8] id [string] null terminated string
 	svc_stufftext,				// [string] stuffed into client's console buffer, should be \n terminated
 	svc_serverdata,				// [long] protocol ...
 	svc_configstring,			// [short] [string]
@@ -5421,7 +5418,7 @@ char* Sys_GetClipboardData( void );
 
 void SCR_BeginLoadingPlaque (void);
 
-void SV_Shutdown (char *finalmsg, qboolean reconnect);
+void SV_Shutdown (char *finalmsg, bool reconnect);
 
 //
 // SECTION ???
@@ -5433,7 +5430,7 @@ typedef struct {
 	char		netname[16];
 	int			hand;
 
-	qboolean	connected;			// a loadgame will leave valid entities that
+	bool	connected;			// a loadgame will leave valid entities that
 									// just don't have a connection yet
 
 	// values saved and restored from edicts when changing levels
@@ -5461,7 +5458,7 @@ typedef struct {
 	int			game_helpchanged;
 	int			helpchanged;
 
-	qboolean	spectator;			// client is a spectator
+	bool	spectator;			// client is a spectator
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns
@@ -5471,7 +5468,7 @@ typedef struct {
 	int			score;				// frags, etc
 	vec3_t		cmd_angles;			// angles sent over in the last command
 
-	qboolean	spectator;			// client is a spectator
+	bool	spectator;			// client is a spectator
 } client_respawn_t;
 
 typedef enum {
@@ -5492,10 +5489,10 @@ typedef struct gclient_s {
 	client_respawn_t	resp;
 	pmove_state_t		old_pmove;	// for detecting out-of-pmove changes
 
-	qboolean	showscores;			// set layout stat
-	qboolean	showinventory;		// set layout stat
-	qboolean	showhelp;
-	qboolean	showhelpicon;
+	bool	showscores;			// set layout stat
+	bool	showinventory;		// set layout stat
+	bool	showhelp;
+	bool	showhelpicon;
 
 	int			ammo_index;
 
@@ -5503,7 +5500,7 @@ typedef struct gclient_s {
 	int			oldbuttons;
 	int			latched_buttons;
 
-	qboolean	weapon_thunk;
+	bool	weapon_thunk;
 
 	gitem_t		*newweapon;
 
@@ -5539,8 +5536,8 @@ typedef struct gclient_s {
 	// animation vars
 	int			anim_end;
 	int			anim_priority;
-	qboolean	anim_duck;
-	qboolean	anim_run;
+	bool	anim_duck;
+	bool	anim_run;
 
 	// powerup timers
 	float		quad_framenum;
@@ -5548,7 +5545,7 @@ typedef struct gclient_s {
 	float		breather_framenum;
 	float		enviro_framenum;
 
-	qboolean	grenade_blew_up;
+	bool	grenade_blew_up;
 	float		grenade_time;
 	int			silencer_shots;
 	int			weapon_sound;
@@ -5562,7 +5559,7 @@ typedef struct gclient_s {
 	float		respawn_time;		// can respawn when time > this
 
 	edict_t		*chase_target;		// player we are chasing
-	qboolean	update_chase;		// need to update chase info?
+	bool	update_chase;		// need to update chase info?
 } gclient_t;
 
 //===============================================================
@@ -5606,10 +5603,10 @@ typedef struct
 	// collision detection
 	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passent, int contentmask);
 	int		(*pointcontents) (vec3_t point);
-	qboolean	(*inPVS) (vec3_t p1, vec3_t p2);
-	qboolean	(*inPHS) (vec3_t p1, vec3_t p2);
-	void		(*SetAreaPortalState) (int portalnum, qboolean open);
-	qboolean	(*AreasConnected) (int area1, int area2);
+	bool	(*inPVS) (vec3_t p1, vec3_t p2);
+	bool	(*inPHS) (vec3_t p1, vec3_t p2);
+	void		(*SetAreaPortalState) (int portalnum, bool open);
+	bool	(*AreasConnected) (int area1, int area2);
 
 	// an entity will never be sent to a client or used for collision
 	// if it is not passed to linkentity.  If the size, position, or
@@ -5621,7 +5618,7 @@ typedef struct
 
 	// network messaging
 	void	(*multicast) (vec3_t origin, multicast_t to);
-	void	(*unicast) (edict_t *ent, qboolean reliable);
+	void	(*unicast) (edict_t *ent, bool reliable);
 	void	(*WriteChar) (int c);
 	void	(*WriteByte) (int c);
 	void	(*WriteShort) (int c);
@@ -5629,7 +5626,7 @@ typedef struct
 	void	(*WriteFloat) (float f);
 	void	(*WriteString) (char *s);
 	void	(*WritePosition) (vec3_t pos);	// some fractional bits
-	void	(*WriteDir) (vec3_t pos);		// single byte encoded, very coarse
+	void	(*WriteDir) (vec3_t pos);		// single u8 encoded, very coarse
 	void	(*WriteAngle) (float f);
 
 	// managed memory allocation
@@ -5674,7 +5671,7 @@ typedef struct
 	// about the world state and the clients.
 	// WriteGame is called every time a level is exited.
 	// ReadGame is called on a loadgame.
-	void		(*WriteGame) (char *filename, qboolean autosave);
+	void		(*WriteGame) (char *filename, bool autosave);
 	void		(*ReadGame) (char *filename);
 
 	// ReadLevel is called after the default map information has been
@@ -5682,7 +5679,7 @@ typedef struct
 	void		(*WriteLevel) (char *filename);
 	void		(*ReadLevel) (char *filename);
 
-	qboolean	(*ClientConnect) (edict_t *ent, char *userinfo);
+	bool	(*ClientConnect) (edict_t *ent, char *userinfo);
 	void		(*ClientBegin) (edict_t *ent);
 	void		(*ClientUserinfoChanged) (edict_t *ent, char *userinfo);
 	void		(*ClientDisconnect) (edict_t *ent);
@@ -5982,7 +5979,7 @@ static struct {
 	// items
 	int			num_items;
 
-	qboolean	autosaved;
+	bool	autosaved;
 } game;
 
 static level_locals_t	level;
@@ -6154,13 +6151,13 @@ void Think_Weapon (edict_t *ent);
 int ArmorIndex (edict_t *ent);
 int PowerArmorType (edict_t *ent);
 gitem_t	*GetItemByIndex (int index);
-qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
+bool Add_Ammo (edict_t *ent, gitem_t *item, int count);
 void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf);
 
 //
 // g_utils.c
 //
-qboolean	KillBox (edict_t *ent);
+bool	KillBox (edict_t *ent);
 void	G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 edict_t *G_Find (edict_t *from, int fieldofs, char *match);
 edict_t *findradius (edict_t *from, vec3_t org, float rad);
@@ -6184,8 +6181,8 @@ void vectoangles (vec3_t vec, vec3_t angles);
 //
 // g_combat.c
 //
-qboolean OnSameTeam (edict_t *ent1, edict_t *ent2);
-qboolean CanDamage (edict_t *targ, edict_t* inflictor);
+bool OnSameTeam (edict_t *ent1, edict_t *ent2);
+bool CanDamage (edict_t *targ, edict_t* inflictor);
 void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod);
 
@@ -6222,7 +6219,7 @@ void flymonster_start (edict_t* self);
 void AttackFinished (edict_t* self, float time);
 void monster_death_use (edict_t* self);
 void M_CatagorizePosition (edict_t *ent);
-qboolean M_CheckAttack (edict_t* self);
+bool M_CheckAttack (edict_t* self);
 void M_FlyCheck (edict_t* self);
 void M_CheckGround (edict_t *ent);
 
@@ -6248,20 +6245,20 @@ void ai_charge (edict_t* self, float dist);
 int range (edict_t* self, edict_t* other);
 
 void FoundTarget (edict_t* self);
-qboolean infront (edict_t* self, edict_t* other);
-qboolean visible (edict_t* self, edict_t* other);
-qboolean FacingIdeal(edict_t* self);
+bool infront (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
+bool FacingIdeal(edict_t* self);
 
 //
 // g_weapon.c
 //
 void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin);
-qboolean fire_hit (edict_t* self, vec3_t aim, int damage, int kick);
+bool fire_hit (edict_t* self, vec3_t aim, int damage, int kick);
 void fire_bullet (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
 void fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
-void fire_blaster (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, qboolean hyper);
+void fire_blaster (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, bool hyper);
 void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius);
-void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held);
+void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, bool held);
 void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
 void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick);
 void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
@@ -6297,7 +6294,7 @@ void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damag
 // g_svcmds.c
 //
 void	ServerCommand (void);
-qboolean SV_FilterPacket (char *from);
+bool SV_FilterPacket (char *from);
 
 //
 // p_view.c
@@ -6322,8 +6319,8 @@ void PlayerNoise(edict_t *who, vec3_t where, int type);
 //
 // m_move.c
 //
-qboolean M_CheckBottom (edict_t *ent);
-qboolean M_walkmove (edict_t *ent, float yaw, float dist);
+bool M_CheckBottom (edict_t *ent);
+bool M_walkmove (edict_t *ent, float yaw, float dist);
 void M_MoveToGoal (edict_t *ent, float dist);
 void M_ChangeYaw (edict_t *ent);
 
@@ -6717,7 +6714,7 @@ vec3_t	trace_extents;
 
 trace_t	trace_trace;
 int		trace_contents;
-qboolean	trace_ispoint;		// optimized case
+bool	trace_ispoint;		// optimized case
 
 /*
 ================
@@ -6733,7 +6730,7 @@ void CM_ClipBoxToBrush (vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
 	float		enterfrac, leavefrac;
 	vec3_t		ofs;
 	float		d1, d2;
-	qboolean	getout, startout;
+	bool	getout, startout;
 	float		f;
 	cbrushside_t	*side, *leadside;
 
@@ -7183,7 +7180,7 @@ trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
 	vec3_t		a;
 	vec3_t		forward, right, up;
 	vec3_t		temp;
-	qboolean	rotated;
+	bool	rotated;
 
 	// subtract origin offset
 	VectorSubtract (start, origin, start_l);
@@ -7248,10 +7245,10 @@ PVS / PHS
 CM_DecompressVis
 ===================
 */
-void CM_DecompressVis (byte *in, byte *out)
+void CM_DecompressVis (u8 *in, u8 *out)
 {
 	int		c;
-	byte	*out_p;
+	u8	*out_p;
 	int		row;
 
 	row = (numclusters+7)>>3;
@@ -7290,10 +7287,10 @@ void CM_DecompressVis (byte *in, byte *out)
 	} while (out_p - out < row);
 }
 
-byte	pvsrow[MAX_MAP_LEAFS/8];
-byte	phsrow[MAX_MAP_LEAFS/8];
+u8	pvsrow[MAX_MAP_LEAFS/8];
+u8	phsrow[MAX_MAP_LEAFS/8];
 
-byte	*CM_ClusterPVS (int cluster)
+u8	*CM_ClusterPVS (int cluster)
 {
 	if (cluster == -1)
 		memset (pvsrow, 0, (numclusters+7)>>3);
@@ -7302,7 +7299,7 @@ byte	*CM_ClusterPVS (int cluster)
 	return pvsrow;
 }
 
-byte	*CM_ClusterPHS (int cluster)
+u8	*CM_ClusterPHS (int cluster)
 {
 	if (cluster == -1)
 		memset (phsrow, 0, (numclusters+7)>>3);
@@ -7349,18 +7346,18 @@ void	FloodAreaConnections (void)
 
 }
 
-static void CM_SetAreaPortalState(int portalnum, qboolean open) {
+static void CM_SetAreaPortalState(int portalnum, bool open) {
 	assert(portalnum >= 0 && portalnum <= numareaportals);
 	portalopen[portalnum] = open;
 	FloodAreaConnections();
 }
 
-static qboolean CM_AreasConnected(int area1, int area2) {
+static bool CM_AreasConnected(int area1, int area2) {
 	if (map_noareas->value) {
 		return true;
 	}
 	assert(area1 >= 0 && area1 <= numareas && area2 >= 0 && area2 <= numareas);
-	qboolean result = map_areas[area1].floodnum == map_areas[area2].floodnum;
+	bool result = map_areas[area1].floodnum == map_areas[area2].floodnum;
 	return result;
 }
 
@@ -7369,13 +7366,13 @@ static qboolean CM_AreasConnected(int area1, int area2) {
 =================
 CM_WriteAreaBits
 
-Writes a length byte followed by a bit vector of all the areas
+Writes a length u8 followed by a bit vector of all the areas
 that area in the same flood as the area parameter
 
 This is used by the client refreshes to cull visibility
 =================
 */
-int CM_WriteAreaBits (byte *buffer, int area)
+int CM_WriteAreaBits (u8 *buffer, int area)
 {
 	int		i;
 	int		floodnum;
@@ -7428,7 +7425,7 @@ Returns true if any leaf under headnode has a cluster that
 is potentially visible
 =============
 */
-qboolean CM_HeadnodeVisible (int nodenum, byte *visbits)
+bool CM_HeadnodeVisible (int nodenum, u8 *visbits)
 {
 	int		leafnum;
 	int		cluster;
@@ -7496,7 +7493,7 @@ void Com_SetServerState (int state)
 
 			MESSAGE IO FUNCTIONS
 
-Handles byte ordering and avoids alignment errors
+Handles u8 ordering and avoids alignment errors
 ==============================================================================
 */
 
@@ -7519,7 +7516,7 @@ Handles byte ordering and avoids alignment errors
 
 
 /// just for debugging
-int	memsearch (byte *start, int count, int search)
+int	memsearch (u8 *start, int count, int search)
 {
 	int		i;
 
@@ -7545,7 +7542,7 @@ just cleared malloc with counters now...
 
 //============================================================================
 
-static byte chktbl[1024] = {
+static u8 chktbl[1024] = {
 0x84, 0x47, 0x51, 0xc1, 0x93, 0x22, 0x21, 0x24, 0x2f, 0x66, 0x60, 0x4d, 0xb0, 0x7c, 0xda,
 0x88, 0x54, 0x15, 0x2b, 0xc6, 0x6c, 0x89, 0xc5, 0x9d, 0x48, 0xee, 0xe6, 0x8a, 0xb5, 0xf4,
 0xcb, 0xfb, 0xf1, 0x0c, 0x2e, 0xa0, 0xd7, 0xc9, 0x1f, 0xd6, 0x06, 0x9a, 0x09, 0x41, 0x54,
@@ -7613,12 +7610,12 @@ static byte chktbl[1024] = {
 };
 
 // For proxy protecting
-byte COM_BlockSequenceCRCByte(byte *base, int length, int sequence)
+u8 COM_BlockSequenceCRCByte(u8 *base, int length, int sequence)
 {
 	int		n;
-	byte	*p;
+	u8	*p;
 	int		x;
-	byte chkb[60 + 4];
+	u8 chkb[60 + 4];
 	unsigned short crc;
 
 	assert(sequence >= 0);
@@ -7868,7 +7865,7 @@ int FS_FOpenFile (char *filename, FILE **file)
 int FS_LoadFile (char *path, void **buffer)
 {
 	FILE	*h;
-	byte	*buf;
+	u8	*buf;
 	int		len;
 
 	buf = NULL;	// quiet compiler warning
@@ -8295,10 +8292,10 @@ char *FS_NextPath (char *prevpath)
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;
 
-/* UINT2 defines a two byte word */
+/* UINT2 defines a two u8 word */
 typedef unsigned short int UINT2;
 
-/* UINT4 defines a four byte word */
+/* UINT4 defines a four u8 word */
 #ifdef __alpha__
 typedef unsigned int UINT4;
 #else
@@ -8633,10 +8630,10 @@ Netchan_OutOfBand
 Sends an out-of-band datagram
 ================
 */
-void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, byte *data)
+void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, u8 *data)
 {
 	sizebuf_t	send;
-	byte		send_buf[MAX_MSGLEN];
+	u8		send_buf[MAX_MSGLEN];
 
 // write the packet header
 	SZ_Init (&send, send_buf, sizeof(send_buf));
@@ -8664,7 +8661,7 @@ void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...)
 	vsprintf (string, format,argptr);
 	va_end (argptr);
 
-	Netchan_OutOfBand (net_socket, adr, strlen(string), (byte *)string);
+	Netchan_OutOfBand (net_socket, adr, strlen(string), (u8 *)string);
 }
 
 
@@ -8698,7 +8695,7 @@ Netchan_CanReliable
 Returns true if the last reliable message has acked
 ================
 */
-qboolean Netchan_CanReliable (netchan_t *chan)
+bool Netchan_CanReliable (netchan_t *chan)
 {
 	if (chan->reliable_length)
 		return false;			// waiting for ack
@@ -8706,9 +8703,9 @@ qboolean Netchan_CanReliable (netchan_t *chan)
 }
 
 
-qboolean Netchan_NeedReliable (netchan_t *chan)
+bool Netchan_NeedReliable (netchan_t *chan)
 {
-	qboolean	send_reliable;
+	bool	send_reliable;
 
 // if the remote side dropped the last reliable message, resend it
 	send_reliable = false;
@@ -8736,11 +8733,11 @@ transmition / retransmition of the reliable messages.
 A 0 length will still generate a packet and deal with the reliable messages.
 ================
 */
-void Netchan_Transmit (netchan_t *chan, int length, byte *data)
+void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 {
 	sizebuf_t	send;
-	byte		send_buf[MAX_MSGLEN];
-	qboolean	send_reliable;
+	u8		send_buf[MAX_MSGLEN];
+	bool	send_reliable;
 	unsigned	w1, w2;
 
 // check for message overflow
@@ -8821,7 +8818,7 @@ called when the current net_message is from remote_address
 modifies net_message so that it points to the packet payload
 =================
 */
-qboolean Netchan_Process (netchan_t *chan, sizebuf_t *msg)
+bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 {
 	unsigned	sequence, sequence_ack;
 	unsigned	reliable_ack, reliable_message;
@@ -8929,7 +8926,7 @@ typedef struct
 	int			groundcontents;
 
 	vec3_t		previous_origin;
-	qboolean	ladder;
+	bool	ladder;
 } pml_t;
 
 pmove_t		*pm;
@@ -9755,7 +9752,7 @@ void PM_CheckSpecialMovement (void)
 PM_FlyMove
 ===============
 */
-void PM_FlyMove (qboolean doclip)
+void PM_FlyMove (bool doclip)
 {
 	float	speed, drop, friction, control, newspeed;
 	float	currentspeed, addspeed, accelspeed;
@@ -9930,7 +9927,7 @@ void PM_DeadMove (void)
 }
 
 
-qboolean	PM_GoodPosition (void)
+bool	PM_GoodPosition (void)
 {
 	trace_t	trace;
 	vec3_t	origin, end;
@@ -10260,8 +10257,8 @@ typedef struct
 {
 	server_state_t	state;			// precache commands are only valid during load
 
-	qboolean	attractloop;		// running cinematics and demos for the local system only
-	qboolean	loadgame;			// client begins should reuse existing entity
+	bool	attractloop;		// running cinematics and demos for the local system only
+	bool	loadgame;			// client begins should reuse existing entity
 
 	unsigned	time;				// always sv.framenum * 100 msec
 	int			framenum;
@@ -10275,15 +10272,15 @@ typedef struct
 	// the multicast buffer is used to send a message to a set of clients
 	// it is only used to marshall data until SV_Multicast is called
 	sizebuf_t	multicast;
-	byte		multicast_buf[MAX_MSGLEN];
+	u8		multicast_buf[MAX_MSGLEN];
 
 	// demo server information
 	FILE		*demofile;
-	qboolean	timedemo;		// don't time sync
+	bool	timedemo;		// don't time sync
 } server_t;
 
-#define EDICT_NUM(n) ((edict_t *)((byte *)ge->edicts + ge->edict_size*(n)))
-#define NUM_FOR_EDICT(e) ( ((byte *)(e)-(byte *)ge->edicts ) / ge->edict_size)
+#define EDICT_NUM(n) ((edict_t *)((u8 *)ge->edicts + ge->edict_size*(n)))
+#define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)ge->edicts ) / ge->edict_size)
 
 
 typedef enum
@@ -10298,7 +10295,7 @@ typedef enum
 typedef struct
 {
 	int					areabytes;
-	byte				areabits[MAX_MAP_AREAS/8];		// portalarea visibility bits
+	u8				areabits[MAX_MAP_AREAS/8];		// portalarea visibility bits
 	player_state_t		ps;
 	int					num_entities;
 	int					first_entity;		// into the circular sv_packet_entities[]
@@ -10334,11 +10331,11 @@ typedef struct client_s
 	// The datagram is written to by sound calls, prints, temp ents, etc.
 	// It can be harmlessly overflowed.
 	sizebuf_t		datagram;
-	byte			datagram_buf[MAX_MSGLEN];
+	u8			datagram_buf[MAX_MSGLEN];
 
 	client_frame_t	frames[UPDATE_BACKUP];	// updates can be delta'd from here
 
-	byte			*download;			// file being downloaded
+	u8			*download;			// file being downloaded
 	int				downloadsize;		// total bytes (can't use EOF because of paks)
 	int				downloadcount;		// bytes sent
 
@@ -10373,7 +10370,7 @@ typedef struct
 
 typedef struct
 {
-	qboolean	initialized;				// sv_init has completed
+	bool	initialized;				// sv_init has completed
 	int			realtime;					// always increasing, no clamping, etc
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base
@@ -10391,7 +10388,7 @@ typedef struct
 	// serverrecord values
 	FILE		*demofile;
 	sizebuf_t	demo_multicast;
-	byte		demo_multicast_buf[MAX_MSGLEN];
+	u8		demo_multicast_buf[MAX_MSGLEN];
 } server_static_t;
 
 //=============================================================================
@@ -10419,7 +10416,7 @@ extern	edict_t		*sv_player;
 //
 // sv_main.c
 //
-void SV_FinalMessage (char *message, qboolean reconnect);
+void SV_FinalMessage (char *message, bool reconnect);
 void SV_DropClient (client_t *drop);
 
 int SV_ModelIndex (char *name);
@@ -10440,7 +10437,7 @@ void Master_Packet (void);
 // sv_init.c
 //
 void SV_InitGame (void);
-void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame);
+void SV_Map (bool attractloop, char *levelstring, bool loadgame);
 
 
 //
@@ -10565,7 +10562,7 @@ SV_SetPlayer
 Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 ==================
 */
-qboolean SV_SetPlayer (void)
+bool SV_SetPlayer (void)
 {
 	client_t	*cl;
 	int			i;
@@ -10655,7 +10652,7 @@ void CopyFile (char *src, char *dst)
 {
 	FILE	*f1, *f2;
 	int		l;
-	byte	buffer[65536];
+	u8	buffer[65536];
 
 	Com_DPrintf ("CopyFile (%s, %s)\n", src, dst);
 
@@ -10785,7 +10782,7 @@ SV_WriteServerFile
 
 ==============
 */
-void SV_WriteServerFile (qboolean autosave)
+void SV_WriteServerFile (bool autosave)
 {
 	FILE	*f;
 	cvar_t	*var;
@@ -10909,7 +10906,7 @@ static void SV_GameMap_f() {
 	char		*map;
 	int			i;
 	client_t	*cl;
-	qboolean	*savedInuse;
+	bool	*savedInuse;
 
 	if (cmd_argc != 2) {
 		Com_Printf ("USAGE: gamemap <map>\n");
@@ -10934,7 +10931,7 @@ static void SV_GameMap_f() {
 			// clear all the client inuse flags before saving so that
 			// when the level is re-entered, the clients will spawn
 			// at spawn points instead of occupying body shells
-			savedInuse = malloc(maxclients->value * sizeof(qboolean));
+			savedInuse = malloc(maxclients->value * sizeof(bool));
 			for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++)
 			{
 				savedInuse[i] = cl->edict->inuse;
@@ -11263,7 +11260,7 @@ void SV_ServerRecord_f (void)
 	//
 	// write a single giant fake message with all the startup info
 	//
-	SZ_Init (&buf, (byte*)buf_data, sizeof(buf_data));
+	SZ_Init (&buf, (u8*)buf_data, sizeof(buf_data));
 
 	//
 	// serverdata needs to go over for all types of servers
@@ -11370,7 +11367,7 @@ edict_t	*projectiles[MAX_PROJECTILES];
 int		numprojs;
 cvar_t  *sv_projectiles;
 
-qboolean SV_AddProjectileUpdate (edict_t *ent)
+bool SV_AddProjectileUpdate (edict_t *ent)
 {
 	if (!sv_projectiles)
 		sv_projectiles = Cvar_Get("sv_projectiles", "1", 0);
@@ -11389,7 +11386,7 @@ qboolean SV_AddProjectileUpdate (edict_t *ent)
 
 void SV_EmitProjectileUpdate (sizebuf_t *msg)
 {
-	byte	bits[16];	// [modelindex] [48 bits] xyz p y 12 12 12 8 8 [entitynum] [e2]
+	u8	bits[16];	// [modelindex] [48 bits] xyz p y 12 12 12 8 8 [entitynum] [e2]
 	int		n, i;
 	edict_t	*ent;
 	int		x, y, z, p, yaw;
@@ -11795,7 +11792,7 @@ Build a client frame structure
 =============================================================================
 */
 
-byte		fatpvs[65536/8];	// 32767 is MAX_MAP_LEAFS
+u8		fatpvs[65536/8];	// 32767 is MAX_MAP_LEAFS
 
 /*
 ============
@@ -11810,7 +11807,7 @@ void SV_FatPVS (vec3_t org)
 	int		leafs[64];
 	int		i, j, count;
 	int		longs;
-	byte	*src;
+	u8	*src;
 	vec3_t	mins, maxs;
 
 	for (i=0 ; i<3 ; i++)
@@ -11862,8 +11859,8 @@ void SV_BuildClientFrame (client_t *client)
 	int		l;
 	int		clientarea, clientcluster;
 	int		leafnum;
-	byte	*clientphs;
-	byte	*bitvector;
+	u8	*clientphs;
+	u8	*bitvector;
 
 	clent = client->edict;
 	if (!clent->client)
@@ -12011,7 +12008,7 @@ void SV_RecordDemoMessage (void)
 	edict_t		*ent;
 	entity_state_t	nostate;
 	sizebuf_t	buf;
-	byte		buf_data[32768];
+	u8		buf_data[32768];
 	int			len;
 
 	if (!svs.demofile)
@@ -12070,7 +12067,7 @@ PF_Unicast
 Sends the contents of the mutlicast buffer to a single client
 ===============
 */
-void PF_Unicast (edict_t *ent, qboolean reliable)
+void PF_Unicast (edict_t *ent, bool reliable)
 {
 	int		p;
 	client_t	*client;
@@ -12220,12 +12217,12 @@ PF_inPVS
 Also checks portalareas so that doors block sight
 =================
 */
-qboolean PF_inPVS (vec3_t p1, vec3_t p2)
+bool PF_inPVS (vec3_t p1, vec3_t p2)
 {
 	int		leafnum;
 	int		cluster;
 	int		area1, area2;
-	byte	*mask;
+	u8	*mask;
 
 	leafnum = CM_PointLeafnum (p1);
 	cluster = CM_LeafCluster (leafnum);
@@ -12250,12 +12247,12 @@ PF_inPHS
 Also checks portalareas so that doors block sound
 =================
 */
-qboolean PF_inPHS (vec3_t p1, vec3_t p2)
+bool PF_inPHS (vec3_t p1, vec3_t p2)
 {
 	int		leafnum;
 	int		cluster;
 	int		area1, area2;
-	byte	*mask;
+	u8	*mask;
 
 	leafnum = CM_PointLeafnum (p1);
 	cluster = CM_LeafCluster (leafnum);
@@ -12375,7 +12372,7 @@ SV_FindIndex
 
 ================
 */
-int SV_FindIndex (char *name, int start, int max, qboolean create)
+int SV_FindIndex (char *name, int start, int max, bool create)
 {
 	int		i;
 
@@ -12511,7 +12508,7 @@ clients along with it.
 
 ================
 */
-void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate, qboolean attractloop, qboolean loadgame)
+void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate, bool attractloop, bool loadgame)
 {
 	int			i;
 	unsigned	checksum;
@@ -12741,7 +12738,7 @@ another level:
 	map tram.cin+jail_e3
 ======================
 */
-void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame)
+void SV_Map (bool attractloop, char *levelstring, bool loadgame)
 {
 	char	level[MAX_QPATH];
 	char	*ch;
@@ -13558,7 +13555,7 @@ not just stuck on the outgoing message list, because the server is going
 to totally exit after returning from this function.
 ==================
 */
-void SV_FinalMessage (char *message, qboolean reconnect)
+void SV_FinalMessage (char *message, bool reconnect)
 {
 	int			i;
 	client_t	*cl;
@@ -13587,7 +13584,7 @@ void SV_FinalMessage (char *message, qboolean reconnect)
 			, net_message.data);
 }
 
-void SV_Shutdown (char *finalmsg, qboolean reconnect)
+void SV_Shutdown (char *finalmsg, bool reconnect)
 {
 	if (svs.clients)
 		SV_FinalMessage (finalmsg, reconnect);
@@ -13756,10 +13753,10 @@ MULTICAST_PHS	send to clients potentially hearable from org
 void SV_Multicast (vec3_t origin, multicast_t to)
 {
 	client_t	*client;
-	byte		*mask;
+	u8		*mask;
 	int			leafnum, cluster;
 	int			j;
-	qboolean	reliable;
+	bool	reliable;
 	int			area1, area2;
 
 	reliable = false;
@@ -13871,7 +13868,7 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 	int			i;
 	int			ent;
 	vec3_t		origin_v;
-	qboolean	use_phs;
+	bool	use_phs;
 
 	assert(volume >= 0 && volume <= 1.0);
 	assert(attenuation >= 0 && attenuation <= 4);
@@ -13977,9 +13974,9 @@ FRAME UPDATES
 SV_SendClientDatagram
 =======================
 */
-qboolean SV_SendClientDatagram (client_t *client)
+bool SV_SendClientDatagram (client_t *client)
 {
-	byte		msg_buf[MAX_MSGLEN];
+	u8		msg_buf[MAX_MSGLEN];
 	sizebuf_t	msg;
 
 	SV_BuildClientFrame (client);
@@ -14041,7 +14038,7 @@ Returns true if the client is over its current
 bandwidth estimation and should not be sent another packet
 =======================
 */
-qboolean SV_RateDrop (client_t *c)
+bool SV_RateDrop (client_t *c)
 {
 	int		total;
 	int		i;
@@ -14077,7 +14074,7 @@ void SV_SendClientMessages (void)
 	int			i;
 	client_t	*c;
 	int			msglen;
-	byte		msgbuf[MAX_MSGLEN];
+	u8		msgbuf[MAX_MSGLEN];
 	int			r;
 
 	msglen = 0;
@@ -14672,7 +14669,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 	int		stringCmdCount;
 	int		checksum, calculatedChecksum;
 	int		checksumIndex;
-	qboolean	move_issued;
+	bool	move_issued;
 	int		lastframe;
 
 	sv_client = cl;
@@ -14812,7 +14809,7 @@ FIXME: this use of "area" is different from the bsp file use
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
 // ent = STRUCT_FROM_LINK(link,entity_t,order)
 // FIXME: remove this mess!
-#define	STRUCT_FROM_LINK(l,t,m) ((t *)((byte *)l - (size_t)&(((t *)0)->m)))
+#define	STRUCT_FROM_LINK(l,t,m) ((t *)((u8 *)l - (size_t)&(((t *)0)->m)))
 
 #define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
 
@@ -15505,7 +15502,7 @@ typedef struct
 	float		time;				// time is uesed to auto animate
 	int			rdflags;			// RDF_UNDERWATER, etc
 
-	byte		*areabits;			// if not NULL, only areas with set bits will be drawn
+	u8		*areabits;			// if not NULL, only areas with set bits will be drawn
 
 	lightstyle_t	*lightstyles;	// [MAX_LIGHTSTYLES]
 
@@ -15576,18 +15573,18 @@ void S_Shutdown (void);
 void S_StartSound (vec3_t origin, int entnum, int entchannel, struct sfx_s *sfx, float fvol,  float attenuation, float timeofs);
 void S_StartLocalSound (char *s);
 
-void S_RawSamples (int samples, int rate, int width, int channels, byte *data);
+void S_RawSamples (int samples, int rate, int width, int channels, u8 *data);
 
 void S_StopAllSounds(void);
 void S_Update (vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up);
 
-void S_Activate (qboolean active);
+void S_Activate (bool active);
 
 void S_BeginRegistration (void);
 struct sfx_s *S_RegisterSound (char *sample);
 void S_EndRegistration (void);
 
-struct sfx_s *S_FindName (char *name, qboolean create);
+struct sfx_s *S_FindName (char *name, bool create);
 
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
@@ -15727,9 +15724,9 @@ extern	int		key_repeats[256];
 extern	int	anykeydown;
 extern char chat_buffer[];
 extern	int chat_bufferlen;
-extern	qboolean	chat_team;
+extern	bool	chat_team;
 
-void Key_Event (int key, qboolean down, unsigned time);
+void Key_Event (int key, bool down, unsigned time);
 void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
 
@@ -15747,11 +15744,11 @@ void Con_ToggleConsole_f (void);
 
 typedef struct
 {
-	qboolean		valid;			// cleared if delta parsing was invalid
+	bool		valid;			// cleared if delta parsing was invalid
 	int				serverframe;
 	int				servertime;		// server time the message is valid for (in msec)
 	int				deltaframe;
-	byte			areabits[MAX_MAP_AREAS/8];		// portalarea visibility bits
+	u8			areabits[MAX_MAP_AREAS/8];		// portalarea visibility bits
 	player_state_t	playerstate;
 	int				num_entities;
 	int				parse_entities;	// non-masked index into cl_parse_entities array
@@ -15800,9 +15797,9 @@ typedef struct
 	int			timedemo_frames;
 	int			timedemo_start;
 
-	qboolean	refresh_prepped;	// false if on new level or new ref dll
-	qboolean	sound_prepped;		// ambient sounds can start
-	qboolean	force_refdef;		// vid has changed, so we can't use a paused refdef
+	bool	refresh_prepped;	// false if on new level or new ref dll
+	bool	sound_prepped;		// ambient sounds can start
+	bool	force_refdef;		// vid has changed, so we can't use a paused refdef
 
 	int			parse_entities;		// index (not anded off) into cl_parse_entities[]
 
@@ -15850,12 +15847,12 @@ typedef struct
 	int			cinematictime;		// cls.realtime for first cinematic frame
 	int			cinematicframe;
 	char		cinematicpalette[768];
-	qboolean	cinematicpalette_active;
+	bool	cinematicpalette_active;
 
 	//
 	// server state information
 	//
-	qboolean	attractloop;		// running the attract loop, any key will menu
+	bool	attractloop;		// running the attract loop, any key will menu
 	int			servercount;	// server identification for prespawns
 	char		gamedir[MAX_QPATH];
 	int			playernum;
@@ -15961,7 +15958,7 @@ extern	sizebuf_t	net_message;
 
 void DrawString (int x, int y, char *s);
 void DrawAltString (int x, int y, char *s);	// toggle high bit
-qboolean	CL_CheckOrDownloadFile (char *filename);
+bool	CL_CheckOrDownloadFile (char *filename);
 
 void CL_AddNetgraph (void);
 
@@ -16212,21 +16209,21 @@ void CL_PredictMovement (void);
 
 typedef struct
 {
-	byte	*data;
+	u8	*data;
 	int		count;
 } cblock_t;
 
 typedef struct
 {
-	qboolean	restart_sound;
+	bool	restart_sound;
 	int		s_rate;
 	int		s_width;
 	int		s_channels;
 
 	int		width;
 	int		height;
-	byte	*pic;
-	byte	*pic_pending;
+	u8	*pic;
+	u8	*pic_pending;
 
 	// order 1 huffman stuff
 	int		*hnodes1;	// [256][256][2];
@@ -16252,14 +16249,14 @@ PCX LOADING
 SCR_LoadPCX
 ==============
 */
-void SCR_LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height)
+void SCR_LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height)
 {
-	byte	*raw;
+	u8	*raw;
 	pcx_t	*pcx;
 	int		x, y;
 	int		len;
 	int		dataByte, runLength;
-	byte	*out, *pix;
+	u8	*out, *pix;
 
 	*pic = NULL;
 
@@ -16296,7 +16293,7 @@ void SCR_LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *h
 	if (palette)
 	{
 		*palette = Z_Malloc(768);
-		memcpy (*palette, (byte *)pcx + len - 768, 768);
+		memcpy (*palette, (u8 *)pcx + len - 768, 768);
 	}
 
 	if (width)
@@ -16324,7 +16321,7 @@ void SCR_LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *h
 
 	}
 
-	if ( raw - (byte *)pcx > len)
+	if ( raw - (u8 *)pcx > len)
 	{
 		Com_Printf ("PCX file %s was malformed", filename);
 		Z_Free (*pic);
@@ -16435,7 +16432,7 @@ void Huff1TableInit (void)
 	int		prev;
 	int		j;
 	int		*node, *nodebase;
-	byte	counts[256];
+	u8	counts[256];
 	int		numhnodes;
 
 	cin.hnodes1 = Z_Malloc (256*256*2*4);
@@ -16483,8 +16480,8 @@ Huff1Decompress
 */
 cblock_t Huff1Decompress (cblock_t in)
 {
-	byte		*input;
-	byte		*out_p;
+	u8		*input;
+	u8		*out_p;
 	int			nodenum;
 	int			count;
 	cblock_t	out;
@@ -16610,14 +16607,14 @@ cblock_t Huff1Decompress (cblock_t in)
 SCR_ReadNextFrame
 ==================
 */
-byte *SCR_ReadNextFrame (void)
+u8 *SCR_ReadNextFrame (void)
 {
 	int		r;
 	int		command;
-	byte	samples[22050/14*4];
-	byte	compressed[0x20000];
+	u8	samples[22050/14*4];
+	u8	compressed[0x20000];
 	int		size;
-	byte	*pic;
+	u8	*pic;
 	cblock_t	in, huf1;
 	int		start, end, count;
 
@@ -16714,7 +16711,7 @@ static struct {
 } viddef;
 
 // Returns true if a cinematic is active, meaning the view rendering should be skipped
-static qboolean SCR_DrawCinematic() {
+static bool SCR_DrawCinematic() {
 	if (cl.cinematictime <= 0) {
 		return false;
 	}
@@ -16735,7 +16732,7 @@ static qboolean SCR_DrawCinematic() {
 		return true;
 	}
 
-	void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data);
+	void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data);
 	Draw_StretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
 
 	return true;
@@ -16744,7 +16741,7 @@ static qboolean SCR_DrawCinematic() {
 void SCR_PlayCinematic (char *arg)
 {
 	int		width, height;
-	byte	*palette;
+	u8	*palette;
 	char	name[MAX_OSPATH], *dot;
 	int		old_khz;
 
@@ -16844,7 +16841,7 @@ typedef struct
 	vec3_t	origin;
 	vec3_t	oldorigin;
 	vec3_t	angles;
-	qboolean present;
+	bool present;
 } projectile_t;
 
 #define	MAX_PROJECTILES	64
@@ -16871,11 +16868,11 @@ Flechettes are passed as efficient temporary entities
 void CL_ParseProjectiles (void)
 {
 	int		i, c, j;
-	byte	bits[8];
-	byte	b;
+	u8	bits[8];
+	u8	b;
 	projectile_t	pr;
 	int lastempty = -1;
-	qboolean old = false;
+	bool old = false;
 
 	c = MSG_ReadByte (&net_message);
 	for (i=0 ; i<c ; i++)
@@ -16917,7 +16914,7 @@ void CL_ParseProjectiles (void)
 
 		b = MSG_ReadByte (&net_message);
 		pr.num = (b & 0x7f);
-		if (b & 128) // extra entity number byte
+		if (b & 128) // extra entity number u8
 			pr.num |= (MSG_ReadByte (&net_message) << 7);
 
 		pr.present = true;
@@ -19807,7 +19804,7 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 	int			i;
 	float		d, c, s;
 	vec3_t		dir;
-	byte		clr = 0x74;
+	u8		clr = 0x74;
 
 	VectorCopy (start, move);
 	VectorSubtract (end, start, vec);
@@ -20505,7 +20502,7 @@ state bit 1 is edge triggered on the up to down transition
 state bit 2 is edge triggered on the down to up transition
 
 
-Key_Event (int key, qboolean down, unsigned time);
+Key_Event (int key, bool down, unsigned time);
 
   +mlook src time
 
@@ -20819,7 +20816,7 @@ void CL_FinishMove (usercmd_t *cmd)
 	in_impulse = 0;
 
 // send the ambient light level at the player's current position
-	cmd->lightlevel = (byte)cl_lightlevel->value;
+	cmd->lightlevel = (u8)cl_lightlevel->value;
 }
 
 /*
@@ -20912,7 +20909,7 @@ CL_SendCmd
 void CL_SendCmd (void)
 {
 	sizebuf_t	buf;
-	byte		data[128];
+	u8		data[128];
 	int			i;
 	usercmd_t	*cmd, *oldcmd;
 	usercmd_t	nullcmd;
@@ -20959,7 +20956,7 @@ void CL_SendCmd (void)
 	// begin a client move command
 	MSG_WriteByte (&buf, clc_move);
 
-	// save the position for a checksum byte
+	// save the position for a checksum u8
 	checksumIndex = buf.cursize;
 	MSG_WriteByte (&buf, 0);
 
@@ -21280,7 +21277,7 @@ void CL_Record_f (void)
 	//
 	// write out messages to hold the startup information
 	//
-	SZ_Init (&buf, (byte*)buf_data, sizeof(buf_data));
+	SZ_Init (&buf, (u8*)buf_data, sizeof(buf_data));
 
 	// send the serverdata
 	MSG_WriteByte (&buf, svc_serverdata);
@@ -21620,9 +21617,9 @@ void CL_Disconnect() {
 		char final[32] = {};
 		final[0] = clc_stringcmd;
 		strcpy((char *)final+1, "disconnect");
-		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
-		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
-		Netchan_Transmit(&cls.netchan, strlen(final), (byte*)final);
+		Netchan_Transmit(&cls.netchan, strlen(final), (u8*)final);
+		Netchan_Transmit(&cls.netchan, strlen(final), (u8*)final);
+		Netchan_Transmit(&cls.netchan, strlen(final), (u8*)final);
 
 		CL_ClearState();
 
@@ -22050,7 +22047,7 @@ int precache_spawncount;
 int precache_tex;
 int precache_model_skin;
 
-byte *precache_model; // used for skin checking in alias models
+u8 *precache_model; // used for skin checking in alias models
 
 #define PLAYER_MULT 5
 
@@ -23645,7 +23642,7 @@ Returns true if the file exists, otherwise it attempts
 to start a download from the server.
 ===============
 */
-qboolean	CL_CheckOrDownloadFile (char *filename)
+bool	CL_CheckOrDownloadFile (char *filename)
 {
 	FILE *fp;
 	char	name[MAX_OSPATH];
@@ -23949,10 +23946,10 @@ typedef struct image_s
 	struct msurface_s	*texturechain;	// for sort-by-texture world drawing
 	int		texnum;						// gl texture binding
 	float	sl, tl, sh, th;				// 0,0 - 1,1 unless part of the scrap
-	qboolean	scrap;
-	qboolean	has_alpha;
+	bool	scrap;
+	bool	has_alpha;
 
-	qboolean paletted;
+	bool paletted;
 } image_t;
 
 image_t	*Draw_FindPic (char *name);
@@ -24638,7 +24635,7 @@ void CL_PredictMovement (void)
 float		scr_con_current;	// aproaches scr_conlines at scr_conspeed
 float		scr_conlines;		// 0.0 to 1.0 lines of console to display
 
-qboolean	scr_initialized;		// ready to draw
+bool	scr_initialized;		// ready to draw
 
 int			scr_draw_loading;
 
@@ -25311,7 +25308,7 @@ char		*sb_nums[2][11] =
 
 #define	ICON_WIDTH	24
 #define	ICON_HEIGHT	24
-#define	CHAR_WIDTH	16
+#define	Q_CHAR_WIDTH	16
 #define	ICON_SPACE	8
 
 
@@ -25406,13 +25403,13 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 		width = 5;
 
 	SCR_AddDirtyPoint (x, y);
-	SCR_AddDirtyPoint (x+width*CHAR_WIDTH+2, y+23);
+	SCR_AddDirtyPoint (x+width*Q_CHAR_WIDTH+2, y+23);
 
 	Com_sprintf (num, sizeof(num), "%i", value);
 	l = strlen(num);
 	if (l > width)
 		l = width;
-	x += 2 + CHAR_WIDTH*(width - l);
+	x += 2 + Q_CHAR_WIDTH*(width - l);
 
 	ptr = num;
 	while (*ptr && l)
@@ -25423,7 +25420,7 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 			frame = *ptr -'0';
 
 		Draw_Pic (x,y,sb_nums[color][frame]);
-		x += CHAR_WIDTH;
+		x += Q_CHAR_WIDTH;
 		ptr++;
 		l--;
 	}
@@ -26511,7 +26508,7 @@ void CL_ParseNuke (void)
 CL_ParseTEnt
 =================
 */
-static byte splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
+static u8 splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
 
 void CL_ParseTEnt (void)
 {
@@ -28571,11 +28568,11 @@ int		history_line=0;
 
 int		key_waiting;
 char	*keybindings[256];
-qboolean	consolekeys[256];	// if true, can't be rebound while in console
-qboolean	menubound[256];	// if true, can't be rebound while in menu
+bool	consolekeys[256];	// if true, can't be rebound while in console
+bool	menubound[256];	// if true, can't be rebound while in menu
 int		keyshift[256];		// key to map to if shift held down in console
 int		key_repeats[256];	// if > 1, it is autorepeating
-qboolean	keydown[256];
+bool	keydown[256];
 
 typedef struct
 {
@@ -28969,7 +28966,7 @@ void Key_Console (int key)
 
 //============================================================================
 
-qboolean	chat_team;
+bool	chat_team;
 char		chat_buffer[MAXCMDLINE];
 int			chat_bufferlen = 0;
 
@@ -29199,7 +29196,7 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
-void Key_Event (int key, qboolean down, unsigned time)
+void Key_Event (int key, bool down, unsigned time)
 {
 	char	*kb;
 	char	cmd[1024];
@@ -29497,14 +29494,14 @@ typedef struct
 	menucommon_s generic;
 } menuseparator_s;
 
-qboolean Field_Key( menufield_s *field, int key );
+bool Field_Key( menufield_s *field, int key );
 
 void	Menu_AddItem( menuframework_s *menu, void *item );
 void	Menu_AdjustCursor( menuframework_s *menu, int dir );
 void	Menu_Center( menuframework_s *menu );
 void	Menu_Draw( menuframework_s *menu );
 void	*Menu_ItemAtCursor( menuframework_s *m );
-qboolean Menu_SelectItem( menuframework_s *s );
+bool Menu_SelectItem( menuframework_s *s );
 void	Menu_SetStatusBar( menuframework_s *s, const char *string );
 void	Menu_SlideItem( menuframework_s *s, int dir );
 int		Menu_TallySlots( menuframework_s *menu );
@@ -29544,7 +29541,7 @@ void M_Menu_Main_f (void);
 
 	void M_Menu_Credits( void );
 
-qboolean	m_entersound;		// play after drawing a frame, so caching
+bool	m_entersound;		// play after drawing a frame, so caching
 								// won't disrupt the sound
 
 typedef const char* (*M_Key_Proc)(int k);
@@ -29785,7 +29782,7 @@ and both above and below y.
 void M_DrawCursor( int x, int y, int f )
 {
 	char	cursorname[80];
-	static qboolean cached;
+	static bool cached;
 
 	if ( !cached )
 	{
@@ -31476,7 +31473,7 @@ static menuframework_s	s_loadgame_menu;
 static menuaction_s		s_loadgame_actions[MAX_SAVEGAMES];
 
 char		m_savestrings[MAX_SAVEGAMES][32];
-qboolean	m_savevalid[MAX_SAVEGAMES];
+bool	m_savevalid[MAX_SAVEGAMES];
 
 void Create_Savestrings (void)
 {
@@ -32841,7 +32838,7 @@ static void FreeFileList( char **list, int n )
 	free( list );
 }
 
-static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles )
+static bool IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles )
 {
 	int i;
 	char scratch[1024];
@@ -32859,7 +32856,7 @@ static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles )
 	return false;
 }
 
-static qboolean PlayerConfig_ScanDirectories( void )
+static bool PlayerConfig_ScanDirectories( void )
 {
 	char findname[1024];
 	char scratch[1024];
@@ -33023,7 +33020,7 @@ static int pmicmpfnc( const void *_a, const void *_b )
 }
 
 
-qboolean PlayerConfig_MenuInit( void )
+bool PlayerConfig_MenuInit( void )
 {
 	extern cvar_t *name;
 	extern cvar_t *team;
@@ -33430,7 +33427,7 @@ void Action_Draw( menuaction_s *a )
 		a->generic.ownerdraw( a );
 }
 
-qboolean Field_DoEnter( menufield_s *f )
+bool Field_DoEnter( menufield_s *f )
 {
 	if ( f->generic.callback )
 	{
@@ -33488,10 +33485,8 @@ void Field_Draw( menufield_s *f )
 	}
 }
 
-qboolean Field_Key( menufield_s *f, int key )
+bool Field_Key( menufield_s *f, int key )
 {
-	extern int keydown[];
-
 	switch ( key )
 	{
 	case K_KP_SLASH:
@@ -33835,7 +33830,7 @@ void *Menu_ItemAtCursor( menuframework_s *m )
 	return m->items[m->cursor];
 }
 
-qboolean Menu_SelectItem( menuframework_s *s )
+bool Menu_SelectItem( menuframework_s *s )
 {
 	menucommon_s *item = ( menucommon_s * ) Menu_ItemAtCursor( s );
 
@@ -34038,7 +34033,7 @@ typedef struct
 	int 		speed;			// not needed, because converted on load?
 	int 		width;
 	int 		stereo;
-	byte		data[1];		// variable sized
+	u8		data[1];		// variable sized
 } sfxcache_t;
 
 typedef struct sfx_s
@@ -34060,7 +34055,7 @@ typedef struct playsound_s
 	float		attenuation;
 	int			entnum;
 	int			entchannel;
-	qboolean	fixed_origin;	// use origin field instead of entnum's origin
+	bool	fixed_origin;	// use origin field instead of entnum's origin
 	vec3_t		origin;
 	unsigned	begin;			// begin on this sample
 } playsound_t;
@@ -34073,7 +34068,7 @@ typedef struct
 	int			samplepos;				// in mono samples
 	int			samplebits;
 	int			speed;
-	byte		*buffer;
+	u8		*buffer;
 } dma_t;
 
 // !!! if this is changed, the asm code must change !!!
@@ -34090,8 +34085,8 @@ typedef struct
 	vec3_t		origin;			// only use if fixed_origin is set
 	vec_t		dist_mult;		// distance multiplier (attenuation/clipK)
 	int			master_vol;		// 0-255 master volume
-	qboolean	fixed_origin;	// use origin instead of fetching entnum's origin
-	qboolean	autosound;		// from an entity->sound, cleared each frame
+	bool	fixed_origin;	// use origin instead of fetching entnum's origin
+	bool	autosound;		// from an entity->sound, cleared each frame
 } channel_t;
 
 typedef struct
@@ -34114,7 +34109,7 @@ typedef struct
 */
 
 // initializes cycling through a DMA buffer and returns information on it
-qboolean SNDDMA_Init(void);
+bool SNDDMA_Init(void);
 
 // gets the current DMA position
 int		SNDDMA_GetDMAPos(void);
@@ -34151,7 +34146,7 @@ extern cvar_t	*s_mixahead;
 extern cvar_t	*s_testsound;
 extern cvar_t	*s_primary;
 
-wavinfo_t GetWavinfo (byte *wav, int wavlength);
+wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
 void S_InitScaletable (void);
 
@@ -34189,7 +34184,7 @@ int			s_registration_sequence;
 
 channel_t   channels[MAX_CHANNELS];
 
-qboolean	snd_initialized = false;
+bool	snd_initialized = false;
 int			sound_started=0;
 
 dma_t		dma;
@@ -34199,7 +34194,7 @@ vec3_t		listener_forward;
 vec3_t		listener_right;
 vec3_t		listener_up;
 
-qboolean	s_registering;
+bool	s_registering;
 
 int			soundtime;		// sample PAIRS
 int   		paintedtime; 	// sample PAIRS
@@ -34336,7 +34331,7 @@ void S_Shutdown(void)
 // Load a sound
 // =======================================================================
 
-sfx_t *S_FindName (char *name, qboolean create)
+sfx_t *S_FindName (char *name, bool create)
 {
 	int		i;
 	sfx_t	*sfx;
@@ -34477,7 +34472,7 @@ void S_EndRegistration (void)
 			{
 				size = sfx->cache->length*sfx->cache->width;
 				for (int j = size-1 ; j>0 ; j-=4096) {
-					paged_total += ((byte*)sfx->cache)[j];
+					paged_total += ((u8*)sfx->cache)[j];
 				}
 			}
 		}
@@ -35031,7 +35026,7 @@ S_RawSamples
 Cinematic streaming and voice over network
 ============
 */
-void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
+void S_RawSamples (int samples, int rate, int width, int channels, u8 *data)
 {
 	int		i;
 	int		src, dst;
@@ -35115,8 +35110,8 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 			dst = s_rawend&(MAX_RAW_SAMPLES-1);
 			s_rawend++;
 			s_rawsamples[dst].left =
-				(((byte *)data)[src]-128) << 16;
-			s_rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
+				(((u8 *)data)[src]-128) << 16;
+			s_rawsamples[dst].right = (((u8 *)data)[src]-128) << 16;
 		}
 	}
 }
@@ -35342,14 +35337,14 @@ void S_SoundList(void)
 
 int			cache_full_cycle;
 
-byte *S_Alloc (int size);
+u8 *S_Alloc (int size);
 
 /*
 ================
 ResampleSfx
 ================
 */
-void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, byte *data)
+void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
 {
 	int		outcount;
 	int		srcsample;
@@ -35416,7 +35411,7 @@ S_LoadSound
 sfxcache_t *S_LoadSound (sfx_t *s)
 {
 	char	namebuffer[MAX_QPATH];
-	byte	*data;
+	u8	*data;
 	wavinfo_t	info;
 	int		len;
 	float	stepscale;
@@ -35498,10 +35493,10 @@ WAV loading
 */
 
 
-byte	*data_p;
-byte 	*iff_end;
-byte 	*last_chunk;
-byte 	*iff_data;
+u8	*data_p;
+u8 	*iff_end;
+u8 	*last_chunk;
+u8 	*iff_data;
 int 	iff_chunk_len;
 
 
@@ -35574,7 +35569,7 @@ void DumpChunks(void)
 	} while (data_p < iff_end);
 }
 
-wavinfo_t GetWavinfo(byte *wav, int wavlength)
+wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 {
 	wavinfo_t	info;
 	int     i;
@@ -36030,13 +36025,13 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 
 /* already inlined above: game/g_local.h */
 
-qboolean FindTarget (edict_t* self);
+bool FindTarget (edict_t* self);
 extern cvar_t	*maxclients;
 
-static qboolean ai_checkattack(edict_t* self);
+static bool ai_checkattack(edict_t* self);
 
-qboolean	enemy_vis;
-qboolean	enemy_infront;
+bool	enemy_vis;
+bool	enemy_infront;
 int			enemy_range;
 float		enemy_yaw;
 
@@ -36293,7 +36288,7 @@ visible
 returns 1 if the entity is visible to self, even if not infront ()
 =============
 */
-qboolean visible (edict_t* self, edict_t* other)
+bool visible (edict_t* self, edict_t* other)
 {
 	vec3_t	spot1;
 	vec3_t	spot2;
@@ -36318,7 +36313,7 @@ infront
 returns 1 if the entity is in front (in sight) of self
 =============
 */
-qboolean infront (edict_t* self, edict_t* other)
+bool infront (edict_t* self, edict_t* other)
 {
 	vec3_t	vec;
 	float	dot;
@@ -36413,10 +36408,10 @@ checked each frame.  This means multi player games will have slightly
 slower noticing monsters.
 ============
 */
-qboolean FindTarget (edict_t* self)
+bool FindTarget (edict_t* self)
 {
 	edict_t		*client;
-	qboolean	heardit;
+	bool	heardit;
 	int			r;
 
 	if (self->monsterinfo.aiflags & AI_GOOD_GUY)
@@ -36600,7 +36595,7 @@ FacingIdeal
 
 ============
 */
-qboolean FacingIdeal(edict_t* self)
+bool FacingIdeal(edict_t* self)
 {
 	float	delta;
 
@@ -36613,7 +36608,7 @@ qboolean FacingIdeal(edict_t* self)
 
 //=============================================================================
 
-qboolean M_CheckAttack (edict_t* self)
+bool M_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	float	chance;
@@ -36769,9 +36764,9 @@ void ai_run_slide(edict_t* self, float distance)
 }
 
 // Decides if we're going to attack or do something else used by ai_run and ai_stand
-static qboolean ai_checkattack(edict_t* self) {
+static bool ai_checkattack(edict_t* self) {
 	vec3_t		temp;
-	qboolean	hesDeadJim;
+	bool	hesDeadJim;
 
 // this causes monsters to run blindly to the combat point w/o firing
 	if (self->goalentity)
@@ -36911,7 +36906,7 @@ void ai_run (edict_t* self, float dist)
 	vec3_t		v;
 	edict_t		*tempgoal;
 	edict_t		*save;
-	qboolean	new;
+	bool	new;
 	edict_t		*marker;
 	float		d1, d2;
 	trace_t		tr;
@@ -37508,7 +37503,7 @@ char *ClientTeam (edict_t *ent)
 	return ++p;
 }
 
-qboolean OnSameTeam (edict_t *ent1, edict_t *ent2)
+bool OnSameTeam (edict_t *ent1, edict_t *ent2)
 {
 	char	ent1Team [512];
 	char	ent2Team [512];
@@ -37617,7 +37612,7 @@ void Cmd_Give_f (edict_t *ent)
 	gitem_t		*it;
 	int			index;
 	int			i;
-	qboolean	give_all;
+	bool	give_all;
 	edict_t		*it_ent;
 
 	if (deathmatch->value && !sv_cheats->value)
@@ -38246,7 +38241,7 @@ void Cmd_Wave_f (edict_t *ent)
 Cmd_Say_f
 ==================
 */
-void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
+void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 {
 	int		i, j;
 	edict_t	*other;
@@ -38464,7 +38459,7 @@ Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-qboolean CanDamage (edict_t *targ, edict_t* inflictor)
+bool CanDamage (edict_t *targ, edict_t* inflictor)
 {
 	vec3_t	dest;
 	trace_t	trace;
@@ -38802,7 +38797,7 @@ void M_ReactToDamage (edict_t *targ, edict_t* attacker)
 	}
 }
 
-static qboolean CheckTeamDamage(edict_t *targ, edict_t* attacker) {
+static bool CheckTeamDamage(edict_t *targ, edict_t* attacker) {
 	// FIXME make the next line real and uncomment this block
 	// if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
 	UNUSED(targ);
@@ -39856,7 +39851,7 @@ NOMONSTER	monsters will not trigger this door
 4)	heavy
 */
 
-void door_use_areaportals (edict_t* self, qboolean open)
+void door_use_areaportals (edict_t* self, bool open)
 {
 	edict_t	*t = NULL;
 
@@ -40545,7 +40540,7 @@ void train_next (edict_t* self)
 {
 	edict_t		*ent;
 	vec3_t		dest;
-	qboolean	first;
+	bool	first;
 
 	first = true;
 again:
@@ -41076,7 +41071,7 @@ void SP_func_killbox (edict_t *ent)
 /* already inlined above: game/g_local.h */
 
 
-qboolean	Pickup_Weapon (edict_t *ent, edict_t* other);
+bool	Pickup_Weapon (edict_t *ent, edict_t* other);
 void		Use_Weapon (edict_t *ent, gitem_t *inv);
 void		Drop_Weapon (edict_t *ent, gitem_t *inv);
 
@@ -41206,7 +41201,7 @@ void SetRespawn (edict_t *ent, float delay)
 
 //======================================================================
 
-qboolean Pickup_Powerup (edict_t *ent, edict_t* other)
+bool Pickup_Powerup (edict_t *ent, edict_t* other)
 {
 	int		quantity;
 
@@ -41244,7 +41239,7 @@ void Drop_General (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Adrenaline (edict_t *ent, edict_t* other)
+bool Pickup_Adrenaline (edict_t *ent, edict_t* other)
 {
 	if (!deathmatch->value)
 		other->max_health += 1;
@@ -41258,7 +41253,7 @@ qboolean Pickup_Adrenaline (edict_t *ent, edict_t* other)
 	return true;
 }
 
-qboolean Pickup_AncientHead (edict_t *ent, edict_t* other)
+bool Pickup_AncientHead (edict_t *ent, edict_t* other)
 {
 	other->max_health += 2;
 
@@ -41268,7 +41263,7 @@ qboolean Pickup_AncientHead (edict_t *ent, edict_t* other)
 	return true;
 }
 
-qboolean Pickup_Bandolier (edict_t *ent, edict_t* other)
+bool Pickup_Bandolier (edict_t *ent, edict_t* other)
 {
 	gitem_t	*item;
 	int		index;
@@ -41306,7 +41301,7 @@ qboolean Pickup_Bandolier (edict_t *ent, edict_t* other)
 	return true;
 }
 
-qboolean Pickup_Pack (edict_t *ent, edict_t* other)
+bool Pickup_Pack (edict_t *ent, edict_t* other)
 {
 	gitem_t	*item;
 	int		index;
@@ -41469,7 +41464,7 @@ void	Use_Silencer (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Key (edict_t *ent, edict_t* other)
+bool Pickup_Key (edict_t *ent, edict_t* other)
 {
 	if (coop->value)
 	{
@@ -41494,7 +41489,7 @@ qboolean Pickup_Key (edict_t *ent, edict_t* other)
 
 //======================================================================
 
-qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count)
+bool Add_Ammo (edict_t *ent, gitem_t *item, int count)
 {
 	int			index;
 	int			max;
@@ -41530,11 +41525,11 @@ qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count)
 	return true;
 }
 
-qboolean Pickup_Ammo (edict_t *ent, edict_t* other)
+bool Pickup_Ammo (edict_t *ent, edict_t* other)
 {
 	int			oldcount;
 	int			count;
-	qboolean	weapon;
+	bool	weapon;
 
 	weapon = (ent->item->flags & IT_WEAPON);
 	if ( (weapon) && ( (int)dmflags->value & DF_INFINITE_AMMO ) )
@@ -41603,7 +41598,7 @@ void MegaHealth_think (edict_t* self)
 		G_FreeEdict (self);
 }
 
-qboolean Pickup_Health (edict_t *ent, edict_t* other)
+bool Pickup_Health (edict_t *ent, edict_t* other)
 {
 	if (!(ent->style & HEALTH_IGNORE_MAX))
 		if (other->health >= other->max_health)
@@ -41654,7 +41649,7 @@ int ArmorIndex (edict_t *ent)
 	return 0;
 }
 
-qboolean Pickup_Armor (edict_t *ent, edict_t* other)
+bool Pickup_Armor (edict_t *ent, edict_t* other)
 {
 	int				old_armor_index;
 	gitem_armor_t	*oldinfo;
@@ -41775,7 +41770,7 @@ static void Use_PowerArmor(edict_t *ent, gitem_t *item) {
 	}
 }
 
-qboolean Pickup_PowerArmor (edict_t *ent, edict_t* other)
+bool Pickup_PowerArmor (edict_t *ent, edict_t* other)
 {
 	int		quantity;
 
@@ -41806,7 +41801,7 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 	UNUSED(plane);
 	UNUSED(surf);
 
-	qboolean	taken;
+	bool	taken;
 
 	if (!other->client)
 		return;
@@ -43203,13 +43198,13 @@ void SetItemNames (void)
 
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
-qboolean ClientConnect (edict_t *ent, char *userinfo);
+bool ClientConnect (edict_t *ent, char *userinfo);
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 void RunEntity (edict_t *ent);
-void WriteGame (char *filename, qboolean autosave);
+void WriteGame (char *filename, bool autosave);
 void ReadGame (char *filename);
 void WriteLevel (char *filename);
 void ReadLevel (char *filename);
@@ -45899,7 +45894,7 @@ void monster_death_use (edict_t* self)
 
 //============================================================================
 
-qboolean monster_start (edict_t* self)
+bool monster_start (edict_t* self)
 {
 	if (deathmatch->value)
 	{
@@ -45958,8 +45953,8 @@ void monster_start_go (edict_t* self)
 	// check for target to combat_point and change to combattarget
 	if (self->target)
 	{
-		qboolean	notcombat;
-		qboolean	fixup;
+		bool	notcombat;
+		bool	fixup;
 		edict_t		*target;
 
 		target = NULL;
@@ -46178,7 +46173,7 @@ void SV_CheckVelocity (edict_t *ent)
 }
 
 // Runs thinking code for this frame if necessary
-static qboolean SV_RunThink(edict_t* ent) {
+static bool SV_RunThink(edict_t* ent) {
 	if (ent->nextthink <= 0 || ent->nextthink > level.time + 0.001) {
 		return true;
 	}
@@ -46480,7 +46475,7 @@ Objects need to be moved back on a failed push,
 otherwise riders would continue to slide.
 ============
 */
-qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
+bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 {
 	int			i, e;
 	edict_t		*check, *block;
@@ -46752,8 +46747,8 @@ void SV_Physics_Toss (edict_t *ent)
 	vec3_t		move;
 	float		backoff;
 	edict_t		*slave;
-	qboolean	wasinwater;
-	qboolean	isinwater;
+	bool	wasinwater;
+	bool	isinwater;
 	vec3_t		old_origin;
 
 // regular thinking
@@ -46893,8 +46888,8 @@ void SV_AddRotationalFriction (edict_t *ent)
 
 void SV_Physics_Step (edict_t *ent)
 {
-	qboolean	wasonground;
-	qboolean	hitsound = false;
+	bool	wasonground;
+	bool	hitsound = false;
 	float		*vel;
 	float		speed, newspeed, control;
 	float		friction;
@@ -47220,7 +47215,7 @@ static void InitGame() {
 
 //=========================================================
 
-static void WriteField1(field_t *field, byte *base) {
+static void WriteField1(field_t *field, u8 *base) {
 	void		*p;
 	int			len;
 	int			index;
@@ -47270,19 +47265,19 @@ static void WriteField1(field_t *field, byte *base) {
 
 	//relative to code segment
 	case F_FUNCTION:
-		if (*(byte **)p == NULL)
+		if (*(u8 **)p == NULL)
 			index = 0;
 		else
-			index = *(byte **)p - ((byte *)InitGame);
+			index = *(u8 **)p - ((u8 *)InitGame);
 		*(int *)p = index;
 		break;
 
 	//relative to data segment
 	case F_MMOVE:
-		if (*(byte **)p == NULL)
+		if (*(u8 **)p == NULL)
 			index = 0;
 		else
-			index = *(byte **)p - (byte *)&mmove_reloc;
+			index = *(u8 **)p - (u8 *)&mmove_reloc;
 		*(int *)p = index;
 		break;
 
@@ -47291,7 +47286,7 @@ static void WriteField1(field_t *field, byte *base) {
 }
 
 
-void WriteField2 (FILE *f, field_t *field, byte *base)
+void WriteField2 (FILE *f, field_t *field, u8 *base)
 {
 	int			len;
 	void		*p;
@@ -47314,7 +47309,7 @@ void WriteField2 (FILE *f, field_t *field, byte *base)
 	}
 }
 
-void ReadField (FILE *f, field_t *field, byte *base)
+void ReadField (FILE *f, field_t *field, u8 *base)
 {
 	void		*p;
 	int			len;
@@ -47369,18 +47364,18 @@ void ReadField (FILE *f, field_t *field, byte *base)
 	case F_FUNCTION:
 		index = *(int *)p;
 		if ( index == 0 )
-			*(byte **)p = NULL;
+			*(u8 **)p = NULL;
 		else
-			*(byte **)p = ((byte *)InitGame) + index;
+			*(u8 **)p = ((u8 *)InitGame) + index;
 		break;
 
 	//relative to data segment
 	case F_MMOVE:
 		index = *(int *)p;
 		if (index == 0)
-			*(byte **)p = NULL;
+			*(u8 **)p = NULL;
 		else
-			*(byte **)p = (byte *)&mmove_reloc + index;
+			*(u8 **)p = (u8 *)&mmove_reloc + index;
 		break;
 
 	default: assert(!"unreachable");
@@ -47407,7 +47402,7 @@ void WriteClient (FILE *f, gclient_t *client)
 	// change the pointers to lengths or indexes
 	for (field=clientfields ; field->name ; field++)
 	{
-		WriteField1(field, (byte *)&temp);
+		WriteField1(field, (u8 *)&temp);
 	}
 
 	// write the block
@@ -47416,7 +47411,7 @@ void WriteClient (FILE *f, gclient_t *client)
 	// now write any allocated data following the edict
 	for (field=clientfields ; field->name ; field++)
 	{
-		WriteField2 (f, field, (byte *)client);
+		WriteField2 (f, field, (u8 *)client);
 	}
 }
 
@@ -47435,7 +47430,7 @@ void ReadClient (FILE *f, gclient_t *client)
 
 	for (field=clientfields ; field->name ; field++)
 	{
-		ReadField (f, field, (byte *)client);
+		ReadField (f, field, (u8 *)client);
 	}
 }
 
@@ -47453,7 +47448,7 @@ A single player death will automatically restore from the
 last save position.
 ============
 */
-void WriteGame (char *filename, qboolean autosave)
+void WriteGame (char *filename, bool autosave)
 {
 	FILE	*f;
 	int		i;
@@ -47525,7 +47520,7 @@ void WriteEdict (FILE *f, edict_t *ent)
 	// change the pointers to lengths or indexes
 	for (field=fields ; field->name ; field++)
 	{
-		WriteField1(field, (byte *)&temp);
+		WriteField1(field, (u8 *)&temp);
 	}
 
 	// write the block
@@ -47534,7 +47529,7 @@ void WriteEdict (FILE *f, edict_t *ent)
 	// now write any allocated data following the edict
 	for (field=fields ; field->name ; field++)
 	{
-		WriteField2 (f, field, (byte *)ent);
+		WriteField2 (f, field, (u8 *)ent);
 	}
 
 }
@@ -47557,7 +47552,7 @@ void WriteLevelLocals (FILE *f)
 	// change the pointers to lengths or indexes
 	for (field=levelfields ; field->name ; field++)
 	{
-		WriteField1(field, (byte *)&temp);
+		WriteField1(field, (u8 *)&temp);
 	}
 
 	// write the block
@@ -47566,7 +47561,7 @@ void WriteLevelLocals (FILE *f)
 	// now write any allocated data following the edict
 	for (field=levelfields ; field->name ; field++)
 	{
-		WriteField2 (f, field, (byte *)&level);
+		WriteField2 (f, field, (u8 *)&level);
 	}
 }
 
@@ -47586,7 +47581,7 @@ void ReadEdict (FILE *f, edict_t *ent)
 
 	for (field=fields ; field->name ; field++)
 	{
-		ReadField (f, field, (byte *)ent);
+		ReadField (f, field, (u8 *)ent);
 	}
 }
 
@@ -47605,7 +47600,7 @@ void ReadLevelLocals (FILE *f)
 
 	for (field=levelfields ; field->name ; field++)
 	{
-		ReadField (f, field, (byte *)&level);
+		ReadField (f, field, (u8 *)&level);
 	}
 }
 
@@ -48083,7 +48078,7 @@ in an edict
 void ED_ParseField (char *key, char *value, edict_t *ent)
 {
 	field_t	*f;
-	byte	*b;
+	u8	*b;
 	float	v;
 	vec3_t	vec;
 
@@ -48092,9 +48087,9 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 		if (!(f->flags & FFL_NOSPAWN) && !Q_stricmp(f->name, key))
 		{	// found it
 			if (f->flags & FFL_SPAWNTEMP)
-				b = (byte *)&st;
+				b = (u8 *)&st;
 			else
-				b = (byte *)ent;
+				b = (u8 *)ent;
 
 			switch (f->type)
 			{
@@ -48134,7 +48129,7 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 // edict should be a properly initialized empty edict.
 char *ED_ParseEdict (char *data, edict_t *ent)
 {
-	qboolean	init;
+	bool	init;
 	char		keyname[256];
 	char		*com_token;
 
@@ -48747,12 +48742,12 @@ int			numipfilters;
 StringToFilter
 =================
 */
-static qboolean StringToFilter (char *s, ipfilter_t *f)
+static bool StringToFilter (char *s, ipfilter_t *f)
 {
 	char	num[128];
 	int		i, j;
-	byte	b[4];
-	byte	m[4];
+	u8	b[4];
+	u8	m[4];
 
 	for (i=0 ; i<4 ; i++)
 	{
@@ -48794,11 +48789,11 @@ static qboolean StringToFilter (char *s, ipfilter_t *f)
 SV_FilterPacket
 =================
 */
-qboolean SV_FilterPacket (char *from)
+bool SV_FilterPacket (char *from)
 {
 	int		i;
 	unsigned	in;
-	byte m[4];
+	u8 m[4];
 	char *p;
 
 	i = 0;
@@ -48894,7 +48889,7 @@ SV_ListIP_f
 void SVCmd_ListIP_f (void)
 {
 	int		i;
-	byte	b[4];
+	u8	b[4];
 
 	gi.cprintf (NULL, PRINT_HIGH, "Filter list:\n");
 	for (i=0 ; i<numipfilters ; i++)
@@ -48913,7 +48908,7 @@ void SVCmd_WriteIP_f (void)
 {
 	FILE	*f;
 	char	name[MAX_OSPATH];
-	byte	b[4];
+	u8	b[4];
 	int		i;
 	cvar_t	*game;
 
@@ -48979,7 +48974,7 @@ void	ServerCommand (void)
 
 /*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8)
 Fire an origin based temp entity event to the clients.
-"style"		type byte
+"style"		type u8
 */
 static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
@@ -50659,7 +50654,7 @@ static void turret_driver_die(edict_t* self, edict_t* inflictor, edict_t* attack
 	infantry_die (self, inflictor, attacker, damage, self->s.origin);
 }
 
-qboolean FindTarget (edict_t* self);
+bool FindTarget (edict_t* self);
 
 void turret_driver_think (edict_t* self)
 {
@@ -50835,7 +50830,7 @@ edict_t *G_Find (edict_t *from, int fieldofs, char *match)
 	{
 		if (!from->inuse)
 			continue;
-		s = *(char **) ((byte *)from + fieldofs);
+		s = *(char **) ((u8 *)from + fieldofs);
 		if (!s)
 			continue;
 		if (!Q_stricmp (s, match))
@@ -51315,7 +51310,7 @@ Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
-qboolean KillBox (edict_t *ent)
+bool KillBox (edict_t *ent)
 {
 	trace_t		tr;
 
@@ -51381,7 +51376,7 @@ fire_hit
 Used for all impact (hit/punch/slash) attacks
 =================
 */
-qboolean fire_hit (edict_t* self, vec3_t aim, int damage, int kick)
+bool fire_hit (edict_t* self, vec3_t aim, int damage, int kick)
 {
 	trace_t		tr;
 	vec3_t		forward, right, up;
@@ -51461,7 +51456,7 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 	float		r;
 	float		u;
 	vec3_t		water_start;
-	qboolean	water = false;
+	bool	water = false;
 	int			content_mask = MASK_SHOT | MASK_WATER;
 
 	tr = gi.trace (self->s.origin, NULL, NULL, start, self, MASK_SHOT);
@@ -51663,7 +51658,7 @@ void blaster_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* 
 	G_FreeEdict (self);
 }
 
-void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int effect, qboolean hyper)
+void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int effect, bool hyper)
 {
 	edict_t	*bolt;
 	trace_t	tr;
@@ -51838,7 +51833,7 @@ void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int s
 	gi.linkentity (grenade);
 }
 
-void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held)
+void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, bool held)
 {
 	edict_t	*grenade;
 	vec3_t	dir;
@@ -51984,7 +51979,7 @@ void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick
 	trace_t		tr;
 	edict_t		*ignore;
 	int			mask;
-	qboolean	water;
+	bool	water;
 
 	VectorMA (start, 8192, aimdir, end);
 	VectorCopy (start, from);
@@ -54326,7 +54321,7 @@ boss2
 
 void BossExplode (edict_t* self);
 
-qboolean infront (edict_t* self, edict_t* other);
+bool infront (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -54812,7 +54807,7 @@ static void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	self->monsterinfo.currentmove = &boss2_move_death;
 }
 
-qboolean Boss2_CheckAttack (edict_t* self)
+bool Boss2_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -55899,7 +55894,7 @@ jorg
 /* ============ end inlined header: game/m_boss31.h ============ */
 
 extern void SP_monster_makron (edict_t* self);
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -56429,7 +56424,7 @@ static void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	self->monsterinfo.currentmove = &jorg_move_death;
 }
 
-qboolean Jorg_CheckAttack (edict_t* self)
+bool Jorg_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -56592,7 +56587,7 @@ Makron -- Final Boss
 /* already inlined above: game/g_local.h */
 /* already inlined above: game/m_boss32.h */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 void MakronRailgun (edict_t* self);
 void MakronSaveloc (edict_t* self);
@@ -57267,7 +57262,7 @@ static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 
 }
 
-qboolean Makron_CheckAttack (edict_t* self)
+bool Makron_CheckAttack (edict_t* self)
 {
 	vec3_t	spot1, spot2;
 	vec3_t	temp;
@@ -58989,7 +58984,7 @@ chick
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_chick.h ============ */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 void chick_stand (edict_t* self);
 void chick_run (edict_t* self);
@@ -61569,7 +61564,7 @@ flyer
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flyer.h ============ */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 static int	nextmove;			// Used for start/stop frames
 
@@ -63162,7 +63157,7 @@ void gunner_search (edict_t* self)
 }
 
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 void GunnerGrenade (edict_t* self);
 void GunnerFire (edict_t* self);
 void gunner_fire_chain(edict_t* self);
@@ -64025,7 +64020,7 @@ hover
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_hover.h ============ */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 
 static int	sound_pain1;
@@ -67116,7 +67111,7 @@ MEDIC
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_medic.h ============ */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 
 static int	sound_idle1;
@@ -67796,7 +67791,7 @@ void medic_attack(edict_t* self)
 		self->monsterinfo.currentmove = &medic_move_attackBlaster;
 }
 
-qboolean medic_checkattack (edict_t* self)
+bool medic_checkattack (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_MEDIC)
 	{
@@ -67882,7 +67877,7 @@ is not a staircase.
 */
 int c_yes, c_no;
 
-qboolean M_CheckBottom (edict_t *ent)
+bool M_CheckBottom (edict_t *ent)
 {
 	vec3_t	mins, maxs, start, stop;
 	trace_t	trace;
@@ -67957,7 +67952,7 @@ pr_global_struct->trace_normal is set to the normal of the blocking wall
 */
 //FIXME since we need to test end position contents here, can we avoid doing
 //it again later in catagorize position?
-qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
+bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 {
 	float		dz;
 	vec3_t		oldorg, neworg, end;
@@ -68198,7 +68193,7 @@ facing it.
 
 ======================
 */
-qboolean SV_StepDirection (edict_t *ent, float yaw, float dist)
+bool SV_StepDirection (edict_t *ent, float yaw, float dist)
 {
 	vec3_t		move, oldorigin;
 	float		delta;
@@ -68340,7 +68335,7 @@ SV_CloseEnough
 
 ======================
 */
-qboolean SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
+bool SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 {
 	int		i;
 
@@ -68387,7 +68382,7 @@ void M_MoveToGoal (edict_t *ent, float dist)
 M_walkmove
 ===============
 */
-qboolean M_walkmove (edict_t *ent, float yaw, float dist)
+bool M_walkmove (edict_t *ent, float yaw, float dist)
 {
 	vec3_t	move;
 
@@ -69080,14 +69075,14 @@ void mutant_jump (edict_t* self)
 // CHECKATTACK
 //
 
-qboolean mutant_check_melee (edict_t* self)
+bool mutant_check_melee (edict_t* self)
 {
 	if (range (self, self->enemy) == RANGE_MELEE)
 		return true;
 	return false;
 }
 
-qboolean mutant_check_jump (edict_t* self)
+bool mutant_check_jump (edict_t* self)
 {
 	vec3_t	v;
 	float	distance;
@@ -69114,7 +69109,7 @@ qboolean mutant_check_jump (edict_t* self)
 	return true;
 }
 
-qboolean mutant_checkattack (edict_t* self)
+bool mutant_checkattack (edict_t* self)
 {
 	if (!self->enemy || self->enemy->health <= 0)
 		return false;
@@ -69823,7 +69818,7 @@ static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage)
 }
 
 
-static qboolean parasite_drain_attack_ok (vec3_t start, vec3_t end)
+static bool parasite_drain_attack_ok (vec3_t start, vec3_t end)
 {
 	vec3_t	dir, angles;
 
@@ -72381,7 +72376,7 @@ SUPERTANK
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_supertank.h ============ */
 
-qboolean visible (edict_t* self, edict_t* other);
+bool visible (edict_t* self, edict_t* other);
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -74656,7 +74651,7 @@ void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
 }
 
 
-qboolean IsFemale (edict_t *ent)
+bool IsFemale (edict_t *ent)
 {
 	char		*info;
 
@@ -74669,7 +74664,7 @@ qboolean IsFemale (edict_t *ent)
 	return false;
 }
 
-qboolean IsNeutral (edict_t *ent)
+bool IsNeutral (edict_t *ent)
 {
 	char		*info;
 
@@ -74688,7 +74683,7 @@ static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker)
 	int			mod;
 	char		*message;
 	char		*message2;
-	qboolean	ff;
+	bool	ff;
 
 	if (coop->value && attacker->client)
 		meansOfDeath |= MOD_FRIENDLY_FIRE;
@@ -74886,7 +74881,7 @@ void TossClientWeapon (edict_t* self)
 {
 	gitem_t		*item;
 	edict_t		*drop;
-	qboolean	quad;
+	bool	quad;
 	float		spread;
 
 	if (!deathmatch->value)
@@ -75894,7 +75889,7 @@ Changing levels will NOT cause this to be called again, but
 loadgames will.
 ============
 */
-qboolean ClientConnect (edict_t *ent, char *userinfo)
+bool ClientConnect (edict_t *ent, char *userinfo)
 {
 	char	*value;
 
@@ -76013,7 +76008,7 @@ unsigned CheckBlock (void *b, int c)
 	int	v,i;
 	v = 0;
 	for (i=0 ; i<c ; i++)
-		v+= ((byte *)b)[i];
+		v+= ((u8 *)b)[i];
 	return v;
 }
 void PrintPmove (pmove_t *pm)
@@ -76510,7 +76505,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 DeathmatchScoreboard
 
 Draw instead of help message.
-Note that it isn't that hard to overflow the 1400 byte message limit!
+Note that it isn't that hard to overflow the 1400 u8 message limit!
 ==================
 */
 void DeathmatchScoreboard (edict_t *ent)
@@ -76849,7 +76844,7 @@ the player has been recently.  It is used by monsters for pursuit.
 
 edict_t		*trail[TRAIL_LENGTH];
 int			trail_head;
-qboolean	trail_active = false;
+bool	trail_active = false;
 
 #define NEXT(n)		(((n) + 1) & (TRAIL_LENGTH - 1))
 #define PREV(n)		(((n) - 1) & (TRAIL_LENGTH - 1))
@@ -77510,8 +77505,8 @@ P_WorldEffects
 */
 void P_WorldEffects (void)
 {
-	qboolean	breather;
-	qboolean	envirosuit;
+	bool	breather;
+	bool	envirosuit;
 	int			waterlevel, old_waterlevel;
 
 	if (current_player->movetype == MOVETYPE_NOCLIP)
@@ -77787,7 +77782,7 @@ G_SetClientFrame
 void G_SetClientFrame (edict_t *ent)
 {
 	gclient_t	*client;
-	qboolean	duck, run;
+	bool	duck, run;
 
 	if (ent->s.modelindex != 255)
 		return;		// not in the player model
@@ -78026,11 +78021,11 @@ void ClientEndServerFrame (edict_t *ent)
 /* already inlined above: game/m_player.h */
 
 
-static qboolean	is_quad;
-static byte		is_silenced;
+static bool	is_quad;
+static u8		is_silenced;
 
 
-void weapon_grenade_fire (edict_t *ent, qboolean held);
+void weapon_grenade_fire (edict_t *ent, bool held);
 
 
 static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
@@ -78118,7 +78113,7 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 }
 
 
-qboolean Pickup_Weapon (edict_t *ent, edict_t* other)
+bool Pickup_Weapon (edict_t *ent, edict_t* other)
 {
 	int			index;
 	gitem_t		*ammo;
@@ -78546,7 +78541,7 @@ GRENADE
 #define GRENADE_MINSPEED	400
 #define GRENADE_MAXSPEED	800
 
-void weapon_grenade_fire (edict_t *ent, qboolean held)
+void weapon_grenade_fire (edict_t *ent, bool held)
 {
 	vec3_t	offset;
 	vec3_t	forward, right;
@@ -78816,7 +78811,7 @@ BLASTER / HYPERBLASTER
 ======================================================================
 */
 
-void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
+void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, bool hyper, int effect)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -80038,9 +80033,9 @@ typedef struct msurface_s
 	int			dlightbits;
 
 	int			lightmaptexturenum;
-	byte		styles[MAXLIGHTMAPS];
+	u8		styles[MAXLIGHTMAPS];
 	float		cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	byte		*samples;		// [numstyles*surfsize]
+	u8		*samples;		// [numstyles*surfsize]
 } msurface_t;
 
 typedef struct mnode_s
@@ -80110,7 +80105,7 @@ typedef struct model_s
 //
 // solid volume for clipping
 //
-	qboolean	clipbox;
+	bool	clipbox;
 	vec3_t		clipmins, clipmaxs;
 
 //
@@ -80152,7 +80147,7 @@ typedef struct model_s
 
 	dvis_t		*vis;
 
-	byte		*lightdata;
+	u8		*lightdata;
 
 	// for alias models and skins
 	image_t		*skins[MAX_MD2SKINS];
@@ -80165,9 +80160,9 @@ typedef struct model_s
 
 void	Mod_Init (void);
 void	Mod_ClearAll (void);
-model_t *Mod_ForName (char *name, qboolean crash);
+model_t *Mod_ForName (char *name, bool crash);
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
-byte	*Mod_ClusterPVS (int cluster, model_t *model);
+u8	*Mod_ClusterPVS (int cluster, model_t *model);
 
 void	Mod_Modellist_f (void);
 
@@ -80305,7 +80300,7 @@ void R_TranslatePlayerSkin (int playernum);
 void GL_Bind (int texnum);
 void GL_MBind( GLenum target, int texnum );
 void GL_TexEnv( GLenum value );
-void GL_EnableMultitexture( qboolean enable );
+void GL_EnableMultitexture( bool enable );
 void GL_SelectTexture( GLenum );
 
 void R_LightPoint (vec3_t p, vec3_t color);
@@ -80335,7 +80330,7 @@ void R_RenderBrushPoly (msurface_t *fa);
 void R_InitParticleTexture (void);
 void Draw_InitLocal (void);
 void GL_SubdivideSurface (msurface_t *fa);
-qboolean R_CullBox (vec3_t mins, vec3_t maxs);
+bool R_CullBox (vec3_t mins, vec3_t maxs);
 void R_RotateForEntity (Entity *e);
 void R_MarkLeaves (void);
 
@@ -80373,8 +80368,8 @@ int		Draw_GetPalette (void);
 
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
 
-void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height);
-image_t *GL_LoadPic (char *name, byte *pic, int width, int height, imagetype_t type, int bits);
+void LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height);
+image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits);
 image_t	*GL_FindImage (char *name, imagetype_t type);
 void	GL_TextureMode( char *string );
 void	GL_ImageList_f (void);
@@ -80444,13 +80439,13 @@ typedef struct
 	const char *version_string;
 	const char *extensions_string;
 
-	qboolean	allow_cds;
+	bool	allow_cds;
 } glconfig_t;
 
 typedef struct
 {
 	float inverse_intensity;
-	qboolean fullscreen;
+	bool fullscreen;
 
 	unsigned char *d_16to8table;
 
@@ -80460,7 +80455,7 @@ typedef struct
 	int currenttmu;
 
 	float camera_separation;
-	qboolean stereo_enabled;
+	bool stereo_enabled;
 
 	unsigned char originalRedGammaTable[256];
 	unsigned char originalGreenGammaTable[256];
@@ -80472,9 +80467,9 @@ extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame( float camera_separation );
 
-int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, qboolean fullscreen );
-void		GLimp_AppActivate( qboolean active );
-void		GLimp_EnableLogging( qboolean enable );
+int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, bool fullscreen );
+void		GLimp_AppActivate( bool active );
+void		GLimp_EnableLogging( bool enable );
 void		GLimp_LogNewFrame( void );
 
 #endif	// GL_LOCAL_H
@@ -80483,7 +80478,7 @@ void		GLimp_LogNewFrame( void );
 
 image_t		*draw_chars;
 
-extern	qboolean	scrap_dirty;
+extern	bool	scrap_dirty;
 void Scrap_Upload (void);
 
 
@@ -80697,7 +80692,7 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	union
 	{
 		unsigned	c;
-		byte		v[4];
+		u8		v[4];
 	} color;
 
 	assert((unsigned)c <= 255);
@@ -80752,12 +80747,12 @@ void Draw_FadeScreen (void)
 
 extern unsigned	r_rawpalette[256];
 
-void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data)
+void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 {
 	unsigned	image32[256*256];
 	unsigned char image8[256*256];
 	int			i, j, trows;
-	byte		*source;
+	u8		*source;
 	int			frac, fracstep;
 	float		hscale;
 	int			row;
@@ -80859,15 +80854,15 @@ image_t		gltextures[MAX_GLTEXTURES];
 int			numgltextures;
 int			base_textureid;		// gltextures[i] = base_textureid+i
 
-static byte			 intensitytable[256];
+static u8			 intensitytable[256];
 static unsigned char gammatable[256];
 
 cvar_t		*intensity;
 
 unsigned	d_8to24table[256];
 
-qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean is_sky );
-qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap);
+bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap, bool is_sky );
+bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
 
 
 int		gl_solid_format = 3;
@@ -80902,7 +80897,7 @@ void GL_SetTexturePalette( unsigned palette[256] )
 	}
 }
 
-void GL_EnableMultitexture( qboolean enable )
+void GL_EnableMultitexture( bool enable )
 {
 	if ( !qglSelectTextureSGIS )
 		return;
@@ -81173,8 +81168,8 @@ void	GL_ImageList_f (void)
 #define	BLOCK_HEIGHT	256
 
 int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-byte		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
-qboolean	scrap_dirty;
+u8		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
+bool	scrap_dirty;
 
 // returns a texture number and the position inside it
 int Scrap_AllocBlock (int w, int h, int *x, int *y)
@@ -81227,13 +81222,13 @@ void Scrap_Upload (void)
 	scrap_dirty = false;
 }
 
-void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *height) {
-	byte	*raw;
+void LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height) {
+	u8	*raw;
 	pcx_t	*pcx;
 	int		x, y;
 	int		len;
 	int		dataByte, runLength;
-	byte	*out, *pix;
+	u8	*out, *pix;
 
 	*pic = NULL;
 	*palette = NULL;
@@ -81283,7 +81278,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 	if (palette)
 	{
 		*palette = malloc(768);
-		memcpy (*palette, (byte *)pcx + len - 768, 768);
+		memcpy (*palette, (u8 *)pcx + len - 768, 768);
 	}
 
 	if (width)
@@ -81311,7 +81306,7 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 
 	}
 
-	if ( raw - (byte *)pcx > len)
+	if ( raw - (u8 *)pcx > len)
 	{
 		Com_Printf("PCX file %s was malformed", filename);
 		free (*pic);
@@ -81343,16 +81338,16 @@ typedef struct _TargaHeader {
 LoadTGA
 =============
 */
-void LoadTGA (char *name, byte **pic, int *width, int *height)
+void LoadTGA (char *name, u8 **pic, int *width, int *height)
 {
 	int		columns, rows, numPixels;
-	byte	*pixbuf;
+	u8	*pixbuf;
 	int		row, column;
-	byte	*buf_p;
-	byte	*buffer;
+	u8	*buf_p;
+	u8	*buffer;
 	TargaHeader		targa_header;
-	byte			*targa_rgba;
-	byte tmp[2];
+	u8			*targa_rgba;
+	u8 tmp[2];
 
 	*pic = NULL;
 
@@ -81559,9 +81554,9 @@ typedef struct
 	else if (pos[off] != 255) fdc = pos[off]; \
 }
 
-void R_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
+void R_FloodFillSkin( u8 *skin, int skinwidth, int skinheight )
 {
-	byte				fillcolor = *skin; // assume this is the pixel to fill
+	u8				fillcolor = *skin; // assume this is the pixel to fill
 	floodfill_t			fifo[FLOODFILL_FIFO_SIZE];
 	int					inpt = 0, outpt = 0;
 	int					filledcolor = -1;
@@ -81593,7 +81588,7 @@ void R_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
 	{
 		int			x = fifo[outpt].x, y = fifo[outpt].y;
 		int			fdc = filledcolor;
-		byte		*pos = &skin[x + skinwidth * y];
+		u8		*pos = &skin[x + skinwidth * y];
 
 		outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
 
@@ -81619,7 +81614,7 @@ void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,
 	unsigned	*inrow, *inrow2;
 	unsigned	frac, fracstep;
 	unsigned	p1[1024], p2[1024];
-	byte		*pix1, *pix2, *pix3, *pix4;
+	u8		*pix1, *pix2, *pix3, *pix4;
 
 	fracstep = inwidth*0x10000/outwidth;
 
@@ -81643,14 +81638,14 @@ void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,
 		frac = fracstep >> 1;
 		for (j=0 ; j<outwidth ; j++)
 		{
-			pix1 = (byte *)inrow + p1[j];
-			pix2 = (byte *)inrow + p2[j];
-			pix3 = (byte *)inrow2 + p1[j];
-			pix4 = (byte *)inrow2 + p2[j];
-			((byte *)(out+j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
-			((byte *)(out+j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
-			((byte *)(out+j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
-			((byte *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
+			pix1 = (u8 *)inrow + p1[j];
+			pix2 = (u8 *)inrow + p2[j];
+			pix3 = (u8 *)inrow2 + p1[j];
+			pix4 = (u8 *)inrow2 + p2[j];
+			((u8 *)(out+j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
+			((u8 *)(out+j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
+			((u8 *)(out+j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
+			((u8 *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
 		}
 	}
 }
@@ -81663,14 +81658,14 @@ Scale up the pixel values in a texture to increase the
 lighting range
 ================
 */
-void GL_LightScaleTexture (unsigned *in, int inwidth, int inheight, qboolean only_gamma )
+void GL_LightScaleTexture (unsigned *in, int inwidth, int inheight, bool only_gamma )
 {
 	if ( only_gamma )
 	{
 		int		i, c;
-		byte	*p;
+		u8	*p;
 
-		p = (byte *)in;
+		p = (u8 *)in;
 
 		c = inwidth*inheight;
 		for (i=0 ; i<c ; i++, p+=4)
@@ -81683,9 +81678,9 @@ void GL_LightScaleTexture (unsigned *in, int inwidth, int inheight, qboolean onl
 	else
 	{
 		int		i, c;
-		byte	*p;
+		u8	*p;
 
-		p = (byte *)in;
+		p = (u8 *)in;
 
 		c = inwidth*inheight;
 		for (i=0 ; i<c ; i++, p+=4)
@@ -81704,10 +81699,10 @@ GL_MipMap
 Operates in place, quartering the size of the texture
 ================
 */
-void GL_MipMap (byte *in, int width, int height)
+void GL_MipMap (u8 *in, int width, int height)
 {
 	int		i, j;
-	byte	*out;
+	u8	*out;
 
 	width <<=2;
 	height >>= 1;
@@ -81752,16 +81747,16 @@ void GL_BuildPalettedTexture( unsigned char *paletted_texture, unsigned char *sc
 }
 
 int		upload_width, upload_height;
-qboolean uploaded_paletted;
+bool uploaded_paletted;
 
-qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
+bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 {
 	int			samples;
 	unsigned	scaled[256*256];
 	unsigned char paletted_texture[256*256];
 	int			scaled_width, scaled_height;
 	int			i, c;
-	byte		*scan;
+	u8		*scan;
 	int comp;
 
 	uploaded_paletted = false;
@@ -81800,7 +81795,7 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 
 	// scan the texture for any non-255 alpha
 	c = width*height;
-	scan = ((byte *)data) + 3;
+	scan = ((u8 *)data) + 3;
 	samples = gl_solid_format;
 	for (i=0 ; i<c ; i++, scan += 4)
 	{
@@ -81891,7 +81886,7 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 		miplevel = 0;
 		while (scaled_width > 1 || scaled_height > 1)
 		{
-			GL_MipMap ((byte *)scaled, scaled_width, scaled_height);
+			GL_MipMap ((u8 *)scaled, scaled_width, scaled_height);
 			scaled_width >>= 1;
 			scaled_height >>= 1;
 			if (scaled_width < 1)
@@ -81938,7 +81933,7 @@ done: ;
 }
 
 // Returns has_alpha
-static qboolean GL_Upload8(byte *data, int width, int height,  qboolean mipmap, qboolean is_sky) {
+static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap, bool is_sky) {
 	unsigned	trans[512*256];
 	int			i;
 	int			p;
@@ -81985,9 +81980,9 @@ static qboolean GL_Upload8(byte *data, int width, int height,  qboolean mipmap, 
 				else
 					p = 0;
 				// copy rgb components
-				((byte *)&trans[i])[0] = ((byte *)&d_8to24table[p])[0];
-				((byte *)&trans[i])[1] = ((byte *)&d_8to24table[p])[1];
-				((byte *)&trans[i])[2] = ((byte *)&d_8to24table[p])[2];
+				((u8 *)&trans[i])[0] = ((u8 *)&d_8to24table[p])[0];
+				((u8 *)&trans[i])[1] = ((u8 *)&d_8to24table[p])[1];
+				((u8 *)&trans[i])[2] = ((u8 *)&d_8to24table[p])[2];
 			}
 		}
 
@@ -82005,7 +82000,7 @@ GL_LoadPic
 This is also used as an entry point for the generated r_notexture
 ================
 */
-image_t *GL_LoadPic (char *name, byte *pic, int width, int height, imagetype_t type, int bits)
+image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits)
 {
 	image_t		*image;
 	int			i;
@@ -82105,7 +82100,7 @@ image_t *GL_LoadWal (char *name)
 	height = LittleLong (mt->height);
 	ofs = LittleLong (mt->offsets[0]);
 
-	image = GL_LoadPic (name, (byte *)mt + ofs, width, height, it_wall, 8);
+	image = GL_LoadPic (name, (u8 *)mt + ofs, width, height, it_wall, 8);
 
 	FS_FreeFile ((void *)mt);
 
@@ -82123,7 +82118,7 @@ image_t	*GL_FindImage (char *name, imagetype_t type)
 {
 	image_t	*image;
 	int		i, len;
-	byte	*pic, *palette;
+	u8	*pic, *palette;
 	int		width, height;
 
 	if (!name)
@@ -82232,7 +82227,7 @@ int Draw_GetPalette (void)
 	int		i;
 	int		r, g, b;
 	unsigned	v;
-	byte	*pic, *pal;
+	u8	*pic, *pal;
 	int		width, height;
 
 	// get the palette
@@ -82477,7 +82472,7 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 	int			s, t, ds, dt;
 	int			i;
 	mtexinfo_t	*tex;
-	byte		*lightmap;
+	u8		*lightmap;
 	int			maps;
 	int			r;
 
@@ -82728,12 +82723,12 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the floating format in blocklights
 ===============
 */
-void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
+void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 {
 	int			smax, tmax;
 	int			r, g, b, a, max;
 	int			i, j, size;
-	byte		*lightmap;
+	u8		*lightmap;
 	float		scale[4];
 	int			nummaps;
 	float		*bl;
@@ -83265,15 +83260,15 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 	int		index_xyz;
 	float	*lerp;
 
-	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames
+	frame = (daliasframe_t *)((u8 *)paliashdr + paliashdr->ofs_frames
 		+ currententity->frame * paliashdr->framesize);
 	verts = v = frame->verts;
 
-	oldframe = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames
+	oldframe = (daliasframe_t *)((u8 *)paliashdr + paliashdr->ofs_frames
 		+ currententity->oldframe * paliashdr->framesize);
 	ov = oldframe->verts;
 
-	order = (int *)((byte *)paliashdr + paliashdr->ofs_glcmds);
+	order = (int *)((u8 *)paliashdr + paliashdr->ofs_glcmds);
 
 //	glTranslatef (frame->translate[0], frame->translate[1], frame->translate[2]);
 //	glScalef (frame->scale[0], frame->scale[1], frame->scale[2]);
@@ -83467,7 +83462,7 @@ static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 
 	height = 0;
 
-	order = (int *)((byte *)paliashdr + paliashdr->ofs_glcmds);
+	order = (int *)((u8 *)paliashdr + paliashdr->ofs_glcmds);
 
 	height = -lheight + 1.0;
 
@@ -83515,7 +83510,7 @@ static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 /*
 ** R_CullAliasModel
 */
-static qboolean R_CullAliasModel( vec3_t bbox[8], Entity *e )
+static bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
 {
 	int i;
 	vec3_t		mins, maxs;
@@ -83540,11 +83535,11 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], Entity *e )
 		e->oldframe = 0;
 	}
 
-	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
+	pframe = ( daliasframe_t * ) ( ( u8 * ) paliashdr +
 									  paliashdr->ofs_frames +
 									  e->frame * paliashdr->framesize);
 
-	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
+	poldframe = ( daliasframe_t * ) ( ( u8 * ) paliashdr +
 									  paliashdr->ofs_frames +
 									  e->oldframe * paliashdr->framesize);
 
@@ -83995,9 +83990,9 @@ int		modfilelen;
 void Mod_LoadSpriteModel (model_t *mod, void *buffer);
 void Mod_LoadBrushModel (model_t *mod, void *buffer);
 void Mod_LoadAliasModel (model_t *mod, void *buffer);
-model_t *Mod_LoadModel (model_t *mod, qboolean crash);
+model_t *Mod_LoadModel (model_t *mod, bool crash);
 
-byte	mod_novis[MAX_MAP_LEAFS/8];
+u8	mod_novis[MAX_MAP_LEAFS/8];
 
 #define	MAX_MOD_KNOWN	512
 model_t	mod_known[MAX_MOD_KNOWN];
@@ -84043,11 +84038,11 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 Mod_DecompressVis
 ===================
 */
-byte *Mod_DecompressVis (byte *in, model_t *model)
+u8 *Mod_DecompressVis (u8 *in, model_t *model)
 {
-	static byte	decompressed[MAX_MAP_LEAFS/8];
+	static u8	decompressed[MAX_MAP_LEAFS/8];
 	int		c;
-	byte	*out;
+	u8	*out;
 	int		row;
 
 	row = (model->vis->numclusters+7)>>3;
@@ -84088,11 +84083,11 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 Mod_ClusterPVS
 ==============
 */
-byte *Mod_ClusterPVS (int cluster, model_t *model)
+u8 *Mod_ClusterPVS (int cluster, model_t *model)
 {
 	if (cluster == -1 || !model->vis)
 		return mod_novis;
-	return Mod_DecompressVis ( (byte *)model->vis + model->vis->bitofs[cluster][DVIS_PVS],
+	return Mod_DecompressVis ( (u8 *)model->vis + model->vis->bitofs[cluster][DVIS_PVS],
 		model);
 }
 
@@ -84129,7 +84124,7 @@ void Mod_Init (void)
 
 static int hunk_cursize = 0;
 static int hunkmaxsize = 0;
-static byte* hunk_membase;
+static u8* hunk_membase;
 
 static void* Hunk_Begin(int maxsize) {
 	// reserve a huge chunk of memory, but don't commit any yet
@@ -84141,7 +84136,7 @@ static void* Hunk_Begin(int maxsize) {
 }
 
 // Loads in a model for the given name
-model_t *Mod_ForName (char *name, qboolean crash)
+model_t *Mod_ForName (char *name, bool crash)
 {
 	model_t	*mod;
 	unsigned *buf;
@@ -84231,7 +84226,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	return mod;
 }
 
-byte	*mod_base;
+u8	*mod_base;
 
 static void* Hunk_Alloc(int size) {
 	// round to cacheline
@@ -84787,7 +84782,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	assert(i == BSPVERSION);
 
 	// swap all the lumps
-	mod_base = (byte *)header;
+	mod_base = (u8 *)header;
 
 	for (i=0 ; i<(int)sizeof(dheader_t)/4 ; i++)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
@@ -84866,7 +84861,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	pheader = Hunk_Alloc (LittleLong(pinmodel->ofs_end));
 
-	// byte swap the header fields and sanity check
+	// u8 swap the header fields and sanity check
 	for (i=0 ; i<(int)sizeof(dmdl_t)/4 ; i++)
 		((int *)pheader)[i] = LittleLong (((int *)buffer)[i]);
 
@@ -84877,8 +84872,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	assert(pheader->num_frames > 0);
 
 	// load base s and t vertices (not used in gl version)
-	pinst = (dstvert_t *) ((byte *)pinmodel + pheader->ofs_st);
-	poutst = (dstvert_t *) ((byte *)pheader + pheader->ofs_st);
+	pinst = (dstvert_t *) ((u8 *)pinmodel + pheader->ofs_st);
+	poutst = (dstvert_t *) ((u8 *)pheader + pheader->ofs_st);
 
 	for (i=0 ; i<pheader->num_st ; i++)
 	{
@@ -84887,8 +84882,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	}
 
 	// load triangle lists
-	pintri = (dtriangle_t *) ((byte *)pinmodel + pheader->ofs_tris);
-	pouttri = (dtriangle_t *) ((byte *)pheader + pheader->ofs_tris);
+	pintri = (dtriangle_t *) ((u8 *)pinmodel + pheader->ofs_tris);
+	pouttri = (dtriangle_t *) ((u8 *)pheader + pheader->ofs_tris);
 
 	for (i=0 ; i<pheader->num_tris ; i++)
 	{
@@ -84902,9 +84897,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	// load the frames
 	for (i=0 ; i<pheader->num_frames ; i++)
 	{
-		pinframe = (daliasframe_t *) ((byte *)pinmodel
+		pinframe = (daliasframe_t *) ((u8 *)pinmodel
 			+ pheader->ofs_frames + i * pheader->framesize);
-		poutframe = (daliasframe_t *) ((byte *)pheader
+		poutframe = (daliasframe_t *) ((u8 *)pheader
 			+ pheader->ofs_frames + i * pheader->framesize);
 
 		memcpy (poutframe->name, pinframe->name, sizeof(poutframe->name));
@@ -84924,8 +84919,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	//
 	// load the glcmds
 	//
-	pincmd = (int *) ((byte *)pinmodel + pheader->ofs_glcmds);
-	poutcmd = (int *) ((byte *)pheader + pheader->ofs_glcmds);
+	pincmd = (int *) ((u8 *)pinmodel + pheader->ofs_glcmds);
+	poutcmd = (int *) ((u8 *)pheader + pheader->ofs_glcmds);
 	for (i=0 ; i<pheader->num_glcmds ; i++)
 		poutcmd[i] = LittleLong (pincmd[i]);
 
@@ -84970,7 +84965,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	assert(sprout->version == SPRITE_VERSION);
 	assert(sprout->numframes <= MAX_MD2SKINS);
 
-	// byte swap everything
+	// u8 swap everything
 	for (i=0 ; i<sprout->numframes ; i++)
 	{
 		sprout->frames[i].width = LittleLong (sprin->frames[i].width);
@@ -85185,7 +85180,7 @@ R_CullBox
 Returns true if the box is completely outside the frustom
 =================
 */
-qboolean R_CullBox (vec3_t mins, vec3_t maxs)
+bool R_CullBox (vec3_t mins, vec3_t maxs)
 {
 	int		i;
 
@@ -85433,7 +85428,7 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	int				i;
 	vec3_t			up, right;
 	float			scale;
-	byte			color[4];
+	u8			color[4];
 
 	GL_Bind(r_particletexture->texnum);
 	qglDepthMask( GL_FALSE );		// no z buffering
@@ -85941,8 +85936,8 @@ void R_RenderFrame (refdef_t *fd)
 }
 
 static i64 screen_resolution_index = 0;
-static qboolean fullscreen_mode = false;
-static qboolean vid_ref_modified = false;
+static bool fullscreen_mode = false;
+static bool vid_ref_modified = false;
 
 static void R_SetMode() {
 	assert(gl_config.allow_cds);
@@ -85960,9 +85955,9 @@ typedef struct {
 
 	HINSTANCE hinstOpenGL;	// HINSTANCE for the OpenGL library
 
-	qboolean minidriver;
-	qboolean allowdisplaydepthchange;
-	qboolean mcd_accelerated;
+	bool minidriver;
+	bool allowdisplaydepthchange;
+	bool mcd_accelerated;
 
 	FILE *log_fp;
 } glwstate_t;
@@ -86144,7 +86139,7 @@ void R_SetPalette ( const unsigned char *palette)
 {
 	int		i;
 
-	byte *rp = ( byte * ) r_rawpalette;
+	u8 *rp = ( u8 * ) r_rawpalette;
 
 	if ( palette )
 	{
@@ -86272,7 +86267,7 @@ void	Draw_FadeScreen (void);
 R_InitParticleTexture
 ==================
 */
-byte	dottexture[8][8] =
+u8	dottexture[8][8] =
 {
 	{0,0,0,0,0,0,0,0},
 	{0,0,1,1,0,0,0,0},
@@ -86287,7 +86282,7 @@ byte	dottexture[8][8] =
 void R_InitParticleTexture (void)
 {
 	int		x,y;
-	byte	data[8][8][4];
+	u8	data[8][8][4];
 
 	//
 	// particle texture
@@ -86302,7 +86297,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = dottexture[x][y]*255;
 		}
 	}
-	r_particletexture = GL_LoadPic ("***particle***", (byte *)data, 8, 8, it_sprite, 32);
+	r_particletexture = GL_LoadPic ("***particle***", (u8 *)data, 8, 8, it_sprite, 32);
 
 	//
 	// also use this for bad textures, but without alpha
@@ -86317,12 +86312,12 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = 255;
 		}
 	}
-	r_notexture = GL_LoadPic ("***r_notexture***", (byte *)data, 8, 8, it_wall, 32);
+	r_notexture = GL_LoadPic ("***r_notexture***", (u8 *)data, 8, 8, it_wall, 32);
 }
 
 void GL_ScreenShot_f(void)
 {
-	byte		*buffer;
+	u8		*buffer;
 	char		picname[80];
 	char		checkname[MAX_OSPATH];
 	int			i, c, temp;
@@ -86504,18 +86499,18 @@ typedef struct
 
 	// the lightmap texture data needs to be kept in
 	// main memory so texsubimage can update properly
-	byte		lightmap_buffer[4*BLOCK_WIDTH*BLOCK_HEIGHT];
+	u8		lightmap_buffer[4*BLOCK_WIDTH*BLOCK_HEIGHT];
 } gllightmapstate_t;
 
 static gllightmapstate_t gl_lms;
 
 
 static void		LM_InitBlock( void );
-static void		LM_UploadBlock( qboolean dynamic );
-static qboolean	LM_AllocBlock (int w, int h, int *x, int *y);
+static void		LM_UploadBlock( bool dynamic );
+static bool	LM_AllocBlock (int w, int h, int *x, int *y);
 
 extern void R_SetCacheState( msurface_t *surf );
-extern void R_BuildLightMap (msurface_t *surf, byte *dest, int stride);
+extern void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride);
 
 /*
 =============================================================
@@ -86562,7 +86557,7 @@ glpoly_t *WaterWarpPolyVerts (glpoly_t *p)
 {
 	int		i;
 	float	*v, *nv;
-	static byte	buffer[1024];
+	static u8	buffer[1024];
 	glpoly_t *out;
 
 	out = (glpoly_t *)buffer;
@@ -86854,7 +86849,7 @@ void R_BlendLightmaps (void)
 		for ( surf = gl_lms.lightmap_surfaces[0]; surf != 0; surf = surf->lightmapchain )
 		{
 			int		smax, tmax;
-			byte	*base;
+			u8	*base;
 
 			smax = (surf->extents[0]>>4)+1;
 			tmax = (surf->extents[1]>>4)+1;
@@ -86888,7 +86883,7 @@ void R_BlendLightmaps (void)
 				LM_InitBlock();
 
 				// try uploading the block now
-				qboolean lm_alloc_block_result = LM_AllocBlock(smax, tmax, &surf->dlight_s, &surf->dlight_t);
+				bool lm_alloc_block_result = LM_AllocBlock(smax, tmax, &surf->dlight_s, &surf->dlight_t);
 				assert(lm_alloc_block_result);
 
 				base = gl_lms.lightmap_buffer;
@@ -86928,7 +86923,7 @@ void R_RenderBrushPoly (msurface_t *fa)
 {
 	int			maps;
 	image_t		*image;
-	qboolean is_dynamic = false;
+	bool is_dynamic = false;
 
 	c_brush_polys++;
 
@@ -87153,7 +87148,7 @@ static void GL_RenderLightmappedPoly( msurface_t *surf )
 	int		map;
 	float	*v;
 	image_t *image = R_TextureAnimation( surf->texinfo );
-	qboolean is_dynamic = false;
+	bool is_dynamic = false;
 	unsigned lmtex = surf->lightmaptexturenum;
 	glpoly_t *p;
 
@@ -87405,7 +87400,7 @@ void R_DrawBrushModel (Entity *e)
 {
 	vec3_t		mins, maxs;
 	int			i;
-	qboolean	rotated;
+	bool	rotated;
 
 	if (currentmodel->nummodelsurfaces == 0)
 		return;
@@ -87711,8 +87706,8 @@ cluster
 */
 void R_MarkLeaves (void)
 {
-	byte	*vis;
-	byte	fatvis[MAX_MAP_LEAFS/8];
+	u8	*vis;
+	u8	fatvis[MAX_MAP_LEAFS/8];
 	mnode_t	*node;
 	int		i, c;
 	mleaf_t	*leaf;
@@ -87803,7 +87798,7 @@ static void LM_InitBlock( void )
 	memset( gl_lms.allocated, 0, sizeof( gl_lms.allocated ) );
 }
 
-static void LM_UploadBlock( qboolean dynamic )
+static void LM_UploadBlock( bool dynamic )
 {
 	int texture;
 	int height = 0;
@@ -87855,7 +87850,7 @@ static void LM_UploadBlock( qboolean dynamic )
 }
 
 // returns a texture number and the position inside it
-static qboolean LM_AllocBlock (int w, int h, int *x, int *y)
+static bool LM_AllocBlock (int w, int h, int *x, int *y)
 {
 	int		i, j;
 	int		best, best2;
@@ -87972,7 +87967,7 @@ GL_CreateSurfaceLightmap
 void GL_CreateSurfaceLightmap (msurface_t *surf)
 {
 	int		smax, tmax;
-	byte	*base;
+	u8	*base;
 
 	if (surf->flags & (SURF_DRAWSKY|SURF_DRAWTURB))
 		return;
@@ -87984,7 +87979,7 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	{
 		LM_UploadBlock( false );
 		LM_InitBlock();
-		qboolean lm_alloc_block_result = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
+		bool lm_alloc_block_result = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
 		assert(lm_alloc_block_result);
 	}
 
@@ -88447,7 +88442,7 @@ void ClipSkyPolygon (int nump, vec3_t vecs, int stage)
 {
 	float	*norm;
 	float	*v;
-	qboolean	front, back;
+	bool	front, back;
 	float	d, e;
 	float	dists[MAX_CLIP_VERTS];
 	int		sides[MAX_CLIP_VERTS];
@@ -89144,7 +89139,8 @@ extern LPDIRECTSOUNDBUFFER pDSBuf;
 extern DWORD gSndBufSize;
 
 extern HWND			cl_hwnd;
-extern qboolean		ActiveApp, Minimized;
+static bool ActiveApp;
+static bool Minimized;
 
 void IN_MouseEvent (int mstate);
 
@@ -89209,7 +89205,7 @@ cvar_t	*joy_yawsensitivity;
 cvar_t	*joy_upthreshold;
 cvar_t	*joy_upsensitivity;
 
-qboolean	joy_avail, joy_advancedinit, joy_haspov;
+bool	joy_avail, joy_advancedinit, joy_haspov;
 DWORD		joy_oldbuttonstate, joy_oldpovstate;
 
 int			joy_id;
@@ -89218,7 +89214,7 @@ DWORD		joy_numbuttons;
 
 static JOYINFOEX	ji;
 
-qboolean	in_appactive;
+bool	in_appactive;
 
 // forward-referenced functions
 void IN_StartupJoystick (void);
@@ -89236,7 +89232,7 @@ void IN_JoyMove (usercmd_t *cmd);
 // mouse variables
 cvar_t	*m_filter;
 
-qboolean	mlooking;
+bool	mlooking;
 
 void IN_MLookDown (void) { mlooking = true; }
 void IN_MLookUp (void) {
@@ -89252,12 +89248,12 @@ int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
 
 int			old_x, old_y;
 
-qboolean	mouseactive;	// false when not focus app
+bool	mouseactive;	// false when not focus app
 
-qboolean	restore_spi;
-qboolean	mouseinitialized;
+bool	restore_spi;
+bool	mouseinitialized;
 int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
-qboolean	mouseparmsvalid;
+bool	mouseparmsvalid;
 
 int			window_center_x, window_center_y;
 RECT		window_rect;
@@ -89513,7 +89509,7 @@ void IN_Shutdown (void)
 
 // Called when the main window gains or loses focus.
 // The window may have been destroyed and recreated between a deactivate and an activate.
-void IN_Activate(qboolean active) {
+void IN_Activate(bool active) {
 	in_appactive = active;
 	mouseactive = !active;
 }
@@ -89830,7 +89826,7 @@ void IN_Commands (void)
 IN_ReadJoystick
 ===============
 */
-qboolean IN_ReadJoystick (void)
+bool IN_ReadJoystick (void)
 {
 
 	memset (&ji, 0, sizeof(ji));
@@ -90008,7 +90004,7 @@ void IN_JoyMove (usercmd_t *cmd)
 
 typedef struct
 {
-	byte	data[MAX_MSGLEN];
+	u8	data[MAX_MSGLEN];
 	int		datalen;
 } loopmsg_t;
 
@@ -90081,7 +90077,7 @@ void SockadrToNetadr (struct sockaddr *s, netadr_t *a)
 }
 
 
-qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
+bool	NET_CompareAdr (netadr_t a, netadr_t b)
 {
 	if (a.type != b.type)
 		return false;
@@ -90113,7 +90109,7 @@ NET_CompareBaseAdr
 Compares without the port
 ===================
 */
-qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
+bool	NET_CompareBaseAdr (netadr_t a, netadr_t b)
 {
 	if (a.type != b.type)
 		return false;
@@ -90170,7 +90166,7 @@ idnewt:28000
 	sscanf (copy, "%x", &val);	\
 	((struct sockaddr_ipx *)sadr)->dest = val
 
-qboolean	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
+bool	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
 {
 	struct hostent	*h;
 	char	*colon;
@@ -90239,7 +90235,7 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-qboolean	NET_StringToAdr (char *s, netadr_t *a)
+bool	NET_StringToAdr (char *s, netadr_t *a)
 {
 	struct sockaddr sadr;
 
@@ -90259,7 +90255,7 @@ qboolean	NET_StringToAdr (char *s, netadr_t *a)
 }
 
 
-qboolean	NET_IsLocalAddress (netadr_t adr)
+bool	NET_IsLocalAddress (netadr_t adr)
 {
 	return adr.type == NA_LOOPBACK;
 }
@@ -90272,7 +90268,7 @@ LOOPBACK BUFFERS FOR LOCAL PLAYER
 =============================================================================
 */
 
-qboolean	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
+bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
 {
 	int		i;
 	loopback_t	*loop;
@@ -90313,7 +90309,7 @@ static void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t 
 
 //=============================================================================
 
-qboolean	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
+bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
 {
 	int 	ret;
 	struct sockaddr from;
@@ -90432,7 +90428,7 @@ int NET_IPSocket (char *net_interface, int port)
 {
 	int					newsocket;
 	struct sockaddr_in	address;
-	qboolean			_true = true;
+	bool			_true = true;
 	int					i = 1;
 	int					err;
 
@@ -90622,10 +90618,10 @@ NET_Config
 A single player game will only use the loopback code
 ====================
 */
-void	NET_Config (qboolean multiplayer)
+void	NET_Config (bool multiplayer)
 {
 	int		i;
-	static	qboolean	old_config;
+	static	bool	old_config;
 
 	if (old_config == multiplayer)
 		return;
@@ -90742,7 +90738,7 @@ char *NET_ErrorString (void)
 int Sys_Milliseconds (void)
 {
 	static int		base;
-	static qboolean	initialized = false;
+	static bool	initialized = false;
 
 	if (!initialized)
 	{	// let base retain 16 bits of effectively random data
@@ -90765,7 +90761,7 @@ char	findbase[MAX_OSPATH];
 char	findpath[MAX_OSPATH];
 intptr_t		findhandle;
 
-static qboolean CompareAttributes( unsigned found, unsigned musthave, unsigned canthave )
+static bool CompareAttributes( unsigned found, unsigned musthave, unsigned canthave )
 {
 	if ( ( found & _A_RDONLY ) && ( canthave & SFF_RDONLY ) )
 		return false;
@@ -90855,10 +90851,10 @@ typedef enum {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 
 cvar_t	*s_wavonly;
 
-static qboolean	dsound_init;
-static qboolean	wav_init;
-static qboolean	snd_firsttime = true, snd_isdirect, snd_iswave;
-static qboolean	primary_format_set;
+static bool	dsound_init;
+static bool	wav_init;
+static bool	snd_firsttime = true, snd_isdirect, snd_iswave;
+static bool	primary_format_set;
 
 // starts at 0 for disabled
 static int	snd_buffer_count = 0;
@@ -90891,7 +90887,7 @@ LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 HINSTANCE hInstDS;
 
 sndinitstat SNDDMA_InitDirect (void);
-qboolean SNDDMA_InitWav (void);
+bool SNDDMA_InitWav (void);
 
 void FreeSound( void );
 
@@ -90915,7 +90911,7 @@ static const char *DSoundError( int error )
 /*
 ** DS_CreateBuffers
 */
-static qboolean DS_CreateBuffers( void )
+static bool DS_CreateBuffers( void )
 {
 	DSBUFFERDESC	dsbuf;
 	DSBCAPS			dsbcaps;
@@ -91259,7 +91255,7 @@ SNDDM_InitWav
 Crappy windows multimedia base
 ==================
 */
-qboolean SNDDMA_InitWav (void)
+bool SNDDMA_InitWav (void)
 {
 	WAVEFORMATEX  format;
 	int				i;
@@ -91400,16 +91396,9 @@ qboolean SNDDMA_InitWav (void)
 	return true;
 }
 
-/*
-==================
-SNDDMA_Init
-
-Try to find a sound device to mix for.
-Returns false if nothing is found.
-==================
-*/
-int SNDDMA_Init(void)
-{
+// Try to find a sound device to mix for.
+// Returns false if nothing is found.
+bool SNDDMA_Init() {
 	sndinitstat	stat;
 
 	memset ((void *)&dma, 0, sizeof (dma));
@@ -91654,7 +91643,7 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-void S_Activate (qboolean active)
+void S_Activate (bool active)
 {
 	if ( active )
 	{
@@ -91690,11 +91679,9 @@ void S_Activate (qboolean active)
 #define MINIMUM_WIN_MEMORY	0x0a00000
 #define MAXIMUM_WIN_MEMORY	0x1000000
 
-qboolean s_win95;
+bool s_win95;
 
 int			starttime;
-int			ActiveApp;
-qboolean	Minimized;
 
 unsigned	sys_msg_time;
 unsigned	sys_frame_time;
@@ -91787,7 +91774,7 @@ HWND        cl_hwnd;            // Main window handle for life of program
 
 extern	unsigned	sys_msg_time;
 
-byte        scantokey[128] =
+u8        scantokey[128] =
 					{
 //  0           1       2       3       4       5       6       7
 //  8           9       A       B       C       D       E       F
@@ -91820,7 +91807,7 @@ int MapKey (int key)
 {
 	int result;
 	int modified = ( key >> 16 ) & 255;
-	qboolean is_extended = false;
+	bool is_extended = false;
 
 	if ( modified > 127)
 		return 0;
@@ -91873,10 +91860,10 @@ int MapKey (int key)
 	}
 }
 
-static qboolean reflib_active = false;
+static bool reflib_active = false;
 
 static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	qboolean pass_to_default_window_proc = true;
+	bool pass_to_default_window_proc = true;
 
 	switch (uMsg) {
 		case WM_MOUSEWHEEL: {
@@ -91903,7 +91890,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		case WM_ACTIVATE: {
 				int fActive = LOWORD(wParam) != WA_INACTIVE;
-				Minimized = (BOOL)HIWORD(wParam);
+				Minimized = (bool)HIWORD(wParam);
 
 				Key_ClearStates();
 				ActiveApp = fActive && !Minimized;
@@ -91912,7 +91899,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 
 				if (reflib_active) {
-					void GLimp_AppActivate(qboolean active);
+					void GLimp_AppActivate(bool active);
 					GLimp_AppActivate(fActive);
 				}
 			} break;
@@ -92025,7 +92012,7 @@ void VID_NewWindow( int width, int height) {
 	cl.force_refdef = true;		// can't use a paused refdef
 }
 
-static qboolean QGL_Init(const char *dllname);
+static bool QGL_Init(const char *dllname);
 
 static HINSTANCE global_hInstance;
 
@@ -92120,7 +92107,7 @@ static void VID_CheckChanges() {
 
 		{
 			// initialize our QGL dynamic bindings
-			qboolean QGL_Init_result = QGL_Init(gl_driver->string);
+			bool QGL_Init_result = QGL_Init(gl_driver->string);
 			assert(QGL_Init_result);
 
 			// initialize OS-specific parts of OpenGL
@@ -92509,9 +92496,9 @@ static const char* VID_MenuKey(int key) {
 	return sound;
 }
 
-qboolean GLimp_InitGL();
+bool GLimp_InitGL();
 
-static qboolean VerifyDriver( void )
+static bool VerifyDriver( void )
 {
 	char buffer[1024];
 
@@ -92524,7 +92511,7 @@ static qboolean VerifyDriver( void )
 }
 
 
-qboolean VID_CreateWindow( int width, int height, qboolean fullscreen ) {
+bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	RECT			r;
 	cvar_t			*vid_xpos, *vid_ypos;
 	int				stylebits;
@@ -92613,7 +92600,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen ) {
 	return true;
 }
 
-static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, qboolean fullscreen) {
+static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, bool fullscreen) {
 	struct {
 		int width;
 		int height;
@@ -92735,7 +92722,7 @@ static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, qboolean fulls
 	return rserr_ok;
 }
 
-qboolean GLimp_InitGL (void)
+bool GLimp_InitGL (void)
 {
 	PIXELFORMATDESCRIPTOR pfd =
 	{
@@ -92934,7 +92921,7 @@ static void GLimp_EndFrame() {
 	}
 }
 
-void GLimp_AppActivate( qboolean active )
+void GLimp_AppActivate( bool active )
 {
 	if ( active )
 	{
@@ -95927,7 +95914,7 @@ void QGL_Shutdown(void) {
 // the appropriate GL stuff.  In Windows this means doing a
 // LoadLibrary and a bunch of calls to GetProcAddress.  On other
 // operating systems we need to do the right thing, whatever that might be.
-static qboolean QGL_Init( const char *dllname ) {
+static bool QGL_Init( const char *dllname ) {
 	// update 3Dfx gamma irrespective of underlying DLL
 	{
 		char envbuffer[1024];
@@ -96321,7 +96308,7 @@ static qboolean QGL_Init( const char *dllname ) {
 	return true;
 }
 
-void GLimp_EnableLogging( qboolean enable )
+void GLimp_EnableLogging( bool enable )
 {
 	if ( enable )
 	{
@@ -97314,8 +97301,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// NOTE: Swap init
 		{
-			byte swaptest[2] = {1,0};
-			qboolean little_endian = *(short*)swaptest == 1;
+			u8 swaptest[2] = {1,0};
+			bool little_endian = *(short*)swaptest == 1;
 			assert(little_endian);
 		}
 
