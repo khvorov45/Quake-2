@@ -80255,7 +80255,6 @@ extern cvar_t	*gl_particle_att_c;
 
 extern	cvar_t	*gl_nosubimage;
 extern	cvar_t	*gl_bitdepth;
-extern	cvar_t	*gl_mode;
 extern	cvar_t	*gl_log;
 extern	cvar_t	*gl_lightmap;
 extern	cvar_t	*gl_shadows;
@@ -80452,8 +80451,6 @@ typedef struct
 {
 	float inverse_intensity;
 	qboolean fullscreen;
-
-	int     prev_mode;
 
 	unsigned char *d_16to8table;
 
@@ -85153,7 +85150,7 @@ cvar_t	*gl_drawbuffer;
 cvar_t  *gl_driver;
 cvar_t	*gl_lightmap;
 cvar_t	*gl_shadows;
-cvar_t	*gl_mode;
+
 cvar_t	*gl_dynamic;
 cvar_t  *gl_monolightmap;
 cvar_t	*gl_modulate;
@@ -85943,40 +85940,14 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-static qboolean fullscreen_mode;
+static i64 screen_resolution_index = 0;
+static qboolean fullscreen_mode = false;
+static qboolean vid_ref_modified = false;
 
 static void R_SetMode() {
 	assert(gl_config.allow_cds);
-
-	gl_mode->modified = false;
-
-	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, fullscreen_mode);
-	if (GLimp_SetMode_result == rserr_ok) {
-		gl_state.prev_mode = gl_mode->value;
-	} else {
-		// NOTE: Fallbacks
-
-		if (GLimp_SetMode_result == rserr_invalid_fullscreen) {
-			// NOTE: Try same as before but not fullscreen
-
-			fullscreen_mode = false;
-			Com_Printf("Fullscreen unavailable in this mode\n");
-			GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, fullscreen_mode);
-
-		} else if (GLimp_SetMode_result == rserr_invalid_mode) {
-
-			COM_SetValueCvar("gl_mode", gl_state.prev_mode);
-			gl_mode->modified = false;
-			Com_Printf("invalid video mode\n");
-		}
-
-		if (GLimp_SetMode_result != rserr_ok) {
-			// try setting it back to something safe
-			fullscreen_mode = false;
-			GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_state.prev_mode, fullscreen_mode);
-			assert(GLimp_SetMode_result == rserr_ok);
-		}
-	}
+	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
+	assert(GLimp_SetMode_result == rserr_ok);
 }
 
 typedef struct {
@@ -86062,16 +86033,8 @@ static void R_Shutdown() {
 	QGL_Shutdown(); // shutdown our QGL subsystem
 }
 
-static qboolean vid_ref_modified = false;
-
 static void R_BeginFrame(float camera_separation) {
 	gl_state.camera_separation = camera_separation;
-
-	// change modes if necessary
-	if (gl_mode->modified) {
-		// FIXME: only restart if CDS is required
-		vid_ref_modified = true;
-	}
 
 	if ( gl_log->modified )
 	{
@@ -92110,7 +92073,6 @@ static void VID_CheckChanges() {
 			gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
 			gl_log = COM_GetCvar( "gl_log", "0", 0 );
 			gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
-			gl_mode = COM_GetCvar( "gl_mode", "0", CVAR_ARCHIVE );
 			gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
 			gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
 			gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
@@ -92168,8 +92130,6 @@ static void VID_CheckChanges() {
 				glw_state.wndproc = MainWndProc;
 			}
 
-			// set our "safe" modes
-			gl_state.prev_mode = 3;
 			R_SetMode();
 
 			VID_MenuInit();
@@ -92259,7 +92219,6 @@ static void VID_CheckChanges() {
 extern cvar_t *vid_gamma;
 extern cvar_t *scr_viewsize;
 
-static cvar_t *gl_mode;
 static cvar_t *gl_driver;
 static cvar_t *gl_picmip;
 static cvar_t *gl_ext_palettedtexture;
@@ -92331,14 +92290,20 @@ static void ApplyChanges(void* unused) {
 
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
-	COM_SetValueCvar("gl_mode", s_mode_list.curvalue);
+
+	if (screen_resolution_index != s_mode_list.curvalue) {
+		screen_resolution_index = s_mode_list.curvalue;
+		vid_ref_modified = true;
+	}
 
 	assert(s_ref_list.curvalue == 0);
 	COM_SetCvar("gl_driver", "opengl32");
 
 	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
 
-	vid_ref_modified = vid_gamma->modified || gl_driver->modified;
+	if (!vid_ref_modified) {
+		vid_ref_modified = vid_gamma->modified || gl_driver->modified;
+	}
 
 	M_ForceMenuOff();
 }
@@ -92362,10 +92327,6 @@ static void VID_MenuInit() {
 		gl_picmip = COM_GetCvar("gl_picmip", "0", 0);
 	}
 
-	if (!gl_mode) {
-		gl_mode = COM_GetCvar("gl_mode", "0", 0);
-	}
-
 	if (!sw_mode) {
 		sw_mode = COM_GetCvar("sw_mode", "0", 0);
 	}
@@ -92382,7 +92343,7 @@ static void VID_MenuInit() {
 		sw_stipplealpha = COM_GetCvar( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 	}
 
-	s_mode_list.curvalue = gl_mode->value;
+	s_mode_list.curvalue = screen_resolution_index;
 
 	if (!scr_viewsize) {
 		scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
