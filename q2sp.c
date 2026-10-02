@@ -80386,59 +80386,13 @@ void GL_TextureSolidMode( char *string );
 */
 void GL_DrawParticles( int n, const particle_t particles[], const unsigned colortable[768] );
 
-/*
-** GL config stuff
-*/
-#define GL_RENDERER_VOODOO		0x00000001
-#define GL_RENDERER_VOODOO2   	0x00000002
-#define GL_RENDERER_VOODOO_RUSH	0x00000004
-#define GL_RENDERER_BANSHEE		0x00000008
-#define		GL_RENDERER_3DFX		0x0000000F
-
-#define GL_RENDERER_PCX1		0x00000010
-#define GL_RENDERER_PCX2		0x00000020
-#define GL_RENDERER_PMX			0x00000040
-#define		GL_RENDERER_POWERVR		0x00000070
-
-#define GL_RENDERER_PERMEDIA2	0x00000100
-#define GL_RENDERER_GLINT_MX	0x00000200
-#define GL_RENDERER_GLINT_TX	0x00000400
-#define GL_RENDERER_3DLABS_MISC	0x00000800
-#define		GL_RENDERER_3DLABS	0x00000F00
-
-#define GL_RENDERER_REALIZM		0x00001000
-#define GL_RENDERER_REALIZM2	0x00002000
-#define		GL_RENDERER_INTERGRAPH	0x00003000
-
-#define GL_RENDERER_3DPRO		0x00004000
-#define GL_RENDERER_REAL3D		0x00008000
-#define GL_RENDERER_RIVA128		0x00010000
-#define GL_RENDERER_DYPIC		0x00020000
-
-#define GL_RENDERER_V1000		0x00040000
-#define GL_RENDERER_V2100		0x00080000
-#define GL_RENDERER_V2200		0x00100000
-#define		GL_RENDERER_RENDITION	0x001C0000
-
-#define GL_RENDERER_O2          0x00100000
-#define GL_RENDERER_IMPACT      0x00200000
-#define GL_RENDERER_RE			0x00400000
-#define GL_RENDERER_IR			0x00800000
-#define		GL_RENDERER_SGI			0x00F00000
-
-#define GL_RENDERER_MCD			0x01000000
-#define GL_RENDERER_OTHER		0x80000000
-
-typedef struct
-{
-	int         renderer;
-	const char *renderer_string;
-	const char *vendor_string;
-	const char *version_string;
-	const char *extensions_string;
-
-	bool	allow_cds;
-} glconfig_t;
+static struct {
+	const char* renderer_string;
+	const char* vendor_string;
+	const char* version_string;
+	const char* extensions_string;
+	bool allow_cds;
+} gl_config;
 
 typedef struct
 {
@@ -80460,7 +80414,6 @@ typedef struct
 	unsigned char originalBlueGammaTable[256];
 } glstate_t;
 
-extern glconfig_t  gl_config;
 extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame( float camera_separation );
@@ -80588,9 +80541,6 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 	if (scrap_dirty)
 		Scrap_Upload ();
 
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) ) && !gl->has_alpha)
-		qglDisable (GL_ALPHA_TEST);
-
 	GL_Bind (gl->texnum);
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (gl->sl, gl->tl);
@@ -80602,9 +80552,6 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 	qglTexCoord2f (gl->sl, gl->th);
 	qglVertex2f (x, y+h);
 	qglEnd ();
-
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) ) && !gl->has_alpha)
-		qglEnable (GL_ALPHA_TEST);
 }
 
 void Draw_Pic (int x, int y, char *pic)
@@ -80620,9 +80567,6 @@ void Draw_Pic (int x, int y, char *pic)
 	if (scrap_dirty)
 		Scrap_Upload ();
 
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) ) && !gl->has_alpha)
-		qglDisable (GL_ALPHA_TEST);
-
 	GL_Bind (gl->texnum);
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (gl->sl, gl->tl);
@@ -80634,9 +80578,6 @@ void Draw_Pic (int x, int y, char *pic)
 	qglTexCoord2f (gl->sl, gl->th);
 	qglVertex2f (x, y+gl->height);
 	qglEnd ();
-
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )  && !gl->has_alpha)
-		qglEnable (GL_ALPHA_TEST);
 }
 
 /*
@@ -80658,9 +80599,6 @@ void Draw_TileClear (int x, int y, int w, int h, char *pic)
 		return;
 	}
 
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )  && !image->has_alpha)
-		qglDisable (GL_ALPHA_TEST);
-
 	GL_Bind (image->texnum);
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (x/64.0, y/64.0);
@@ -80672,9 +80610,6 @@ void Draw_TileClear (int x, int y, int w, int h, char *pic)
 	qglTexCoord2f ( x/64.0, (y+h)/64.0 );
 	qglVertex2f (x, y+h);
 	qglEnd ();
-
-	if ( ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )  && !image->has_alpha)
-		qglEnable (GL_ALPHA_TEST);
 }
 
 
@@ -80824,9 +80759,6 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )
-		qglDisable (GL_ALPHA_TEST);
-
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (0, 0);
 	qglVertex2f (x, y);
@@ -80837,9 +80769,6 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 	qglTexCoord2f (0, t);
 	qglVertex2f (x, y+h);
 	qglEnd ();
-
-	if ( ( gl_config.renderer == GL_RENDERER_MCD ) || ( gl_config.renderer & GL_RENDERER_RENDITION ) )
-		qglEnable (GL_ALPHA_TEST);
 }
 
 /* ============ end source: ref_gl/gl_draw.c ============ */
@@ -82278,11 +82207,6 @@ void	GL_InitImages (void)
 	{
 		FS_LoadFile( "pics/16to8.dat", (void**)&gl_state.d_16to8table );
 		assert(gl_state.d_16to8table);
-	}
-
-	if ( gl_config.renderer & ( GL_RENDERER_VOODOO | GL_RENDERER_VOODOO2 ) )
-	{
-		g = 1.0F;
 	}
 
 	for ( i = 0; i < 256; i++ )
@@ -84935,7 +84859,6 @@ model_t		*r_worldmodel;
 
 float		gldepthmin, gldepthmax;
 
-glconfig_t gl_config;
 glstate_t  gl_state;
 
 image_t		*r_notexture;		// use for bad textures
@@ -85905,25 +85828,8 @@ static void R_BeginFrame(float camera_separation) {
 		GLimp_LogNewFrame();
 	}
 
-	/*
-	** update 3Dfx gamma -- it is expected that a user will do a vid_restart
-	** after tweaking this value
-	*/
-	if ( vid_gamma->modified )
-	{
+	if (vid_gamma->modified) {
 		vid_gamma->modified = false;
-
-		if ( gl_config.renderer & ( GL_RENDERER_VOODOO ) )
-		{
-			char envbuffer[1024];
-			float g;
-
-			g = 2.00 * ( 0.8 - ( vid_gamma->value - 0.5 ) ) + 1.0F;
-			Com_sprintf( envbuffer, sizeof(envbuffer), "SSTV2_GAMMA=%f", g );
-			_putenv( envbuffer );
-			Com_sprintf( envbuffer, sizeof(envbuffer), "SST_GAMMA=%f", g );
-			_putenv( envbuffer );
-		}
 	}
 
 	GLimp_BeginFrame( camera_separation );
@@ -91931,16 +91837,6 @@ static void VID_CheckChanges() {
 			gl_config.version_string = (char*)qglGetString (GL_VERSION);
 			gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
 
-			char renderer_buffer[1000];
-			strcpy(renderer_buffer, gl_config.renderer_string);
-			_strlwr(renderer_buffer);
-
-			char vendor_buffer[1000];
-			strcpy(vendor_buffer, gl_config.vendor_string);
-			_strlwr(vendor_buffer);
-
-			gl_config.renderer = GL_RENDERER_OTHER;
-
 			COM_SetCvar( "scr_drawall", "0" );
 
 			gl_config.allow_cds = true;
@@ -95718,18 +95614,6 @@ void QGL_Shutdown(void) {
 // LoadLibrary and a bunch of calls to GetProcAddress.  On other
 // operating systems we need to do the right thing, whatever that might be.
 static bool QGL_Init( const char *dllname ) {
-	// update 3Dfx gamma irrespective of underlying DLL
-	{
-		char envbuffer[1024];
-		float g;
-
-		g = 2.00 * ( 0.8 - ( vid_gamma->value - 0.5 ) ) + 1.0F;
-		Com_sprintf( envbuffer, sizeof(envbuffer), "SSTV2_GAMMA=%f", g );
-		_putenv( envbuffer );
-		Com_sprintf( envbuffer, sizeof(envbuffer), "SST_GAMMA=%f", g );
-		_putenv( envbuffer );
-	}
-
 	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllname ) ) == 0 )
 	{
 		char *buf = NULL;
