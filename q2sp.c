@@ -80287,7 +80287,6 @@ extern	cvar_t	*gl_texturesolidmode;
 extern  cvar_t  *gl_saturatelighting;
 extern  cvar_t  *gl_lockpvs;
 
-extern	cvar_t	*vid_fullscreen;
 extern	cvar_t	*vid_gamma;
 
 extern	cvar_t		*intensity;
@@ -85179,7 +85178,6 @@ cvar_t	*gl_lockpvs;
 
 cvar_t	*gl_3dlabs_broken;
 
-cvar_t	*vid_fullscreen;
 cvar_t	*vid_gamma;
 
 
@@ -85945,13 +85943,18 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
+static struct {
+	qboolean value;
+	qboolean modified;
+} fullscreen_mode;
+
 static void R_SetMode() {
 	assert(gl_config.allow_cds);
 
-	vid_fullscreen->modified = false;
+	fullscreen_mode.modified = false;
 	gl_mode->modified = false;
 
-	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, vid_fullscreen->value);
+	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, fullscreen_mode.value);
 	if (GLimp_SetMode_result == rserr_ok) {
 		gl_state.prev_mode = gl_mode->value;
 	} else {
@@ -85960,23 +85963,21 @@ static void R_SetMode() {
 		if (GLimp_SetMode_result == rserr_invalid_fullscreen) {
 			// NOTE: Try same as before but not fullscreen
 
-			COM_SetValueCvar("vid_fullscreen", 0);
-			vid_fullscreen->modified = false;
-
+			fullscreen_mode.value = false;
 			Com_Printf("Fullscreen unavailable in this mode\n");
-
-			GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, false);
+			GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_mode->value, fullscreen_mode.value);
 
 		} else if (GLimp_SetMode_result == rserr_invalid_mode) {
 
-			COM_SetValueCvar( "gl_mode", gl_state.prev_mode);
+			COM_SetValueCvar("gl_mode", gl_state.prev_mode);
 			gl_mode->modified = false;
 			Com_Printf("invalid video mode\n");
 		}
 
 		if (GLimp_SetMode_result != rserr_ok) {
 			// try setting it back to something safe
-			GLimp_SetMode_result = GLimp_SetMode( (int*)&vid.width, (int*)&vid.height, gl_state.prev_mode, false );
+			fullscreen_mode.value = false;
+			GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, gl_state.prev_mode, fullscreen_mode.value);
 			assert(GLimp_SetMode_result == rserr_ok);
 		}
 	}
@@ -86071,7 +86072,7 @@ static void R_BeginFrame(float camera_separation) {
 	gl_state.camera_separation = camera_separation;
 
 	// change modes if necessary
-	if (gl_mode->modified || vid_fullscreen->modified) {
+	if (gl_mode->modified || fullscreen_mode.modified) {
 		// FIXME: only restart if CDS is required
 		vid_ref_modified = true;
 	}
@@ -89581,8 +89582,7 @@ void IN_Frame (void)
 		|| cls.key_dest == key_menu)
 	{
 		// temporarily deactivate if in fullscreen
-		if (Cvar_VariableValue ("vid_fullscreen") == 0)
-		{
+		if (!fullscreen_mode.value) {
 			IN_DeactivateMouse ();
 			return;
 		}
@@ -91817,7 +91817,6 @@ void* Sys_GetGameAPI(void* parms) {
 cvar_t		*vid_gamma;
 cvar_t		*vid_xpos;			// X coordinate of window position
 cvar_t		*vid_ypos;			// Y coordinate of window position
-cvar_t		*vid_fullscreen;
 
 // Global variables used internally by this module
 
@@ -91960,7 +91959,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			} break;
 
 		case WM_MOVE: {
-				if (!vid_fullscreen->value) {
+				if (!fullscreen_mode.value) {
 					int xPos = (short)LOWORD(lParam);
 					int yPos = (short)HIWORD(lParam);
 
@@ -92007,9 +92006,9 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			// NOTE: Special case for Alt+Enter
 			if (uMsg == WM_SYSKEYDOWN && wParam == VK_RETURN) {
 				pass_to_default_window_proc = false;
-				if (vid_fullscreen) {
-					COM_SetValueCvar("vid_fullscreen", !vid_fullscreen->value);
-				}
+
+				fullscreen_mode.value = !fullscreen_mode.value;
+				fullscreen_mode.modified = true;
 			} else {
 				Key_Event(MapKey(lParam), true, sys_msg_time);
 			}
@@ -92083,7 +92082,7 @@ static void VID_CheckChanges() {
 		S_StopAllSounds();
 
 		// refresh has changed
-		vid_fullscreen->modified = true;
+		fullscreen_mode.modified = true;
 		cl.refresh_prepped = false;
 		cls.disable_screen = true;
 
@@ -92116,7 +92115,7 @@ static void VID_CheckChanges() {
 			gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
 			gl_log = COM_GetCvar( "gl_log", "0", 0 );
 			gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
-			gl_mode = COM_GetCvar( "gl_mode", "3", CVAR_ARCHIVE );
+			gl_mode = COM_GetCvar( "gl_mode", "0", CVAR_ARCHIVE );
 			gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
 			gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
 			gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
@@ -92154,7 +92153,6 @@ static void VID_CheckChanges() {
 
 			gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
 
-			vid_fullscreen = COM_GetCvar( "vid_fullscreen", "0", CVAR_ARCHIVE );
 			vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
 
 			Cmd_AddCommand( "imagelist", GL_ImageList_f );
@@ -92254,7 +92252,7 @@ static void VID_CheckChanges() {
 
 	// update our window position
 	if (vid_xpos->modified || vid_ypos->modified) {
-		if (!vid_fullscreen->value) {
+		if (!fullscreen_mode.value) {
 			VID_UpdateWindowPosAndSize();
 		}
 
@@ -92263,7 +92261,6 @@ static void VID_CheckChanges() {
 	}
 }
 
-extern cvar_t *vid_fullscreen;
 extern cvar_t *vid_gamma;
 extern cvar_t *scr_viewsize;
 
@@ -92331,7 +92328,12 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("vid_gamma", gamma);
 	COM_SetValueCvar("sw_stipplealpha", s_stipple_box.curvalue);
 	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
-	COM_SetValueCvar("vid_fullscreen", s_fs_box.curvalue);
+
+	if (fullscreen_mode.value != s_fs_box.curvalue) {
+		fullscreen_mode.value = s_fs_box.curvalue;
+		fullscreen_mode.modified = true;
+	}
+
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
 	COM_SetValueCvar("gl_mode", s_mode_list.curvalue);
@@ -92435,7 +92437,7 @@ static void VID_MenuInit() {
 	s_fs_box.generic.y	= 40;
 	s_fs_box.generic.name	= "fullscreen";
 	s_fs_box.itemnames = yesno_names;
-	s_fs_box.curvalue = vid_fullscreen->value;
+	s_fs_box.curvalue = fullscreen_mode.value;
 
 	s_defaults_action.generic.type = MTYPE_ACTION;
 	s_defaults_action.generic.name = "reset to defaults";
@@ -92552,8 +92554,6 @@ static const char* VID_MenuKey(int key) {
 }
 
 qboolean GLimp_InitGL();
-
-extern cvar_t *vid_fullscreen;
 
 static qboolean VerifyDriver( void )
 {
@@ -92987,7 +92987,7 @@ void GLimp_AppActivate( qboolean active )
 	}
 	else
 	{
-		if ( vid_fullscreen->value )
+		if (fullscreen_mode.value)
 			ShowWindow( glw_state.hWnd, SW_MINIMIZE );
 	}
 }
@@ -97604,7 +97604,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// Create the video variables so we know how to start the graphics drivers
 				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
 				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
-				vid_fullscreen = COM_GetCvar ("vid_fullscreen", "0", CVAR_ARCHIVE);
 				vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
 
 				Cmd_AddCommand("vid_restart", VID_Restart_f);
