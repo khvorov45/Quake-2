@@ -80254,7 +80254,6 @@ extern	cvar_t	*gl_log;
 extern	cvar_t	*gl_lightmap;
 extern	cvar_t	*gl_shadows;
 extern	cvar_t	*gl_dynamic;
-extern  cvar_t  *gl_monolightmap;
 extern	cvar_t	*gl_nobind;
 extern	cvar_t	*gl_round_down;
 extern	cvar_t	*gl_picmip;
@@ -80285,7 +80284,6 @@ extern	cvar_t	*vid_gamma;
 
 extern	cvar_t		*intensity;
 
-extern	int		gl_lightmap_format;
 extern	int		gl_solid_format;
 extern	int		gl_alpha_format;
 extern	int		gl_tex_solid_format;
@@ -82716,23 +82714,16 @@ void R_SetCacheState( msurface_t *surf )
 	}
 }
 
-/*
-===============
-R_BuildLightMap
-
-Combine and scale multiple lightmaps into the floating format in blocklights
-===============
-*/
+// Combine and scale multiple lightmaps into the floating format in blocklights
 void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 {
 	int			smax, tmax;
-	int			r, g, b, a, max;
+	int			r, g, b, max;
 	int			i, j, size;
 	u8		*lightmap;
 	float		scale[4];
 	int			nummaps;
 	float		*bl;
-	int monolightmap;
 
 	assert(!(surf->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP)));
 
@@ -82830,180 +82821,67 @@ void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 		}
 	}
 
-// add all the dynamic lights
+	// add all the dynamic lights
 	if (surf->dlightframe == r_framecount)
 		R_AddDynamicLights (surf);
 
-// put into texture format
-store:
+	// put into texture format
+	store:
 	stride -= (smax<<2);
 	bl = s_blocklights;
 
-	monolightmap = gl_monolightmap->string[0];
-
-	if ( monolightmap == '0' )
+	for (i=0 ; i<tmax ; i++, dest += stride)
 	{
-		for (i=0 ; i<tmax ; i++, dest += stride)
+		for (j=0 ; j<smax ; j++)
 		{
-			for (j=0 ; j<smax ; j++)
+
+			r = Q_ftol( bl[0] );
+			g = Q_ftol( bl[1] );
+			b = Q_ftol( bl[2] );
+
+			// catch negative lights
+			if (r < 0)
+				r = 0;
+			if (g < 0)
+				g = 0;
+			if (b < 0)
+				b = 0;
+
+			/*
+			** determine the brightest of the three color components
+			*/
+			if (r > g)
+				max = r;
+			else
+				max = g;
+			if (b > max)
+				max = b;
+
+			/*
+			** rescale all the color components if the intensity of the greatest
+			** channel exceeds 1.0
+			*/
+			if (max > 255)
 			{
+				float t = 255.0F / max;
 
-				r = Q_ftol( bl[0] );
-				g = Q_ftol( bl[1] );
-				b = Q_ftol( bl[2] );
-
-				// catch negative lights
-				if (r < 0)
-					r = 0;
-				if (g < 0)
-					g = 0;
-				if (b < 0)
-					b = 0;
-
-				/*
-				** determine the brightest of the three color components
-				*/
-				if (r > g)
-					max = r;
-				else
-					max = g;
-				if (b > max)
-					max = b;
-
-				/*
-				** alpha is ONLY used for the mono lightmap case.  For this reason
-				** we set it to the brightest of the color components so that
-				** things don't get too dim.
-				*/
-				a = max;
-
-				/*
-				** rescale all the color components if the intensity of the greatest
-				** channel exceeds 1.0
-				*/
-				if (max > 255)
-				{
-					float t = 255.0F / max;
-
-					r = r*t;
-					g = g*t;
-					b = b*t;
-					a = a*t;
-				}
-
-				dest[0] = r;
-				dest[1] = g;
-				dest[2] = b;
-				dest[3] = a;
-
-				bl += 3;
-				dest += 4;
+				r = r*t;
+				g = g*t;
+				b = b*t;
 			}
+
+			dest[0] = r;
+			dest[1] = g;
+			dest[2] = b;
+
+			bl += 3;
+			dest += 4;
 		}
 	}
-	else
-	{
-		for (i=0 ; i<tmax ; i++, dest += stride)
-		{
-			for (j=0 ; j<smax ; j++)
-			{
 
-				r = Q_ftol( bl[0] );
-				g = Q_ftol( bl[1] );
-				b = Q_ftol( bl[2] );
-
-				// catch negative lights
-				if (r < 0)
-					r = 0;
-				if (g < 0)
-					g = 0;
-				if (b < 0)
-					b = 0;
-
-				/*
-				** determine the brightest of the three color components
-				*/
-				if (r > g)
-					max = r;
-				else
-					max = g;
-				if (b > max)
-					max = b;
-
-				/*
-				** alpha is ONLY used for the mono lightmap case.  For this reason
-				** we set it to the brightest of the color components so that
-				** things don't get too dim.
-				*/
-				a = max;
-
-				/*
-				** rescale all the color components if the intensity of the greatest
-				** channel exceeds 1.0
-				*/
-				if (max > 255)
-				{
-					float t = 255.0F / max;
-
-					r = r*t;
-					g = g*t;
-					b = b*t;
-					a = a*t;
-				}
-
-				/*
-				** So if we are doing alpha lightmaps we need to set the R, G, and B
-				** components to 0 and we need to set alpha to 1-alpha.
-				*/
-				switch ( monolightmap )
-				{
-				case 'L':
-				case 'I':
-					r = a;
-					g = b = 0;
-					break;
-				case 'C':
-					// try faking colored lighting
-					a = 255 - ((r+g+b)/3);
-					r *= a/255.0;
-					g *= a/255.0;
-					b *= a/255.0;
-					break;
-				case 'A':
-				default:
-					r = g = b = 0;
-					a = 255 - a;
-					break;
-				}
-
-				dest[0] = r;
-				dest[1] = g;
-				dest[2] = b;
-				dest[3] = a;
-
-				bl += 3;
-				dest += 4;
-			}
-		}
-	}
 }
 
-/* ============ end source: ref_gl/gl_light.c ============ */
-/* ============ begin source: ref_gl/gl_mesh.c ============ */
-
-// gl_mesh.c: triangle model functions
-
-/* already inlined above: ref_gl/gl_local.h */
-
-/*
-=============================================================
-
-  ALIAS MODELS
-
-=============================================================
-*/
-
-#define NUMVERTEXNORMALS	162
+#define NUMVERTEXNORMALS 162
 
 float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 /* ============ begin inlined header: ref_gl/anorms.h ============ */
@@ -83777,20 +83655,6 @@ void R_DrawAliasModel (Entity *e)
 					r_lightlevel->value = 150*shadelight[2];
 			}
 
-		}
-
-		if ( gl_monolightmap->string[0] != '0' )
-		{
-			float s = shadelight[0];
-
-			if ( s < shadelight[1] )
-				s = shadelight[1];
-			if ( s < shadelight[2] )
-				s = shadelight[2];
-
-			shadelight[0] = s;
-			shadelight[1] = s;
-			shadelight[2] = s;
 		}
 	}
 
@@ -85147,7 +85011,6 @@ cvar_t	*gl_lightmap;
 cvar_t	*gl_shadows;
 
 cvar_t	*gl_dynamic;
-cvar_t  *gl_monolightmap;
 cvar_t	*gl_modulate;
 cvar_t	*gl_nobind;
 cvar_t	*gl_round_down;
@@ -86787,26 +86650,7 @@ void R_BlendLightmaps (void)
 		}
 		else
 		{
-			if ( gl_monolightmap->string[0] != '0' )
-			{
-				switch ( toupper( gl_monolightmap->string[0] ) )
-				{
-				case 'I':
-					qglBlendFunc (GL_ZERO, GL_SRC_COLOR );
-					break;
-				case 'L':
-					qglBlendFunc (GL_ZERO, GL_SRC_COLOR );
-					break;
-				case 'A':
-				default:
-					qglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-					break;
-				}
-			}
-			else
-			{
-				qglBlendFunc (GL_ZERO, GL_SRC_COLOR );
-			}
+			qglBlendFunc (GL_ZERO, GL_SRC_COLOR );
 		}
 	}
 
@@ -88020,52 +87864,13 @@ static void GL_BeginBuildingLightmaps() {
 	if (!gl_state.lightmap_textures)
 	{
 		gl_state.lightmap_textures	= TEXNUM_LIGHTMAPS;
-//		gl_state.lightmap_textures	= gl_state.texture_extension_number;
-//		gl_state.texture_extension_number = gl_state.lightmap_textures + MAX_LIGHTMAPS;
 	}
 
 	gl_lms.current_lightmap_texture = 1;
 
-	/*
-	** if mono lightmaps are enabled and we want to use alpha
-	** blending (a,1-a) then we're likely running on a 3DLabs
-	** Permedia2.  In a perfect world we'd use a GL_ALPHA lightmap
-	** in order to conserve space and maximize bandwidth, however
-	** this isn't a perfect world.
-	**
-	** So we have to use alpha lightmaps, but stored in GL_RGBA format,
-	** which means we only get 1/16th the color resolution we should when
-	** using alpha lightmaps.  If we find another board that supports
-	** only alpha lightmaps but that can at least support the GL_ALPHA
-	** format then we should change this code to use real alpha maps.
-	*/
-	if ( toupper( gl_monolightmap->string[0] ) == 'A' )
-	{
-		gl_lms.internal_format = gl_tex_alpha_format;
-	}
-	/*
-	** try to do hacked colored lighting with a blended texture
-	*/
-	else if ( toupper( gl_monolightmap->string[0] ) == 'C' )
-	{
-		gl_lms.internal_format = gl_tex_alpha_format;
-	}
-	else if ( toupper( gl_monolightmap->string[0] ) == 'I' )
-	{
-		gl_lms.internal_format = GL_INTENSITY8;
-	}
-	else if ( toupper( gl_monolightmap->string[0] ) == 'L' )
-	{
-		gl_lms.internal_format = GL_LUMINANCE8;
-	}
-	else
-	{
-		gl_lms.internal_format = gl_tex_solid_format;
-	}
+	gl_lms.internal_format = gl_tex_solid_format;
 
-	/*
-	** initialize the dynamic lightmap texture
-	*/
+	// initialize the dynamic lightmap texture
 	GL_Bind( gl_state.lightmap_textures + 0 );
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -92075,7 +91880,6 @@ static void VID_CheckChanges() {
 			gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
 			gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
 			gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-			gl_monolightmap = COM_GetCvar( "gl_monolightmap", "0", 0 );
 			gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
 			gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
 			gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
@@ -92136,7 +91940,6 @@ static void VID_CheckChanges() {
 			_strlwr(vendor_buffer);
 
 			gl_config.renderer = GL_RENDERER_OTHER;
-			COM_SetCvar("gl_monolightmap", "0");
 
 			COM_SetCvar( "scr_drawall", "0" );
 
