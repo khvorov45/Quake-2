@@ -1021,7 +1021,7 @@ static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* c
 		bits |= CM_IMPULSE;
 	}
 
-    MSG_WriteByte(buf, bits);
+	MSG_WriteByte(buf, bits);
 
 	if (bits & CM_ANGLE1) {
 		MSG_WriteShort(buf, cmd->angles[0]);
@@ -1050,7 +1050,7 @@ static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* c
 		MSG_WriteByte(buf, cmd->impulse);
 	}
 
-    MSG_WriteByte(buf, cmd->msec);
+	MSG_WriteByte(buf, cmd->msec);
 	MSG_WriteByte(buf, cmd->lightlevel);
 }
 
@@ -2960,19 +2960,19 @@ typedef struct {
 // PCX files are used for as many images as possible
 
 typedef struct {
-    char	manufacturer;
-    char	version;
-    char	encoding;
-    char	bits_per_pixel;
-    unsigned short	xmin,ymin,xmax,ymax;
-    unsigned short	hres,vres;
-    unsigned char	palette[48];
-    char	reserved;
-    char	color_planes;
-    unsigned short	bytes_per_line;
-    unsigned short	palette_type;
-    char	filler[58];
-    unsigned char	data; // unbounded
+	char	manufacturer;
+	char	version;
+	char	encoding;
+	char	bits_per_pixel;
+	unsigned short	xmin,ymin,xmax,ymax;
+	unsigned short	hres,vres;
+	unsigned char	palette[48];
+	char	reserved;
+	char	color_planes;
+	unsigned short	bytes_per_line;
+	unsigned short	palette_type;
+	char	filler[58];
+	unsigned char	data; // unbounded
 } pcx_t;
 
 
@@ -9193,10 +9193,10 @@ void PM_StepSlideMove (void)
 	VectorCopy(pml.origin, up);
 
 	// decide which one went farther
-    down_dist = (down_o[0] - start_o[0])*(down_o[0] - start_o[0])
-        + (down_o[1] - start_o[1])*(down_o[1] - start_o[1]);
-    up_dist = (up[0] - start_o[0])*(up[0] - start_o[0])
-        + (up[1] - start_o[1])*(up[1] - start_o[1]);
+	down_dist = (down_o[0] - start_o[0])*(down_o[0] - start_o[0])
+		+ (down_o[1] - start_o[1])*(down_o[1] - start_o[1]);
+	up_dist = (up[0] - start_o[0])*(up[0] - start_o[0])
+		+ (up[1] - start_o[1])*(up[1] - start_o[1]);
 #endif
 
 	if (down_dist > up_dist || trace.plane.normal[2] < MIN_STEP_NORMAL)
@@ -12274,7 +12274,7 @@ qboolean PF_inPHS (vec3_t p1, vec3_t p2)
 }
 
 void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
-    float attenuation, float timeofs)
+	float attenuation, float timeofs)
 {
 	if (!entity)
 		return;
@@ -13867,8 +13867,8 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					float attenuation, float timeofs)
 {
 	int			sendchan;
-    int			flags;
-    int			i;
+	int			flags;
+	int			i;
 	int			ent;
 	vec3_t		origin_v;
 	qboolean	use_phs;
@@ -24147,31 +24147,31 @@ CL_ParseStartSoundPacket
 */
 void CL_ParseStartSoundPacket(void)
 {
-    vec3_t  pos_v;
+	vec3_t  pos_v;
 	float	*pos;
-    int 	channel, ent;
-    int 	sound_num;
-    float 	volume;
-    float 	attenuation;
+	int 	channel, ent;
+	int 	sound_num;
+	float 	volume;
+	float 	attenuation;
 	int		flags;
 	float	ofs;
 
 	flags = MSG_ReadByte (&net_message);
 	sound_num = MSG_ReadByte (&net_message);
 
-    if (flags & SND_VOLUME) {
+	if (flags & SND_VOLUME) {
 		volume = MSG_ReadByte (&net_message) / 255.0;
 	} else {
 		volume = DEFAULT_SOUND_PACKET_VOLUME;
 	}
 
-    if (flags & SND_ATTENUATION) {
+	if (flags & SND_ATTENUATION) {
 		attenuation = MSG_ReadByte (&net_message) / 64.0;
 	} else {
 		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 	}
 
-    if (flags & SND_OFFSET) {
+	if (flags & SND_OFFSET) {
 		ofs = MSG_ReadByte (&net_message) / 1000.0;
 	} else {
 		ofs = 0;
@@ -28067,7 +28067,7 @@ void V_RenderView( float stereo_separation )
 		cl.refdef.rdflags = cl.frame.playerstate.rdflags;
 
 		// sort entities for better cache locality
-        qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (*)(const void *, const void *))entitycmpfnc );
+		qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (*)(const void *, const void *))entitycmpfnc );
 	}
 
 	R_RenderFrame (&cl.refdef);
@@ -31990,8 +31990,8 @@ void StartServer_MenuInit( void )
 
 	for ( i = 0; i < nummaps; i++ )
 	{
-    char  shortname[MAX_TOKEN_CHARS];
-    char  longname[MAX_TOKEN_CHARS];
+	char  shortname[MAX_TOKEN_CHARS];
+	char  longname[MAX_TOKEN_CHARS];
 		char  scratch[200];
 		int		j, l;
 
@@ -33953,7 +33953,7 @@ void Slider_Draw( menuslider_s *s )
 	int	i;
 
 	Menu_DrawStringR2LDark( s->generic.x + s->generic.parent->x + LCOLUMN_OFFSET,
-		                s->generic.y + s->generic.parent->y,
+						s->generic.y + s->generic.parent->y,
 						s->generic.name );
 
 	s->range = ( s->curvalue - s->minvalue ) / ( float ) ( s->maxvalue - s->minvalue );
@@ -34245,13 +34245,13 @@ void S_SoundInfo_f(void)
 		return;
 	}
 
-    Com_Printf("%5d stereo\n", dma.channels - 1);
-    Com_Printf("%5d samples\n", dma.samples);
-    Com_Printf("%5d samplepos\n", dma.samplepos);
-    Com_Printf("%5d samplebits\n", dma.samplebits);
-    Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
-    Com_Printf("%5d speed\n", dma.speed);
-    Com_Printf("0x%x dma buffer\n", dma.buffer);
+	Com_Printf("%5d stereo\n", dma.channels - 1);
+	Com_Printf("%5d samples\n", dma.samples);
+	Com_Printf("%5d samplepos\n", dma.samplepos);
+	Com_Printf("%5d samplebits\n", dma.samplebits);
+	Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
+	Com_Printf("%5d speed\n", dma.speed);
+	Com_Printf("0x%x dma buffer\n", dma.buffer);
 }
 
 static void S_Init() {
@@ -34504,18 +34504,18 @@ S_PickChannel
 */
 channel_t *S_PickChannel(int entnum, int entchannel)
 {
-    int			ch_idx;
-    int			first_to_die;
-    int			life_left;
+	int			ch_idx;
+	int			first_to_die;
+	int			life_left;
 	channel_t	*ch;
 
 	assert(entchannel >= 0);
 
 	// Check for replacement sound, or find the best one to replace
-    first_to_die = -1;
-    life_left = 0x7fffffff;
-    for (ch_idx=0 ; ch_idx < MAX_CHANNELS ; ch_idx++)
-    {
+	first_to_die = -1;
+	life_left = 0x7fffffff;
+	for (ch_idx=0 ; ch_idx < MAX_CHANNELS ; ch_idx++)
+	{
 		if (entchannel != 0		// channel 0 never overrides
 		&& channels[ch_idx].entnum == entnum
 		&& channels[ch_idx].entchannel == entchannel)
@@ -34541,7 +34541,7 @@ channel_t *S_PickChannel(int entnum, int entchannel)
 	ch = &channels[first_to_die];
 	memset (ch, 0, sizeof(*ch));
 
-    return ch;
+	return ch;
 }
 
 /*
@@ -34553,10 +34553,10 @@ Used for spatializing channels and autosounds
 */
 void S_SpatializeOrigin (vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol)
 {
-    vec_t		dot;
-    vec_t		dist;
-    vec_t		lscale, rscale, scale;
-    vec3_t		source_vec;
+	vec_t		dot;
+	vec_t		dist;
+	vec_t		lscale, rscale, scale;
+	vec3_t		source_vec;
 
 	if (cls.state != ca_active)
 	{
@@ -34707,7 +34707,7 @@ void S_IssuePlaysound (playsound_t *ps)
 
 	ch->pos = 0;
 	sc = S_LoadSound (ch->sfx);
-    ch->end = paintedtime + sc->length;
+	ch->end = paintedtime + sc->length;
 
 	// free the playsound
 	S_FreePlaysound (ps);
@@ -35054,9 +35054,9 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 				dst = s_rawend&(MAX_RAW_SAMPLES-1);
 				s_rawend++;
 				s_rawsamples[dst].left =
-				    LittleShort(((short *)data)[i*2]) << 8;
+					LittleShort(((short *)data)[i*2]) << 8;
 				s_rawsamples[dst].right =
-				    LittleShort(((short *)data)[i*2+1]) << 8;
+					LittleShort(((short *)data)[i*2+1]) << 8;
 			}
 		}
 		else
@@ -35069,9 +35069,9 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 				dst = s_rawend&(MAX_RAW_SAMPLES-1);
 				s_rawend++;
 				s_rawsamples[dst].left =
-				    LittleShort(((short *)data)[src*2]) << 8;
+					LittleShort(((short *)data)[src*2]) << 8;
 				s_rawsamples[dst].right =
-				    LittleShort(((short *)data)[src*2+1]) << 8;
+					LittleShort(((short *)data)[src*2+1]) << 8;
 			}
 		}
 	}
@@ -35085,9 +35085,9 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 			dst = s_rawend&(MAX_RAW_SAMPLES-1);
 			s_rawend++;
 			s_rawsamples[dst].left =
-			    LittleShort(((short *)data)[src]) << 8;
+				LittleShort(((short *)data)[src]) << 8;
 			s_rawsamples[dst].right =
-			    LittleShort(((short *)data)[src]) << 8;
+				LittleShort(((short *)data)[src]) << 8;
 		}
 	}
 	else if (channels == 2 && width == 1)
@@ -35100,9 +35100,9 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 			dst = s_rawend&(MAX_RAW_SAMPLES-1);
 			s_rawend++;
 			s_rawsamples[dst].left =
-			    ((char *)data)[src*2] << 16;
+				((char *)data)[src*2] << 16;
 			s_rawsamples[dst].right =
-			    ((char *)data)[src*2+1] << 16;
+				((char *)data)[src*2+1] << 16;
 		}
 	}
 	else if (channels == 1 && width == 1)
@@ -35115,7 +35115,7 @@ void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
 			dst = s_rawend&(MAX_RAW_SAMPLES-1);
 			s_rawend++;
 			s_rawsamples[dst].left =
-			    (((byte *)data)[src]-128) << 16;
+				(((byte *)data)[src]-128) << 16;
 			s_rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
 		}
 	}
@@ -35415,7 +35415,7 @@ S_LoadSound
 */
 sfxcache_t *S_LoadSound (sfx_t *s)
 {
-    char	namebuffer[MAX_QPATH];
+	char	namebuffer[MAX_QPATH];
 	byte	*data;
 	wavinfo_t	info;
 	int		len;
@@ -38292,21 +38292,21 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	if (flood_msgs->value) {
 		cl = ent->client;
 
-        if (level.time < cl->flood_locktill) {
+		if (level.time < cl->flood_locktill) {
 			gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
 				(int)(cl->flood_locktill - level.time));
-            return;
-        }
-        i = cl->flood_whenhead - flood_msgs->value + 1;
-        if (i < 0)
-            i = (sizeof(cl->flood_when)/sizeof(cl->flood_when[0])) + i;
+			return;
+		}
+		i = cl->flood_whenhead - flood_msgs->value + 1;
+		if (i < 0)
+			i = (sizeof(cl->flood_when)/sizeof(cl->flood_when[0])) + i;
 		if (cl->flood_when[i] &&
 			level.time - cl->flood_when[i] < flood_persecond->value) {
 			cl->flood_locktill = level.time + flood_waitdelay->value;
 			gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
 				(int)flood_waitdelay->value);
-            return;
-        }
+			return;
+		}
 		cl->flood_whenhead = (cl->flood_whenhead + 1) %
 			(sizeof(cl->flood_when)/sizeof(cl->flood_when[0]));
 		cl->flood_when[cl->flood_whenhead] = level.time;
@@ -79847,14 +79847,14 @@ extern BOOL  ( WINAPI * qwglShareLists)(HGLRC, HGLRC);
 extern BOOL  ( WINAPI * qwglUseFontBitmaps)(HDC, DWORD, DWORD, DWORD);
 
 extern BOOL  ( WINAPI * qwglUseFontOutlines)(HDC, DWORD, DWORD, DWORD, FLOAT,
-                                           FLOAT, int, LPGLYPHMETRICSFLOAT);
+										   FLOAT, int, LPGLYPHMETRICSFLOAT);
 
 extern BOOL ( WINAPI * qwglDescribeLayerPlane)(HDC, int, int, UINT,
-                                            LPLAYERPLANEDESCRIPTOR);
+											LPLAYERPLANEDESCRIPTOR);
 extern int  ( WINAPI * qwglSetLayerPaletteEntries)(HDC, int, int, int,
-                                                CONST COLORREF *);
+												CONST COLORREF *);
 extern int  ( WINAPI * qwglGetLayerPaletteEntries)(HDC, int, int, int,
-                                                COLORREF *);
+												COLORREF *);
 extern BOOL ( WINAPI * qwglRealizeLayerPalette)(HDC, int, BOOL);
 extern BOOL ( WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
 
@@ -80824,7 +80824,7 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, byte *data
 		}
 
 		qglTexImage2D( GL_TEXTURE_2D,
-			           0,
+					   0,
 					   GL_COLOR_INDEX8_EXT,
 					   256, 256,
 					   0,
@@ -81256,14 +81256,14 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 	//
 	pcx = (pcx_t *)raw;
 
-    pcx->xmin = LittleShort(pcx->xmin);
-    pcx->ymin = LittleShort(pcx->ymin);
-    pcx->xmax = LittleShort(pcx->xmax);
-    pcx->ymax = LittleShort(pcx->ymax);
-    pcx->hres = LittleShort(pcx->hres);
-    pcx->vres = LittleShort(pcx->vres);
-    pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
-    pcx->palette_type = LittleShort(pcx->palette_type);
+	pcx->xmin = LittleShort(pcx->xmin);
+	pcx->ymin = LittleShort(pcx->ymin);
+	pcx->xmax = LittleShort(pcx->xmax);
+	pcx->ymax = LittleShort(pcx->ymax);
+	pcx->hres = LittleShort(pcx->hres);
+	pcx->vres = LittleShort(pcx->vres);
+	pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
+	pcx->palette_type = LittleShort(pcx->palette_type);
 
 	raw = &pcx->data;
 
@@ -81816,13 +81816,13 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	}
 
 	if (samples == gl_solid_format)
-	    comp = gl_tex_solid_format;
+		comp = gl_tex_solid_format;
 	else if (samples == gl_alpha_format)
-	    comp = gl_tex_alpha_format;
+		comp = gl_tex_alpha_format;
 	else {
-	    Com_Printf(			   "Unknown number of texture components %i\n",
+		Com_Printf(			   "Unknown number of texture components %i\n",
 			   samples);
-	    comp = samples;
+		comp = samples;
 	}
 
 #if 0
@@ -83545,11 +83545,11 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], Entity *e )
 	}
 
 	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
-		                              paliashdr->ofs_frames +
+									  paliashdr->ofs_frames +
 									  e->frame * paliashdr->framesize);
 
 	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr +
-		                              paliashdr->ofs_frames +
+									  paliashdr->ofs_frames +
 									  e->oldframe * paliashdr->framesize);
 
 	/*
@@ -83870,13 +83870,13 @@ void R_DrawAliasModel (Entity *e)
 		qglPushMatrix();
 		qglLoadIdentity();
 		qglScalef( -1, 1, 1 );
-	    MYgluPerspective( r_newrefdef.fov_y, ( float ) r_newrefdef.width / r_newrefdef.height,  4,  4096);
+		MYgluPerspective( r_newrefdef.fov_y, ( float ) r_newrefdef.width / r_newrefdef.height,  4,  4096);
 		qglMatrixMode( GL_MODELVIEW );
 
 		qglCullFace( GL_BACK );
 	}
 
-    qglPushMatrix ();
+	qglPushMatrix ();
 	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
 	R_RotateForEntity (e);
 	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
@@ -84425,7 +84425,7 @@ void Mod_LoadTexinfo (lump_t *l)
 		if (next > 0)
 			out->next = loadmodel->texinfo + next;
 		else
-		    out->next = NULL;
+			out->next = NULL;
 		Com_sprintf (name, sizeof(name), "textures/%s.wal", in->texture);
 
 		out->image = GL_FindImage (name, it_wall);
@@ -85206,11 +85206,11 @@ qboolean R_CullBox (vec3_t mins, vec3_t maxs)
 
 void R_RotateForEntity (Entity *e)
 {
-    qglTranslatef (e->origin[0],  e->origin[1],  e->origin[2]);
+	qglTranslatef (e->origin[0],  e->origin[1],  e->origin[2]);
 
-    qglRotatef (e->angles[1],  0, 0, 1);
-    qglRotatef (-e->angles[0],  0, 1, 0);
-    qglRotatef (-e->angles[2],  1, 0, 0);
+	qglRotatef (e->angles[1],  0, 0, 1);
+	qglRotatef (-e->angles[0],  0, 1, 0);
+	qglRotatef (-e->angles[2],  1, 0, 0);
 }
 
 /*
@@ -85258,7 +85258,7 @@ void R_DrawSpriteModel (Entity *e)
 
 	qglColor4f( 1, 1, 1, alpha );
 
-    GL_Bind(currentmodel->skins[e->frame]->texnum);
+	GL_Bind(currentmodel->skins[e->frame]->texnum);
 
 	GL_TexEnv( GL_MODULATE );
 
@@ -85317,7 +85317,7 @@ void R_DrawNullModel (void)
 	else
 		R_LightPoint (currententity->origin, shadelight);
 
-    qglPushMatrix ();
+	qglPushMatrix ();
 	R_RotateForEntity (currententity);
 
 	qglDisable (GL_TEXTURE_2D);
@@ -85440,7 +85440,7 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	float			scale;
 	byte			color[4];
 
-    GL_Bind(r_particletexture->texnum);
+	GL_Bind(r_particletexture->texnum);
 	qglDepthMask( GL_FALSE );		// no z buffering
 	qglEnable( GL_BLEND );
 	GL_TexEnv( GL_MODULATE );
@@ -85453,8 +85453,8 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	{
 		// hack a scale up to keep particles from disapearing
 		scale = ( p->origin[0] - r_origin[0] ) * vpn[0] +
-			    ( p->origin[1] - r_origin[1] ) * vpn[1] +
-			    ( p->origin[2] - r_origin[2] ) * vpn[2];
+				( p->origin[1] - r_origin[1] ) * vpn[1] +
+				( p->origin[2] - r_origin[2] ) * vpn[2];
 
 		if (scale < 20)
 			scale = 1;
@@ -85471,12 +85471,12 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 
 		qglTexCoord2f( 1.0625, 0.0625 );
 		qglVertex3f( p->origin[0] + up[0]*scale,
-			         p->origin[1] + up[1]*scale,
+					 p->origin[1] + up[1]*scale,
 					 p->origin[2] + up[2]*scale);
 
 		qglTexCoord2f( 0.0625, 1.0625 );
 		qglVertex3f( p->origin[0] + right[0]*scale,
-			         p->origin[1] + right[1]*scale,
+					 p->origin[1] + right[1]*scale,
 					 p->origin[2] + right[2]*scale);
 	}
 
@@ -85547,11 +85547,11 @@ void R_PolyBlend (void)
 	qglDisable (GL_DEPTH_TEST);
 	qglDisable (GL_TEXTURE_2D);
 
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 
 	// FIXME: get rid of these
-    qglRotatef (-90,  1, 0, 0);	    // put Z going up
-    qglRotatef (90,  0, 0, 1);	    // put Z going up
+	qglRotatef (-90,  1, 0, 0);	    // put Z going up
+	qglRotatef (90,  0, 0, 1);	    // put Z going up
 
 	qglColor4fv (v_blend);
 
@@ -85700,7 +85700,7 @@ void R_SetupFrame (void)
 
 
 void MYgluPerspective( GLdouble fovy, GLdouble aspect,
-		     GLdouble zNear, GLdouble zFar )
+			 GLdouble zNear, GLdouble zFar )
 {
    GLdouble xmin, xmax, ymin, ymax;
 
@@ -85744,23 +85744,23 @@ void R_SetupGL (void)
 	//
 	// set up projection matrix
 	//
-    screenaspect = (float)r_newrefdef.width/r_newrefdef.height;
+	screenaspect = (float)r_newrefdef.width/r_newrefdef.height;
 //	yfov = 2*atan((float)r_newrefdef.height/r_newrefdef.width)*180/M_PI;
 	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity ();
-    MYgluPerspective (r_newrefdef.fov_y,  screenaspect,  4,  4096);
+	qglLoadIdentity ();
+	MYgluPerspective (r_newrefdef.fov_y,  screenaspect,  4,  4096);
 
 	qglCullFace(GL_FRONT);
 
 	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 
-    qglRotatef (-90,  1, 0, 0);	    // put Z going up
-    qglRotatef (90,  0, 0, 1);	    // put Z going up
-    qglRotatef (-r_newrefdef.viewangles[2],  1, 0, 0);
-    qglRotatef (-r_newrefdef.viewangles[0],  0, 1, 0);
-    qglRotatef (-r_newrefdef.viewangles[1],  0, 0, 1);
-    qglTranslatef (-r_newrefdef.vieworg[0],  -r_newrefdef.vieworg[1],  -r_newrefdef.vieworg[2]);
+	qglRotatef (-90,  1, 0, 0);	    // put Z going up
+	qglRotatef (90,  0, 0, 1);	    // put Z going up
+	qglRotatef (-r_newrefdef.viewangles[2],  1, 0, 0);
+	qglRotatef (-r_newrefdef.viewangles[0],  0, 1, 0);
+	qglRotatef (-r_newrefdef.viewangles[1],  0, 0, 1);
+	qglTranslatef (-r_newrefdef.vieworg[0],  -r_newrefdef.vieworg[1],  -r_newrefdef.vieworg[2]);
 
 //	if ( gl_state.camera_separation != 0 && gl_state.stereo_enabled )
 //		qglTranslatef ( gl_state.camera_separation, 0, 0 );
@@ -85891,10 +85891,10 @@ void	R_SetGL2D (void)
 	// set 2D virtual screen size
 	qglViewport (0,0, vid.width, vid.height);
 	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 	qglOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
 	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 	qglDisable (GL_DEPTH_TEST);
 	qglDisable (GL_CULL_FACE);
 	qglDisable (GL_BLEND);
@@ -86194,10 +86194,10 @@ static void R_BeginFrame(float camera_separation) {
 	*/
 	qglViewport (0,0, vid.width, vid.height);
 	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 	qglOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
 	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+	qglLoadIdentity ();
 	qglDisable (GL_DEPTH_TEST);
 	qglDisable (GL_CULL_FACE);
 	qglDisable (GL_BLEND);
@@ -86997,7 +86997,7 @@ void R_BlendLightmaps (void)
 				{
 					if ( drawsurf->polys )
 						DrawGLPolyChain( drawsurf->polys,
-							              ( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ),
+										  ( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ),
 										( drawsurf->light_t - drawsurf->dlight_t ) * ( 1.0 / 128.0 ) );
 				}
 
@@ -87060,7 +87060,7 @@ void R_RenderBrushPoly (msurface_t *fa)
 		// warp texture, no lightmaps
 		GL_TexEnv( GL_MODULATE );
 		qglColor4f( gl_state.inverse_intensity,
-			        gl_state.inverse_intensity,
+					gl_state.inverse_intensity,
 					gl_state.inverse_intensity,
 					1.0F );
 		EmitWaterPolys (fa);
@@ -87161,7 +87161,7 @@ void R_DrawAlphaSurfaces (void)
 	//
 	// go back to the world matrix
 	//
-    qglLoadMatrixf (r_world_matrix);
+	qglLoadMatrixf (r_world_matrix);
 
 	qglEnable (GL_BLEND);
 	GL_TexEnv( GL_MODULATE );
@@ -87567,7 +87567,7 @@ void R_DrawBrushModel (Entity *e)
 		modelorg[2] = DotProduct (temp, up);
 	}
 
-    qglPushMatrix ();
+	qglPushMatrix ();
 e->angles[0] = -e->angles[0];	// stupid quake bug
 e->angles[2] = -e->angles[2];	// stupid quake bug
 	R_RotateForEntity (e);
@@ -89197,10 +89197,10 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 		return FALSE;
 
 // height
-    info.srWindow.Left = 0;
-    info.srWindow.Right = info.dwSize.X - 1;
-    info.srWindow.Top = 0;
-    info.srWindow.Bottom = cy - 1;
+	info.srWindow.Left = 0;
+	info.srWindow.Right = info.dwSize.X - 1;
+	info.srWindow.Top = 0;
+	info.srWindow.Bottom = cy - 1;
 
 	if (cy < info.dwSize.Y) {
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
@@ -89210,7 +89210,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
 			return FALSE;
-    } else if (cy > info.dwSize.Y) {
+	} else if (cy > info.dwSize.Y) {
 		info.dwSize.Y = cy;
 
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
@@ -89218,7 +89218,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 
 		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
 			return FALSE;
-    }
+	}
 
 	if (!GetConsoleScreenBufferInfo(hStdout, &info))
 		return FALSE;
@@ -89589,7 +89589,7 @@ void IN_Init (void)
 {
 	// mouse variables
 	m_filter				= COM_GetCvar ("m_filter",					"0",		0);
-    in_mouse				= COM_GetCvar ("in_mouse",					"1",		CVAR_ARCHIVE);
+	in_mouse				= COM_GetCvar ("in_mouse",					"1",		CVAR_ARCHIVE);
 
 	// joystick variables
 	in_joystick				= COM_GetCvar ("in_joystick",				"0",		CVAR_ARCHIVE);
@@ -91044,12 +91044,12 @@ static qboolean DS_CreateBuffers( void )
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
-    format.nChannels = dma.channels;
-    format.wBitsPerSample = dma.samplebits;
-    format.nSamplesPerSec = dma.speed;
-    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-    format.cbSize = 0;
-    format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
+	format.nChannels = dma.channels;
+	format.wBitsPerSample = dma.samplebits;
+	format.nSamplesPerSec = dma.speed;
+	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
+	format.cbSize = 0;
+	format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
 
 	Com_Printf( "Creating DS buffers\n" );
 
@@ -91157,7 +91157,7 @@ static qboolean DS_CreateBuffers( void )
 
 	if (snd_firsttime)
 		Com_Printf("   %d channel(s)\n"
-		               "   %d bits/sample\n"
+					   "   %d bits/sample\n"
 					   "   %d bytes/sec\n",
 					   dma.channels, dma.samplebits, dma.speed);
 
@@ -91337,7 +91337,7 @@ sndinitstat SNDDMA_InitDirect (void)
 
 		if (MessageBox (NULL,
 						"The sound hardware is in use by another app.\n\n"
-					    "Select Retry to try to start sound again or Cancel to run Quake with no sound.",
+						"Select Retry to try to start sound again or Cancel to run Quake with no sound.",
 						"Sound not available",
 						MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY)
 		{
@@ -91425,7 +91425,7 @@ qboolean SNDDMA_InitWav (void)
 
 		if (MessageBox (NULL,
 						"The sound hardware is in use by another app.\n\n"
-					    "Select Retry to try to start sound again or Cancel to run Quake 2 with no sound.",
+						"Select Retry to try to start sound again or Cancel to run Quake 2 with no sound.",
 						"Sound not available",
 						MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY)
 		{
@@ -92618,7 +92618,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen ) {
 	};
 
 	ATOM register_class_result = RegisterClass(&wc);
-    assert(register_class_result);
+	assert(register_class_result);
 
 	if (fullscreen)
 	{
@@ -92810,7 +92810,7 @@ static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, qboolean fulls
 
 qboolean GLimp_InitGL (void)
 {
-    PIXELFORMATDESCRIPTOR pfd =
+	PIXELFORMATDESCRIPTOR pfd =
 	{
 		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
 		1,								// version number
@@ -92830,8 +92830,8 @@ qboolean GLimp_InitGL (void)
 		PFD_MAIN_PLANE,					// main layer
 		0,								// reserved
 		0, 0, 0							// layer masks ignored
-    };
-    int  pixelformat;
+	};
+	int  pixelformat;
 	cvar_t *stereo;
 
 	stereo = COM_GetCvar( "cl_stereo", "0", 0 );
@@ -92864,7 +92864,7 @@ qboolean GLimp_InitGL (void)
 	if ( glw_state.hDC != NULL )
 		Com_Printf("non-NULL DC exists\n");
 
-    if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
+	if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
 	{
 		Com_Printf("GetDC failed\n");
 		return false;
@@ -92934,7 +92934,7 @@ qboolean GLimp_InitGL (void)
 		goto fail;
 	}
 
-    if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
+	if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
 	{
 		Com_Printf("qwglMakeCurrent failed\n");
 
@@ -97104,7 +97104,7 @@ static void SV_Frame(int msec) {
 	if (!svs.initialized)
 		return;
 
-    svs.realtime += msec;
+	svs.realtime += msec;
 
 	// keep the random time dependent
 	rand ();
@@ -97759,5 +97759,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// never gets here
-    return TRUE;
+	return TRUE;
 }
