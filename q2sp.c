@@ -91998,6 +91998,8 @@ int MapKey (int key)
 static qboolean reflib_active = false;
 
 static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	qboolean pass_to_default_window_proc = true;
+
 	switch (uMsg) {
 		case WM_MOUSEWHEEL: {
 			if ((short)HIWORD(wParam) > 0) {
@@ -92076,23 +92078,22 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			// NOTE: Prevent screen turining off when game is active
 			i64 wparam_low = wParam & 0xFFF0;
 			if (wparam_low == SC_SCREENSAVE || wparam_low == SC_MONITORPOWER) {
-				return 0;
+				pass_to_default_window_proc = false;
 			}
 		} break;
 
-		case WM_SYSKEYDOWN: {
+		case WM_SYSKEYDOWN:
+		case WM_KEYDOWN: {
 			// NOTE: Special case for Alt+Enter
-			if (wParam == VK_RETURN) {
+			if (uMsg == WM_SYSKEYDOWN && wParam == VK_RETURN) {
+				pass_to_default_window_proc = false;
 				if (vid_fullscreen) {
 					COM_SetValueCvar("vid_fullscreen", !vid_fullscreen->value);
 				}
-				return 0;
+			} else {
+				Key_Event(MapKey(lParam), true, sys_msg_time);
 			}
-		} // fall through
-		case WM_KEYDOWN: {
-			Key_Event(MapKey(lParam), true, sys_msg_time);
-			break;
-		}
+		} break;
 
 		case WM_SYSKEYUP:
 		case WM_KEYUP: {
@@ -92101,9 +92102,13 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		// NOTE: Can't get WM_QUIT here
 		case WM_CLOSE: ExitProcess(0);
-    }
+	}
 
-    return DefWindowProc(hWnd,uMsg, wParam, lParam);
+	LONG result = 0;
+	if (pass_to_default_window_proc) {
+		result = DefWindowProc(hWnd,uMsg, wParam, lParam);
+	}
+	return result;
 }
 
 /*
