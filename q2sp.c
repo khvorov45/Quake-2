@@ -2187,7 +2187,7 @@ static void Cbuf_AddEarlyCommands(qboolean clear) {
 
 // Adds command line parameters as script statements
 // Commands lead with a + and continue until another + or -
-// quake +vid_ref gl +map amlev1
+// quake +map amlev1
 // Returns true if any late commands were added, which will keep the demoloop from immediately starting
 static qboolean Cbuf_AddLateCommands() {
 	// build the combined string to parse from
@@ -22604,7 +22604,7 @@ void CL_SendCommand (void)
 extern cparticle_t	*active_particles, *free_particles;
 extern cparticle_t	particles[MAX_PARTICLES];
 extern int			cl_numparticles;
-extern cvar_t		*vid_ref;
+
 
 extern void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
 
@@ -85181,7 +85181,7 @@ cvar_t	*gl_3dlabs_broken;
 
 cvar_t	*vid_fullscreen;
 cvar_t	*vid_gamma;
-cvar_t	*vid_ref;
+
 
 /*
 =================
@@ -85945,81 +85945,7 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-
-void R_Register( void )
-{
-	r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-	r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
-	r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
-	r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
-	r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
-	r_novis = COM_GetCvar ("r_novis", "0", 0);
-	r_nocull = COM_GetCvar ("r_nocull", "0", 0);
-	r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
-	r_speeds = COM_GetCvar ("r_speeds", "0", 0);
-
-	r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
-
-	gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
-	gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
-
-	gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
-	gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
-	gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
-	gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
-	gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
-	gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
-
-	gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
-	gl_log = COM_GetCvar( "gl_log", "0", 0 );
-	gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
-	gl_mode = COM_GetCvar( "gl_mode", "3", CVAR_ARCHIVE );
-	gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
-	gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
-	gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
-	gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
-	gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
-	gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
-	gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
-	gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
-	gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
-	gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
-	gl_clear = COM_GetCvar ("gl_clear", "0", 0);
-	gl_cull = COM_GetCvar ("gl_cull", "1", 0);
-	gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
-	gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
-	gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-	gl_monolightmap = COM_GetCvar( "gl_monolightmap", "0", 0 );
-	gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
-	gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-	gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
-	gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
-	gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-
-	gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
-
-	gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-	gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
-	gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-	gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-	gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
-
-	gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
-	gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
-
-	gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
-
-	gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
-
-	vid_fullscreen = COM_GetCvar( "vid_fullscreen", "0", CVAR_ARCHIVE );
-	vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
-	vid_ref = COM_GetCvar( "vid_ref", "gl", CVAR_ARCHIVE );
-
-	Cmd_AddCommand( "imagelist", GL_ImageList_f );
-	Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
-	Cmd_AddCommand( "modellist", Mod_Modellist_f );
-	Cmd_AddCommand( "gl_strings", GL_Strings_f );
-}
+static cvar_t* vid_ref;
 
 static void R_SetMode() {
 	assert(gl_config.allow_cds);
@@ -91894,7 +91820,6 @@ void* Sys_GetGameAPI(void* parms) {
 
 // Console variables that we need to access from this module
 cvar_t		*vid_gamma;
-cvar_t		*vid_ref;			// Name of Refresh DLL loaded
 cvar_t		*vid_xpos;			// X coordinate of window position
 cvar_t		*vid_ypos;			// Y coordinate of window position
 cvar_t		*vid_fullscreen;
@@ -92182,7 +92107,80 @@ static void VID_CheckChanges() {
 
 		R_Shutdown();
 		Draw_GetPalette();
-		R_Register();
+
+		{
+			r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
+			r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
+			r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
+			r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
+			r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
+			r_novis = COM_GetCvar ("r_novis", "0", 0);
+			r_nocull = COM_GetCvar ("r_nocull", "0", 0);
+			r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
+			r_speeds = COM_GetCvar ("r_speeds", "0", 0);
+
+			r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
+
+			gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
+			gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
+
+			gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
+			gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
+			gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
+			gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
+			gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
+			gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
+
+			gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
+			gl_log = COM_GetCvar( "gl_log", "0", 0 );
+			gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
+			gl_mode = COM_GetCvar( "gl_mode", "3", CVAR_ARCHIVE );
+			gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
+			gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
+			gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
+			gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
+			gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
+			gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
+			gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
+			gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
+			gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
+			gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
+			gl_clear = COM_GetCvar ("gl_clear", "0", 0);
+			gl_cull = COM_GetCvar ("gl_cull", "1", 0);
+			gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
+			gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
+			gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
+			gl_monolightmap = COM_GetCvar( "gl_monolightmap", "0", 0 );
+			gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
+			gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+			gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
+			gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
+			gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
+
+			gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
+
+			gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
+			gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
+			gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
+			gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
+			gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
+
+			gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
+			gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
+
+			gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
+
+			gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
+
+			vid_fullscreen = COM_GetCvar( "vid_fullscreen", "0", CVAR_ARCHIVE );
+			vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
+			vid_ref = COM_GetCvar( "vid_ref", "gl", CVAR_ARCHIVE );
+
+			Cmd_AddCommand( "imagelist", GL_ImageList_f );
+			Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
+			Cmd_AddCommand( "modellist", Mod_Modellist_f );
+			Cmd_AddCommand( "gl_strings", GL_Strings_f );
+		}
 
 		{
 			// initialize our QGL dynamic bindings
@@ -92284,10 +92282,6 @@ static void VID_CheckChanges() {
 	}
 }
 
-/* ============ end source: win32/vid_dll.c ============ */
-/* ============ begin source: win32/vid_menu.c ============ */
-
-extern cvar_t *vid_ref;
 extern cvar_t *vid_fullscreen;
 extern cvar_t *vid_gamma;
 extern cvar_t *scr_viewsize;
@@ -92582,7 +92576,6 @@ static const char* VID_MenuKey(int key) {
 qboolean GLimp_InitGL();
 
 extern cvar_t *vid_fullscreen;
-extern cvar_t *vid_ref;
 
 static qboolean VerifyDriver( void )
 {
