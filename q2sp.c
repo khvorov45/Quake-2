@@ -15799,7 +15799,6 @@ typedef struct
 
 	bool	refresh_prepped;	// false if on new level or new ref dll
 	bool	sound_prepped;		// ambient sounds can start
-	bool	force_refdef;		// vid has changed, so we can't use a paused refdef
 
 	int			parse_entities;		// index (not anded off) into cl_parse_entities[]
 
@@ -17544,7 +17543,6 @@ void CL_ParseFrame (void)
 		if (cls.state != ca_active)
 		{
 			cls.state = ca_active;
-			cl.force_refdef = true;
 			cl.predicted_origin[0] = cl.frame.playerstate.pmove.origin[0]*0.125;
 			cl.predicted_origin[1] = cl.frame.playerstate.pmove.origin[1]*0.125;
 			cl.predicted_origin[2] = cl.frame.playerstate.pmove.origin[2]*0.125;
@@ -27887,7 +27885,6 @@ static void CL_PrepRefresh() {
 
 	SCR_UpdateScreen ();
 	cl.refresh_prepped = true;
-	cl.force_refdef = true;	// make sure we have a valid refdef
 }
 
 /*
@@ -27992,10 +27989,7 @@ void V_RenderView( float stereo_separation )
 
 	// an invalid frame will just use the exact previous refdef
 	// we can't use the old frame if the video mode has changed, though...
-	if ( cl.frame.valid && (cl.force_refdef || !cl_paused->value) )
-	{
-		cl.force_refdef = false;
-
+	if (cl.frame.valid && !cl_paused->value) {
 		V_ClearScene ();
 
 		// build a refresh entity list and calc cl.sim*
@@ -82142,12 +82136,6 @@ void GL_FreeUnusedImages (void)
 	}
 }
 
-
-/*
-===============
-Draw_GetPalette
-===============
-*/
 int Draw_GetPalette (void)
 {
 	int		i;
@@ -85655,7 +85643,7 @@ void R_RenderFrame (refdef_t *fd)
 
 static i64 screen_resolution_index = 0;
 static bool fullscreen_mode = false;
-static bool vid_ref_modified = false;
+static bool video_should_restart = false;
 
 static void R_SetMode() {
 	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
@@ -91502,8 +91490,6 @@ int MapKey (int key)
 	}
 }
 
-static bool reflib_active = false;
-
 static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	bool pass_to_default_window_proc = true;
 
@@ -91540,10 +91526,8 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				S_Activate(ActiveApp);
 
 
-				if (reflib_active) {
-					void GLimp_AppActivate(bool active);
-					GLimp_AppActivate(fActive);
-				}
+				void GLimp_AppActivate(bool active);
+				GLimp_AppActivate(fActive);
 			} break;
 
 		case WM_MOVE: {
@@ -91596,7 +91580,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				pass_to_default_window_proc = false;
 
 				fullscreen_mode = !fullscreen_mode;
-				vid_ref_modified = true;
+				video_should_restart = true;
 			} else {
 				Key_Event(MapKey(lParam), true, sys_msg_time);
 			}
@@ -91619,7 +91603,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 }
 
 static void VID_Restart_f() {
-	vid_ref_modified = true;
+	video_should_restart = true;
 }
 
 void VID_Front_f( void )
@@ -91650,8 +91634,6 @@ static void VID_UpdateWindowPosAndSize() {
 void VID_NewWindow( int width, int height) {
 	viddef.width  = width;
 	viddef.height = height;
-
-	cl.force_refdef = true;		// can't use a paused refdef
 }
 
 static bool QGL_Init(const char *dllname);
@@ -91661,164 +91643,86 @@ static HINSTANCE global_hInstance;
 // This function gets called once just before drawing each frame, and it's sole purpose in life
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
-static void VID_CheckChanges() {
-	if (vid_ref_modified) {
-		vid_ref_modified = false;
-		reflib_active = true;
+static void VID_Restart() {
+	video_should_restart = false;
 
-		cl.force_refdef = true; // can't use a paused refdef
-		S_StopAllSounds();
+	S_StopAllSounds();
 
-		// refresh has changed
-		cl.refresh_prepped = false;
-		cls.disable_screen = true;
+	// refresh has changed
+	cl.refresh_prepped = false;
+	cls.disable_screen = true;
 
-		R_Shutdown();
-		Draw_GetPalette();
+	R_Shutdown();
+	Draw_GetPalette();
 
+	{
+		// initialize our QGL dynamic bindings
+		bool QGL_Init_result = QGL_Init(gl_driver->string);
+		assert(QGL_Init_result);
+
+		glw_state.allowdisplaydepthchange = false;
+		glw_state.hInstance = global_hInstance;
+		glw_state.wndproc = MainWndProc;
+
+		R_SetMode();
+
+		VID_MenuInit();
+
+		// get our various GL strings
+		gl_config.vendor_string = (char*)qglGetString(GL_VENDOR);
+		gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
+		gl_config.version_string = (char*)qglGetString (GL_VERSION);
+		gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
+
+		COM_SetCvar( "scr_drawall", "0" );
+
+		// grab extensions
 		{
-			r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-			r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
-			r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
-			r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
-			r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
-			r_novis = COM_GetCvar ("r_novis", "0", 0);
-			r_nocull = COM_GetCvar ("r_nocull", "0", 0);
-			r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
-			r_speeds = COM_GetCvar ("r_speeds", "0", 0);
-
-			r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
-
-			gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
-			gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
-
-			gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
-			gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
-			gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
-			gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
-			gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
-			gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
-
-			gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
-			gl_log = COM_GetCvar( "gl_log", "0", 0 );
-			gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
-			gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
-			gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
-			gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
-			gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
-			gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
-			gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
-			gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
-			gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
-			gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
-			gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
-			gl_clear = COM_GetCvar ("gl_clear", "0", 0);
-			gl_cull = COM_GetCvar ("gl_cull", "1", 0);
-			gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
-			gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
-			gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-			gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
-			gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-			gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
-			gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
-			gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-
-			gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
-
-			gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-			gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
-			gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-			gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-			gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
-
-			gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
-			gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
-
-			gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
-
-			gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
-
-			vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
-
-			Cmd_AddCommand( "imagelist", GL_ImageList_f );
-			Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
-			Cmd_AddCommand( "modellist", Mod_Modellist_f );
-			Cmd_AddCommand( "gl_strings", GL_Strings_f );
-		}
-
-		{
-			// initialize our QGL dynamic bindings
-			bool QGL_Init_result = QGL_Init(gl_driver->string);
-			assert(QGL_Init_result);
-
-			// initialize OS-specific parts of OpenGL
-			{
-				glw_state.allowdisplaydepthchange = false;
-				glw_state.hInstance = global_hInstance;
-				glw_state.wndproc = MainWndProc;
-			}
-
-			R_SetMode();
-
-			VID_MenuInit();
-
-			// get our various GL strings
-			gl_config.vendor_string = (char*)qglGetString(GL_VENDOR);
-			gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
-			gl_config.version_string = (char*)qglGetString (GL_VERSION);
-			gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
-
-			COM_SetCvar( "scr_drawall", "0" );
-
-			// grab extensions
-
-			{
-				char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
-				char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
-				if (ext || sgi) {
-					qglLockArraysEXT = (void*)qwglGetProcAddress("glLockArraysEXT");
-					qglUnlockArraysEXT = (void*)qwglGetProcAddress("glUnlockArraysEXT");
-				}
-			}
-
-			if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
-				qwglSwapIntervalEXT = (void*)qwglGetProcAddress("wglSwapIntervalEXT");
-			}
-
-			if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
-				qglPointParameterfEXT = (void*)qwglGetProcAddress("glPointParameterfEXT");
-				qglPointParameterfvEXT = (void*)qwglGetProcAddress("glPointParameterfvEXT");
-			}
-
-			{
-				char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
-				char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
-				if (paletted && shared && gl_ext_palettedtexture->value) {
-					qglColorTableEXT = (void*)qwglGetProcAddress("glColorTableEXT");
-				}
-			}
-
-			if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
-				qglMTexCoord2fSGIS = (void*)qwglGetProcAddress( "glMTexCoord2fSGIS" );
-				qglSelectTextureSGIS = (void*)qwglGetProcAddress( "glSelectTextureSGIS" );
-			}
-
-			GL_SetDefaultState();
-			GL_InitImages();
-			Mod_Init();
-			R_InitParticleTexture();
-			Draw_InitLocal();
-
-			{
-				int err = qglGetError();
-				if (err != GL_NO_ERROR) {
-					Com_Printf("glGetError() = 0x%x\n", err);
-				}
+			char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
+			char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
+			if (ext || sgi) {
+				qglLockArraysEXT = (void*)qwglGetProcAddress("glLockArraysEXT");
+				qglUnlockArraysEXT = (void*)qwglGetProcAddress("glUnlockArraysEXT");
 			}
 		}
 
-		cls.disable_screen = false;
+		if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
+			qwglSwapIntervalEXT = (void*)qwglGetProcAddress("wglSwapIntervalEXT");
+		}
+
+		if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
+			qglPointParameterfEXT = (void*)qwglGetProcAddress("glPointParameterfEXT");
+			qglPointParameterfvEXT = (void*)qwglGetProcAddress("glPointParameterfvEXT");
+		}
+
+		{
+			char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
+			char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
+			if (paletted && shared && gl_ext_palettedtexture->value) {
+				qglColorTableEXT = (void*)qwglGetProcAddress("glColorTableEXT");
+			}
+		}
+
+		if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
+			qglMTexCoord2fSGIS = (void*)qwglGetProcAddress( "glMTexCoord2fSGIS" );
+			qglSelectTextureSGIS = (void*)qwglGetProcAddress( "glSelectTextureSGIS" );
+		}
+
+		GL_SetDefaultState();
+		GL_InitImages();
+		Mod_Init();
+		R_InitParticleTexture();
+		Draw_InitLocal();
+
+		{
+			int err = qglGetError();
+			if (err != GL_NO_ERROR) {
+				Com_Printf("glGetError() = 0x%x\n", err);
+			}
+		}
 	}
+
+	cls.disable_screen = false;
 
 	// update our window position
 	if (vid_xpos->modified || vid_ypos->modified) {
@@ -91900,7 +91804,7 @@ static void ApplyChanges(void* unused) {
 
 	if (fullscreen_mode != s_fs_box.curvalue) {
 		fullscreen_mode = s_fs_box.curvalue;
-		vid_ref_modified = true;
+		video_should_restart = true;
 	}
 
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
@@ -91908,7 +91812,7 @@ static void ApplyChanges(void* unused) {
 
 	if (screen_resolution_index != s_mode_list.curvalue) {
 		screen_resolution_index = s_mode_list.curvalue;
-		vid_ref_modified = true;
+		video_should_restart = true;
 	}
 
 	assert(s_ref_list.curvalue == 0);
@@ -91916,8 +91820,8 @@ static void ApplyChanges(void* unused) {
 
 	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
 
-	if (!vid_ref_modified) {
-		vid_ref_modified = vid_gamma->modified || gl_driver->modified;
+	if (!video_should_restart) {
+		video_should_restart = vid_gamma->modified || gl_driver->modified;
 	}
 
 	M_ForceMenuOff();
@@ -96715,7 +96619,9 @@ void CL_Frame (int msec) {
 	CL_PredictMovement ();
 
 	// allow rendering DLL change
-	VID_CheckChanges ();
+	if (video_should_restart) {
+		VID_Restart();
+	}
 	if (!cl.refresh_prepped && cls.state == ca_active)
 		CL_PrepRefresh ();
 
@@ -97165,9 +97071,75 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Cmd_AddCommand("vid_restart", VID_Restart_f);
 				Cmd_AddCommand("vid_front", VID_Front_f);
 
-				// Start the graphics mode
-				vid_ref_modified = true;
-				VID_CheckChanges();
+				r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
+				r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
+				r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
+				r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
+				r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
+				r_novis = COM_GetCvar ("r_novis", "0", 0);
+				r_nocull = COM_GetCvar ("r_nocull", "0", 0);
+				r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
+				r_speeds = COM_GetCvar ("r_speeds", "0", 0);
+
+				r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
+
+				gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
+				gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
+
+				gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
+				gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
+				gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
+				gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
+				gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
+				gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
+
+				gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
+				gl_log = COM_GetCvar( "gl_log", "0", 0 );
+				gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
+				gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
+				gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
+				gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
+				gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
+				gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
+				gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
+				gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
+				gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
+				gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
+				gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
+				gl_clear = COM_GetCvar ("gl_clear", "0", 0);
+				gl_cull = COM_GetCvar ("gl_cull", "1", 0);
+				gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
+				gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
+				gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
+				gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
+				gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+				gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
+				gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
+				gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
+
+				gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
+
+				gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
+				gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
+				gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
+				gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
+				gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
+
+				gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
+				gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
+
+				gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
+
+				gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
+
+				vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
+
+				Cmd_AddCommand( "imagelist", GL_ImageList_f );
+				Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
+				Cmd_AddCommand( "modellist", Mod_Modellist_f );
+				Cmd_AddCommand( "gl_strings", GL_Strings_f );
+
+				VID_Restart();
 			}
 
 			// sound must be initialized after window is created
