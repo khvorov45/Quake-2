@@ -6,6 +6,7 @@
 #pragma comment(lib, "wsock32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "opengl32.lib")
 
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <stdint.h>
@@ -79425,13 +79426,8 @@ void Weapon_BFG (edict_t *ent)
 
 
 #include <windows.h>
-
 #include <GL/gl.h>
-#include <GL/glu.h>
 
-static void (APIENTRY *qglArrayElement)(GLint i);
-static void (APIENTRY *qglBegin)(GLenum mode);
-static void (APIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 static int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
 static int (WINAPI *qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 static BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
@@ -80046,7 +80042,7 @@ void Draw_Char (int x, int y, int num)
 
 	GL_Bind (draw_chars->texnum);
 
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 	qglTexCoord2f (fcol, frow);
 	qglVertex2f (x, y);
 	qglTexCoord2f (fcol + size, frow);
@@ -80108,7 +80104,7 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 		Scrap_Upload ();
 
 	GL_Bind (gl->texnum);
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 	qglTexCoord2f (gl->sl, gl->tl);
 	qglVertex2f (x, y);
 	qglTexCoord2f (gl->sh, gl->tl);
@@ -80134,7 +80130,7 @@ void Draw_Pic (int x, int y, char *pic)
 		Scrap_Upload ();
 
 	GL_Bind (gl->texnum);
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 	qglTexCoord2f (gl->sl, gl->tl);
 	qglVertex2f (x, y);
 	qglTexCoord2f (gl->sh, gl->tl);
@@ -80166,7 +80162,7 @@ void Draw_TileClear (int x, int y, int w, int h, char *pic)
 	}
 
 	GL_Bind (image->texnum);
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 	qglTexCoord2f (x/64.0, y/64.0);
 	qglVertex2f (x, y);
 	qglTexCoord2f ( (x+w)/64.0, y/64.0);
@@ -80203,7 +80199,7 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 		color.v[1]/255.0,
 		color.v[2]/255.0);
 
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 
 	qglVertex2f (x,y);
 	qglVertex2f (x+w, y);
@@ -80228,7 +80224,7 @@ void Draw_FadeScreen (void)
 	qglEnable (GL_BLEND);
 	qglDisable (GL_TEXTURE_2D);
 	qglColor4f (0, 0, 0, 0.8);
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 
 	qglVertex2f (0,0);
 	qglVertex2f (vid.width, 0);
@@ -80325,7 +80321,7 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 	qglTexCoord2f (0, 0);
 	qglVertex2f (x, y);
 	qglTexCoord2f (1, 0);
@@ -80454,7 +80450,7 @@ void GL_Bind (int texnum)
 	if ( gl_state.currenttextures[gl_state.currenttmu] == texnum)
 		return;
 	gl_state.currenttextures[gl_state.currenttmu] = texnum;
-	qglBindTexture (GL_TEXTURE_2D, texnum);
+	glBindTexture (GL_TEXTURE_2D, texnum);
 }
 
 void GL_MBind( GLenum target, int texnum )
@@ -81745,7 +81741,7 @@ void R_RenderDlight (dlight_t *light)
 
 	VectorSubtract (light->origin, r_origin, v);
 
-	qglBegin (GL_TRIANGLE_FAN);
+	glBegin (GL_TRIANGLE_FAN);
 	qglColor3f (light->color[0]*0.2, light->color[1]*0.2, light->color[2]*0.2);
 	for (i=0 ; i<3 ; i++)
 		v[i] = light->origin[i] - vpn[i]*rad;
@@ -82630,11 +82626,11 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 			if (count < 0)
 			{
 				count = -count;
-				qglBegin (GL_TRIANGLE_FAN);
+				glBegin (GL_TRIANGLE_FAN);
 			}
 			else
 			{
-				qglBegin (GL_TRIANGLE_STRIP);
+				glBegin (GL_TRIANGLE_STRIP);
 			}
 
 			// PMM - added double damage shell
@@ -82657,7 +82653,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 					qglTexCoord2f (((float *)order)[0], ((float *)order)[1]);
 					index_xyz = order[2];
 					order += 3;
-					qglArrayElement( index_xyz );
+					glArrayElement( index_xyz );
 
 				} while (--count);
 			}
@@ -82678,11 +82674,11 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 			if (count < 0)
 			{
 				count = -count;
-				qglBegin (GL_TRIANGLE_FAN);
+				glBegin (GL_TRIANGLE_FAN);
 			}
 			else
 			{
-				qglBegin (GL_TRIANGLE_STRIP);
+				glBegin (GL_TRIANGLE_STRIP);
 			}
 
 			if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE ) )
@@ -82746,10 +82742,10 @@ static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 		if (count < 0)
 		{
 			count = -count;
-			qglBegin (GL_TRIANGLE_FAN);
+			glBegin (GL_TRIANGLE_FAN);
 		}
 		else
-			qglBegin (GL_TRIANGLE_STRIP);
+			glBegin (GL_TRIANGLE_STRIP);
 
 		do
 		{
@@ -84461,7 +84457,7 @@ void R_DrawSpriteModel (Entity *e)
 	else
 		qglDisable( GL_ALPHA_TEST );
 
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 
 	qglTexCoord2f (0, 1);
 	VectorMA (e->origin, -frame->origin_y, up, point);
@@ -84517,13 +84513,13 @@ void R_DrawNullModel (void)
 	qglDisable (GL_TEXTURE_2D);
 	qglColor3fv (shadelight);
 
-	qglBegin (GL_TRIANGLE_FAN);
+	glBegin (GL_TRIANGLE_FAN);
 	qglVertex3f (0, 0, -16);
 	for (i=0 ; i<=4 ; i++)
 		qglVertex3f (16*cos(i*M_PI/2), 16*sin(i*M_PI/2), 0);
 	qglEnd ();
 
-	qglBegin (GL_TRIANGLE_FAN);
+	glBegin (GL_TRIANGLE_FAN);
 	qglVertex3f (0, 0, 16);
 	for (i=4 ; i>=0 ; i--)
 		qglVertex3f (16*cos(i*M_PI/2), 16*sin(i*M_PI/2), 0);
@@ -84638,7 +84634,7 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	qglDepthMask( GL_FALSE );		// no z buffering
 	qglEnable( GL_BLEND );
 	GL_TexEnv( GL_MODULATE );
-	qglBegin( GL_TRIANGLES );
+	glBegin( GL_TRIANGLES );
 
 	VectorScale (vup, 1.5, up);
 	VectorScale (vright, 1.5, right);
@@ -84700,7 +84696,7 @@ void R_DrawParticles (void)
 
 		qglPointSize( gl_particle_size->value );
 
-		qglBegin( GL_POINTS );
+		glBegin( GL_POINTS );
 		for ( i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++ )
 		{
 			*(int *)color = d_8to24table[p->color];
@@ -84749,7 +84745,7 @@ void R_PolyBlend (void)
 
 	qglColor4fv (v_blend);
 
-	qglBegin (GL_QUADS);
+	glBegin (GL_QUADS);
 
 	qglVertex3f (10, 100, 100);
 	qglVertex3f (10, -100, 100);
@@ -85328,7 +85324,7 @@ void R_DrawBeam( Entity *e )
 
 	qglColor4f( r, g, b, e->alpha );
 
-	qglBegin( GL_TRIANGLE_STRIP );
+	glBegin( GL_TRIANGLE_STRIP );
 	for ( i = 0; i < NUM_BEAM_SEGS; i++ )
 	{
 		qglVertex3fv( start_points[i] );
@@ -85546,7 +85542,7 @@ void DrawGLPoly (glpoly_t *p)
 	int		i;
 	float	*v;
 
-	qglBegin (GL_POLYGON);
+	glBegin (GL_POLYGON);
 	v = p->verts[0];
 	for (i=0 ; i<p->numverts ; i++, v+= VERTEXSIZE)
 	{
@@ -85576,7 +85572,7 @@ void DrawGLFlowingPoly (msurface_t *fa)
 	if(scroll == 0.0)
 		scroll = -64.0;
 
-	qglBegin (GL_POLYGON);
+	glBegin (GL_POLYGON);
 	v = p->verts[0];
 	for (i=0 ; i<p->numverts ; i++, v+= VERTEXSIZE)
 	{
@@ -85614,7 +85610,7 @@ void R_DrawTriangleOutlines (void)
 			{
 				for (j=2 ; j<p->numverts ; j++ )
 				{
-					qglBegin (GL_LINE_STRIP);
+					glBegin (GL_LINE_STRIP);
 					qglVertex3fv (p->verts[0]);
 					qglVertex3fv (p->verts[j-1]);
 					qglVertex3fv (p->verts[j]);
@@ -85641,7 +85637,7 @@ void DrawGLPolyChain( glpoly_t *p, float soffset, float toffset )
 			float *v;
 			int j;
 
-			qglBegin (GL_POLYGON);
+			glBegin (GL_POLYGON);
 			v = p->verts[0];
 			for (j=0 ; j<p->numverts ; j++, v+= VERTEXSIZE)
 			{
@@ -85658,7 +85654,7 @@ void DrawGLPolyChain( glpoly_t *p, float soffset, float toffset )
 			float *v;
 			int j;
 
-			qglBegin (GL_POLYGON);
+			glBegin (GL_POLYGON);
 			v = p->verts[0];
 			for (j=0 ; j<p->numverts ; j++, v+= VERTEXSIZE)
 			{
@@ -86130,7 +86126,7 @@ dynamic:
 			for ( p = surf->polys; p; p = p->chain )
 			{
 				v = p->verts[0];
-				qglBegin (GL_POLYGON);
+				glBegin (GL_POLYGON);
 				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
 				{
 					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, (v[3]+scroll), v[4]);
@@ -86145,7 +86141,7 @@ dynamic:
 			for ( p = surf->polys; p; p = p->chain )
 			{
 				v = p->verts[0];
-				qglBegin (GL_POLYGON);
+				glBegin (GL_POLYGON);
 				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
 				{
 					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, v[3], v[4]);
@@ -86178,7 +86174,7 @@ dynamic:
 			for ( p = surf->polys; p; p = p->chain )
 			{
 				v = p->verts[0];
-				qglBegin (GL_POLYGON);
+				glBegin (GL_POLYGON);
 				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
 				{
 					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, (v[3]+scroll), v[4]);
@@ -86195,7 +86191,7 @@ dynamic:
 			for ( p = surf->polys; p; p = p->chain )
 			{
 				v = p->verts[0];
-				qglBegin (GL_POLYGON);
+				glBegin (GL_POLYGON);
 				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
 				{
 					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, v[3], v[4]);
@@ -87142,7 +87138,7 @@ void EmitWaterPolys (msurface_t *fa)
 	{
 		p = bp;
 
-		qglBegin (GL_TRIANGLE_FAN);
+		glBegin (GL_TRIANGLE_FAN);
 		for (i=0,v=p->verts[0] ; i<p->numverts ; i++, v+=VERTEXSIZE)
 		{
 			os = v[3];
@@ -87509,7 +87505,7 @@ qglRotatef (r_newrefdef.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
 
 		GL_Bind (sky_images[skytexorder[i]]->texnum);
 
-		qglBegin (GL_QUADS);
+		glBegin (GL_QUADS);
 		MakeSkyVec (skymins[0][i], skymins[1][i], i);
 		MakeSkyVec (skymins[0][i], skymaxs[1][i], i);
 		MakeSkyVec (skymaxs[0][i], skymaxs[1][i], i);
@@ -90928,9 +90924,6 @@ static void VID_Restart() {
 
 		#define GPA(a) (void*)GetProcAddress(glw_state.hinstOpenGL, a)
 		qglAlphaFunc = GPA( "glAlphaFunc" );
-		qglArrayElement = GPA( "glArrayElement" );
-		qglBegin = GPA( "glBegin" );
-		qglBindTexture = GPA( "glBindTexture" );
 		qglBlendFunc = GPA( "glBlendFunc" );
 		qglClear = GPA( "glClear" );
 		qglClearColor = GPA( "glClearColor" );
