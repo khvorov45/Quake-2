@@ -79428,7 +79428,6 @@ void Weapon_BFG (edict_t *ent)
 #include <windows.h>
 #include <GL/gl.h>
 
-static int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
 static int (WINAPI *qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 static BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
 static BOOL (WINAPI *qwglSwapBuffers)(HDC);
@@ -90978,7 +90977,7 @@ static void VID_Restart() {
 		qwglGetProcAddress = GPA( "wglGetProcAddress" );
 		qwglMakeCurrent = GPA( "wglMakeCurrent" );
 
-		qwglChoosePixelFormat = GPA( "wglChoosePixelFormat" );
+
 		qwglDescribePixelFormat = GPA( "wglDescribePixelFormat" );
 		qwglSetPixelFormat = GPA( "wglSetPixelFormat" );
 		qwglSwapBuffers = GPA( "wglSwapBuffers" );
@@ -91682,9 +91681,9 @@ bool GLimp_InitGL (void)
 
 	if ( glw_state.minidriver )
 	{
-		if ( (pixelformat = qwglChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
+		if ( (pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
 		{
-			Com_Printf("qwglChoosePixelFormat failed\n");
+			Com_Printf("ChoosePixelFormat failed\n");
 			return false;
 		}
 		if ( qwglSetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
