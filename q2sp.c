@@ -79431,10 +79431,6 @@ void Weapon_BFG (edict_t *ent)
 static int (WINAPI *qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 static BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
 static BOOL (WINAPI *qwglSwapBuffers)(HDC);
-static HGLRC (WINAPI *qwglCreateContext)(HDC);
-static BOOL (WINAPI *qwglDeleteContext)(HGLRC);
-static PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
-static BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 
 static void (APIENTRY *qglLockArraysEXT)( int, int);
 static void (APIENTRY *qglUnlockArraysEXT) (void );
@@ -90826,13 +90822,8 @@ static void VID_Restart() {
 		}
 	}
 
-	if (qwglMakeCurrent) {
-		qwglMakeCurrent(NULL, NULL);
-	}
-
-	if (qwglDeleteContext) {
-		qwglDeleteContext(glw_state.hGLRC);
-	}
+	wglMakeCurrent(NULL, NULL);
+	wglDeleteContext(glw_state.hGLRC);
 	glw_state.hGLRC = NULL;
 
 	ReleaseDC(glw_state.hWnd, glw_state.hDC);
@@ -90856,12 +90847,6 @@ static void VID_Restart() {
 		assert(glw_state.hinstOpenGL);
 
 		#define GPA(a) (void*)GetProcAddress(glw_state.hinstOpenGL, a)
-		qwglCreateContext = GPA( "wglCreateContext" );
-		qwglDeleteContext = GPA( "wglDeleteContext" );
-		qwglGetProcAddress = GPA( "wglGetProcAddress" );
-		qwglMakeCurrent = GPA( "wglMakeCurrent" );
-
-
 		qwglDescribePixelFormat = GPA( "wglDescribePixelFormat" );
 		qwglSetPixelFormat = GPA( "wglSetPixelFormat" );
 		qwglSwapBuffers = GPA( "wglSwapBuffers" );
@@ -90934,31 +90919,31 @@ static void VID_Restart() {
 		char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
 		char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
 		if (ext || sgi) {
-			qglLockArraysEXT = (void*)qwglGetProcAddress("glLockArraysEXT");
-			qglUnlockArraysEXT = (void*)qwglGetProcAddress("glUnlockArraysEXT");
+			qglLockArraysEXT = (void*)wglGetProcAddress("glLockArraysEXT");
+			qglUnlockArraysEXT = (void*)wglGetProcAddress("glUnlockArraysEXT");
 		}
 	}
 
 	if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
-		qwglSwapIntervalEXT = (void*)qwglGetProcAddress("wglSwapIntervalEXT");
+		qwglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
 	}
 
 	if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
-		qglPointParameterfEXT = (void*)qwglGetProcAddress("glPointParameterfEXT");
-		qglPointParameterfvEXT = (void*)qwglGetProcAddress("glPointParameterfvEXT");
+		qglPointParameterfEXT = (void*)wglGetProcAddress("glPointParameterfEXT");
+		qglPointParameterfvEXT = (void*)wglGetProcAddress("glPointParameterfvEXT");
 	}
 
 	{
 		char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
 		char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
 		if (paletted && shared && gl_ext_palettedtexture->value) {
-			qglColorTableEXT = (void*)qwglGetProcAddress("glColorTableEXT");
+			qglColorTableEXT = (void*)wglGetProcAddress("glColorTableEXT");
 		}
 	}
 
 	if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
-		qglMTexCoord2fSGIS = (void*)qwglGetProcAddress( "glMTexCoord2fSGIS" );
-		qglSelectTextureSGIS = (void*)qwglGetProcAddress( "glSelectTextureSGIS" );
+		qglMTexCoord2fSGIS = (void*)wglGetProcAddress("glMTexCoord2fSGIS" );
+		qglSelectTextureSGIS = (void*)wglGetProcAddress("glSelectTextureSGIS" );
 	}
 
 	glClearColor(1,0, 0.5 , 0.5);
@@ -91616,22 +91601,12 @@ bool GLimp_InitGL (void)
 		gl_state.stereo_enabled = false;
 	}
 
-	/*
-	** startup the OpenGL subsystem by creating a context and making
-	** it current
-	*/
-	if ( ( glw_state.hGLRC = qwglCreateContext( glw_state.hDC ) ) == 0 )
+	glw_state.hGLRC = wglCreateContext( glw_state.hDC );
+	assert(glw_state.hGLRC);
+
 	{
-		Com_Printf("qwglCreateContext failed\n");
-
-		goto fail;
-	}
-
-	if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
-	{
-		Com_Printf("qwglMakeCurrent failed\n");
-
-		goto fail;
+		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+		assert(make_current_result);
 	}
 
 	if ( !VerifyDriver() )
@@ -91650,7 +91625,7 @@ bool GLimp_InitGL (void)
 fail:
 	if ( glw_state.hGLRC )
 	{
-		qwglDeleteContext( glw_state.hGLRC );
+		wglDeleteContext( glw_state.hGLRC );
 		glw_state.hGLRC = NULL;
 	}
 
