@@ -79428,10 +79428,6 @@ void Weapon_BFG (edict_t *ent)
 #include <windows.h>
 #include <GL/gl.h>
 
-static int (WINAPI *qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-static BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-static BOOL (WINAPI *qwglSwapBuffers)(HDC);
-
 static void (APIENTRY *qglLockArraysEXT)( int, int);
 static void (APIENTRY *qglUnlockArraysEXT) (void );
 static BOOL (WINAPI *qwglSwapIntervalEXT)( int interval );
@@ -90846,12 +90842,6 @@ static void VID_Restart() {
 		glw_state.hinstOpenGL = LoadLibrary(gl_driver->string);
 		assert(glw_state.hinstOpenGL);
 
-		#define GPA(a) (void*)GetProcAddress(glw_state.hinstOpenGL, a)
-		qwglDescribePixelFormat = GPA( "wglDescribePixelFormat" );
-		qwglSetPixelFormat = GPA( "wglSetPixelFormat" );
-		qwglSwapBuffers = GPA( "wglSwapBuffers" );
-		#undef GPA
-
 		qwglSwapIntervalEXT = 0;
 		qglPointParameterfEXT = 0;
 		qglPointParameterfvEXT = 0;
@@ -91555,12 +91545,12 @@ bool GLimp_InitGL (void)
 			Com_Printf("ChoosePixelFormat failed\n");
 			return false;
 		}
-		if ( qwglSetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
+		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
 		{
-			Com_Printf("qwglSetPixelFormat failed\n");
+			Com_Printf("SetPixelFormat failed\n");
 			return false;
 		}
-		qwglDescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
+		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
 	}
 	else
 	{
@@ -91670,7 +91660,7 @@ static void GLimp_EndFrame() {
 	int err = glGetError();
 	assert(err == GL_NO_ERROR);
 	if (_stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0) {
-		BOOL swap_buffers_result = qwglSwapBuffers(glw_state.hDC);
+		BOOL swap_buffers_result = SwapBuffers(glw_state.hDC);
 		assert(swap_buffers_result);
 	}
 }
