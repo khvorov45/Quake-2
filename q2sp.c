@@ -19,6 +19,7 @@
 
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
 #define UNUSED(x) ((x)=(x))
+#define clamp(x, min, max) ((x) > (max) ? max : (x) < (min) ? (min) : (x))
 
 // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
 #define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0)
@@ -80152,7 +80153,6 @@ typedef struct model_s
 
 //============================================================================
 
-void	Mod_Init (void);
 void	Mod_ClearAll (void);
 model_t *Mod_ForName (char *name, bool crash);
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
@@ -80165,7 +80165,6 @@ void	Mod_Modellist_f (void);
 void GL_BeginRendering (int *x, int *y, int *width, int *height);
 void GL_EndRendering (void);
 
-void GL_SetDefaultState( void );
 void GL_UpdateSwapInterval( void );
 
 extern	float	gldepthmin, gldepthmax;
@@ -80319,8 +80318,6 @@ void R_DrawWorld (void);
 void R_RenderDlights (void);
 void R_DrawAlphaSurfaces (void);
 void R_RenderBrushPoly (msurface_t *fa);
-void R_InitParticleTexture (void);
-void Draw_InitLocal (void);
 void GL_SubdivideSurface (msurface_t *fa);
 bool R_CullBox (vec3_t mins, vec3_t maxs);
 void R_RotateForEntity (Entity *e);
@@ -80355,25 +80352,14 @@ void	Draw_Fill (int x, int y, int w, int h, int c);
 
 void	R_SwapBuffers( int );
 
-
-int		Draw_GetPalette (void);
-
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
 
 void LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height);
 image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits);
 image_t	*GL_FindImage (char *name, imagetype_t type);
-void	GL_TextureMode( char *string );
 void	GL_ImageList_f (void);
 
-void	GL_SetTexturePalette( unsigned palette[256] );
-
-void	GL_InitImages (void);
-
 void	GL_FreeUnusedImages (void);
-
-void GL_TextureAlphaMode( char *string );
-void GL_TextureSolidMode( char *string );
 
 /*
 ** GL extension emulation functions
@@ -80424,21 +80410,6 @@ image_t		*draw_chars;
 
 extern	bool	scrap_dirty;
 void Scrap_Upload (void);
-
-
-/*
-===============
-Draw_InitLocal
-===============
-*/
-void Draw_InitLocal (void)
-{
-	// load console characters (don't bilerp characters)
-	draw_chars = GL_FindImage ("pics/conchars.pcx", it_pic);
-	GL_Bind( draw_chars->texnum );
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-}
 
 
 
@@ -80974,11 +80945,6 @@ void GL_TextureMode( char *string )
 	}
 }
 
-/*
-===============
-GL_TextureAlphaMode
-===============
-*/
 void GL_TextureAlphaMode( char *string )
 {
 	int		i;
@@ -80998,11 +80964,6 @@ void GL_TextureAlphaMode( char *string )
 	gl_tex_alpha_format = gl_alpha_modes[i].mode;
 }
 
-/*
-===============
-GL_TextureSolidMode
-===============
-*/
 void GL_TextureSolidMode( char *string )
 {
 	int		i;
@@ -82165,63 +82126,6 @@ int Draw_GetPalette (void)
 	free (pal);
 
 	return 0;
-}
-
-
-/*
-===============
-GL_InitImages
-===============
-*/
-void	GL_InitImages (void)
-{
-	int		i, j;
-	float	g = vid_gamma->value;
-
-	registration_sequence = 1;
-
-	// init intensity conversions
-	intensity = COM_GetCvar("intensity", "2", 0);
-
-	if ( intensity->value <= 1 )
-		COM_SetCvar( "intensity", "1" );
-
-	gl_state.inverse_intensity = 1 / intensity->value;
-
-	Draw_GetPalette ();
-
-	if ( qglColorTableEXT )
-	{
-		FS_LoadFile( "pics/16to8.dat", (void**)&gl_state.d_16to8table );
-		assert(gl_state.d_16to8table);
-	}
-
-	for ( i = 0; i < 256; i++ )
-	{
-		if ( g == 1 )
-		{
-			gammatable[i] = i;
-		}
-		else
-		{
-			float inf;
-
-			inf = 255 * pow ( (i+0.5)/255.5 , g ) + 0.5;
-			if (inf < 0)
-				inf = 0;
-			if (inf > 255)
-				inf = 255;
-			gammatable[i] = inf;
-		}
-	}
-
-	for (i=0 ; i<256 ; i++)
-	{
-		j = i*intensity->value;
-		if (j > 255)
-			j = 255;
-		intensitytable[i] = j;
-	}
 }
 
 int	r_dlightframecount;
@@ -83823,11 +83727,6 @@ void Mod_Modellist_f (void)
 		total += mod->extradatasize;
 	}
 	Com_Printf("Total resident: %i\n", total);
-}
-
-void Mod_Init (void)
-{
-	memset (mod_novis, 0xff, sizeof(mod_novis));
 }
 
 static int hunk_cursize = 0;
@@ -85645,11 +85544,6 @@ static i64 screen_resolution_index = 0;
 static bool fullscreen_mode = false;
 static bool video_should_restart = false;
 
-static void R_SetMode() {
-	rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
-	assert(GLimp_SetMode_result == rserr_ok);
-}
-
 typedef struct {
 	HINSTANCE	hInstance;
 	void	*wndproc;
@@ -85701,36 +85595,6 @@ static void GLimp_Shutdown() {
 		ChangeDisplaySettings(0, 0);
 		gl_state.fullscreen = false;
 	}
-}
-
-static void R_Shutdown() {
-
-	// NOTE: Commands
-	Cmd_RemoveCommand("modellist");
-	Cmd_RemoveCommand("screenshot");
-	Cmd_RemoveCommand("imagelist");
-	Cmd_RemoveCommand("gl_strings");
-
-	// NOTE: Mods
-	for (int i = 0; i < mod_numknown; i++) {
-		if (mod_known[i].extradatasize) {
-			Mod_Free(&mod_known[i]);
-		}
-	}
-
-	// NOTE: Images
-	{
-		image_t* image = gltextures;
-		for (int i=0; i < numgltextures; i++, image++) {
-			if (image->registration_sequence) {
-				qglDeleteTextures(1, (GLuint*)&image->texnum);
-				memset(image, 0, sizeof(*image));
-			}
-		}
-	}
-
-	GLimp_Shutdown(); // shut down OS specific OpenGL stuff like contexts, etc.
-	QGL_Shutdown(); // shutdown our QGL subsystem
 }
 
 static void R_BeginFrame(float camera_separation) {
@@ -85950,59 +85814,6 @@ void	Draw_FadeScreen (void);
 
 /* already inlined above: ref_gl/gl_local.h */
 
-/*
-==================
-R_InitParticleTexture
-==================
-*/
-u8	dottexture[8][8] =
-{
-	{0,0,0,0,0,0,0,0},
-	{0,0,1,1,0,0,0,0},
-	{0,1,1,1,1,0,0,0},
-	{0,1,1,1,1,0,0,0},
-	{0,0,1,1,0,0,0,0},
-	{0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0},
-};
-
-void R_InitParticleTexture (void)
-{
-	int		x,y;
-	u8	data[8][8][4];
-
-	//
-	// particle texture
-	//
-	for (x=0 ; x<8 ; x++)
-	{
-		for (y=0 ; y<8 ; y++)
-		{
-			data[y][x][0] = 255;
-			data[y][x][1] = 255;
-			data[y][x][2] = 255;
-			data[y][x][3] = dottexture[x][y]*255;
-		}
-	}
-	r_particletexture = GL_LoadPic ("***particle***", (u8 *)data, 8, 8, it_sprite, 32);
-
-	//
-	// also use this for bad textures, but without alpha
-	//
-	for (x=0 ; x<8 ; x++)
-	{
-		for (y=0 ; y<8 ; y++)
-		{
-			data[y][x][0] = dottexture[x&3][y&3]*255;
-			data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
-			data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
-			data[y][x][3] = 255;
-		}
-	}
-	r_notexture = GL_LoadPic ("***r_notexture***", (u8 *)data, 8, 8, it_wall, 32);
-}
-
 void GL_ScreenShot_f(void)
 {
 	u8		*buffer;
@@ -86072,65 +85883,6 @@ void GL_Strings_f( void )
 	Com_Printf("GL_RENDERER: %s\n", gl_config.renderer_string );
 	Com_Printf("GL_VERSION: %s\n", gl_config.version_string );
 	Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensions_string );
-}
-
-/*
-** GL_SetDefaultState
-*/
-void GL_SetDefaultState( void )
-{
-	qglClearColor (1,0, 0.5 , 0.5);
-	qglCullFace(GL_FRONT);
-	qglEnable(GL_TEXTURE_2D);
-
-	qglEnable(GL_ALPHA_TEST);
-	qglAlphaFunc(GL_GREATER, 0.666);
-
-	qglDisable (GL_DEPTH_TEST);
-	qglDisable (GL_CULL_FACE);
-	qglDisable (GL_BLEND);
-
-	qglColor4f (1,1,1,1);
-
-	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-	qglShadeModel (GL_FLAT);
-
-	GL_TextureMode( gl_texturemode->string );
-	GL_TextureAlphaMode( gl_texturealphamode->string );
-	GL_TextureSolidMode( gl_texturesolidmode->string );
-
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	qglBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	GL_TexEnv( GL_REPLACE );
-
-	if ( qglPointParameterfEXT )
-	{
-		float attenuations[3];
-
-		attenuations[0] = gl_particle_att_a->value;
-		attenuations[1] = gl_particle_att_b->value;
-		attenuations[2] = gl_particle_att_c->value;
-
-		qglEnable( GL_POINT_SMOOTH );
-		qglPointParameterfEXT( GL_POINT_SIZE_MIN_EXT, gl_particle_min_size->value );
-		qglPointParameterfEXT( GL_POINT_SIZE_MAX_EXT, gl_particle_max_size->value );
-		qglPointParameterfvEXT( GL_DISTANCE_ATTENUATION_EXT, attenuations );
-	}
-
-	if ( qglColorTableEXT && gl_ext_palettedtexture->value )
-	{
-		qglEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
-
-		GL_SetTexturePalette( d_8to24table );
-	}
-
-	GL_UpdateSwapInterval();
 }
 
 void GL_UpdateSwapInterval( void )
@@ -91652,73 +91404,214 @@ static void VID_Restart() {
 	cl.refresh_prepped = false;
 	cls.disable_screen = true;
 
-	R_Shutdown();
+	// NOTE: Free nods
+	for (int i = 0; i < mod_numknown; i++) {
+		if (mod_known[i].extradatasize) {
+			Mod_Free(&mod_known[i]);
+		}
+	}
+
+	// NOTE: Free images
+	{
+		image_t* image = gltextures;
+		for (int i = 0; i < numgltextures; i++, image++) {
+			if (image->registration_sequence) {
+				qglDeleteTextures(1, (GLuint*)&image->texnum);
+				memset(image, 0, sizeof(*image));
+			}
+		}
+	}
+
+	GLimp_Shutdown(); // shut down OS specific OpenGL stuff like contexts, etc.
+	QGL_Shutdown(); // shutdown our QGL subsystem
+
 	Draw_GetPalette();
 
 	{
-		// initialize our QGL dynamic bindings
 		bool QGL_Init_result = QGL_Init(gl_driver->string);
 		assert(QGL_Init_result);
 
-		glw_state.allowdisplaydepthchange = false;
-		glw_state.hInstance = global_hInstance;
-		glw_state.wndproc = MainWndProc;
+	}
 
-		R_SetMode();
+	glw_state.allowdisplaydepthchange = false;
+	glw_state.hInstance = global_hInstance;
+	glw_state.wndproc = MainWndProc;
 
-		VID_MenuInit();
+	{
+		rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
+		assert(GLimp_SetMode_result == rserr_ok);
+	}
 
-		// get our various GL strings
-		gl_config.vendor_string = (char*)qglGetString(GL_VENDOR);
-		gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
-		gl_config.version_string = (char*)qglGetString (GL_VERSION);
-		gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
+	VID_MenuInit();
 
-		COM_SetCvar( "scr_drawall", "0" );
+	// get our various GL strings
+	gl_config.vendor_string = (char*)qglGetString(GL_VENDOR);
+	gl_config.renderer_string = (char*)qglGetString (GL_RENDERER);
+	gl_config.version_string = (char*)qglGetString (GL_VERSION);
+	gl_config.extensions_string = (char*)qglGetString (GL_EXTENSIONS);
 
-		// grab extensions
-		{
-			char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
-			char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
-			if (ext || sgi) {
-				qglLockArraysEXT = (void*)qwglGetProcAddress("glLockArraysEXT");
-				qglUnlockArraysEXT = (void*)qwglGetProcAddress("glUnlockArraysEXT");
+	COM_SetCvar("scr_drawall", "0");
+
+	// grab extensions
+	{
+		char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
+		char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
+		if (ext || sgi) {
+			qglLockArraysEXT = (void*)qwglGetProcAddress("glLockArraysEXT");
+			qglUnlockArraysEXT = (void*)qwglGetProcAddress("glUnlockArraysEXT");
+		}
+	}
+
+	if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
+		qwglSwapIntervalEXT = (void*)qwglGetProcAddress("wglSwapIntervalEXT");
+	}
+
+	if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
+		qglPointParameterfEXT = (void*)qwglGetProcAddress("glPointParameterfEXT");
+		qglPointParameterfvEXT = (void*)qwglGetProcAddress("glPointParameterfvEXT");
+	}
+
+	{
+		char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
+		char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
+		if (paletted && shared && gl_ext_palettedtexture->value) {
+			qglColorTableEXT = (void*)qwglGetProcAddress("glColorTableEXT");
+		}
+	}
+
+	if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
+		qglMTexCoord2fSGIS = (void*)qwglGetProcAddress( "glMTexCoord2fSGIS" );
+		qglSelectTextureSGIS = (void*)qwglGetProcAddress( "glSelectTextureSGIS" );
+	}
+
+	qglClearColor(1,0, 0.5 , 0.5);
+	qglCullFace(GL_FRONT);
+	qglEnable(GL_TEXTURE_2D);
+
+	qglEnable(GL_ALPHA_TEST);
+	qglAlphaFunc(GL_GREATER, 0.666);
+
+	qglDisable(GL_DEPTH_TEST);
+	qglDisable(GL_CULL_FACE);
+	qglDisable(GL_BLEND);
+
+	qglColor4f(1,1,1,1);
+
+	qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	qglShadeModel(GL_FLAT);
+
+	GL_TextureMode(gl_texturemode->string);
+	GL_TextureAlphaMode(gl_texturealphamode->string);
+	GL_TextureSolidMode(gl_texturesolidmode->string);
+
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	GL_TexEnv(GL_REPLACE);
+
+	if (qglPointParameterfEXT) {
+		float attenuations[3] = {gl_particle_att_a->value, gl_particle_att_b->value, gl_particle_att_c->value};
+
+		qglEnable(GL_POINT_SMOOTH);
+		qglPointParameterfEXT(GL_POINT_SIZE_MIN_EXT, gl_particle_min_size->value);
+		qglPointParameterfEXT(GL_POINT_SIZE_MAX_EXT, gl_particle_max_size->value);
+		qglPointParameterfvEXT(GL_DISTANCE_ATTENUATION_EXT, attenuations);
+	}
+
+	if (qglColorTableEXT && gl_ext_palettedtexture->value) {
+		qglEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
+		GL_SetTexturePalette(d_8to24table);
+	}
+
+	GL_UpdateSwapInterval();
+
+	{
+		registration_sequence = 1;
+
+		// init intensity conversions
+		intensity = COM_GetCvar("intensity", "2", 0);
+
+		if (intensity->value <= 1)
+			COM_SetCvar("intensity", "1");
+
+		gl_state.inverse_intensity = 1 / intensity->value;
+
+		Draw_GetPalette();
+
+		if (qglColorTableEXT) {
+			FS_LoadFile("pics/16to8.dat", (void**)&gl_state.d_16to8table);
+			assert(gl_state.d_16to8table);
+		}
+
+		for (i64 ind = 0; ind < 256; ind++) {
+			if (vid_gamma->value == 1) {
+				gammatable[ind] = ind;
+			} else {
+				float inf = clamp(255 * pow((ind + 0.5) / 255.5, vid_gamma->value) + 0.5, 0, 255);
+				gammatable[ind] = inf;
 			}
 		}
 
-		if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
-			qwglSwapIntervalEXT = (void*)qwglGetProcAddress("wglSwapIntervalEXT");
+		for (i64 ind=0 ; ind<256 ; ind++) {
+			i64 j = min(ind * intensity->value, 255);
+			intensitytable[ind] = j;
 		}
+	}
 
-		if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
-			qglPointParameterfEXT = (void*)qwglGetProcAddress("glPointParameterfEXT");
-			qglPointParameterfvEXT = (void*)qwglGetProcAddress("glPointParameterfvEXT");
-		}
+	memset(mod_novis, 0xff, sizeof(mod_novis));
 
-		{
-			char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
-			char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
-			if (paletted && shared && gl_ext_palettedtexture->value) {
-				qglColorTableEXT = (void*)qwglGetProcAddress("glColorTableEXT");
+	{
+		u8 dottexture[8][8] = {
+			{0,0,0,0,0,0,0,0},
+			{0,0,1,1,0,0,0,0},
+			{0,1,1,1,1,0,0,0},
+			{0,1,1,1,1,0,0,0},
+			{0,0,1,1,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+		};
+
+		u8 data[8][8][4] = {};
+
+		// particle texture
+		for (i64 x = 0; x < 8; x++) {
+			for (i64 y=0 ; y<8 ; y++) {
+				data[y][x][0] = 255;
+				data[y][x][1] = 255;
+				data[y][x][2] = 255;
+				data[y][x][3] = dottexture[x][y]*255;
 			}
 		}
+		r_particletexture = GL_LoadPic("***particle***", (u8*)data, 8, 8, it_sprite, 32);
 
-		if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
-			qglMTexCoord2fSGIS = (void*)qwglGetProcAddress( "glMTexCoord2fSGIS" );
-			qglSelectTextureSGIS = (void*)qwglGetProcAddress( "glSelectTextureSGIS" );
-		}
-
-		GL_SetDefaultState();
-		GL_InitImages();
-		Mod_Init();
-		R_InitParticleTexture();
-		Draw_InitLocal();
-
-		{
-			int err = qglGetError();
-			if (err != GL_NO_ERROR) {
-				Com_Printf("glGetError() = 0x%x\n", err);
+		// also use this for bad textures, but without alpha
+		for (i64 x = 0; x < 8; x++) {
+			for (i64 y = 0; y < 8; y++) {
+				data[y][x][0] = dottexture[x&3][y&3]*255;
+				data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
+				data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
+				data[y][x][3] = 255;
 			}
+		}
+		r_notexture = GL_LoadPic("***r_notexture***", (u8*)data, 8, 8, it_wall, 32);
+	}
+
+	// load console characters (don't bilerp characters)
+	draw_chars = GL_FindImage("pics/conchars.pcx", it_pic);
+	GL_Bind(draw_chars->texnum);
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	{
+		int err = qglGetError();
+		if (err != GL_NO_ERROR) {
+			Com_Printf("glGetError() = 0x%x\n", err);
 		}
 	}
 
