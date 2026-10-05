@@ -80005,7 +80005,6 @@ extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame( float camera_separation );
 
-int     	GLimp_SetMode( int *pwidth, int *pheight, int mode, bool fullscreen );
 void		GLimp_AppActivate( bool active );
 void		GLimp_LogNewFrame( void );
 
@@ -85157,45 +85156,11 @@ typedef struct {
 	bool minidriver;
 	bool allowdisplaydepthchange;
 	bool mcd_accelerated;
-
-	FILE *log_fp;
 } glwstate_t;
 
 static glwstate_t glw_state = {};
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
-
-// This routine does all OS specific shutdown procedures for the OpenGL subsystem.
-// Under OpenGL this means NULLing out the current DC and HGLRC, deleting the rendering context, and releasing the DC acquired for the window.
-// The state structure is also nulled out.
-static void GLimp_Shutdown() {
-	if (qwglMakeCurrent) {
-		qwglMakeCurrent(NULL, NULL);
-	}
-
-	if (qwglDeleteContext) {
-		qwglDeleteContext(glw_state.hGLRC);
-	}
-	glw_state.hGLRC = NULL;
-
-	ReleaseDC(glw_state.hWnd, glw_state.hDC);
-	glw_state.hDC = NULL;
-
-	DestroyWindow(glw_state.hWnd);
-	glw_state.hWnd = NULL;
-
-	if (glw_state.log_fp) {
-		fclose(glw_state.log_fp);
-		glw_state.log_fp = 0;
-	}
-
-	UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
-
-	if (gl_state.fullscreen) {
-		ChangeDisplaySettings(0, 0);
-		gl_state.fullscreen = false;
-	}
-}
 
 static void R_BeginFrame(float camera_separation) {
 	gl_state.camera_separation = camera_separation;
@@ -90932,7 +90897,27 @@ static void VID_Restart() {
 		}
 	}
 
-	GLimp_Shutdown(); // shut down OS specific OpenGL stuff like contexts, etc.
+	if (qwglMakeCurrent) {
+		qwglMakeCurrent(NULL, NULL);
+	}
+
+	if (qwglDeleteContext) {
+		qwglDeleteContext(glw_state.hGLRC);
+	}
+	glw_state.hGLRC = NULL;
+
+	ReleaseDC(glw_state.hWnd, glw_state.hDC);
+	glw_state.hDC = NULL;
+
+	DestroyWindow(glw_state.hWnd);
+	glw_state.hWnd = NULL;
+
+	UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
+
+	if (gl_state.fullscreen) {
+		ChangeDisplaySettings(0, 0);
+		gl_state.fullscreen = false;
+	}
 
 	Draw_GetPalette();
 
@@ -91019,8 +91004,43 @@ static void VID_Restart() {
 	glw_state.wndproc = MainWndProc;
 
 	{
-		rserr_t GLimp_SetMode_result = GLimp_SetMode((int*)&vid.width, (int*)&vid.height, screen_resolution_index, fullscreen_mode);
-		assert(GLimp_SetMode_result == rserr_ok);
+		struct {
+			int width;
+			int height;
+		} vid_modes[] = {
+			{1024, 768},
+			{1280, 960},
+			{1600, 1200},
+		};
+
+		assert(screen_resolution_index >= 0 && screen_resolution_index < (int)carray_count(vid_modes));
+		vid.width  = vid_modes[screen_resolution_index].width;
+		vid.height = vid_modes[screen_resolution_index].height;
+
+		gl_state.fullscreen = fullscreen_mode;
+		if (fullscreen_mode) {
+			DEVMODE dm = {
+				.dmSize = sizeof(dm),
+				.dmPelsWidth = vid.width,
+				.dmPelsHeight = vid.height,
+				.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT,
+			};
+
+			if (gl_bitdepth->value) {
+				dm.dmBitsPerPel = gl_bitdepth->value;
+				dm.dmFields |= DM_BITSPERPEL;
+			}
+
+			LONG change_display_settings_result = ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
+			assert(change_display_settings_result);
+
+		} else {
+			ChangeDisplaySettings(0, 0);
+		}
+
+		bool VID_CreateWindow(int width, int height, bool fullscreen);
+		bool create_window_result = VID_CreateWindow(vid.width, vid.height, fullscreen_mode);
+		assert(create_window_result);
 	}
 
 	VID_MenuInit();
@@ -91593,7 +91613,6 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	// init all the gl stuff for the window
 	if (!GLimp_InitGL ())
 	{
-		Com_Printf("VID_CreateWindow() - GLimp_InitGL failed\n");
 		return false;
 	}
 
@@ -91604,128 +91623,6 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	VID_NewWindow (width, height);
 
 	return true;
-}
-
-static rserr_t GLimp_SetMode(int* pwidth, int* pheight, int mode, bool fullscreen) {
-	struct {
-		int width;
-		int height;
-	} vid_modes[] = {
-		{1024, 768},
-		{1280, 960},
-		{1600, 1200},
-	};
-
-	assert(mode >= 0 && mode < (int)carray_count(vid_modes));
-	int width  = vid_modes[mode].width;
-	int height = vid_modes[mode].height;
-
-	GLimp_Shutdown();
-
-	// do a CDS if needed
-	if (fullscreen) {
-		DEVMODE dm;
-
-		memset( &dm, 0, sizeof( dm ) );
-
-		dm.dmSize = sizeof( dm );
-
-		dm.dmPelsWidth  = width;
-		dm.dmPelsHeight = height;
-		dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
-
-		if ( gl_bitdepth->value != 0 )
-		{
-			dm.dmBitsPerPel = gl_bitdepth->value;
-			dm.dmFields |= DM_BITSPERPEL;
-		}
-		else
-		{
-			HDC hdc = GetDC( NULL );
-			int bitspixel = GetDeviceCaps( hdc, BITSPIXEL );
-
-			Com_Printf("...using desktop display depth of %d\n", bitspixel);
-
-			ReleaseDC( 0, hdc );
-		}
-
-		Com_Printf("...calling CDS: ");
-		if ( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) == DISP_CHANGE_SUCCESSFUL )
-		{
-			*pwidth = width;
-			*pheight = height;
-
-			gl_state.fullscreen = true;
-
-			Com_Printf("ok\n");
-
-			if ( !VID_CreateWindow (width, height, true) )
-				return rserr_invalid_mode;
-
-			return rserr_ok;
-		}
-		else
-		{
-			*pwidth = width;
-			*pheight = height;
-
-			Com_Printf("failed\n");
-
-			Com_Printf("...calling CDS assuming dual monitors:");
-
-			dm.dmPelsWidth = width * 2;
-			dm.dmPelsHeight = height;
-			dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
-
-			if ( gl_bitdepth->value != 0 )
-			{
-				dm.dmBitsPerPel = gl_bitdepth->value;
-				dm.dmFields |= DM_BITSPERPEL;
-			}
-
-			/*
-			** our first CDS failed, so maybe we're running on some weird dual monitor
-			** system
-			*/
-			if ( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
-			{
-				Com_Printf(" failed\n");
-
-				Com_Printf("...setting windowed mode\n");
-
-				ChangeDisplaySettings( 0, 0 );
-
-				*pwidth = width;
-				*pheight = height;
-				gl_state.fullscreen = false;
-				if ( !VID_CreateWindow (width, height, false) )
-					return rserr_invalid_mode;
-				return rserr_invalid_fullscreen;
-			}
-			else
-			{
-				Com_Printf(" ok\n");
-				if ( !VID_CreateWindow (width, height, true) )
-					return rserr_invalid_mode;
-
-				gl_state.fullscreen = true;
-				return rserr_ok;
-			}
-		}
-	} else {
-		// NOTE: Windowed
-
-		ChangeDisplaySettings(0, 0);
-
-		*pwidth = width;
-		*pheight = height;
-		gl_state.fullscreen = false;
-		if (!VID_CreateWindow(width, height, false)) {
-			return rserr_invalid_mode;
-		}
-	}
-
-	return rserr_ok;
 }
 
 bool GLimp_InitGL (void)
