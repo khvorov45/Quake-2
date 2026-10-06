@@ -79428,8 +79428,6 @@ void Weapon_BFG (edict_t *ent)
 #include <windows.h>
 #include <GL/gl.h>
 
-static void (APIENTRY *qglLockArraysEXT)( int, int);
-static void (APIENTRY *qglUnlockArraysEXT) (void );
 static BOOL (WINAPI *qwglSwapIntervalEXT)( int interval );
 static void (APIENTRY *qglPointParameterfEXT)( GLenum param, GLfloat value );
 static void (APIENTRY *qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
@@ -82551,9 +82549,6 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 			}
 		}
 
-		if ( qglLockArraysEXT != 0 )
-			qglLockArraysEXT( 0, paliashdr->num_xyz );
-
 		while (1)
 		{
 			// get the vertex count and primitive type
@@ -82596,9 +82591,6 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 			}
 			glEnd ();
 		}
-
-		if ( qglUnlockArraysEXT != 0 )
-			qglUnlockArraysEXT();
 	}
 	else
 	{
@@ -90905,15 +90897,6 @@ static void VID_Restart() {
 	COM_SetCvar("scr_drawall", "0");
 
 	// grab extensions
-	{
-		char* ext = strstr(gl_config.extensions_string, "GL_EXT_compiled_vertex_array");
-		char* sgi = strstr(gl_config.extensions_string, "GL_SGI_compiled_vertex_array");
-		if (ext || sgi) {
-			qglLockArraysEXT = (void*)wglGetProcAddress("glLockArraysEXT");
-			qglUnlockArraysEXT = (void*)wglGetProcAddress("glUnlockArraysEXT");
-		}
-	}
-
 	if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
 		qwglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
 	}
