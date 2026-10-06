@@ -15886,9 +15886,6 @@ extern	client_state_t	cl;
 //
 // cvars
 //
-extern	cvar_t	*cl_stereo_separation;
-extern	cvar_t	*cl_stereo;
-
 extern	cvar_t	*cl_gun;
 extern	cvar_t	*cl_add_blend;
 extern	cvar_t	*cl_add_lights;
@@ -16150,7 +16147,7 @@ void CL_Download_f (void);
 extern	int			gun_frame;
 extern	struct model_s	*gun_model;
 
-void V_RenderView( float stereo_separation );
+void V_RenderView();
 void V_AddEntity (Entity *ent);
 void V_AddParticle (vec3_t org, int color, float alpha);
 void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
@@ -21112,9 +21109,6 @@ cvar_t	*adr6;
 cvar_t	*adr7;
 cvar_t	*adr8;
 
-cvar_t	*cl_stereo_separation;
-cvar_t	*cl_stereo;
-
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
 
@@ -22393,12 +22387,7 @@ void CL_InitLocal (void)
 	adr7 = COM_GetCvar( "adr7", "", CVAR_ARCHIVE );
 	adr8 = COM_GetCvar( "adr8", "", CVAR_ARCHIVE );
 
-//
-// register our variables
-//
-	cl_stereo_separation = COM_GetCvar( "cl_stereo_separation", "0.4", CVAR_ARCHIVE );
-	cl_stereo = COM_GetCvar( "cl_stereo", "0", 0 );
-
+	// register our variables
 	cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
 	cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
 	cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
@@ -22408,7 +22397,6 @@ void CL_InitLocal (void)
 	cl_noskins = COM_GetCvar ("cl_noskins", "0", 0);
 	cl_autoskins = COM_GetCvar ("cl_autoskins", "0", 0);
 	cl_predict = COM_GetCvar ("cl_predict", "1", 0);
-//	cl_minfps = Cvar_Get ("cl_minfps", "5", 0);
 	cl_maxfps = COM_GetCvar ("cl_maxfps", "90", 0);
 
 	cl_upspeed = COM_GetCvar ("cl_upspeed", "200", 0);
@@ -25135,7 +25123,7 @@ int entitycmpfnc( const Entity *a, const Entity *b )
 }
 
 void R_RenderFrame (refdef_t *fd);
-void R_BeginFrame( float camera_separation );
+void R_BeginFrame();
 void GLimp_EndFrame( void );
 
 void SCR_TimeRefresh_f (void)
@@ -25151,7 +25139,7 @@ void SCR_TimeRefresh_f (void)
 
 	if (cmd_argc == 2)
 	{	// run without page flipping
-		R_BeginFrame( 0 );
+		R_BeginFrame();
 		for (i=0 ; i<128 ; i++)
 		{
 			cl.refdef.viewangles[1] = i/128.0*360.0;
@@ -25165,7 +25153,7 @@ void SCR_TimeRefresh_f (void)
 		{
 			cl.refdef.viewangles[1] = i/128.0*360.0;
 
-			R_BeginFrame( 0 );
+			R_BeginFrame();
 			R_RenderFrame (&cl.refdef);
 			GLimp_EndFrame();
 		}
@@ -25758,27 +25746,8 @@ static void SCR_UpdateScreen() {
 		return;
 	}
 
-	// range check cl_camera_separation so we don't inadvertently fry someone's brain
-	if (cl_stereo_separation->value > 1.0) {
-		COM_SetValueCvar("cl_stereo_separation", 1.0);
-	} else if (cl_stereo_separation->value < 0) {
-		COM_SetValueCvar("cl_stereo_separation", 0.0);
-	}
-
-	int numframes = 0;
-	float separation[2] = {0, 0};
-	if (cl_stereo->value) {
-		numframes = 2;
-		separation[0] = -cl_stereo_separation->value / 2;
-		separation[1] =  cl_stereo_separation->value / 2;
-	} else {
-		separation[0] = 0;
-		separation[1] = 0;
-		numframes = 1;
-	}
-
-	for (int i = 0; i < numframes; i++) {
-		R_BeginFrame( separation[i] );
+	{
+		R_BeginFrame();
 
 		if (scr_draw_loading == 2) {
 			//  loading plaque over black screen
@@ -25824,7 +25793,7 @@ static void SCR_UpdateScreen() {
 			// clear any dirty part of the background
 			SCR_TileClear();
 
-			V_RenderView(separation[i]);
+			V_RenderView();
 
 			SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 
@@ -27964,13 +27933,7 @@ void SCR_DrawCrosshair (void)
 	, scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
 
-/*
-==================
-V_RenderView
-
-==================
-*/
-void V_RenderView( float stereo_separation )
+void V_RenderView()
 {
 	extern int entitycmpfnc( const Entity *, const Entity * );
 
@@ -28009,15 +27972,6 @@ void V_RenderView( float stereo_separation )
 			cl.refdef.blend[1] = 0.5;
 			cl.refdef.blend[2] = 0.25;
 			cl.refdef.blend[3] = 0.5;
-		}
-
-		// offset vieworg appropriately if we're doing stereo separation
-		if ( stereo_separation != 0 )
-		{
-			vec3_t tmp;
-
-			VectorScale( cl.v_right, stereo_separation, tmp );
-			VectorAdd( cl.refdef.vieworg, tmp, cl.refdef.vieworg );
 		}
 
 		// never let it sit exactly on a node line, because a water plane can
@@ -79906,9 +79860,6 @@ typedef struct
 	int	currenttextures[2];
 	int currenttmu;
 
-	float camera_separation;
-	bool stereo_enabled;
-
 	unsigned char originalRedGammaTable[256];
 	unsigned char originalGreenGammaTable[256];
 	unsigned char originalBlueGammaTable[256];
@@ -79916,7 +79867,7 @@ typedef struct
 
 extern glstate_t   gl_state;
 
-void		GLimp_BeginFrame( float camera_separation );
+void		GLimp_BeginFrame();
 
 void		GLimp_AppActivate( bool active );
 void		GLimp_LogNewFrame( void );
@@ -84532,9 +84483,6 @@ void MYgluPerspective( GLdouble fovy, GLdouble aspect,
    xmin = ymin * aspect;
    xmax = ymax * aspect;
 
-   xmin += -( 2 * gl_state.camera_separation ) / zNear;
-   xmax += -( 2 * gl_state.camera_separation ) / zNear;
-
    glFrustum( xmin, xmax, ymin, ymax, zNear, zFar );
 }
 
@@ -84786,20 +84734,16 @@ static BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
 static void GL_UpdateSwapInterval() {
 	if (gl_swapinterval->modified) {
 		gl_swapinterval->modified = false;
-		if (!gl_state.stereo_enabled) {
-			wglSwapIntervalEXT(gl_swapinterval->value);
-		}
+		wglSwapIntervalEXT(gl_swapinterval->value);
 	}
 }
 
-static void R_BeginFrame(float camera_separation) {
-	gl_state.camera_separation = camera_separation;
-
+static void R_BeginFrame() {
 	if (vid_gamma->modified) {
 		vid_gamma->modified = false;
 	}
 
-	GLimp_BeginFrame( camera_separation );
+	GLimp_BeginFrame();
 
 	/*
 	** go into 2D mode
@@ -84823,13 +84767,10 @@ static void R_BeginFrame(float camera_separation) {
 	{
 		gl_drawbuffer->modified = false;
 
-		if ( gl_state.camera_separation == 0 || !gl_state.stereo_enabled )
-		{
-			if ( Q_stricmp( gl_drawbuffer->string, "GL_FRONT" ) == 0 )
-				glDrawBuffer( GL_FRONT );
-			else
-				glDrawBuffer( GL_BACK );
-		}
+		if ( Q_stricmp( gl_drawbuffer->string, "GL_FRONT" ) == 0 )
+			glDrawBuffer( GL_FRONT );
+		else
+			glDrawBuffer( GL_BACK );
 	}
 
 	/*
@@ -90258,17 +90199,6 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 			0, 0, 0							// layer masks ignored
 		};
 
-		cvar_t* stereo = COM_GetCvar("cl_stereo", "0", 0);
-
-		// set PFD_STEREO if necessary
-		if (stereo->value != 0) {
-			Com_Printf("...attempting to use stereo\n");
-			pfd.dwFlags |= PFD_STEREO;
-			gl_state.stereo_enabled = true;
-		} else {
-			gl_state.stereo_enabled = false;
-		}
-
 		// Get a DC for the specified window
 		assert(glw_state.hDC == NULL);
 		glw_state.hDC = GetDC(glw_state.hWnd);
@@ -90280,12 +90210,6 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 		assert(set_pixel_format_result);
 		int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
 		assert(describe_pixel_format_result);
-
-		// report if stereo is desired but unavailable
-		if (!(pfd.dwFlags & PFD_STEREO) && (stereo->value != 0)) {
-			COM_SetValueCvar( "cl_stereo", 0 );
-			gl_state.stereo_enabled = false;
-		}
 
 		glw_state.hGLRC = wglCreateContext(glw_state.hDC);
 		assert(glw_state.hGLRC);
@@ -90829,11 +90753,7 @@ static const char* VID_MenuKey(int key) {
 	return sound;
 }
 
-
-/*
-** GLimp_BeginFrame
-*/
-void GLimp_BeginFrame( float camera_separation )
+void GLimp_BeginFrame()
 {
 	if ( gl_bitdepth->modified )
 	{
@@ -90845,18 +90765,7 @@ void GLimp_BeginFrame( float camera_separation )
 		gl_bitdepth->modified = false;
 	}
 
-	if ( camera_separation < 0 && gl_state.stereo_enabled )
-	{
-		glDrawBuffer( GL_BACK_LEFT );
-	}
-	else if ( camera_separation > 0 && gl_state.stereo_enabled )
-	{
-		glDrawBuffer( GL_BACK_RIGHT );
-	}
-	else
-	{
-		glDrawBuffer( GL_BACK );
-	}
+	glDrawBuffer( GL_BACK );
 }
 
 static void GLimp_EndFrame() {
