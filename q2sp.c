@@ -90104,13 +90104,7 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
-bool VID_CreateWindow( int width, int height, bool fullscreen ) {
-	RECT			r;
-	cvar_t			*vid_xpos, *vid_ypos;
-	int				stylebits;
-	int				x, y, w, h;
-	int				exstyle;
-
+static void VID_CreateWindow( int width, int height, bool fullscreen ) {
 	WNDCLASS wc = {
 		.style         = 0,
 		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
@@ -90127,50 +90121,41 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	ATOM register_class_result = RegisterClass(&wc);
 	assert(register_class_result);
 
-	if (fullscreen)
-	{
+	int stylebits = 0;
+	int exstyle = 0;
+	if (fullscreen) {
 		exstyle = WS_EX_TOPMOST;
 		stylebits = WS_POPUP|WS_VISIBLE;
-	}
-	else
-	{
-		exstyle = 0;
+	} else {
 		stylebits = WINDOW_STYLE;
 	}
 
-	r.left = 0;
-	r.top = 0;
-	r.right  = width;
-	r.bottom = height;
+	RECT r = {.left = 0, .top = 0, .right = width, .bottom = height};
+	AdjustWindowRect(&r, stylebits, FALSE);
 
-	AdjustWindowRect (&r, stylebits, FALSE);
+	int x = 0;
+	int y = 0;
+	int w = r.right - r.left;
+	int h = r.bottom - r.top;
 
-	w = r.right - r.left;
-	h = r.bottom - r.top;
-
-	if (fullscreen)
-	{
-		x = 0;
-		y = 0;
-	}
-	else
-	{
-		vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
-		vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
+	if (!fullscreen) {
+		cvar_t* vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
+		cvar_t* vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
 		x = vid_xpos->value;
 		y = vid_ypos->value;
 	}
 
-	glw_state.hWnd = CreateWindowEx (
-		 exstyle,
-		 WINDOW_CLASS_NAME,
-		 "Quake 2",
-		 stylebits,
-		 x, y, w, h,
-		 NULL,
-		 NULL,
-		 glw_state.hInstance,
-		 NULL);
+	glw_state.hWnd = CreateWindowEx(
+		exstyle,
+		WINDOW_CLASS_NAME,
+		"Quake 2",
+		stylebits,
+		x, y, w, h,
+		NULL,
+		NULL,
+		glw_state.hInstance,
+		NULL
+	);
 
 	assert(glw_state.hWnd);
 
@@ -90179,24 +90164,13 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 
 	{
 		PIXELFORMATDESCRIPTOR pfd = {
-			sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
-			1,								// version number
-			PFD_DRAW_TO_WINDOW |			// support window
-			PFD_SUPPORT_OPENGL |			// support OpenGL
-			PFD_DOUBLEBUFFER,				// double buffered
-			PFD_TYPE_RGBA,					// RGBA type
-			24,								// 24-bit color depth
-			0, 0, 0, 0, 0, 0,				// color bits ignored
-			0,								// no alpha buffer
-			0,								// shift bit ignored
-			0,								// no accumulation buffer
-			0, 0, 0, 0, 					// accum bits ignored
-			32,								// 32-bit z-buffer
-			0,								// no stencil buffer
-			0,								// no auxiliary buffer
-			PFD_MAIN_PLANE,					// main layer
-			0,								// reserved
-			0, 0, 0							// layer masks ignored
+			.nSize = sizeof(PIXELFORMATDESCRIPTOR),
+			.nVersion = 1,
+			.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+			.iPixelType = PFD_TYPE_RGBA,
+			.cColorBits = 24,
+			.cDepthBits = 32,
+			.iLayerType = PFD_MAIN_PLANE,
 		};
 
 		// Get a DC for the specified window
@@ -90220,13 +90194,11 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 		}
 	}
 
-	SetForegroundWindow( glw_state.hWnd );
-	SetFocus( glw_state.hWnd );
+	SetForegroundWindow(glw_state.hWnd);
+	SetFocus(glw_state.hWnd);
 
 	// let the sound and input subsystems know about the new window
-	VID_NewWindow (width, height);
-
-	return true;
+	VID_NewWindow(width, height);
 }
 
 // This function gets called once just before drawing each frame, and it's sole purpose in life
@@ -90317,8 +90289,7 @@ static void VID_Restart() {
 			ChangeDisplaySettings(0, 0);
 		}
 
-		bool create_window_result = VID_CreateWindow(vid.width, vid.height, fullscreen_mode);
-		assert(create_window_result);
+		VID_CreateWindow(vid.width, vid.height, fullscreen_mode);
 	}
 
 	// NOTE: Must happen after GL context is created
