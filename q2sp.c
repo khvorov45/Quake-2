@@ -90166,6 +90166,235 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
+bool GLimp_InitGL (void)
+{
+	PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
+		1,								// version number
+		PFD_DRAW_TO_WINDOW |			// support window
+		PFD_SUPPORT_OPENGL |			// support OpenGL
+		PFD_DOUBLEBUFFER,				// double buffered
+		PFD_TYPE_RGBA,					// RGBA type
+		24,								// 24-bit color depth
+		0, 0, 0, 0, 0, 0,				// color bits ignored
+		0,								// no alpha buffer
+		0,								// shift bit ignored
+		0,								// no accumulation buffer
+		0, 0, 0, 0, 					// accum bits ignored
+		32,								// 32-bit z-buffer
+		0,								// no stencil buffer
+		0,								// no auxiliary buffer
+		PFD_MAIN_PLANE,					// main layer
+		0,								// reserved
+		0, 0, 0							// layer masks ignored
+	};
+	int  pixelformat;
+	cvar_t *stereo;
+
+	stereo = COM_GetCvar( "cl_stereo", "0", 0 );
+
+	/*
+	** set PFD_STEREO if necessary
+	*/
+	if ( stereo->value != 0 )
+	{
+		Com_Printf("...attempting to use stereo\n");
+		pfd.dwFlags |= PFD_STEREO;
+		gl_state.stereo_enabled = true;
+	}
+	else
+	{
+		gl_state.stereo_enabled = false;
+	}
+
+	/*
+	** figure out if we're running on a minidriver or not
+	*/
+	if ( strstr( gl_driver->string, "opengl32" ) != 0 )
+		glw_state.minidriver = false;
+	else
+		glw_state.minidriver = true;
+
+	/*
+	** Get a DC for the specified window
+	*/
+	if ( glw_state.hDC != NULL )
+		Com_Printf("non-NULL DC exists\n");
+
+	if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
+	{
+		Com_Printf("GetDC failed\n");
+		return false;
+	}
+
+	if ( glw_state.minidriver )
+	{
+		if ( (pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
+		{
+			Com_Printf("ChoosePixelFormat failed\n");
+			return false;
+		}
+		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
+		{
+			Com_Printf("SetPixelFormat failed\n");
+			return false;
+		}
+		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
+	}
+	else
+	{
+		if ( ( pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
+		{
+			Com_Printf("ChoosePixelFormat failed\n");
+			return false;
+		}
+		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
+		{
+			Com_Printf("SetPixelFormat failed\n");
+			return false;
+		}
+		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
+
+		if ( !( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) )
+		{
+			extern cvar_t *gl_allow_software;
+
+			if ( gl_allow_software->value )
+				glw_state.mcd_accelerated = true;
+			else
+				glw_state.mcd_accelerated = false;
+		}
+		else
+		{
+			glw_state.mcd_accelerated = true;
+		}
+	}
+
+	/*
+	** report if stereo is desired but unavailable
+	*/
+	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
+	{
+		Com_Printf("...failed to select stereo pixel format\n");
+		COM_SetValueCvar( "cl_stereo", 0 );
+		gl_state.stereo_enabled = false;
+	}
+
+	glw_state.hGLRC = wglCreateContext( glw_state.hDC );
+	assert(glw_state.hGLRC);
+
+	{
+		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+		assert(make_current_result);
+	}
+
+	// NOTE: Verify hardware acceleration is present
+	{
+		char buffer[1024] = {};
+		strcpy(buffer, (char*)glGetString(GL_RENDERER));
+		_strlwr(buffer);
+		if (strcmp(buffer, "gdi generic") == 0) {
+			assert(glw_state.mcd_accelerated);
+		}
+	}
+
+	/*
+	** print out PFD specifics
+	*/
+	Com_Printf("GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits);
+
+	return true;
+}
+
+bool VID_CreateWindow( int width, int height, bool fullscreen ) {
+	RECT			r;
+	cvar_t			*vid_xpos, *vid_ypos;
+	int				stylebits;
+	int				x, y, w, h;
+	int				exstyle;
+
+	WNDCLASS wc = {
+		.style         = 0,
+		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
+		.cbClsExtra    = 0,
+		.cbWndExtra    = 0,
+		.hInstance     = glw_state.hInstance,
+		.hIcon         = 0,
+		.hCursor       = LoadCursor (NULL,IDC_ARROW),
+		.hbrBackground = (void *)COLOR_GRAYTEXT,
+		.lpszMenuName  = 0,
+		.lpszClassName = WINDOW_CLASS_NAME,
+	};
+
+	ATOM register_class_result = RegisterClass(&wc);
+	assert(register_class_result);
+
+	if (fullscreen)
+	{
+		exstyle = WS_EX_TOPMOST;
+		stylebits = WS_POPUP|WS_VISIBLE;
+	}
+	else
+	{
+		exstyle = 0;
+		stylebits = WINDOW_STYLE;
+	}
+
+	r.left = 0;
+	r.top = 0;
+	r.right  = width;
+	r.bottom = height;
+
+	AdjustWindowRect (&r, stylebits, FALSE);
+
+	w = r.right - r.left;
+	h = r.bottom - r.top;
+
+	if (fullscreen)
+	{
+		x = 0;
+		y = 0;
+	}
+	else
+	{
+		vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
+		vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
+		x = vid_xpos->value;
+		y = vid_ypos->value;
+	}
+
+	glw_state.hWnd = CreateWindowEx (
+		 exstyle,
+		 WINDOW_CLASS_NAME,
+		 "Quake 2",
+		 stylebits,
+		 x, y, w, h,
+		 NULL,
+		 NULL,
+		 glw_state.hInstance,
+		 NULL);
+
+	assert(glw_state.hWnd);
+
+	ShowWindow( glw_state.hWnd, SW_SHOW );
+	UpdateWindow( glw_state.hWnd );
+
+	// init all the gl stuff for the window
+	if (!GLimp_InitGL ())
+	{
+		return false;
+	}
+
+	SetForegroundWindow( glw_state.hWnd );
+	SetFocus( glw_state.hWnd );
+
+	// let the sound and input subsystems know about the new window
+	VID_NewWindow (width, height);
+
+	return true;
+}
+
 // This function gets called once just before drawing each frame, and it's sole purpose in life
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
@@ -90254,7 +90483,6 @@ static void VID_Restart() {
 			ChangeDisplaySettings(0, 0);
 		}
 
-		bool VID_CreateWindow(int width, int height, bool fullscreen);
 		bool create_window_result = VID_CreateWindow(vid.width, vid.height, fullscreen_mode);
 		assert(create_window_result);
 	}
@@ -90691,259 +90919,6 @@ static const char* VID_MenuKey(int key) {
 	return sound;
 }
 
-bool GLimp_InitGL();
-
-static bool VerifyDriver( void )
-{
-	char buffer[1024];
-
-	strcpy( buffer, (char*)glGetString( GL_RENDERER ) );
-	_strlwr( buffer );
-	if ( strcmp( buffer, "gdi generic" ) == 0 )
-		if ( !glw_state.mcd_accelerated )
-			return false;
-	return true;
-}
-
-
-bool VID_CreateWindow( int width, int height, bool fullscreen ) {
-	RECT			r;
-	cvar_t			*vid_xpos, *vid_ypos;
-	int				stylebits;
-	int				x, y, w, h;
-	int				exstyle;
-
-	WNDCLASS wc = {
-		.style         = 0,
-		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
-		.cbClsExtra    = 0,
-		.cbWndExtra    = 0,
-		.hInstance     = glw_state.hInstance,
-		.hIcon         = 0,
-		.hCursor       = LoadCursor (NULL,IDC_ARROW),
-		.hbrBackground = (void *)COLOR_GRAYTEXT,
-		.lpszMenuName  = 0,
-		.lpszClassName = WINDOW_CLASS_NAME,
-	};
-
-	ATOM register_class_result = RegisterClass(&wc);
-	assert(register_class_result);
-
-	if (fullscreen)
-	{
-		exstyle = WS_EX_TOPMOST;
-		stylebits = WS_POPUP|WS_VISIBLE;
-	}
-	else
-	{
-		exstyle = 0;
-		stylebits = WINDOW_STYLE;
-	}
-
-	r.left = 0;
-	r.top = 0;
-	r.right  = width;
-	r.bottom = height;
-
-	AdjustWindowRect (&r, stylebits, FALSE);
-
-	w = r.right - r.left;
-	h = r.bottom - r.top;
-
-	if (fullscreen)
-	{
-		x = 0;
-		y = 0;
-	}
-	else
-	{
-		vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
-		vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
-		x = vid_xpos->value;
-		y = vid_ypos->value;
-	}
-
-	glw_state.hWnd = CreateWindowEx (
-		 exstyle,
-		 WINDOW_CLASS_NAME,
-		 "Quake 2",
-		 stylebits,
-		 x, y, w, h,
-		 NULL,
-		 NULL,
-		 glw_state.hInstance,
-		 NULL);
-
-	assert(glw_state.hWnd);
-
-	ShowWindow( glw_state.hWnd, SW_SHOW );
-	UpdateWindow( glw_state.hWnd );
-
-	// init all the gl stuff for the window
-	if (!GLimp_InitGL ())
-	{
-		return false;
-	}
-
-	SetForegroundWindow( glw_state.hWnd );
-	SetFocus( glw_state.hWnd );
-
-	// let the sound and input subsystems know about the new window
-	VID_NewWindow (width, height);
-
-	return true;
-}
-
-bool GLimp_InitGL (void)
-{
-	PIXELFORMATDESCRIPTOR pfd =
-	{
-		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
-		1,								// version number
-		PFD_DRAW_TO_WINDOW |			// support window
-		PFD_SUPPORT_OPENGL |			// support OpenGL
-		PFD_DOUBLEBUFFER,				// double buffered
-		PFD_TYPE_RGBA,					// RGBA type
-		24,								// 24-bit color depth
-		0, 0, 0, 0, 0, 0,				// color bits ignored
-		0,								// no alpha buffer
-		0,								// shift bit ignored
-		0,								// no accumulation buffer
-		0, 0, 0, 0, 					// accum bits ignored
-		32,								// 32-bit z-buffer
-		0,								// no stencil buffer
-		0,								// no auxiliary buffer
-		PFD_MAIN_PLANE,					// main layer
-		0,								// reserved
-		0, 0, 0							// layer masks ignored
-	};
-	int  pixelformat;
-	cvar_t *stereo;
-
-	stereo = COM_GetCvar( "cl_stereo", "0", 0 );
-
-	/*
-	** set PFD_STEREO if necessary
-	*/
-	if ( stereo->value != 0 )
-	{
-		Com_Printf("...attempting to use stereo\n");
-		pfd.dwFlags |= PFD_STEREO;
-		gl_state.stereo_enabled = true;
-	}
-	else
-	{
-		gl_state.stereo_enabled = false;
-	}
-
-	/*
-	** figure out if we're running on a minidriver or not
-	*/
-	if ( strstr( gl_driver->string, "opengl32" ) != 0 )
-		glw_state.minidriver = false;
-	else
-		glw_state.minidriver = true;
-
-	/*
-	** Get a DC for the specified window
-	*/
-	if ( glw_state.hDC != NULL )
-		Com_Printf("non-NULL DC exists\n");
-
-	if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
-	{
-		Com_Printf("GetDC failed\n");
-		return false;
-	}
-
-	if ( glw_state.minidriver )
-	{
-		if ( (pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
-		{
-			Com_Printf("ChoosePixelFormat failed\n");
-			return false;
-		}
-		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
-		{
-			Com_Printf("SetPixelFormat failed\n");
-			return false;
-		}
-		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
-	}
-	else
-	{
-		if ( ( pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
-		{
-			Com_Printf("ChoosePixelFormat failed\n");
-			return false;
-		}
-		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
-		{
-			Com_Printf("SetPixelFormat failed\n");
-			return false;
-		}
-		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
-
-		if ( !( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) )
-		{
-			extern cvar_t *gl_allow_software;
-
-			if ( gl_allow_software->value )
-				glw_state.mcd_accelerated = true;
-			else
-				glw_state.mcd_accelerated = false;
-		}
-		else
-		{
-			glw_state.mcd_accelerated = true;
-		}
-	}
-
-	/*
-	** report if stereo is desired but unavailable
-	*/
-	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
-	{
-		Com_Printf("...failed to select stereo pixel format\n");
-		COM_SetValueCvar( "cl_stereo", 0 );
-		gl_state.stereo_enabled = false;
-	}
-
-	glw_state.hGLRC = wglCreateContext( glw_state.hDC );
-	assert(glw_state.hGLRC);
-
-	{
-		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-		assert(make_current_result);
-	}
-
-	if ( !VerifyDriver() )
-	{
-		Com_Printf("no hardware acceleration detected\n");
-		goto fail;
-	}
-
-	/*
-	** print out PFD specifics
-	*/
-	Com_Printf("GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits);
-
-	return true;
-
-fail:
-	if ( glw_state.hGLRC )
-	{
-		wglDeleteContext( glw_state.hGLRC );
-		glw_state.hGLRC = NULL;
-	}
-
-	if ( glw_state.hDC )
-	{
-		ReleaseDC( glw_state.hWnd, glw_state.hDC );
-		glw_state.hDC = NULL;
-	}
-	return false;
-}
 
 /*
 ** GLimp_BeginFrame
