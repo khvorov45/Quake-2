@@ -90045,88 +90045,6 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
-static void VID_CreateWindow(int width, int height) {
-	WNDCLASS wc = {
-		.style         = 0,
-		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
-		.cbClsExtra    = 0,
-		.cbWndExtra    = 0,
-		.hInstance     = glw_state.hInstance,
-		.hIcon         = 0,
-		.hCursor       = LoadCursor (NULL,IDC_ARROW),
-		.hbrBackground = (void*)COLOR_GRAYTEXT,
-		.lpszMenuName  = 0,
-		.lpszClassName = WINDOW_CLASS_NAME,
-	};
-
-	ATOM register_class_result = RegisterClass(&wc);
-	assert(register_class_result);
-
-	RECT r = {.left = 0, .top = 0, .right = width, .bottom = height};
-	AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
-
-	cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
-	cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
-	int x = vid_xpos->value;
-	int y = vid_ypos->value;
-	int w = r.right - r.left;
-	int h = r.bottom - r.top;
-
-	glw_state.hWnd = CreateWindowEx(
-		0,
-		WINDOW_CLASS_NAME,
-		"Quake 2",
-		WINDOW_STYLE,
-		x, y, w, h,
-		NULL,
-		NULL,
-		glw_state.hInstance,
-		NULL
-	);
-	assert(glw_state.hWnd);
-
-	ShowWindow(glw_state.hWnd, SW_SHOW);
-	UpdateWindow(glw_state.hWnd);
-
-	{
-		PIXELFORMATDESCRIPTOR pfd = {
-			.nSize = sizeof(PIXELFORMATDESCRIPTOR),
-			.nVersion = 1,
-			.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-			.iPixelType = PFD_TYPE_RGBA,
-			.cColorBits = 24,
-			.cDepthBits = 32,
-			.iLayerType = PFD_MAIN_PLANE,
-		};
-
-		// Get a DC for the specified window
-		assert(glw_state.hDC == NULL);
-		glw_state.hDC = GetDC(glw_state.hWnd);
-		assert(glw_state.hDC != NULL);
-
-		int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
-		assert(pixelformat);
-		BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
-		assert(set_pixel_format_result);
-		int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
-		assert(describe_pixel_format_result);
-
-		glw_state.hGLRC = wglCreateContext(glw_state.hDC);
-		assert(glw_state.hGLRC);
-
-		{
-			BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-			assert(make_current_result);
-		}
-	}
-
-	SetForegroundWindow(glw_state.hWnd);
-	SetFocus(glw_state.hWnd);
-
-	// let the sound and input subsystems know about the new window
-	VID_NewWindow(width, height);
-}
-
 // This function gets called once just before drawing each frame, and it's sole purpose in life
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
@@ -90188,8 +90106,88 @@ static void VID_Restart() {
 		assert(screen_resolution_index >= 0 && screen_resolution_index < (int)carray_count(vid_modes));
 		vid.width  = vid_modes[screen_resolution_index].width;
 		vid.height = vid_modes[screen_resolution_index].height;
+	}
 
-		VID_CreateWindow(vid.width, vid.height);
+	{
+		WNDCLASS wc = {
+			.style         = 0,
+			.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
+			.cbClsExtra    = 0,
+			.cbWndExtra    = 0,
+			.hInstance     = glw_state.hInstance,
+			.hIcon         = 0,
+			.hCursor       = LoadCursor (NULL,IDC_ARROW),
+			.hbrBackground = (void*)COLOR_GRAYTEXT,
+			.lpszMenuName  = 0,
+			.lpszClassName = WINDOW_CLASS_NAME,
+		};
+
+		ATOM register_class_result = RegisterClass(&wc);
+		assert(register_class_result);
+
+		RECT r = {.left = 0, .top = 0, .right = vid.width, .bottom = vid.height};
+		AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
+
+		cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
+		cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
+		int x = vid_xpos->value;
+		int y = vid_ypos->value;
+		int w = r.right - r.left;
+		int h = r.bottom - r.top;
+
+		glw_state.hWnd = CreateWindowEx(
+			0,
+			WINDOW_CLASS_NAME,
+			"Quake 2",
+			WINDOW_STYLE,
+			x, y, w, h,
+			NULL,
+			NULL,
+			glw_state.hInstance,
+			NULL
+		);
+		assert(glw_state.hWnd);
+
+		ShowWindow(glw_state.hWnd, SW_SHOW);
+		UpdateWindow(glw_state.hWnd);
+
+		{
+			PIXELFORMATDESCRIPTOR pfd = {
+				.nSize = sizeof(PIXELFORMATDESCRIPTOR),
+				.nVersion = 1,
+				.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+				.iPixelType = PFD_TYPE_RGBA,
+				.cColorBits = 24,
+				.cDepthBits = 32,
+				.iLayerType = PFD_MAIN_PLANE,
+			};
+
+			// Get a DC for the specified window
+			assert(glw_state.hDC == NULL);
+			glw_state.hDC = GetDC(glw_state.hWnd);
+			assert(glw_state.hDC != NULL);
+
+			int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
+			assert(pixelformat);
+			BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
+			assert(set_pixel_format_result);
+			int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
+			assert(describe_pixel_format_result);
+
+			glw_state.hGLRC = wglCreateContext(glw_state.hDC);
+			assert(glw_state.hGLRC);
+
+			{
+				BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+				assert(make_current_result);
+			}
+		}
+
+		SetForegroundWindow(glw_state.hWnd);
+		SetFocus(glw_state.hWnd);
+
+		// let the sound and input subsystems know about the new window
+		VID_NewWindow(vid.width, vid.height);
 	}
 
 	// NOTE: Must happen after GL context is created
