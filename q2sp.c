@@ -79730,8 +79730,6 @@ extern	cvar_t	*gl_texturesolidmode;
 extern  cvar_t  *gl_saturatelighting;
 extern  cvar_t  *gl_lockpvs;
 
-extern	cvar_t	*vid_gamma;
-
 extern	cvar_t		*intensity;
 
 extern	int		gl_solid_format;
@@ -83958,9 +83956,6 @@ cvar_t	*gl_lockpvs;
 
 cvar_t	*gl_3dlabs_broken;
 
-cvar_t	*vid_gamma;
-
-
 /*
 =================
 R_CullBox
@@ -84704,10 +84699,6 @@ static void GL_UpdateSwapInterval() {
 }
 
 static void R_BeginFrame() {
-	if (vid_gamma->modified) {
-		vid_gamma->modified = false;
-	}
-
 	GLimp_BeginFrame();
 
 	/*
@@ -89806,7 +89797,6 @@ void* Sys_GetGameAPI(void* parms) {
 }
 
 // Console variables that we need to access from this module
-cvar_t		*vid_gamma;
 cvar_t		*vid_xpos;			// X coordinate of window position
 cvar_t		*vid_ypos;			// Y coordinate of window position
 
@@ -90232,12 +90222,7 @@ static void VID_Restart() {
 		Draw_GetPalette();
 
 		for (i64 ind = 0; ind < 256; ind++) {
-			if (vid_gamma->value == 1) {
-				gammatable[ind] = ind;
-			} else {
-				float inf = clamp(255 * pow((ind + 0.5) / 255.5, vid_gamma->value) + 0.5, 0, 255);
-				gammatable[ind] = inf;
-			}
+			gammatable[ind] = ind;
 		}
 
 		for (i64 ind=0 ; ind<256 ; ind++) {
@@ -90308,7 +90293,6 @@ static void VID_Restart() {
 	}
 }
 
-extern cvar_t *vid_gamma;
 extern cvar_t *scr_viewsize;
 
 static cvar_t *gl_picmip;
@@ -90332,7 +90316,6 @@ static menuframework_s	s_opengl_menu;
 
 static menuslider_s		s_tq_slider;
 static menuslider_s		s_screensize_slider;
-static menuslider_s		s_brightness_slider;
 static menulist_s  		s_stipple_box;
 static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
@@ -90344,12 +90327,6 @@ static void ScreenSizeCallback(void *s) {
 	COM_SetValueCvar("viewsize", slider->curvalue * 10);
 }
 
-static void BrightnessCallback(void* s) {
-	UNUSED(s);
-
-	s_brightness_slider.curvalue = s_brightness_slider.curvalue;
-}
-
 static void ResetDefaults(void* unused) {
 	UNUSED(unused);
 	VID_MenuInit();
@@ -90358,19 +90335,11 @@ static void ResetDefaults(void* unused) {
 static void ApplyChanges(void* unused) {
 	UNUSED(unused);
 
-	// invert sense so greater = brighter, and scale to a range of 0.5 to 1.3
-	float gamma = (0.8f - (s_brightness_slider.curvalue / 10.0f - 0.5f)) + 0.5f;
-
-	COM_SetValueCvar("vid_gamma", gamma);
 	COM_SetValueCvar("sw_stipplealpha", s_stipple_box.curvalue);
 	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
 
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
-
-	if (!video_should_restart) {
-		video_should_restart = vid_gamma->modified;
-	}
 
 	M_ForceMenuOff();
 }
@@ -90421,15 +90390,6 @@ static void VID_MenuInit() {
 	s_screensize_slider.maxvalue = 12;
 	s_screensize_slider.generic.callback = ScreenSizeCallback;
 
-	s_brightness_slider.generic.type	= MTYPE_SLIDER;
-	s_brightness_slider.generic.x	= 0;
-	s_brightness_slider.generic.y	= 30;
-	s_brightness_slider.generic.name	= "brightness";
-	s_brightness_slider.generic.callback = BrightnessCallback;
-	s_brightness_slider.minvalue = 5;
-	s_brightness_slider.maxvalue = 13;
-	s_brightness_slider.curvalue = ( 1.3 - vid_gamma->value + 0.5 ) * 10;
-
 	s_defaults_action.generic.type = MTYPE_ACTION;
 	s_defaults_action.generic.name = "reset to defaults";
 	s_defaults_action.generic.x    = 0;
@@ -90472,7 +90432,6 @@ static void VID_MenuInit() {
 	s_finish_box.itemnames = yesno_names;
 
 	Menu_AddItem(&s_opengl_menu, (void*)&s_screensize_slider);
-	Menu_AddItem(&s_opengl_menu, (void*)&s_brightness_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_paletted_texture_box);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_finish_box);
@@ -91110,7 +91069,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// Create the video variables so we know how to start the graphics drivers
 				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
 				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
-				vid_gamma = COM_GetCvar( "vid_gamma", "1", CVAR_ARCHIVE );
 
 				Cmd_AddCommand("vid_restart", VID_Restart_f);
 				Cmd_AddCommand("vid_front", VID_Front_f);
@@ -91172,8 +91130,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 
 				gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
-
-				vid_gamma = COM_GetCvar( "vid_gamma", "1.0", CVAR_ARCHIVE );
 
 				Cmd_AddCommand( "imagelist", GL_ImageList_f );
 				Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
