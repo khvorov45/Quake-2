@@ -90163,66 +90163,6 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
-static void GLimp_InitGL() {
-	PIXELFORMATDESCRIPTOR pfd = {
-		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
-		1,								// version number
-		PFD_DRAW_TO_WINDOW |			// support window
-		PFD_SUPPORT_OPENGL |			// support OpenGL
-		PFD_DOUBLEBUFFER,				// double buffered
-		PFD_TYPE_RGBA,					// RGBA type
-		24,								// 24-bit color depth
-		0, 0, 0, 0, 0, 0,				// color bits ignored
-		0,								// no alpha buffer
-		0,								// shift bit ignored
-		0,								// no accumulation buffer
-		0, 0, 0, 0, 					// accum bits ignored
-		32,								// 32-bit z-buffer
-		0,								// no stencil buffer
-		0,								// no auxiliary buffer
-		PFD_MAIN_PLANE,					// main layer
-		0,								// reserved
-		0, 0, 0							// layer masks ignored
-	};
-
-	cvar_t* stereo = COM_GetCvar("cl_stereo", "0", 0);
-
-	// set PFD_STEREO if necessary
-	if (stereo->value != 0) {
-		Com_Printf("...attempting to use stereo\n");
-		pfd.dwFlags |= PFD_STEREO;
-		gl_state.stereo_enabled = true;
-	} else {
-		gl_state.stereo_enabled = false;
-	}
-
-	// Get a DC for the specified window
-	assert(glw_state.hDC == NULL);
-	glw_state.hDC = GetDC(glw_state.hWnd);
-	assert(glw_state.hDC != NULL);
-
-	int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
-	assert(pixelformat);
-	BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
-	assert(set_pixel_format_result);
-	int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
-	assert(describe_pixel_format_result);
-
-	// report if stereo is desired but unavailable
-	if (!(pfd.dwFlags & PFD_STEREO) && (stereo->value != 0)) {
-		COM_SetValueCvar( "cl_stereo", 0 );
-		gl_state.stereo_enabled = false;
-	}
-
-	glw_state.hGLRC = wglCreateContext(glw_state.hDC);
-	assert(glw_state.hGLRC);
-
-	{
-		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-		assert(make_current_result);
-	}
-}
-
 bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	RECT			r;
 	cvar_t			*vid_xpos, *vid_ypos;
@@ -90296,7 +90236,65 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	ShowWindow( glw_state.hWnd, SW_SHOW );
 	UpdateWindow( glw_state.hWnd );
 
-	GLimp_InitGL();
+	{
+		PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
+			1,								// version number
+			PFD_DRAW_TO_WINDOW |			// support window
+			PFD_SUPPORT_OPENGL |			// support OpenGL
+			PFD_DOUBLEBUFFER,				// double buffered
+			PFD_TYPE_RGBA,					// RGBA type
+			24,								// 24-bit color depth
+			0, 0, 0, 0, 0, 0,				// color bits ignored
+			0,								// no alpha buffer
+			0,								// shift bit ignored
+			0,								// no accumulation buffer
+			0, 0, 0, 0, 					// accum bits ignored
+			32,								// 32-bit z-buffer
+			0,								// no stencil buffer
+			0,								// no auxiliary buffer
+			PFD_MAIN_PLANE,					// main layer
+			0,								// reserved
+			0, 0, 0							// layer masks ignored
+		};
+
+		cvar_t* stereo = COM_GetCvar("cl_stereo", "0", 0);
+
+		// set PFD_STEREO if necessary
+		if (stereo->value != 0) {
+			Com_Printf("...attempting to use stereo\n");
+			pfd.dwFlags |= PFD_STEREO;
+			gl_state.stereo_enabled = true;
+		} else {
+			gl_state.stereo_enabled = false;
+		}
+
+		// Get a DC for the specified window
+		assert(glw_state.hDC == NULL);
+		glw_state.hDC = GetDC(glw_state.hWnd);
+		assert(glw_state.hDC != NULL);
+
+		int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
+		assert(pixelformat);
+		BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
+		assert(set_pixel_format_result);
+		int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
+		assert(describe_pixel_format_result);
+
+		// report if stereo is desired but unavailable
+		if (!(pfd.dwFlags & PFD_STEREO) && (stereo->value != 0)) {
+			COM_SetValueCvar( "cl_stereo", 0 );
+			gl_state.stereo_enabled = false;
+		}
+
+		glw_state.hGLRC = wglCreateContext(glw_state.hDC);
+		assert(glw_state.hGLRC);
+
+		{
+			BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+			assert(make_current_result);
+		}
+	}
 
 	SetForegroundWindow( glw_state.hWnd );
 	SetFocus( glw_state.hWnd );
