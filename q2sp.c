@@ -90038,11 +90038,6 @@ static void VID_UpdateWindowPosAndSize() {
 	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );
 }
 
-void VID_NewWindow( int width, int height) {
-	viddef.width  = width;
-	viddef.height = height;
-}
-
 static HINSTANCE global_hInstance;
 
 // This function gets called once just before drawing each frame, and it's sole purpose in life
@@ -90151,6 +90146,7 @@ static void VID_Restart() {
 		ShowWindow(glw_state.hWnd, SW_SHOW);
 		UpdateWindow(glw_state.hWnd);
 
+		// NOTE: GL context
 		{
 			PIXELFORMATDESCRIPTOR pfd = {
 				.nSize = sizeof(PIXELFORMATDESCRIPTOR),
@@ -90186,8 +90182,8 @@ static void VID_Restart() {
 		SetForegroundWindow(glw_state.hWnd);
 		SetFocus(glw_state.hWnd);
 
-		// let the sound and input subsystems know about the new window
-		VID_NewWindow(vid.width, vid.height);
+		viddef.width  = vid.width;
+		viddef.height = vid.height;
 	}
 
 	// NOTE: Must happen after GL context is created
@@ -90198,9 +90194,9 @@ static void VID_Restart() {
 
 	// get our various GL strings
 	gl_config.vendor_string = (char*)glGetString(GL_VENDOR);
-	gl_config.renderer_string = (char*)glGetString (GL_RENDERER);
-	gl_config.version_string = (char*)glGetString (GL_VERSION);
-	gl_config.extensions_string = (char*)glGetString (GL_EXTENSIONS);
+	gl_config.renderer_string = (char*)glGetString(GL_RENDERER);
+	gl_config.version_string = (char*)glGetString(GL_VERSION);
+	gl_config.extensions_string = (char*)glGetString(GL_EXTENSIONS);
 
 	COM_SetCvar("scr_drawall", "0");
 
