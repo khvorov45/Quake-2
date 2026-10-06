@@ -23948,8 +23948,6 @@ typedef struct image_s
 	float	sl, tl, sh, th;				// 0,0 - 1,1 unless part of the scrap
 	bool	scrap;
 	bool	has_alpha;
-
-	bool paletted;
 } image_t;
 
 image_t	*Draw_FindPic (char *name);
@@ -79424,25 +79422,8 @@ void Weapon_BFG (edict_t *ent)
 	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
 
-
 #include <windows.h>
 #include <GL/gl.h>
-
-static BOOL (WINAPI *qwglSwapIntervalEXT)( int interval );
-static void (APIENTRY *qglPointParameterfEXT)( GLenum param, GLfloat value );
-static void (APIENTRY *qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
-static void (APIENTRY *qglColorTableEXT)( int, int, int, int, int, const void * );
-static void (APIENTRY *qglSelectTextureSGIS)( GLenum );
-static void (APIENTRY *qglMTexCoord2fSGIS)( GLenum, GLfloat, GLfloat );
-
-#define GL_POINT_SIZE_MIN_EXT				0x8126
-#define GL_POINT_SIZE_MAX_EXT				0x8127
-#define GL_DISTANCE_ATTENUATION_EXT			0x8129
-
-#define GL_SHARED_TEXTURE_PALETTE_EXT		0x81FB
-
-#define GL_TEXTURE0_SGIS					0x835E
-#define GL_TEXTURE1_SGIS					0x835F
 
 // coordinates from main game
 static struct {
@@ -79722,8 +79703,6 @@ void	Mod_Modellist_f (void);
 void GL_BeginRendering (int *x, int *y, int *width, int *height);
 void GL_EndRendering (void);
 
-void GL_UpdateSwapInterval( void );
-
 extern	float	gldepthmin, gldepthmax;
 
 typedef struct
@@ -79845,10 +79824,7 @@ extern	float	r_world_matrix[16];
 
 void R_TranslatePlayerSkin (int playernum);
 void GL_Bind (int texnum);
-void GL_MBind( GLenum target, int texnum );
 void GL_TexEnv( GLenum value );
-void GL_EnableMultitexture( bool enable );
-void GL_SelectTexture( GLenum );
 
 void R_LightPoint (vec3_t p, vec3_t color);
 void R_PushDlights (void);
@@ -80186,7 +80162,6 @@ extern unsigned	r_rawpalette[256];
 void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 {
 	unsigned	image32[256*256];
-	unsigned char image8[256*256];
 	int			i, j, trows;
 	u8		*source;
 	int			frac, fracstep;
@@ -80208,7 +80183,6 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 	}
 	t = rows*hscale / 256;
 
-	if ( !qglColorTableEXT )
 	{
 		unsigned *dest;
 
@@ -80230,35 +80204,7 @@ void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
 
 		glTexImage2D (GL_TEXTURE_2D, 0, gl_tex_solid_format, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, image32);
 	}
-	else
-	{
-		unsigned char *dest;
 
-		for (i=0 ; i<trows ; i++)
-		{
-			row = (int)(i*hscale);
-			if (row > rows)
-				break;
-			source = data + cols*row;
-			dest = &image8[i*256];
-			fracstep = cols*0x10000/256;
-			frac = fracstep >> 1;
-			for (j=0 ; j<256 ; j++)
-			{
-				dest[j] = source[frac>>16];
-				frac += fracstep;
-			}
-		}
-
-		glTexImage2D( GL_TEXTURE_2D,
-					   0,
-					   GL_COLOR_INDEX8_EXT,
-					   256, 256,
-					   0,
-					   GL_COLOR_INDEX,
-					   GL_UNSIGNED_BYTE,
-					   image8 );
-	}
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -80285,9 +80231,8 @@ cvar_t		*intensity;
 
 unsigned	d_8to24table[256];
 
-bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap, bool is_sky );
+bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
-
 
 int		gl_solid_format = 3;
 int		gl_alpha_format = 4;
@@ -80297,73 +80242,6 @@ int		gl_tex_alpha_format = 4;
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
 int		gl_filter_max = GL_LINEAR;
-
-void GL_SetTexturePalette( unsigned palette[256] )
-{
-	int i;
-	unsigned char temptable[768];
-
-	for ( i = 0; i < 256; i++ )
-	{
-		temptable[i*3+0] = ( palette[i] >> 0 ) & 0xff;
-		temptable[i*3+1] = ( palette[i] >> 8 ) & 0xff;
-		temptable[i*3+2] = ( palette[i] >> 16 ) & 0xff;
-	}
-
-	if ( qglColorTableEXT && gl_ext_palettedtexture->value )
-	{
-		qglColorTableEXT( GL_SHARED_TEXTURE_PALETTE_EXT,
-						   GL_RGB,
-						   256,
-						   GL_RGB,
-						   GL_UNSIGNED_BYTE,
-						   temptable );
-	}
-}
-
-void GL_EnableMultitexture( bool enable )
-{
-	if ( !qglSelectTextureSGIS )
-		return;
-
-	if ( enable )
-	{
-		GL_SelectTexture( GL_TEXTURE1_SGIS );
-		glEnable( GL_TEXTURE_2D );
-		GL_TexEnv( GL_REPLACE );
-	}
-	else
-	{
-		GL_SelectTexture( GL_TEXTURE1_SGIS );
-		glDisable( GL_TEXTURE_2D );
-		GL_TexEnv( GL_REPLACE );
-	}
-	GL_SelectTexture( GL_TEXTURE0_SGIS );
-	GL_TexEnv( GL_REPLACE );
-}
-
-void GL_SelectTexture( GLenum texture )
-{
-	int tmu;
-
-	if ( !qglSelectTextureSGIS )
-		return;
-
-	if ( texture == GL_TEXTURE0_SGIS )
-		tmu = 0;
-	else
-		tmu = 1;
-
-	if ( tmu == gl_state.currenttmu )
-		return;
-
-	gl_state.currenttmu = tmu;
-
-	if ( tmu == 0 )
-		qglSelectTextureSGIS( GL_TEXTURE0_SGIS );
-	else
-		qglSelectTextureSGIS( GL_TEXTURE1_SGIS );
-}
 
 void GL_TexEnv( GLenum mode )
 {
@@ -80386,22 +80264,6 @@ void GL_Bind (int texnum)
 		return;
 	gl_state.currenttextures[gl_state.currenttmu] = texnum;
 	glBindTexture (GL_TEXTURE_2D, texnum);
-}
-
-void GL_MBind( GLenum target, int texnum )
-{
-	GL_SelectTexture( target );
-	if ( target == GL_TEXTURE0_SGIS )
-	{
-		if ( gl_state.currenttextures[0] == texnum )
-			return;
-	}
-	else
-	{
-		if ( gl_state.currenttextures[1] == texnum )
-			return;
-	}
-	GL_Bind( texnum );
 }
 
 typedef struct
@@ -80526,11 +80388,6 @@ void	GL_ImageList_f (void)
 	int		i;
 	image_t	*image;
 	int		texels;
-	const char *palstrings[2] =
-	{
-		"RGB",
-		"PAL"
-	};
 
 	Com_Printf("------------------\n");
 	texels = 0;
@@ -80559,8 +80416,7 @@ void	GL_ImageList_f (void)
 			break;
 		}
 
-		Com_Printf( " %3i %3i %s: %s\n",
-			image->upload_width, image->upload_height, palstrings[image->paletted], image->name);
+		Com_Printf( " %3i %3i: %s\n", image->upload_width, image->upload_height, image->name);
 	}
 	Com_Printf("Total texel count (not counting mipmaps): %i\n", texels);
 }
@@ -80632,7 +80488,7 @@ void Scrap_Upload (void)
 {
 	scrap_uploads++;
 	GL_Bind(TEXNUM_SCRAPS);
-	GL_Upload8 (scrap_texels[0], BLOCK_WIDTH, BLOCK_HEIGHT, false, false );
+	GL_Upload8 (scrap_texels[0], BLOCK_WIDTH, BLOCK_HEIGHT, false);
 	scrap_dirty = false;
 }
 
@@ -81133,47 +80989,16 @@ void GL_MipMap (u8 *in, int width, int height)
 	}
 }
 
-/*
-===============
-GL_Upload32
-
-Returns has_alpha
-===============
-*/
-void GL_BuildPalettedTexture( unsigned char *paletted_texture, unsigned char *scaled, int scaled_width, int scaled_height )
-{
-	int i;
-
-	for ( i = 0; i < scaled_width * scaled_height; i++ )
-	{
-		unsigned int r, g, b, c;
-
-		r = ( scaled[0] >> 3 ) & 31;
-		g = ( scaled[1] >> 2 ) & 63;
-		b = ( scaled[2] >> 3 ) & 31;
-
-		c = r | ( g << 5 ) | ( b << 11 );
-
-		paletted_texture[i] = gl_state.d_16to8table[c];
-
-		scaled += 4;
-	}
-}
-
 int		upload_width, upload_height;
-bool uploaded_paletted;
 
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 {
 	int			samples;
 	unsigned	scaled[256*256];
-	unsigned char paletted_texture[256*256];
 	int			scaled_width, scaled_height;
 	int			i, c;
 	u8		*scan;
 	int comp;
-
-	uploaded_paletted = false;
 
 	for (scaled_width = 1 ; scaled_width < width ; scaled_width<<=1)
 		;
@@ -81247,24 +81072,7 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 	{
 		if (!mipmap)
 		{
-			if ( qglColorTableEXT && gl_ext_palettedtexture->value && samples == gl_solid_format )
-			{
-				uploaded_paletted = true;
-				GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) data, scaled_width, scaled_height );
-				glTexImage2D( GL_TEXTURE_2D,
-							  0,
-							  GL_COLOR_INDEX8_EXT,
-							  scaled_width,
-							  scaled_height,
-							  0,
-							  GL_COLOR_INDEX,
-							  GL_UNSIGNED_BYTE,
-							  paletted_texture );
-			}
-			else
-			{
-				glTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			}
+			glTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 			goto done;
 		}
 		memcpy (scaled, data, width*height*4);
@@ -81274,24 +81082,7 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 
 	GL_LightScaleTexture (scaled, scaled_width, scaled_height, !mipmap );
 
-	if ( qglColorTableEXT && gl_ext_palettedtexture->value && ( samples == gl_solid_format ) )
-	{
-		uploaded_paletted = true;
-		GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) scaled, scaled_width, scaled_height );
-		glTexImage2D( GL_TEXTURE_2D,
-					  0,
-					  GL_COLOR_INDEX8_EXT,
-					  scaled_width,
-					  scaled_height,
-					  0,
-					  GL_COLOR_INDEX,
-					  GL_UNSIGNED_BYTE,
-					  paletted_texture );
-	}
-	else
-	{
-		glTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled );
-	}
+	glTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled );
 
 	if (mipmap)
 	{
@@ -81308,24 +81099,7 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 			if (scaled_height < 1)
 				scaled_height = 1;
 			miplevel++;
-			if ( qglColorTableEXT && gl_ext_palettedtexture->value && samples == gl_solid_format )
-			{
-				uploaded_paletted = true;
-				GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) scaled, scaled_width, scaled_height );
-				glTexImage2D( GL_TEXTURE_2D,
-							  miplevel,
-							  GL_COLOR_INDEX8_EXT,
-							  scaled_width,
-							  scaled_height,
-							  0,
-							  GL_COLOR_INDEX,
-							  GL_UNSIGNED_BYTE,
-							  paletted_texture );
-			}
-			else
-			{
-				glTexImage2D (GL_TEXTURE_2D, miplevel, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
-			}
+			glTexImage2D (GL_TEXTURE_2D, miplevel, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
 		}
 	}
 done: ;
@@ -81347,7 +81121,7 @@ done: ;
 }
 
 // Returns has_alpha
-static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap, bool is_sky) {
+static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap) {
 	unsigned	trans[512*256];
 	int			i;
 	int			p;
@@ -81355,55 +81129,33 @@ static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap, bool is_sk
 	int s = width * height;
 	assert(s <= (int)sizeof(trans) / 4);
 
-	if ( qglColorTableEXT &&
-		 gl_ext_palettedtexture->value &&
-		 is_sky )
+	for (i=0 ; i<s ; i++)
 	{
-		glTexImage2D( GL_TEXTURE_2D,
-					  0,
-					  GL_COLOR_INDEX8_EXT,
-					  width,
-					  height,
-					  0,
-					  GL_COLOR_INDEX,
-					  GL_UNSIGNED_BYTE,
-					  data );
+		p = data[i];
+		trans[i] = d_8to24table[p];
 
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-	}
-	else
-	{
-		for (i=0 ; i<s ; i++)
-		{
-			p = data[i];
-			trans[i] = d_8to24table[p];
-
-			if (p == 255)
-			{	// transparent, so scan around for another color
-				// to avoid alpha fringes
-				// FIXME: do a full flood fill so mips work...
-				if (i > width && data[i-width] != 255)
-					p = data[i-width];
-				else if (i < s-width && data[i+width] != 255)
-					p = data[i+width];
-				else if (i > 0 && data[i-1] != 255)
-					p = data[i-1];
-				else if (i < s-1 && data[i+1] != 255)
-					p = data[i+1];
-				else
-					p = 0;
-				// copy rgb components
-				((u8 *)&trans[i])[0] = ((u8 *)&d_8to24table[p])[0];
-				((u8 *)&trans[i])[1] = ((u8 *)&d_8to24table[p])[1];
-				((u8 *)&trans[i])[2] = ((u8 *)&d_8to24table[p])[2];
-			}
+		if (p == 255)
+		{	// transparent, so scan around for another color
+			// to avoid alpha fringes
+			// FIXME: do a full flood fill so mips work...
+			if (i > width && data[i-width] != 255)
+				p = data[i-width];
+			else if (i < s-width && data[i+width] != 255)
+				p = data[i+width];
+			else if (i > 0 && data[i-1] != 255)
+				p = data[i-1];
+			else if (i < s-1 && data[i+1] != 255)
+				p = data[i+1];
+			else
+				p = 0;
+			// copy rgb components
+			((u8 *)&trans[i])[0] = ((u8 *)&d_8to24table[p])[0];
+			((u8 *)&trans[i])[1] = ((u8 *)&d_8to24table[p])[1];
+			((u8 *)&trans[i])[2] = ((u8 *)&d_8to24table[p])[2];
 		}
-
-		return GL_Upload32 (trans, width, height, mipmap);
 	}
 
-	return true;
+	return GL_Upload32 (trans, width, height, mipmap);
 }
 
 
@@ -81476,12 +81228,11 @@ nonscrap:
 		image->texnum = TEXNUM_IMAGES + (image - gltextures);
 		GL_Bind(image->texnum);
 		if (bits == 8)
-			image->has_alpha = GL_Upload8 (pic, width, height, (image->type != it_pic && image->type != it_sky), image->type == it_sky );
+			image->has_alpha = GL_Upload8 (pic, width, height, (image->type != it_pic && image->type != it_sky));
 		else
 			image->has_alpha = GL_Upload32 ((unsigned *)pic, width, height, (image->type != it_pic && image->type != it_sky) );
 		image->upload_width = upload_width;		// after power of 2 and scales
 		image->upload_height = upload_height;
-		image->paletted = uploaded_paletted;
 		image->sl = 0;
 		image->sh = 1;
 		image->tl = 0;
@@ -84598,47 +84349,8 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 	GL_TexEnv( GL_REPLACE );
 }
 
-/*
-===============
-R_DrawParticles
-===============
-*/
-void R_DrawParticles (void)
-{
-	if ( gl_ext_pointparameters->value && qglPointParameterfEXT )
-	{
-		int i;
-		unsigned char color[4];
-		const particle_t *p;
-
-		glDepthMask( GL_FALSE );
-		glEnable( GL_BLEND );
-		glDisable( GL_TEXTURE_2D );
-
-		glPointSize( gl_particle_size->value );
-
-		glBegin( GL_POINTS );
-		for ( i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++ )
-		{
-			*(int *)color = d_8to24table[p->color];
-			color[3] = p->alpha*255;
-
-			glColor4ubv( color );
-
-			glVertex3fv( p->origin );
-		}
-		glEnd();
-
-		glDisable( GL_BLEND );
-		glColor4f( 1.0F, 1.0F, 1.0F, 1.0F );
-		glDepthMask( GL_TRUE );
-		glEnable( GL_TEXTURE_2D );
-
-	}
-	else
-	{
-		GL_DrawParticles( r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table );
-	}
+static void R_DrawParticles() {
+	GL_DrawParticles(r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table);
 }
 
 /*
@@ -85064,8 +84776,6 @@ typedef struct {
 	HWND    hWnd;			// handle to window
 	HGLRC   hGLRC;			// handle to GL rendering context
 
-	HINSTANCE hinstOpenGL;	// HINSTANCE for the OpenGL library
-
 	bool minidriver;
 	bool allowdisplaydepthchange;
 	bool mcd_accelerated;
@@ -85074,6 +84784,16 @@ typedef struct {
 static glwstate_t glw_state = {};
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
+
+static BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
+static void GL_UpdateSwapInterval() {
+	if (gl_swapinterval->modified) {
+		gl_swapinterval->modified = false;
+		if (!gl_state.stereo_enabled) {
+			wglSwapIntervalEXT(gl_swapinterval->value);
+		}
+	}
+}
 
 static void R_BeginFrame(float camera_separation) {
 	gl_state.camera_separation = camera_separation;
@@ -85180,7 +84900,6 @@ void R_SetPalette ( const unsigned char *palette)
 			rp[i*4+3] = 0xff;
 		}
 	}
-	GL_SetTexturePalette( r_rawpalette );
 
 	glClearColor (0,0,0,0);
 	glClear (GL_COLOR_BUFFER_BIT);
@@ -85351,26 +85070,6 @@ void GL_Strings_f( void )
 	Com_Printf("GL_VERSION: %s\n", gl_config.version_string );
 	Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 }
-
-void GL_UpdateSwapInterval( void )
-{
-	if ( gl_swapinterval->modified )
-	{
-		gl_swapinterval->modified = false;
-
-		if ( !gl_state.stereo_enabled )
-		{
-			if ( qwglSwapIntervalEXT )
-				qwglSwapIntervalEXT( gl_swapinterval->value );
-		}
-	}
-}
-/* ============ end source: ref_gl/gl_rmisc.c ============ */
-/* ============ begin source: ref_gl/gl_rsurf.c ============ */
-
-// GL_RSURF.C: surface-related refresh code
-
-/* already inlined above: ref_gl/gl_local.h */
 
 static vec3_t	modelorg;		// relative to viewpoint
 
@@ -85880,11 +85579,6 @@ void R_DrawAlphaSurfaces (void)
 	r_alpha_surfaces = NULL;
 }
 
-/*
-================
-DrawTextureChains
-================
-*/
 void DrawTextureChains (void)
 {
 	int		i;
@@ -85893,9 +85587,6 @@ void DrawTextureChains (void)
 
 	c_visible_textures = 0;
 
-//	GL_TexEnv( GL_REPLACE );
-
-	if ( !qglSelectTextureSGIS )
 	{
 		for ( i = 0, image=gltextures ; i<numgltextures ; i++,image++)
 		{
@@ -85912,224 +85603,10 @@ void DrawTextureChains (void)
 			image->texturechain = NULL;
 		}
 	}
-	else
-	{
-		for ( i = 0, image=gltextures ; i<numgltextures ; i++,image++)
-		{
-			if (!image->registration_sequence)
-				continue;
-			if (!image->texturechain)
-				continue;
-			c_visible_textures++;
-
-			for ( s = image->texturechain; s ; s=s->texturechain)
-			{
-				if ( !( s->flags & SURF_DRAWTURB ) )
-					R_RenderBrushPoly (s);
-			}
-		}
-
-		GL_EnableMultitexture( false );
-		for ( i = 0, image=gltextures ; i<numgltextures ; i++,image++)
-		{
-			if (!image->registration_sequence)
-				continue;
-			s = image->texturechain;
-			if (!s)
-				continue;
-
-			for ( ; s ; s=s->texturechain)
-			{
-				if ( s->flags & SURF_DRAWTURB )
-					R_RenderBrushPoly (s);
-			}
-
-			image->texturechain = NULL;
-		}
-//		GL_EnableMultitexture( true );
-	}
 
 	GL_TexEnv( GL_REPLACE );
 }
 
-
-static void GL_RenderLightmappedPoly( msurface_t *surf )
-{
-	int		i, nv = surf->polys->numverts;
-	int		map;
-	float	*v;
-	image_t *image = R_TextureAnimation( surf->texinfo );
-	bool is_dynamic = false;
-	unsigned lmtex = surf->lightmaptexturenum;
-	glpoly_t *p;
-
-	for ( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
-	{
-		if ( r_newrefdef.lightstyles[surf->styles[map]].white != surf->cached_light[map] )
-			goto dynamic;
-	}
-
-	// dynamic this frame or dynamic previously
-	if ( surf->dlightframe == r_framecount )
-	{
-dynamic:
-		if ( gl_dynamic->value )
-		{
-			if ( !(surf->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP ) ) )
-			{
-				is_dynamic = true;
-			}
-		}
-	}
-
-	if ( is_dynamic )
-	{
-		unsigned	temp[128*128];
-		int			smax, tmax;
-
-		if ( ( surf->styles[map] >= 32 || surf->styles[map] == 0 ) && ( surf->dlightframe != r_framecount ) )
-		{
-			smax = (surf->extents[0]>>4)+1;
-			tmax = (surf->extents[1]>>4)+1;
-
-			R_BuildLightMap( surf, (void *)temp, smax*4 );
-			R_SetCacheState( surf );
-
-			GL_MBind( GL_TEXTURE1_SGIS, gl_state.lightmap_textures + surf->lightmaptexturenum );
-
-			lmtex = surf->lightmaptexturenum;
-
-			glTexSubImage2D( GL_TEXTURE_2D, 0,
-							  surf->light_s, surf->light_t,
-							  smax, tmax,
-							  GL_LIGHTMAP_FORMAT,
-							  GL_UNSIGNED_BYTE, temp );
-
-		}
-		else
-		{
-			smax = (surf->extents[0]>>4)+1;
-			tmax = (surf->extents[1]>>4)+1;
-
-			R_BuildLightMap( surf, (void *)temp, smax*4 );
-
-			GL_MBind( GL_TEXTURE1_SGIS, gl_state.lightmap_textures + 0 );
-
-			lmtex = 0;
-
-			glTexSubImage2D( GL_TEXTURE_2D, 0,
-							  surf->light_s, surf->light_t,
-							  smax, tmax,
-							  GL_LIGHTMAP_FORMAT,
-							  GL_UNSIGNED_BYTE, temp );
-
-		}
-
-		c_brush_polys++;
-
-		GL_MBind( GL_TEXTURE0_SGIS, image->texnum );
-		GL_MBind( GL_TEXTURE1_SGIS, gl_state.lightmap_textures + lmtex );
-
-//==========
-//PGM
-		if (surf->texinfo->flags & SURF_FLOWING)
-		{
-			float scroll;
-
-			scroll = -64 * ( (r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0) );
-			if(scroll == 0.0)
-				scroll = -64.0;
-
-			for ( p = surf->polys; p; p = p->chain )
-			{
-				v = p->verts[0];
-				glBegin (GL_POLYGON);
-				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
-				{
-					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, (v[3]+scroll), v[4]);
-					qglMTexCoord2fSGIS( GL_TEXTURE1_SGIS, v[5], v[6]);
-					glVertex3fv (v);
-				}
-				glEnd ();
-			}
-		}
-		else
-		{
-			for ( p = surf->polys; p; p = p->chain )
-			{
-				v = p->verts[0];
-				glBegin (GL_POLYGON);
-				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
-				{
-					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, v[3], v[4]);
-					qglMTexCoord2fSGIS( GL_TEXTURE1_SGIS, v[5], v[6]);
-					glVertex3fv (v);
-				}
-				glEnd ();
-			}
-		}
-//PGM
-//==========
-	}
-	else
-	{
-		c_brush_polys++;
-
-		GL_MBind( GL_TEXTURE0_SGIS, image->texnum );
-		GL_MBind( GL_TEXTURE1_SGIS, gl_state.lightmap_textures + lmtex );
-
-//==========
-//PGM
-		if (surf->texinfo->flags & SURF_FLOWING)
-		{
-			float scroll;
-
-			scroll = -64 * ( (r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0) );
-			if(scroll == 0.0)
-				scroll = -64.0;
-
-			for ( p = surf->polys; p; p = p->chain )
-			{
-				v = p->verts[0];
-				glBegin (GL_POLYGON);
-				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
-				{
-					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, (v[3]+scroll), v[4]);
-					qglMTexCoord2fSGIS( GL_TEXTURE1_SGIS, v[5], v[6]);
-					glVertex3fv (v);
-				}
-				glEnd ();
-			}
-		}
-		else
-		{
-//PGM
-//==========
-			for ( p = surf->polys; p; p = p->chain )
-			{
-				v = p->verts[0];
-				glBegin (GL_POLYGON);
-				for (i=0 ; i< nv; i++, v+= VERTEXSIZE)
-				{
-					qglMTexCoord2fSGIS( GL_TEXTURE0_SGIS, v[3], v[4]);
-					qglMTexCoord2fSGIS( GL_TEXTURE1_SGIS, v[5], v[6]);
-					glVertex3fv (v);
-				}
-				glEnd ();
-			}
-//==========
-//PGM
-		}
-//PGM
-//==========
-	}
-}
-
-/*
-=================
-R_DrawInlineBModel
-=================
-*/
 void R_DrawInlineBModel (void)
 {
 	int			i, k;
@@ -86176,23 +85653,16 @@ void R_DrawInlineBModel (void)
 				psurf->texturechain = r_alpha_surfaces;
 				r_alpha_surfaces = psurf;
 			}
-			else if ( qglMTexCoord2fSGIS && !( psurf->flags & SURF_DRAWTURB ) )
-			{
-				GL_RenderLightmappedPoly( psurf );
-			}
 			else
 			{
-				GL_EnableMultitexture( false );
 				R_RenderBrushPoly( psurf );
-				GL_EnableMultitexture( true );
 			}
 		}
 	}
 
 	if ( !(currententity->flags & RF_TRANSLUCENT) )
 	{
-		if ( !qglMTexCoord2fSGIS )
-			R_BlendLightmaps ();
+		R_BlendLightmaps();
 	}
 	else
 	{
@@ -86261,14 +85731,10 @@ e->angles[2] = -e->angles[2];	// stupid quake bug
 e->angles[0] = -e->angles[0];	// stupid quake bug
 e->angles[2] = -e->angles[2];	// stupid quake bug
 
-	GL_EnableMultitexture( true );
-	GL_SelectTexture( GL_TEXTURE0_SGIS );
 	GL_TexEnv( GL_REPLACE );
-	GL_SelectTexture( GL_TEXTURE1_SGIS );
 	GL_TexEnv( GL_MODULATE );
 
 	R_DrawInlineBModel ();
-	GL_EnableMultitexture( false );
 
 	glPopMatrix ();
 }
@@ -86385,11 +85851,6 @@ void R_RecursiveWorldNode (mnode_t *node)
 		}
 		else
 		{
-			if ( qglMTexCoord2fSGIS && !( surf->flags & SURF_DRAWTURB ) )
-			{
-				GL_RenderLightmappedPoly( surf );
-			}
-			else
 			{
 				// the polygon is visible, so add it to the texture
 				// sorted chain
@@ -86403,42 +85864,6 @@ void R_RecursiveWorldNode (mnode_t *node)
 
 	// recurse down the back side
 	R_RecursiveWorldNode (node->children[!side]);
-/*
-	for ( ; c ; c--, surf++)
-	{
-		if (surf->visframe != r_framecount)
-			continue;
-
-		if ( (surf->flags & SURF_PLANEBACK) != sidebit )
-			continue;		// wrong side
-
-		if (surf->texinfo->flags & SURF_SKY)
-		{	// just adds to visible sky bounds
-			R_AddSkySurface (surf);
-		}
-		else if (surf->texinfo->flags & (SURF_TRANS33|SURF_TRANS66))
-		{	// add to the translucent chain
-//			surf->texturechain = alpha_surfaces;
-//			alpha_surfaces = surf;
-		}
-		else
-		{
-			if ( qglMTexCoord2fSGIS && !( surf->flags & SURF_DRAWTURB ) )
-			{
-				GL_RenderLightmappedPoly( surf );
-			}
-			else
-			{
-				// the polygon is visible, so add it to the texture
-				// sorted chain
-				// FIXME: this is a hack for animation
-				image = R_TextureAnimation (surf->texinfo);
-				surf->texturechain = image->texturechain;
-				image->texturechain = surf;
-			}
-		}
-	}
-*/
 }
 
 
@@ -86472,27 +85897,7 @@ void R_DrawWorld (void)
 	memset (gl_lms.lightmap_surfaces, 0, sizeof(gl_lms.lightmap_surfaces));
 	R_ClearSkyBox ();
 
-	if ( qglMTexCoord2fSGIS )
-	{
-		GL_EnableMultitexture( true );
-
-		GL_SelectTexture( GL_TEXTURE0_SGIS );
-		GL_TexEnv( GL_REPLACE );
-		GL_SelectTexture( GL_TEXTURE1_SGIS );
-
-		if ( gl_lightmap->value )
-			GL_TexEnv( GL_REPLACE );
-		else
-			GL_TexEnv( GL_MODULATE );
-
-		R_RecursiveWorldNode (r_worldmodel->nodes);
-
-		GL_EnableMultitexture( false );
-	}
-	else
-	{
-		R_RecursiveWorldNode (r_worldmodel->nodes);
-	}
+	R_RecursiveWorldNode (r_worldmodel->nodes);
 
 	/*
 	** theoretically nothing should happen in the next two functions
@@ -86812,9 +86217,6 @@ static void GL_BeginBuildingLightmaps() {
 
 	r_framecount = 1;		// no dlightcache
 
-	GL_EnableMultitexture( true );
-	GL_SelectTexture( GL_TEXTURE1_SGIS );
-
 	/*
 	** setup the base lightstyles so the lightmaps won't have to be regenerated
 	** the first time they're seen
@@ -86851,23 +86253,10 @@ static void GL_BeginBuildingLightmaps() {
 				   dummy );
 }
 
-/*
-=======================
-GL_EndBuildingLightmaps
-=======================
-*/
 void GL_EndBuildingLightmaps (void)
 {
 	LM_UploadBlock( false );
-	GL_EnableMultitexture( false );
 }
-
-/* ============ end source: ref_gl/gl_rsurf.c ============ */
-/* ============ begin source: ref_gl/gl_warp.c ============ */
-
-// gl_warp.c -- sky and water polygons
-
-/* already inlined above: ref_gl/gl_local.h */
 
 extern	model_t	*loadmodel;
 
@@ -87456,10 +86845,7 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 		if (gl_skymip->value || skyrotate)
 			gl_picmip->value++;
 
-		if ( qglColorTableEXT && gl_ext_palettedtexture->value )
-			Com_sprintf (pathname, sizeof(pathname), "env/%s%s.pcx", skyname, suf[i]);
-		else
-			Com_sprintf (pathname, sizeof(pathname), "env/%s%s.tga", skyname, suf[i]);
+		Com_sprintf (pathname, sizeof(pathname), "env/%s%s.tga", skyname, suf[i]);
 
 		sky_images[i] = GL_FindImage (pathname, it_sky);
 		if (!sky_images[i])
@@ -90829,19 +90215,6 @@ static void VID_Restart() {
 
 	Draw_GetPalette();
 
-	{
-		FreeLibrary(glw_state.hinstOpenGL);
-		glw_state.hinstOpenGL = LoadLibrary(gl_driver->string);
-		assert(glw_state.hinstOpenGL);
-
-		qwglSwapIntervalEXT = 0;
-		qglPointParameterfEXT = 0;
-		qglPointParameterfvEXT = 0;
-		qglColorTableEXT = 0;
-		qglSelectTextureSGIS = 0;
-		qglMTexCoord2fSGIS = 0;
-	}
-
 	glw_state.allowdisplaydepthchange = false;
 	glw_state.hInstance = global_hInstance;
 	glw_state.wndproc = MainWndProc;
@@ -90886,6 +90259,10 @@ static void VID_Restart() {
 		assert(create_window_result);
 	}
 
+	// NOTE: Must happen after GL context is created
+	wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
+	assert(wglSwapIntervalEXT);
+
 	VID_MenuInit();
 
 	// get our various GL strings
@@ -90895,29 +90272,6 @@ static void VID_Restart() {
 	gl_config.extensions_string = (char*)glGetString (GL_EXTENSIONS);
 
 	COM_SetCvar("scr_drawall", "0");
-
-	// grab extensions
-	if (strstr(gl_config.extensions_string, "WGL_EXT_swap_control")) {
-		qwglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
-	}
-
-	if (strstr(gl_config.extensions_string, "GL_EXT_point_parameters") && gl_ext_pointparameters->value) {
-		qglPointParameterfEXT = (void*)wglGetProcAddress("glPointParameterfEXT");
-		qglPointParameterfvEXT = (void*)wglGetProcAddress("glPointParameterfvEXT");
-	}
-
-	{
-		char* paletted = strstr(gl_config.extensions_string, "GL_EXT_paletted_texture");
-		char* shared = strstr(gl_config.extensions_string, "GL_EXT_shared_texture_palette");
-		if (paletted && shared && gl_ext_palettedtexture->value) {
-			qglColorTableEXT = (void*)wglGetProcAddress("glColorTableEXT");
-		}
-	}
-
-	if (strstr( gl_config.extensions_string, "GL_SGIS_multitexture") && gl_ext_multitexture->value) {
-		qglMTexCoord2fSGIS = (void*)wglGetProcAddress("glMTexCoord2fSGIS" );
-		qglSelectTextureSGIS = (void*)wglGetProcAddress("glSelectTextureSGIS" );
-	}
 
 	glClearColor(1,0, 0.5 , 0.5);
 	glCullFace(GL_FRONT);
@@ -90949,20 +90303,6 @@ static void VID_Restart() {
 
 	GL_TexEnv(GL_REPLACE);
 
-	if (qglPointParameterfEXT) {
-		float attenuations[3] = {gl_particle_att_a->value, gl_particle_att_b->value, gl_particle_att_c->value};
-
-		glEnable(GL_POINT_SMOOTH);
-		qglPointParameterfEXT(GL_POINT_SIZE_MIN_EXT, gl_particle_min_size->value);
-		qglPointParameterfEXT(GL_POINT_SIZE_MAX_EXT, gl_particle_max_size->value);
-		qglPointParameterfvEXT(GL_DISTANCE_ATTENUATION_EXT, attenuations);
-	}
-
-	if (qglColorTableEXT && gl_ext_palettedtexture->value) {
-		glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
-		GL_SetTexturePalette(d_8to24table);
-	}
-
 	GL_UpdateSwapInterval();
 
 	{
@@ -90977,11 +90317,6 @@ static void VID_Restart() {
 		gl_state.inverse_intensity = 1 / intensity->value;
 
 		Draw_GetPalette();
-
-		if (qglColorTableEXT) {
-			FS_LoadFile("pics/16to8.dat", (void**)&gl_state.d_16to8table);
-			assert(gl_state.d_16to8table);
-		}
 
 		for (i64 ind = 0; ind < 256; ind++) {
 			if (vid_gamma->value == 1) {
