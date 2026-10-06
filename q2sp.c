@@ -79723,7 +79723,6 @@ extern	cvar_t	*gl_modulate;
 extern	cvar_t	*gl_playermip;
 extern	cvar_t	*gl_drawbuffer;
 extern	cvar_t	*gl_3dlabs_broken;
-extern  cvar_t  *gl_driver;
 extern	cvar_t	*gl_swapinterval;
 extern	cvar_t	*gl_texturemode;
 extern	cvar_t	*gl_texturealphamode;
@@ -83933,7 +83932,6 @@ cvar_t	*gl_ext_compiled_vertex_array;
 
 cvar_t	*gl_bitdepth;
 cvar_t	*gl_drawbuffer;
-cvar_t  *gl_driver;
 cvar_t	*gl_lightmap;
 cvar_t	*gl_shadows;
 
@@ -90313,7 +90311,6 @@ static void VID_Restart() {
 extern cvar_t *vid_gamma;
 extern cvar_t *scr_viewsize;
 
-static cvar_t *gl_driver;
 static cvar_t *gl_picmip;
 static cvar_t *gl_ext_palettedtexture;
 static cvar_t *gl_finish;
@@ -90371,12 +90368,8 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
 
-	COM_SetCvar("gl_driver", "opengl32");
-
-	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
-
 	if (!video_should_restart) {
-		video_should_restart = vid_gamma->modified || gl_driver->modified;
+		video_should_restart = vid_gamma->modified;
 	}
 
 	M_ForceMenuOff();
@@ -90390,10 +90383,6 @@ static void CancelChanges(void* unused) {
 
 static void VID_MenuInit() {
 	static const char *yesno_names[] = {"no", "yes", 0};
-
-	if (!gl_driver) {
-		gl_driver = COM_GetCvar("gl_driver", "opengl32", 0);
-	}
 
 	if (!gl_picmip) {
 		gl_picmip = COM_GetCvar("gl_picmip", "0", 0);
@@ -90420,8 +90409,6 @@ static void VID_MenuInit() {
 	}
 
 	s_screensize_slider.curvalue = scr_viewsize->value/10;
-
-	assert(strcmp(gl_driver->string, "opengl32") == 0);
 
 	s_opengl_menu.x = viddef.width * 0.50;
 	s_opengl_menu.nitems = 0;
@@ -91166,7 +91153,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
 				gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
 				gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-				gl_driver = COM_GetCvar( "gl_driver", "opengl32", CVAR_ARCHIVE );
 				gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
 				gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
 				gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
