@@ -84679,7 +84679,7 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-static i64 screen_resolution_index = 0;
+
 static bool video_should_restart = false;
 
 typedef struct {
@@ -90088,20 +90088,8 @@ static void VID_Restart() {
 	glw_state.hInstance = global_hInstance;
 	glw_state.wndproc = MainWndProc;
 
-	{
-		struct {
-			int width;
-			int height;
-		} vid_modes[] = {
-			{1024, 768},
-			{1280, 960},
-			{1600, 1200},
-		};
-
-		assert(screen_resolution_index >= 0 && screen_resolution_index < (int)carray_count(vid_modes));
-		vid.width  = vid_modes[screen_resolution_index].width;
-		vid.height = vid_modes[screen_resolution_index].height;
-	}
+	vid.width  = 1600;
+	vid.height = 1200;
 
 	{
 		WNDCLASS wc = {
@@ -90345,8 +90333,6 @@ MENU INTERACTION
 
 static menuframework_s	s_opengl_menu;
 
-static menulist_s		s_mode_list;
-static menulist_s		s_ref_list;
 static menuslider_s		s_tq_slider;
 static menuslider_s		s_screensize_slider;
 static menuslider_s		s_brightness_slider;
@@ -90355,12 +90341,6 @@ static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
-
-static void DriverMenuCallback(void* unused) {
-	UNUSED(unused);
-
-	assert(s_ref_list.curvalue == 0);
-}
 
 static void ScreenSizeCallback(void *s) {
 	menuslider_s* slider = (menuslider_s*)s;
@@ -90391,12 +90371,6 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
 
-	if (screen_resolution_index != s_mode_list.curvalue) {
-		screen_resolution_index = s_mode_list.curvalue;
-		video_should_restart = true;
-	}
-
-	assert(s_ref_list.curvalue == 0);
 	COM_SetCvar("gl_driver", "opengl32");
 
 	assert(_stricmp(gl_driver->string, "opengl32" ) == 0);
@@ -90415,8 +90389,6 @@ static void CancelChanges(void* unused) {
 }
 
 static void VID_MenuInit() {
-	static const char *resolutions[] = {"[1024 768 ]",  "[1280 960 ]",  "[1600 1200]", 0};
-	static const char *refs[] = {"[default OpenGL]", 0};
 	static const char *yesno_names[] = {"no", "yes", 0};
 
 	if (!gl_driver) {
@@ -90443,8 +90415,6 @@ static void VID_MenuInit() {
 		sw_stipplealpha = COM_GetCvar( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 	}
 
-	s_mode_list.curvalue = screen_resolution_index;
-
 	if (!scr_viewsize) {
 		scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
 	}
@@ -90453,23 +90423,8 @@ static void VID_MenuInit() {
 
 	assert(strcmp(gl_driver->string, "opengl32") == 0);
 
-	s_ref_list.curvalue = 0;
-
 	s_opengl_menu.x = viddef.width * 0.50;
 	s_opengl_menu.nitems = 0;
-
-	s_ref_list.generic.type = MTYPE_SPINCONTROL;
-	s_ref_list.generic.name = "driver";
-	s_ref_list.generic.x = 0;
-	s_ref_list.generic.y = 0;
-	s_ref_list.generic.callback = DriverMenuCallback;
-	s_ref_list.itemnames = refs;
-
-	s_mode_list.generic.type = MTYPE_SPINCONTROL;
-	s_mode_list.generic.name = "video mode";
-	s_mode_list.generic.x = 0;
-	s_mode_list.generic.y = 10;
-	s_mode_list.itemnames = resolutions;
 
 	s_screensize_slider.generic.type	= MTYPE_SLIDER;
 	s_screensize_slider.generic.x		= 0;
@@ -90529,8 +90484,6 @@ static void VID_MenuInit() {
 	s_finish_box.curvalue = gl_finish->value;
 	s_finish_box.itemnames = yesno_names;
 
-	Menu_AddItem(&s_opengl_menu, (void*)&s_ref_list);
-	Menu_AddItem(&s_opengl_menu, (void*)&s_mode_list);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_screensize_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_brightness_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
