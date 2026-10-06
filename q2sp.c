@@ -83996,7 +83996,6 @@ cvar_t	*r_lefthand;
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
 cvar_t	*gl_nosubimage;
-cvar_t	*gl_allow_software;
 
 cvar_t	*gl_vertex_arrays;
 
@@ -84776,9 +84775,7 @@ typedef struct {
 	HWND    hWnd;			// handle to window
 	HGLRC   hGLRC;			// handle to GL rendering context
 
-	bool minidriver;
 	bool allowdisplaydepthchange;
-	bool mcd_accelerated;
 } glwstate_t;
 
 static glwstate_t glw_state = {};
@@ -90199,9 +90196,6 @@ static void GLimp_InitGL() {
 		gl_state.stereo_enabled = false;
 	}
 
-	// figure out if we're running on a minidriver or not
-	glw_state.minidriver = strstr(gl_driver->string, "opengl32") == 0;
-
 	// Get a DC for the specified window
 	assert(glw_state.hDC == NULL);
 	glw_state.hDC = GetDC(glw_state.hWnd);
@@ -90213,18 +90207,6 @@ static void GLimp_InitGL() {
 	assert(set_pixel_format_result);
 	int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
 	assert(describe_pixel_format_result);
-
-	if (!glw_state.minidriver) {
-		if (pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
-			glw_state.mcd_accelerated = true;
-		} else {
-			if (gl_allow_software->value) {
-				glw_state.mcd_accelerated = true;
-			} else {
-				glw_state.mcd_accelerated = false;
-			}
-		}
-	}
 
 	// report if stereo is desired but unavailable
 	if (!(pfd.dwFlags & PFD_STEREO) && (stereo->value != 0)) {
@@ -90238,16 +90220,6 @@ static void GLimp_InitGL() {
 	{
 		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
 		assert(make_current_result);
-	}
-
-	// NOTE: Verify hardware acceleration is present
-	{
-		char buffer[1024] = {};
-		strcpy(buffer, (char*)glGetString(GL_RENDERER));
-		_strlwr(buffer);
-		if (strcmp(buffer, "gdi generic") == 0) {
-			assert(glw_state.mcd_accelerated);
-		}
 	}
 }
 
@@ -91468,7 +91440,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 
 				gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
-				gl_allow_software = COM_GetCvar( "gl_allow_software", "0", 0 );
 
 				gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
 				gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
