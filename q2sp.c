@@ -79404,37 +79404,6 @@ static struct {
 
 #define		MAX_GLTEXTURES	1024
 
-//===================================================================
-
-typedef enum
-{
-	rserr_ok,
-
-	rserr_invalid_fullscreen,
-	rserr_invalid_mode,
-
-	rserr_unknown
-} rserr_t;
-
-/* ============ begin inlined header: ref_gl/gl_model.h ============ */
-
-
-/*
-
-d*_t structures are on-disk representations
-m*_t structures are in-memory
-
-*/
-
-/*
-==============================================================================
-
-BRUSH MODELS
-
-==============================================================================
-*/
-
-
 //
 // in memory representation
 //
@@ -79851,8 +79820,6 @@ static struct {
 typedef struct
 {
 	float inverse_intensity;
-	bool fullscreen;
-
 	unsigned char *d_16to8table;
 
 	int lightmap_textures;
@@ -79869,7 +79836,8 @@ extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame();
 
-void		GLimp_AppActivate( bool active );
+
+
 void		GLimp_LogNewFrame( void );
 
 image_t		*draw_chars;
@@ -84712,7 +84680,6 @@ void R_RenderFrame (refdef_t *fd)
 }
 
 static i64 screen_resolution_index = 0;
-static bool fullscreen_mode = false;
 static bool video_should_restart = false;
 
 typedef struct {
@@ -87622,24 +87589,17 @@ void IN_Frame (void)
 	if (!mouseinitialized)
 		return;
 
-	if (!in_mouse || !in_appactive)
-	{
-		IN_DeactivateMouse ();
+	if (!in_mouse || !in_appactive) {
+		IN_DeactivateMouse();
 		return;
 	}
 
-	if ( !cl.refresh_prepped
-		|| cls.key_dest == key_console
-		|| cls.key_dest == key_menu)
-	{
-		// temporarily deactivate if in fullscreen
-		if (!fullscreen_mode) {
-			IN_DeactivateMouse();
-			return;
-		}
+	if (!cl.refresh_prepped || cls.key_dest == key_console || cls.key_dest == key_menu) {
+		IN_DeactivateMouse();
+		return;
 	}
 
-	IN_ActivateMouse ();
+	IN_ActivateMouse();
 }
 
 /*
@@ -89847,14 +89807,6 @@ void* Sys_GetGameAPI(void* parms) {
 	return GetGameAPI((game_import_t *)parms);
 }
 
-// Main windowed and fullscreen graphics interface module. This module
-// is used for both the software and OpenGL rendering versions of the
-// Quake refresh engine.
-
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL (WM_MOUSELAST+1)  // message that will be supported by the OS
-#endif
-
 // Console variables that we need to access from this module
 cvar_t		*vid_gamma;
 cvar_t		*vid_xpos;			// X coordinate of window position
@@ -89983,37 +89935,34 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		} break;
 
 		case WM_ACTIVATE: {
-				int fActive = LOWORD(wParam) != WA_INACTIVE;
-				Minimized = (bool)HIWORD(wParam);
+			int fActive = LOWORD(wParam) != WA_INACTIVE;
+			Minimized = (bool)HIWORD(wParam);
 
-				Key_ClearStates();
-				ActiveApp = fActive && !Minimized;
-				IN_Activate(ActiveApp);
-				S_Activate(ActiveApp);
+			Key_ClearStates();
+			ActiveApp = fActive && !Minimized;
+			IN_Activate(ActiveApp);
+			S_Activate(ActiveApp);
 
-
-				void GLimp_AppActivate(bool active);
-				GLimp_AppActivate(fActive);
-			} break;
+			void GLimp_AppActivate(bool active);
+			GLimp_AppActivate(fActive);
+		} break;
 
 		case WM_MOVE: {
-				if (!fullscreen_mode) {
-					int xPos = (short)LOWORD(lParam);
-					int yPos = (short)HIWORD(lParam);
+			int xPos = (short)LOWORD(lParam);
+			int yPos = (short)HIWORD(lParam);
 
-					RECT r = {.left = 0, .top = 0, .right = 1, .bottom = 1};
-					int style = GetWindowLong(hWnd, GWL_STYLE);
-					AdjustWindowRect(&r, style, FALSE);
+			RECT r = {.left = 0, .top = 0, .right = 1, .bottom = 1};
+			int style = GetWindowLong(hWnd, GWL_STYLE);
+			AdjustWindowRect(&r, style, FALSE);
 
-					COM_SetValueCvar("vid_xpos", xPos + r.left);
-					COM_SetValueCvar("vid_ypos", yPos + r.top);
-					vid_xpos->modified = false;
-					vid_ypos->modified = false;
-					if (ActiveApp) {
-						IN_Activate(true);
-					}
-				}
-			} break;
+			COM_SetValueCvar("vid_xpos", xPos + r.left);
+			COM_SetValueCvar("vid_ypos", yPos + r.top);
+			vid_xpos->modified = false;
+			vid_ypos->modified = false;
+			if (ActiveApp) {
+				IN_Activate(true);
+			}
+		} break;
 
 		// this is complicated because Win32 seems to pack multiple mouse events into
 		// one update sometimes, so we always check all states and look for events
@@ -90024,12 +89973,12 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
 		case WM_MOUSEMOVE: {
-				int mouse_state = 0;
-				if (wParam & MK_LBUTTON) {mouse_state |= 1;}
-				if (wParam & MK_RBUTTON) {mouse_state |= 2;}
-				if (wParam & MK_MBUTTON) {mouse_state |= 4;}
-				IN_MouseEvent (mouse_state);
-			} break;
+			int mouse_state = 0;
+			if (wParam & MK_LBUTTON) {mouse_state |= 1;}
+			if (wParam & MK_RBUTTON) {mouse_state |= 2;}
+			if (wParam & MK_MBUTTON) {mouse_state |= 4;}
+			IN_MouseEvent (mouse_state);
+		} break;
 
 		case WM_SYSCOMMAND: {
 			// NOTE: Prevent screen turining off when game is active
@@ -90041,15 +89990,7 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN: {
-			// NOTE: Special case for Alt+Enter
-			if (uMsg == WM_SYSKEYDOWN && wParam == VK_RETURN) {
-				pass_to_default_window_proc = false;
-
-				fullscreen_mode = !fullscreen_mode;
-				video_should_restart = true;
-			} else {
-				Key_Event(MapKey(lParam), true, sys_msg_time);
-			}
+			Key_Event(MapKey(lParam), true, sys_msg_time);
 		} break;
 
 		case WM_SYSKEYUP:
@@ -90104,7 +90045,7 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
-static void VID_CreateWindow( int width, int height, bool fullscreen ) {
+static void VID_CreateWindow(int width, int height) {
 	WNDCLASS wc = {
 		.style         = 0,
 		.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
@@ -90113,7 +90054,7 @@ static void VID_CreateWindow( int width, int height, bool fullscreen ) {
 		.hInstance     = glw_state.hInstance,
 		.hIcon         = 0,
 		.hCursor       = LoadCursor (NULL,IDC_ARROW),
-		.hbrBackground = (void *)COLOR_GRAYTEXT,
+		.hbrBackground = (void*)COLOR_GRAYTEXT,
 		.lpszMenuName  = 0,
 		.lpszClassName = WINDOW_CLASS_NAME,
 	};
@@ -90121,46 +90062,31 @@ static void VID_CreateWindow( int width, int height, bool fullscreen ) {
 	ATOM register_class_result = RegisterClass(&wc);
 	assert(register_class_result);
 
-	int stylebits = 0;
-	int exstyle = 0;
-	if (fullscreen) {
-		exstyle = WS_EX_TOPMOST;
-		stylebits = WS_POPUP|WS_VISIBLE;
-	} else {
-		stylebits = WINDOW_STYLE;
-	}
-
 	RECT r = {.left = 0, .top = 0, .right = width, .bottom = height};
-	AdjustWindowRect(&r, stylebits, FALSE);
+	AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
 
-	int x = 0;
-	int y = 0;
+	cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
+	cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
+	int x = vid_xpos->value;
+	int y = vid_ypos->value;
 	int w = r.right - r.left;
 	int h = r.bottom - r.top;
 
-	if (!fullscreen) {
-		cvar_t* vid_xpos = COM_GetCvar ("vid_xpos", "0", 0);
-		cvar_t* vid_ypos = COM_GetCvar ("vid_ypos", "0", 0);
-		x = vid_xpos->value;
-		y = vid_ypos->value;
-	}
-
 	glw_state.hWnd = CreateWindowEx(
-		exstyle,
+		0,
 		WINDOW_CLASS_NAME,
 		"Quake 2",
-		stylebits,
+		WINDOW_STYLE,
 		x, y, w, h,
 		NULL,
 		NULL,
 		glw_state.hInstance,
 		NULL
 	);
-
 	assert(glw_state.hWnd);
 
-	ShowWindow( glw_state.hWnd, SW_SHOW );
-	UpdateWindow( glw_state.hWnd );
+	ShowWindow(glw_state.hWnd, SW_SHOW);
+	UpdateWindow(glw_state.hWnd);
 
 	{
 		PIXELFORMATDESCRIPTOR pfd = {
@@ -90243,11 +90169,6 @@ static void VID_Restart() {
 
 	UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
 
-	if (gl_state.fullscreen) {
-		ChangeDisplaySettings(0, 0);
-		gl_state.fullscreen = false;
-	}
-
 	Draw_GetPalette();
 
 	glw_state.allowdisplaydepthchange = false;
@@ -90268,28 +90189,7 @@ static void VID_Restart() {
 		vid.width  = vid_modes[screen_resolution_index].width;
 		vid.height = vid_modes[screen_resolution_index].height;
 
-		gl_state.fullscreen = fullscreen_mode;
-		if (fullscreen_mode) {
-			DEVMODE dm = {
-				.dmSize = sizeof(dm),
-				.dmPelsWidth = vid.width,
-				.dmPelsHeight = vid.height,
-				.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT,
-			};
-
-			if (gl_bitdepth->value) {
-				dm.dmBitsPerPel = gl_bitdepth->value;
-				dm.dmFields |= DM_BITSPERPEL;
-			}
-
-			LONG change_display_settings_result = ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
-			assert(change_display_settings_result);
-
-		} else {
-			ChangeDisplaySettings(0, 0);
-		}
-
-		VID_CreateWindow(vid.width, vid.height, fullscreen_mode);
+		VID_CreateWindow(vid.width, vid.height);
 	}
 
 	// NOTE: Must happen after GL context is created
@@ -90422,10 +90322,7 @@ static void VID_Restart() {
 
 	// update our window position
 	if (vid_xpos->modified || vid_ypos->modified) {
-		if (!fullscreen_mode) {
-			VID_UpdateWindowPosAndSize();
-		}
-
+		VID_UpdateWindowPosAndSize();
 		vid_xpos->modified = false;
 		vid_ypos->modified = false;
 	}
@@ -90459,7 +90356,6 @@ static menulist_s		s_ref_list;
 static menuslider_s		s_tq_slider;
 static menuslider_s		s_screensize_slider;
 static menuslider_s		s_brightness_slider;
-static menulist_s  		s_fs_box;
 static menulist_s  		s_stipple_box;
 static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
@@ -90497,11 +90393,6 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("vid_gamma", gamma);
 	COM_SetValueCvar("sw_stipplealpha", s_stipple_box.curvalue);
 	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
-
-	if (fullscreen_mode != s_fs_box.curvalue) {
-		fullscreen_mode = s_fs_box.curvalue;
-		video_should_restart = true;
-	}
 
 	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
@@ -90603,13 +90494,6 @@ static void VID_MenuInit() {
 	s_brightness_slider.maxvalue = 13;
 	s_brightness_slider.curvalue = ( 1.3 - vid_gamma->value + 0.5 ) * 10;
 
-	s_fs_box.generic.type = MTYPE_SPINCONTROL;
-	s_fs_box.generic.x	= 0;
-	s_fs_box.generic.y	= 40;
-	s_fs_box.generic.name	= "fullscreen";
-	s_fs_box.itemnames = yesno_names;
-	s_fs_box.curvalue = fullscreen_mode;
-
 	s_defaults_action.generic.type = MTYPE_ACTION;
 	s_defaults_action.generic.name = "reset to defaults";
 	s_defaults_action.generic.x    = 0;
@@ -90655,7 +90539,6 @@ static void VID_MenuInit() {
 	Menu_AddItem(&s_opengl_menu, (void*)&s_mode_list);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_screensize_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_brightness_slider);
-	Menu_AddItem(&s_opengl_menu, (void*)&s_fs_box);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_paletted_texture_box);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_finish_box);
@@ -90748,17 +90631,10 @@ static void GLimp_EndFrame() {
 	}
 }
 
-void GLimp_AppActivate( bool active )
-{
-	if ( active )
-	{
-		SetForegroundWindow( glw_state.hWnd );
-		ShowWindow( glw_state.hWnd, SW_RESTORE );
-	}
-	else
-	{
-		if (fullscreen_mode)
-			ShowWindow( glw_state.hWnd, SW_MINIMIZE );
+void GLimp_AppActivate( bool active ) {
+	if (active) {
+		SetForegroundWindow(glw_state.hWnd);
+		ShowWindow(glw_state.hWnd, SW_RESTORE);
 	}
 }
 
