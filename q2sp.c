@@ -90166,10 +90166,8 @@ void VID_NewWindow( int width, int height) {
 
 static HINSTANCE global_hInstance;
 
-bool GLimp_InitGL (void)
-{
-	PIXELFORMATDESCRIPTOR pfd =
-	{
+static void GLimp_InitGL() {
+	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
 		1,								// version number
 		PFD_DRAW_TO_WINDOW |			// support window
@@ -90189,99 +90187,52 @@ bool GLimp_InitGL (void)
 		0,								// reserved
 		0, 0, 0							// layer masks ignored
 	};
-	int  pixelformat;
-	cvar_t *stereo;
 
-	stereo = COM_GetCvar( "cl_stereo", "0", 0 );
+	cvar_t* stereo = COM_GetCvar("cl_stereo", "0", 0);
 
-	/*
-	** set PFD_STEREO if necessary
-	*/
-	if ( stereo->value != 0 )
-	{
+	// set PFD_STEREO if necessary
+	if (stereo->value != 0) {
 		Com_Printf("...attempting to use stereo\n");
 		pfd.dwFlags |= PFD_STEREO;
 		gl_state.stereo_enabled = true;
-	}
-	else
-	{
+	} else {
 		gl_state.stereo_enabled = false;
 	}
 
-	/*
-	** figure out if we're running on a minidriver or not
-	*/
-	if ( strstr( gl_driver->string, "opengl32" ) != 0 )
-		glw_state.minidriver = false;
-	else
-		glw_state.minidriver = true;
+	// figure out if we're running on a minidriver or not
+	glw_state.minidriver = strstr(gl_driver->string, "opengl32") == 0;
 
-	/*
-	** Get a DC for the specified window
-	*/
-	if ( glw_state.hDC != NULL )
-		Com_Printf("non-NULL DC exists\n");
+	// Get a DC for the specified window
+	assert(glw_state.hDC == NULL);
+	glw_state.hDC = GetDC(glw_state.hWnd);
+	assert(glw_state.hDC != NULL);
 
-	if ( ( glw_state.hDC = GetDC( glw_state.hWnd ) ) == NULL )
-	{
-		Com_Printf("GetDC failed\n");
-		return false;
-	}
+	int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
+	assert(pixelformat);
+	BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
+	assert(set_pixel_format_result);
+	int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
+	assert(describe_pixel_format_result);
 
-	if ( glw_state.minidriver )
-	{
-		if ( (pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
-		{
-			Com_Printf("ChoosePixelFormat failed\n");
-			return false;
-		}
-		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
-		{
-			Com_Printf("SetPixelFormat failed\n");
-			return false;
-		}
-		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
-	}
-	else
-	{
-		if ( ( pixelformat = ChoosePixelFormat( glw_state.hDC, &pfd)) == 0 )
-		{
-			Com_Printf("ChoosePixelFormat failed\n");
-			return false;
-		}
-		if ( SetPixelFormat( glw_state.hDC, pixelformat, &pfd) == FALSE )
-		{
-			Com_Printf("SetPixelFormat failed\n");
-			return false;
-		}
-		DescribePixelFormat( glw_state.hDC, pixelformat, sizeof( pfd ), &pfd );
-
-		if ( !( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) )
-		{
-			extern cvar_t *gl_allow_software;
-
-			if ( gl_allow_software->value )
-				glw_state.mcd_accelerated = true;
-			else
-				glw_state.mcd_accelerated = false;
-		}
-		else
-		{
+	if (!glw_state.minidriver) {
+		if (pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
 			glw_state.mcd_accelerated = true;
+		} else {
+			if (gl_allow_software->value) {
+				glw_state.mcd_accelerated = true;
+			} else {
+				glw_state.mcd_accelerated = false;
+			}
 		}
 	}
 
-	/*
-	** report if stereo is desired but unavailable
-	*/
-	if ( !( pfd.dwFlags & PFD_STEREO ) && ( stereo->value != 0 ) )
-	{
-		Com_Printf("...failed to select stereo pixel format\n");
+	// report if stereo is desired but unavailable
+	if (!(pfd.dwFlags & PFD_STEREO) && (stereo->value != 0)) {
 		COM_SetValueCvar( "cl_stereo", 0 );
 		gl_state.stereo_enabled = false;
 	}
 
-	glw_state.hGLRC = wglCreateContext( glw_state.hDC );
+	glw_state.hGLRC = wglCreateContext(glw_state.hDC);
 	assert(glw_state.hGLRC);
 
 	{
@@ -90298,13 +90249,6 @@ bool GLimp_InitGL (void)
 			assert(glw_state.mcd_accelerated);
 		}
 	}
-
-	/*
-	** print out PFD specifics
-	*/
-	Com_Printf("GL PFD: color(%d-bits) Z(%d-bit)\n", ( int ) pfd.cColorBits, ( int ) pfd.cDepthBits);
-
-	return true;
 }
 
 bool VID_CreateWindow( int width, int height, bool fullscreen ) {
@@ -90380,11 +90324,7 @@ bool VID_CreateWindow( int width, int height, bool fullscreen ) {
 	ShowWindow( glw_state.hWnd, SW_SHOW );
 	UpdateWindow( glw_state.hWnd );
 
-	// init all the gl stuff for the window
-	if (!GLimp_InitGL ())
-	{
-		return false;
-	}
+	GLimp_InitGL();
 
 	SetForegroundWindow( glw_state.hWnd );
 	SetFocus( glw_state.hWnd );
