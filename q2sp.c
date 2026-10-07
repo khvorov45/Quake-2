@@ -1570,7 +1570,6 @@ typedef struct {
 	int			last_received;		// for timeouts
 	int			last_sent;			// for retransmits
 	netadr_t	remote_address;
-	int			qport;				// qport value to write when transmitting sequencing variables
 	int			incoming_sequence;
 	int			incoming_acknowledged;
 	int			incoming_reliable_acknowledged;	// single bit
@@ -1588,8 +1587,6 @@ typedef struct {
 	u8		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
 } netchan_t;
 
-cvar_t		*qport;
-
 netadr_t	net_from;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
@@ -1606,8 +1603,6 @@ bool	NET_CompareBaseAdr (netadr_t a, netadr_t b);
 bool	NET_IsLocalAddress (netadr_t adr);
 char		*NET_AdrToString (netadr_t a);
 bool	NET_StringToAdr (char *s, netadr_t *a);
-
-void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
@@ -1645,7 +1640,6 @@ static struct {
 	// connection information
 	char		servername[MAX_OSPATH];	// name of server from original connect
 	float		connect_time;			// for connection retransmits
-	int			quakePort;				// a 16 bit value that allows quake servers to work around address translating routers
 	netchan_t	netchan;
 	int			serverProtocol;			// in case we are doing some kind of version hack
 	int			challenge;				// from the server to use for connecting
@@ -8434,7 +8428,6 @@ packet header
 1	does this message contain a reliable payload
 31	acknowledge sequence
 1	acknowledge receipt of even/odd message
-16	qport
 
 The remote connection never knows if it missed a reliable message, the
 local side detects that it has been dropped by seeing a sequence acknowledge
@@ -8464,15 +8457,6 @@ Illogical packet sequence numbers cause the packet to be dropped, but do
 not kill the connection.  This, combined with the tight window of valid
 reliable acknowledgement numbers provides protection against malicious
 address spoofing.
-
-
-The qport field is a workaround for bad address translating routers that
-sometimes remap the client's source port on a packet during gameplay.
-
-If the base part of the net address matches and the qport matches, then the
-channel matches even if the IP port differs.  The IP port should be updated
-to the new value before sending out any replies.
-
 
 If there is no information that needs to be transfered on a given frame,
 such as during the connection stage while waiting for the client to load,
@@ -8521,21 +8505,13 @@ void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...)
 	Netchan_OutOfBand (net_socket, adr, strlen(string), (u8 *)string);
 }
 
-
-/*
-==============
-Netchan_Setup
-
-called to open a channel to a remote system
-==============
-*/
-void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr, int qport)
+// called to open a channel to a remote system
+void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr)
 {
 	memset (chan, 0, sizeof(*chan));
 
 	chan->sock = sock;
 	chan->remote_address = adr;
-	chan->qport = qport;
 	chan->last_received = curtime;
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
@@ -8580,16 +8556,8 @@ bool Netchan_NeedReliable (netchan_t *chan)
 	return send_reliable;
 }
 
-/*
-===============
-Netchan_Transmit
-
-tries to send an unreliable message to a connection, and handles the
-transmition / retransmition of the reliable messages.
-
-A 0 length will still generate a packet and deal with the reliable messages.
-================
-*/
+// tries to send an unreliable message to a connection, and handles the transmition / retransmition of the reliable messages.
+// A 0 length will still generate a packet and deal with the reliable messages.
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 {
 	sizebuf_t	send;
@@ -8597,7 +8565,7 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 	bool	send_reliable;
 	unsigned	w1, w2;
 
-// check for message overflow
+	// check for message overflow
 	if (chan->message.overflowed)
 	{
 		chan->fatal_error = true;
@@ -8616,8 +8584,7 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 		chan->reliable_sequence ^= 1;
 	}
 
-
-// write the packet header
+	// write the packet header
 	SZ_Init (&send, send_buf, sizeof(send_buf));
 
 	w1 = ( chan->outgoing_sequence & ~(1<<31) ) | (send_reliable<<31);
@@ -8629,24 +8596,20 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 	MSG_WriteLong (&send, w1);
 	MSG_WriteLong (&send, w2);
 
-	// send the qport if we are a client
-	if (chan->sock == NS_CLIENT)
-		MSG_WriteShort (&send, qport->value);
-
-// copy the reliable message to the packet first
+	// copy the reliable message to the packet first
 	if (send_reliable)
 	{
 		SZ_Write (&send, chan->reliable_buf, chan->reliable_length);
 		chan->last_reliable_sequence = chan->outgoing_sequence;
 	}
 
-// add the unreliable part if space is available
+	// add the unreliable part if space is available
 	if (send.maxsize - send.cursize >= length)
 		SZ_Write (&send, data, length);
 	else
 		Com_Printf ("Netchan_Transmit: dumped unreliable\n");
 
-// send the datagram
+	// send the datagram
 	NET_SendPacket (chan->sock, send.cursize, send.data, chan->remote_address);
 }
 
@@ -8667,10 +8630,6 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 	MSG_BeginReading (msg);
 	sequence = MSG_ReadLong (msg);
 	sequence_ack = MSG_ReadLong (msg);
-
-	// read the qport if we are a server
-	if (chan->sock == NS_SERVER)
-		MSG_ReadShort (msg);
 
 	reliable_message = sequence >> 31;
 	reliable_ack = sequence_ack >> 31;
@@ -10905,12 +10864,6 @@ void SV_Kick_f (void)
 	sv_client->lastmessage = svs.realtime;	// min case there is a funny zombie
 }
 
-
-/*
-================
-SV_Status_f
-================
-*/
 void SV_Status_f (void)
 {
 	int			i, j, l;
@@ -10924,29 +10877,29 @@ void SV_Status_f (void)
 	}
 	Com_Printf ("map              : %s\n", sv.name);
 
-	Com_Printf ("num score ping name            lastmsg address               qport \n");
-	Com_Printf ("--- ----- ---- --------------- ------- --------------------- ------\n");
-	for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++)
-	{
-		if (!cl->state)
+	Com_Printf ("num score ping name            lastmsg address               \n");
+	Com_Printf ("--- ----- ---- --------------- ------- --------------------- \n");
+	for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++) {
+		if (!cl->state) {
 			continue;
+		}
 		Com_Printf ("%3i ", i);
 		Com_Printf ("%5i ", cl->edict->client->ps.stats[STAT_FRAGS]);
 
-		if (cl->state == cs_connected)
+		if (cl->state == cs_connected) {
 			Com_Printf ("CNCT ");
-		else if (cl->state == cs_zombie)
+		} else if (cl->state == cs_zombie) {
 			Com_Printf ("ZMBI ");
-		else
-		{
+		} else {
 			ping = cl->ping < 9999 ? cl->ping : 9999;
 			Com_Printf ("%4i ", ping);
 		}
 
 		Com_Printf ("%s", cl->name);
 		l = 16 - strlen(cl->name);
-		for (j=0 ; j<l ; j++)
+		for (j=0 ; j<l ; j++) {
 			Com_Printf (" ");
+		}
 
 		Com_Printf ("%7i ", svs.realtime - cl->lastmessage );
 
@@ -10955,8 +10908,6 @@ void SV_Status_f (void)
 		l = 22 - strlen(s);
 		for (j=0 ; j<l ; j++)
 			Com_Printf (" ");
-
-		Com_Printf ("%5i", cl->netchan.qport);
 
 		Com_Printf ("\n");
 	}
@@ -12744,7 +12695,6 @@ void SVC_DirectConnect (void)
 	edict_t		*ent;
 	int			edictnum;
 	int			version;
-	int			qport;
 	int			challenge;
 
 	adr = net_from;
@@ -12759,11 +12709,9 @@ void SVC_DirectConnect (void)
 		return;
 	}
 
-	qport = atoi(Cmd_Argv(2));
+	challenge = atoi(Cmd_Argv(2));
 
-	challenge = atoi(Cmd_Argv(3));
-
-	strncpy (userinfo, Cmd_Argv(4), sizeof(userinfo)-1);
+	strncpy (userinfo, Cmd_Argv(3), sizeof(userinfo)-1);
 	userinfo[sizeof(userinfo) - 1] = 0;
 
 	// force the IP key/value pair so the game can filter based on ip
@@ -12808,9 +12756,7 @@ void SVC_DirectConnect (void)
 	{
 		if (cl->state == cs_free)
 			continue;
-		if (NET_CompareBaseAdr (adr, cl->netchan.remote_address)
-			&& ( cl->netchan.qport == qport
-			|| adr.port == cl->netchan.remote_address.port ) )
+		if (NET_CompareBaseAdr(adr, cl->netchan.remote_address))
 		{
 			if (!NET_IsLocalAddress (adr) && (svs.realtime - cl->lastconnect) < ((int)sv_reconnect_limit->value * 1000))
 			{
@@ -12870,7 +12816,7 @@ gotnewcl:
 	// send the connect packet to the client
 	Netchan_OutOfBandPrint (NS_SERVER, adr, "client_connect");
 
-	Netchan_Setup (NS_SERVER, &newcl->netchan , adr, qport);
+	Netchan_Setup (NS_SERVER, &newcl->netchan , adr);
 
 	newcl->state = cs_connected;
 
@@ -13051,7 +12997,6 @@ void SV_ReadPackets (void)
 {
 	int			i;
 	client_t	*cl;
-	int			qport;
 
 	while (NET_GetPacket (NS_SERVER, &net_from, &net_message))
 	{
@@ -13062,13 +13007,6 @@ void SV_ReadPackets (void)
 			continue;
 		}
 
-		// read the qport out of the message so we can fix up
-		// stupid address translating routers
-		MSG_BeginReading (&net_message);
-		MSG_ReadLong (&net_message);		// sequence number
-		MSG_ReadLong (&net_message);		// sequence number
-		qport = MSG_ReadShort (&net_message) & 0xffff;
-
 		// check for packets from connected clients
 		for (i=0, cl=svs.clients ; i<maxclients->value ; i++,cl++)
 		{
@@ -13076,13 +13014,6 @@ void SV_ReadPackets (void)
 				continue;
 			if (!NET_CompareBaseAdr (net_from, cl->netchan.remote_address))
 				continue;
-			if (cl->netchan.qport != qport)
-				continue;
-			if (cl->netchan.remote_address.port != net_from.port)
-			{
-				Com_Printf ("SV_ReadPackets: fixing up a translated port\n");
-				cl->netchan.remote_address.port = net_from.port;
-			}
 
 			if (Netchan_Process(&cl->netchan, &net_message))
 			{	// this is a valid, sequenced packet, so process it
@@ -21108,18 +21039,10 @@ void CL_Pause_f (void)
 	COM_SetValueCvar ("paused", !cl_paused->value);
 }
 
-/*
-=======================
-CL_SendConnectPacket
-
-We have gotten a challenge from the server, so try and
-connect.
-======================
-*/
+// We have gotten a challenge from the server, so try and connect.
 void CL_SendConnectPacket (void)
 {
 	netadr_t	adr;
-	int		port;
 
 	if (!NET_StringToAdr (cls.servername, &adr))
 	{
@@ -21130,11 +21053,9 @@ void CL_SendConnectPacket (void)
 	if (adr.port == 0)
 		adr.port = BigShort (PORT_SERVER);
 
-	port = Cvar_VariableValue ("qport");
 	userinfo_modified = false;
 
-	Netchan_OutOfBandPrint (NS_CLIENT, adr, "connect %i %i %i \"%s\"\n",
-		PROTOCOL_VERSION, port, cls.challenge, Info_Cvar_User() );
+	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i \"%s\"\n", PROTOCOL_VERSION, cls.challenge, Info_Cvar_User());
 }
 
 /*
@@ -21547,7 +21468,7 @@ void CL_ConnectionlessPacket (void)
 			Com_Printf ("Dup connect received.  Ignored.\n");
 			return;
 		}
-		Netchan_Setup (NS_CLIENT, &cls.netchan, net_from, cls.quakePort);
+		Netchan_Setup(NS_CLIENT, &cls.netchan, net_from);
 		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
 		MSG_WriteString (&cls.netchan.message, "new");
 		cls.state = ca_connected;
@@ -90518,13 +90439,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		noudp = COM_GetCvar("noudp", "0", CVAR_NOSET);
 		noipx = COM_GetCvar("noipx", "0", CVAR_NOSET);
 		net_shownet = COM_GetCvar("net_shownet", "0", 0);
-	}
-
-	// NOTE: Netchan Init
-	{
-		// pick a port value that should be nice and random
-		int port = Sys_Milliseconds() & 0xffff;
-		qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
 	}
 
 	{
