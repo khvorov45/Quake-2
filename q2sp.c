@@ -83976,18 +83976,12 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-typedef struct {
-	HINSTANCE	hInstance;
+static struct {
 	void	*wndproc;
-
-	HDC     hDC;			// handle to device context
-	HWND    hWnd;			// handle to window
-	HGLRC   hGLRC;			// handle to GL rendering context
-
+	HDC     hDC;
+	HGLRC   hGLRC;
 	bool allowdisplaydepthchange;
-} glwstate_t;
-
-static glwstate_t glw_state = {};
+} glw_state;
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
 
@@ -88616,7 +88610,7 @@ int MapKey (int key)
 	}
 }
 
-static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	bool pass_to_default_window_proc = true;
 
 	switch (uMsg) {
@@ -88651,8 +88645,10 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			IN_Activate(ActiveApp);
 			S_Activate(ActiveApp);
 
-			void GLimp_AppActivate(bool active);
-			GLimp_AppActivate(fActive);
+			if (fActive) {
+				SetForegroundWindow(hWnd);
+				ShowWindow(hWnd, SW_RESTORE);
+			}
 		} break;
 
 		case WM_MOVE: {
@@ -88970,13 +88966,6 @@ static void GLimp_EndFrame() {
 	if (_stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0) {
 		BOOL swap_buffers_result = SwapBuffers(glw_state.hDC);
 		assert(swap_buffers_result);
-	}
-}
-
-void GLimp_AppActivate( bool active ) {
-	if (active) {
-		SetForegroundWindow(glw_state.hWnd);
-		ShowWindow(glw_state.hWnd, SW_RESTORE);
 	}
 }
 
@@ -89558,20 +89547,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Video init
+	// TODO: unglobal
 	{
-		glw_state.hInstance = hInstance;
-		glw_state.wndproc = MainWndProc;
-
 		vid.width  = 1600;
 		vid.height = 1200;
 
 		{
 			WNDCLASS wc = {
 				.style         = 0,
-				.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
+				.lpfnWndProc   = MainWndProc,
 				.cbClsExtra    = 0,
 				.cbWndExtra    = 0,
-				.hInstance     = glw_state.hInstance,
+				.hInstance     = hInstance,
 				.hIcon         = 0,
 				.hCursor       = LoadCursor (NULL,IDC_ARROW),
 				.hbrBackground = (void*)COLOR_GRAYTEXT,
@@ -89585,14 +89572,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			RECT r = {.left = 0, .top = 0, .right = vid.width, .bottom = vid.height};
 			AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
 
-			cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
-			cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
 			int x = vid_xpos->value;
 			int y = vid_ypos->value;
 			int w = r.right - r.left;
 			int h = r.bottom - r.top;
 
-			glw_state.hWnd = CreateWindowEx(
+			HWND window_handle = CreateWindowEx(
 				0,
 				WINDOW_CLASS_NAME,
 				"Quake 2",
@@ -89600,13 +89585,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				x, y, w, h,
 				NULL,
 				NULL,
-				glw_state.hInstance,
+				hInstance,
 				NULL
 			);
-			assert(glw_state.hWnd);
+			assert(window_handle);
 
-			ShowWindow(glw_state.hWnd, SW_SHOW);
-			UpdateWindow(glw_state.hWnd);
+			ShowWindow(window_handle, SW_SHOW);
+			UpdateWindow(window_handle);
 
 			// NOTE: GL context
 			{
@@ -89622,7 +89607,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 				// Get a DC for the specified window
 				assert(glw_state.hDC == NULL);
-				glw_state.hDC = GetDC(glw_state.hWnd);
+				glw_state.hDC = GetDC(window_handle);
 				assert(glw_state.hDC != NULL);
 
 				int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
@@ -89641,8 +89626,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				}
 			}
 
-			SetForegroundWindow(glw_state.hWnd);
-			SetFocus(glw_state.hWnd);
+			SetForegroundWindow(window_handle);
+			SetFocus(window_handle);
 
 			viddef.width  = vid.width;
 			viddef.height = vid.height;
