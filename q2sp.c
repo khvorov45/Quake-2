@@ -1591,16 +1591,11 @@ netadr_t	net_from;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
 
-void		NET_Shutdown (void);
-
-void		NET_Config (bool multiplayer);
-
 bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
 void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
 
 bool	NET_CompareAdr (netadr_t a, netadr_t b);
 bool	NET_CompareBaseAdr (netadr_t a, netadr_t b);
-bool	NET_IsLocalAddress (netadr_t adr);
 char		*NET_AdrToString (netadr_t a);
 bool	NET_StringToAdr (char *s, netadr_t *a);
 
@@ -5205,8 +5200,6 @@ void Pmove (pmove_t *pmove);
 
 #define	PROTOCOL_VERSION	34
 
-#define	PORT_MASTER	27900
-#define	PORT_CLIENT	27901
 #define	PORT_SERVER	27910
 
 #define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered must be power of two
@@ -10000,17 +9993,6 @@ void Pmove (pmove_t *pmove)
 	PM_SnapPosition ();
 }
 
-/* ============ end source: qcommon/pmove.c ============ */
-
-/* server */
-/* ============ begin source: server/sv_ccmds.c ============ */
-
-
-/* ============ begin inlined header: server/server.h ============ */
-
-
-#define	MAX_MASTERS	8				// max recipients for heartbeat packets
-
 typedef enum {
 	ss_dead,			// no map loaded
 	ss_loading,			// spawning level edicts
@@ -10164,8 +10146,6 @@ typedef struct
 
 extern	netadr_t	net_from;
 extern	sizebuf_t	net_message;
-
-extern	netadr_t	master_adr[MAX_MASTERS];	// address of the master server
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
@@ -11079,7 +11059,6 @@ void SV_KillServer_f (void)
 	if (!svs.initialized)
 		return;
 	SV_Shutdown ("Server was killed.\n", false);
-	NET_Config ( false );	// close network sockets
 }
 
 // Let the game dll handle a command
@@ -12294,7 +12273,6 @@ static void SCR_EndLoadingPlaque() {
 void SV_InitGame(void) {
 	int		i;
 	edict_t	*ent;
-	char	idmaster[32];
 
 	if (svs.initialized) {
 		// cause any connected clients to reconnect
@@ -12358,13 +12336,6 @@ void SV_InitGame(void) {
 	svs.clients = Z_Malloc (sizeof(client_t)*maxclients->value);
 	svs.num_client_entities = maxclients->value*UPDATE_BACKUP*64;
 	svs.client_entities = Z_Malloc (sizeof(entity_state_t)*svs.num_client_entities);
-
-	// init network stuff
-	NET_Config ( (maxclients->value > 1) );
-
-	// heartbeats will always be sent to the id master
-	Com_sprintf(idmaster, sizeof(idmaster), "192.246.40.37:%i", PORT_MASTER);
-	NET_StringToAdr (idmaster, &master_adr[0]);
 
 	// init game
 	SV_InitGameProgs ();
@@ -12473,8 +12444,6 @@ void SV_Map (bool attractloop, char *levelstring, bool loadgame)
 
 	SV_BroadcastCommand ("reconnect\n");
 }
-
-netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
 client_t	*sv_client;			// current client
 
@@ -12683,6 +12652,10 @@ void SVC_GetChallenge (void)
 }
 
 #define	VERSION 3.19
+
+static bool NET_IsLocalAddress(netadr_t adr) {
+	return adr.type == NA_LOOPBACK;
+}
 
 // A connection request that did not come from the master
 void SVC_DirectConnect (void)
@@ -15722,7 +15695,6 @@ void CL_ParseLayout (void);
 void CL_FixUpGender(void);
 
 void CL_GetChallengePacket (void);
-void CL_PingServers_f (void);
 void CL_Snd_Restart_f (void);
 void CL_RequestNextDownload (void);
 
@@ -20743,7 +20715,6 @@ cvar_t	*adr7;
 cvar_t	*adr8;
 
 cvar_t	*rcon_client_password;
-cvar_t	*rcon_address;
 
 cvar_t	*cl_noskins;
 cvar_t	*cl_autoskins;
@@ -21125,74 +21096,11 @@ void CL_Connect_f (void)
 
 	server = Cmd_Argv (1);
 
-	NET_Config (true);		// allow remote
-
 	CL_Disconnect ();
 
 	cls.state = ca_connecting;
 	strncpy (cls.servername, server, sizeof(cls.servername)-1);
 	cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
-}
-
-
-/*
-=====================
-CL_Rcon_f
-
-  Send the rest of the command line over as
-  an unconnected command.
-=====================
-*/
-void CL_Rcon_f (void)
-{
-	char	message[1024];
-	int		i;
-	netadr_t	to;
-
-	if (!rcon_client_password->string)
-	{
-		Com_Printf ("You must set 'rcon_password' before\n"
-					"issuing an rcon command.\n");
-		return;
-	}
-
-	message[0] = (char)255;
-	message[1] = (char)255;
-	message[2] = (char)255;
-	message[3] = (char)255;
-	message[4] = 0;
-
-	NET_Config (true);		// allow remote
-
-	strcat (message, "rcon ");
-
-	strcat (message, rcon_client_password->string);
-	strcat (message, " ");
-
-	for (i=1 ; i<cmd_argc ; i++)
-	{
-		strcat (message, Cmd_Argv(i));
-		strcat (message, " ");
-	}
-
-	if (cls.state >= ca_connected)
-		to = cls.netchan.remote_address;
-	else
-	{
-		if (!strlen(rcon_address->string))
-		{
-			Com_Printf ("You must either be connected,\n"
-						"or set the 'rcon_address' cvar\n"
-						"to issue rcon commands\n");
-
-			return;
-		}
-		NET_StringToAdr (rcon_address->string, &to);
-		if (to.port == 0)
-			to.port = BigShort (PORT_SERVER);
-	}
-
-	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
 }
 
 void CL_ClearState (void)
@@ -21271,8 +21179,6 @@ void CL_Packet_f (void)
 		Com_Printf ("packet <destination> <contents>\n");
 		return;
 	}
-
-	NET_Config (true);		// allow remote
 
 	if (!NET_StringToAdr (Cmd_Argv(1), &adr))
 	{
@@ -21373,62 +21279,6 @@ void CL_ParseStatusMessage (void)
 
 	Com_Printf ("%s\n", s);
 	M_AddToServerList (net_from, s);
-}
-
-
-/*
-=================
-CL_PingServers_f
-=================
-*/
-void CL_PingServers_f (void)
-{
-	int			i;
-	netadr_t	adr;
-	char		name[32];
-	char		*adrstring;
-	cvar_t		*noudp;
-	cvar_t		*noipx;
-
-	NET_Config (true);		// allow remote
-
-	// send a broadcast packet
-	Com_Printf ("pinging broadcast...\n");
-
-	noudp = COM_GetCvar ("noudp", "0", CVAR_NOSET);
-	if (!noudp->value)
-	{
-		adr.type = NA_BROADCAST;
-		adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
-
-	noipx = COM_GetCvar ("noipx", "0", CVAR_NOSET);
-	if (!noipx->value)
-	{
-		adr.type = NA_BROADCAST_IPX;
-		adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
-
-	// send a packet to each address book entry
-	for (i=0 ; i<16 ; i++)
-	{
-		Com_sprintf (name, sizeof(name), "adr%i", i);
-		adrstring = Cvar_VariableString (name);
-		if (!adrstring || !adrstring[0])
-			continue;
-
-		Com_Printf ("pinging %s...\n", adrstring);
-		if (!NET_StringToAdr (adrstring, &adr))
-		{
-			Com_Printf ("Bad address: %s\n", adrstring);
-			continue;
-		}
-		if (!adr.port)
-			adr.port = BigShort(PORT_SERVER);
-		Netchan_OutOfBandPrint (NS_CLIENT, adr, va("info %i", PROTOCOL_VERSION));
-	}
 }
 
 // Load or download any custom player skins and models
@@ -22048,7 +21898,6 @@ void CL_InitLocal (void)
 	cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
 
 	rcon_client_password = COM_GetCvar ("rcon_password", "", 0);
-	rcon_address = COM_GetCvar ("rcon_address", "", 0);
 
 	cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 
@@ -22075,7 +21924,6 @@ void CL_InitLocal (void)
 	//
 	Cmd_AddCommand("cmd", CL_ForwardToServer_f);
 	Cmd_AddCommand("pause", CL_Pause_f);
-	Cmd_AddCommand("pingservers", CL_PingServers_f);
 	Cmd_AddCommand("skins", CL_Skins_f);
 
 	Cmd_AddCommand ("userinfo", CL_Userinfo_f);
@@ -22090,10 +21938,6 @@ void CL_InitLocal (void)
 
 	Cmd_AddCommand ("connect", CL_Connect_f);
 	Cmd_AddCommand ("reconnect", CL_Reconnect_f);
-
-	Cmd_AddCommand ("rcon", CL_Rcon_f);
-
-// 	Cmd_AddCommand ("packet", CL_Packet_f); // this is dangerous to leave in
 
 	Cmd_AddCommand ("setenv", CL_Setenv_f );
 
@@ -31288,9 +31132,6 @@ void SearchLocalGames( void )
 
 	// the text box won't show up unless we do a buffer swap
 	GLimp_EndFrame();
-
-	// send out info packets
-	CL_PingServers_f();
 }
 
 static void SearchLocalGamesFunc(void *self) {
@@ -87552,50 +87393,7 @@ typedef struct
 	int			get, send;
 } loopback_t;
 
-
-cvar_t		*net_shownet;
-static cvar_t	*noudp;
-static cvar_t	*noipx;
-
 loopback_t	loopbacks[2];
-int			ip_sockets[2];
-int			ipx_sockets[2];
-
-char *NET_ErrorString (void);
-
-//=============================================================================
-
-void NetadrToSockadr (netadr_t *a, struct sockaddr *s)
-{
-	memset (s, 0, sizeof(*s));
-
-	if (a->type == NA_BROADCAST)
-	{
-		((struct sockaddr_in *)s)->sin_family = AF_INET;
-		((struct sockaddr_in *)s)->sin_port = a->port;
-		((struct sockaddr_in *)s)->sin_addr.s_addr = INADDR_BROADCAST;
-	}
-	else if (a->type == NA_IP)
-	{
-		((struct sockaddr_in *)s)->sin_family = AF_INET;
-		((struct sockaddr_in *)s)->sin_addr.s_addr = *(int *)&a->ip;
-		((struct sockaddr_in *)s)->sin_port = a->port;
-	}
-	else if (a->type == NA_IPX)
-	{
-		((struct sockaddr_ipx *)s)->sa_family = AF_IPX;
-		memcpy(((struct sockaddr_ipx *)s)->sa_netnum, &a->ipx[0], 4);
-		memcpy(((struct sockaddr_ipx *)s)->sa_nodenum, &a->ipx[4], 6);
-		((struct sockaddr_ipx *)s)->sa_socket = a->port;
-	}
-	else if (a->type == NA_BROADCAST_IPX)
-	{
-		((struct sockaddr_ipx *)s)->sa_family = AF_IPX;
-		memset(((struct sockaddr_ipx *)s)->sa_netnum, 0, 4);
-		memset(((struct sockaddr_ipx *)s)->sa_nodenum, 0xff, 6);
-		((struct sockaddr_ipx *)s)->sa_socket = a->port;
-	}
-}
 
 void SockadrToNetadr (struct sockaddr *s, netadr_t *a)
 {
@@ -87686,116 +87484,10 @@ char	*NET_AdrToString (netadr_t a)
 	return s;
 }
 
-
-/*
-=============
-NET_StringToAdr
-
-localhost
-idnewt
-idnewt:28000
-192.246.40.70
-192.246.40.70:28000
-=============
-*/
-#define DO(src,dest)	\
-	copy[0] = s[src];	\
-	copy[1] = s[src + 1];	\
-	sscanf (copy, "%x", &val);	\
-	((struct sockaddr_ipx *)sadr)->dest = val
-
-bool	NET_StringToSockaddr (char *s, struct sockaddr *sadr)
-{
-	struct hostent	*h;
-	char	*colon;
-	int		val;
-	char	copy[128];
-
-	memset (sadr, 0, sizeof(*sadr));
-
-	if ((strlen(s) >= 23) && (s[8] == ':') && (s[21] == ':'))	// check for an IPX address
-	{
-		((struct sockaddr_ipx *)sadr)->sa_family = AF_IPX;
-		copy[2] = 0;
-		DO(0, sa_netnum[0]);
-		DO(2, sa_netnum[1]);
-		DO(4, sa_netnum[2]);
-		DO(6, sa_netnum[3]);
-		DO(9, sa_nodenum[0]);
-		DO(11, sa_nodenum[1]);
-		DO(13, sa_nodenum[2]);
-		DO(15, sa_nodenum[3]);
-		DO(17, sa_nodenum[4]);
-		DO(19, sa_nodenum[5]);
-		sscanf (&s[22], "%u", &val);
-		((struct sockaddr_ipx *)sadr)->sa_socket = htons((unsigned short)val);
-	}
-	else
-	{
-		((struct sockaddr_in *)sadr)->sin_family = AF_INET;
-
-		((struct sockaddr_in *)sadr)->sin_port = 0;
-
-		strcpy (copy, s);
-		// strip off a trailing :port if present
-		for (colon = copy ; *colon ; colon++)
-			if (*colon == ':')
-			{
-				*colon = 0;
-				((struct sockaddr_in *)sadr)->sin_port = htons((short)atoi(colon+1));
-			}
-
-		if (copy[0] >= '0' && copy[0] <= '9')
-		{
-			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = inet_addr(copy);
-		}
-		else
-		{
-			if (! (h = gethostbyname(copy)) )
-				return 0;
-			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
-		}
-	}
-
+static bool NET_StringToAdr(char *s, netadr_t *a) {
+	assert(!strcmp (s, "localhost"));
+	*a = (netadr_t){.type = NA_LOOPBACK};
 	return true;
-}
-
-#undef DO
-
-/*
-=============
-NET_StringToAdr
-
-localhost
-idnewt
-idnewt:28000
-192.246.40.70
-192.246.40.70:28000
-=============
-*/
-bool	NET_StringToAdr (char *s, netadr_t *a)
-{
-	struct sockaddr sadr;
-
-	if (!strcmp (s, "localhost"))
-	{
-		memset (a, 0, sizeof(*a));
-		a->type = NA_LOOPBACK;
-		return true;
-	}
-
-	if (!NET_StringToSockaddr (s, &sadr))
-		return false;
-
-	SockadrToNetadr (&sadr, a);
-
-	return true;
-}
-
-
-bool	NET_IsLocalAddress (netadr_t adr)
-{
-	return adr.type == NA_LOOPBACK;
 }
 
 /*
@@ -87845,425 +87537,14 @@ static void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t 
 	loop->msgs[i].datalen = length;
 }
 
-//=============================================================================
-
-bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
-{
-	int 	ret;
-	struct sockaddr from;
-	int		fromlen;
-	int		net_socket;
-	int		protocol;
-	int		err;
-
-	if (NET_GetLoopPacket (sock, net_from, net_message))
-		return true;
-
-	for (protocol = 0 ; protocol < 2 ; protocol++)
-	{
-		if (protocol == 0)
-			net_socket = ip_sockets[sock];
-		else
-			net_socket = ipx_sockets[sock];
-
-		if (!net_socket)
-			continue;
-
-		fromlen = sizeof(from);
-		ret = recvfrom (net_socket, (char*)net_message->data, net_message->maxsize
-			, 0, (struct sockaddr *)&from, &fromlen);
-		if (ret == -1)
-		{
-			err = WSAGetLastError();
-			assert(err == WSAEWOULDBLOCK);
-		}
-
-		SockadrToNetadr (&from, net_from);
-
-		if (ret == net_message->maxsize)
-		{
-			Com_Printf ("Oversize packet from %s\n", NET_AdrToString (*net_from));
-			continue;
-		}
-
-		net_message->cursize = ret;
-		return true;
-	}
-
-	return false;
+static bool NET_GetPacket(netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message) {
+	bool result = NET_GetLoopPacket(sock, net_from, net_message);
+	return result;
 }
 
-//=============================================================================
-
-void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
-{
-	int		ret;
-	struct sockaddr	addr;
-	int		net_socket = 0;
-
-	if ( to.type == NA_LOOPBACK )
-	{
-		NET_SendLoopPacket (sock, length, data, to);
-		return;
-	}
-
-	if (to.type == NA_BROADCAST)
-	{
-		net_socket = ip_sockets[sock];
-		if (!net_socket)
-			return;
-	}
-	else if (to.type == NA_IP)
-	{
-		net_socket = ip_sockets[sock];
-		if (!net_socket)
-			return;
-	}
-	else if (to.type == NA_IPX)
-	{
-		net_socket = ipx_sockets[sock];
-		if (!net_socket)
-			return;
-	}
-	else if (to.type == NA_BROADCAST_IPX)
-	{
-		net_socket = ipx_sockets[sock];
-		if (!net_socket)
-			return;
-	}
-	else assert(!"unreachable");
-
-	NetadrToSockadr (&to, &addr);
-
-	ret = sendto (net_socket, data, length, 0, &addr, sizeof(addr) );
-	if (ret == -1)
-	{
-		int err = WSAGetLastError();
-
-		// wouldblock is silent
-		if (err == WSAEWOULDBLOCK)
-			return;
-
-		// some PPP links dont allow broadcasts
-		if ((err == WSAEADDRNOTAVAIL) && ((to.type == NA_BROADCAST) || (to.type == NA_BROADCAST_IPX)))
-			return;
-
-		assert(err == WSAEADDRNOTAVAIL);
-		Com_DPrintf ("NET_SendPacket Warning: %s : %s\n", NET_ErrorString(), NET_AdrToString (to));
-	}
-}
-
-
-//=============================================================================
-
-
-/*
-====================
-NET_Socket
-====================
-*/
-int NET_IPSocket (char *net_interface, int port)
-{
-	int					newsocket;
-	struct sockaddr_in	address;
-	bool			_true = true;
-	int					i = 1;
-	int					err;
-
-	if ((newsocket = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-	{
-		err = WSAGetLastError();
-		if (err != WSAEAFNOSUPPORT)
-			Com_Printf ("WARNING: UDP_OpenSocket: socket: %s", NET_ErrorString());
-		return 0;
-	}
-
-	// make it non-blocking
-	if (ioctlsocket (newsocket, FIONBIO, (u_long*)&_true) == -1)
-	{
-		Com_Printf ("WARNING: UDP_OpenSocket: ioctl FIONBIO: %s\n", NET_ErrorString());
-		return 0;
-	}
-
-	// make it broadcast capable
-	if (setsockopt(newsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i)) == -1)
-	{
-		Com_Printf ("WARNING: UDP_OpenSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString());
-		return 0;
-	}
-
-	if (!net_interface || !net_interface[0] || !_stricmp(net_interface, "localhost"))
-		address.sin_addr.s_addr = INADDR_ANY;
-	else
-		NET_StringToSockaddr (net_interface, (struct sockaddr *)&address);
-
-	if (port == PORT_ANY)
-		address.sin_port = 0;
-	else
-		address.sin_port = htons((short)port);
-
-	address.sin_family = AF_INET;
-
-	if( bind (newsocket, (void *)&address, sizeof(address)) == -1)
-	{
-		Com_Printf ("WARNING: UDP_OpenSocket: bind: %s\n", NET_ErrorString());
-		closesocket (newsocket);
-		return 0;
-	}
-
-	return newsocket;
-}
-
-
-/*
-====================
-NET_OpenIP
-====================
-*/
-void NET_OpenIP (void)
-{
-	cvar_t	*ip;
-	int		port;
-
-	ip = COM_GetCvar ("ip", "localhost", CVAR_NOSET);
-
-	if (!ip_sockets[NS_SERVER])
-	{
-		port = COM_GetCvar("ip_hostport", "0", CVAR_NOSET)->value;
-		if (!port)
-		{
-			port = COM_GetCvar("hostport", "0", CVAR_NOSET)->value;
-			if (!port)
-			{
-				port = COM_GetCvar("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
-			}
-		}
-		ip_sockets[NS_SERVER] = NET_IPSocket (ip->string, port);
-	}
-
-	if (!ip_sockets[NS_CLIENT])
-	{
-		port = COM_GetCvar("ip_clientport", "0", CVAR_NOSET)->value;
-		if (!port)
-		{
-			port = COM_GetCvar("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
-			if (!port)
-				port = PORT_ANY;
-		}
-		ip_sockets[NS_CLIENT] = NET_IPSocket (ip->string, port);
-		if (!ip_sockets[NS_CLIENT])
-			ip_sockets[NS_CLIENT] = NET_IPSocket (ip->string, PORT_ANY);
-	}
-}
-
-
-/*
-====================
-IPX_Socket
-====================
-*/
-int NET_IPXSocket (int port)
-{
-	int					newsocket;
-	struct sockaddr_ipx	address;
-	int					_true = 1;
-	int					err;
-
-	if ((newsocket = socket (PF_IPX, SOCK_DGRAM, NSPROTO_IPX)) == -1)
-	{
-		err = WSAGetLastError();
-		if (err != WSAEAFNOSUPPORT)
-			Com_Printf ("WARNING: IPX_Socket: socket: %s\n", NET_ErrorString());
-		return 0;
-	}
-
-	// make it non-blocking
-	if (ioctlsocket (newsocket, FIONBIO, (u_long*)&_true) == -1)
-	{
-		Com_Printf ("WARNING: IPX_Socket: ioctl FIONBIO: %s\n", NET_ErrorString());
-		return 0;
-	}
-
-	// make it broadcast capable
-	if (setsockopt(newsocket, SOL_SOCKET, SO_BROADCAST, (char *)&_true, sizeof(_true)) == -1)
-	{
-		Com_Printf ("WARNING: IPX_Socket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString());
-		return 0;
-	}
-
-	address.sa_family = AF_IPX;
-	memset (address.sa_netnum, 0, 4);
-	memset (address.sa_nodenum, 0, 6);
-	if (port == PORT_ANY)
-		address.sa_socket = 0;
-	else
-		address.sa_socket = htons((short)port);
-
-	if( bind (newsocket, (void *)&address, sizeof(address)) == -1)
-	{
-		Com_Printf ("WARNING: IPX_Socket: bind: %s\n", NET_ErrorString());
-		closesocket (newsocket);
-		return 0;
-	}
-
-	return newsocket;
-}
-
-
-/*
-====================
-NET_OpenIPX
-====================
-*/
-void NET_OpenIPX (void)
-{
-	int		port;
-
-	if (!ipx_sockets[NS_SERVER])
-	{
-		port = COM_GetCvar("ipx_hostport", "0", CVAR_NOSET)->value;
-		if (!port)
-		{
-			port = COM_GetCvar("hostport", "0", CVAR_NOSET)->value;
-			if (!port)
-			{
-				port = COM_GetCvar("port", va("%i", PORT_SERVER), CVAR_NOSET)->value;
-			}
-		}
-		ipx_sockets[NS_SERVER] = NET_IPXSocket (port);
-	}
-
-	if (!ipx_sockets[NS_CLIENT])
-	{
-		port = COM_GetCvar("ipx_clientport", "0", CVAR_NOSET)->value;
-		if (!port)
-		{
-			port = COM_GetCvar("clientport", va("%i", PORT_CLIENT), CVAR_NOSET)->value;
-			if (!port)
-				port = PORT_ANY;
-		}
-		ipx_sockets[NS_CLIENT] = NET_IPXSocket (port);
-		if (!ipx_sockets[NS_CLIENT])
-			ipx_sockets[NS_CLIENT] = NET_IPXSocket (PORT_ANY);
-	}
-}
-
-
-/*
-====================
-NET_Config
-
-A single player game will only use the loopback code
-====================
-*/
-void	NET_Config (bool multiplayer)
-{
-	int		i;
-	static	bool	old_config;
-
-	if (old_config == multiplayer)
-		return;
-
-	old_config = multiplayer;
-
-	if (!multiplayer)
-	{	// shut down any existing sockets
-		for (i=0 ; i<2 ; i++)
-		{
-			if (ip_sockets[i])
-			{
-				closesocket (ip_sockets[i]);
-				ip_sockets[i] = 0;
-			}
-			if (ipx_sockets[i])
-			{
-				closesocket (ipx_sockets[i]);
-				ipx_sockets[i] = 0;
-			}
-		}
-	}
-	else
-	{	// open sockets
-		if (! noudp->value)
-			NET_OpenIP ();
-		if (! noipx->value)
-			NET_OpenIPX ();
-	}
-}
-
-//===================================================================
-
-/*
-====================
-NET_Shutdown
-====================
-*/
-void	NET_Shutdown (void)
-{
-	NET_Config (false);	// close sockets
-
-	WSACleanup ();
-}
-
-
-/*
-====================
-NET_ErrorString
-====================
-*/
-char *NET_ErrorString (void)
-{
-	int		code;
-
-	code = WSAGetLastError ();
-	switch (code)
-	{
-	case WSAEINTR: return "WSAEINTR";
-	case WSAEBADF: return "WSAEBADF";
-	case WSAEACCES: return "WSAEACCES";
-	case WSAEDISCON: return "WSAEDISCON";
-	case WSAEFAULT: return "WSAEFAULT";
-	case WSAEINVAL: return "WSAEINVAL";
-	case WSAEMFILE: return "WSAEMFILE";
-	case WSAEWOULDBLOCK: return "WSAEWOULDBLOCK";
-	case WSAEINPROGRESS: return "WSAEINPROGRESS";
-	case WSAEALREADY: return "WSAEALREADY";
-	case WSAENOTSOCK: return "WSAENOTSOCK";
-	case WSAEDESTADDRREQ: return "WSAEDESTADDRREQ";
-	case WSAEMSGSIZE: return "WSAEMSGSIZE";
-	case WSAEPROTOTYPE: return "WSAEPROTOTYPE";
-	case WSAENOPROTOOPT: return "WSAENOPROTOOPT";
-	case WSAEPROTONOSUPPORT: return "WSAEPROTONOSUPPORT";
-	case WSAESOCKTNOSUPPORT: return "WSAESOCKTNOSUPPORT";
-	case WSAEOPNOTSUPP: return "WSAEOPNOTSUPP";
-	case WSAEPFNOSUPPORT: return "WSAEPFNOSUPPORT";
-	case WSAEAFNOSUPPORT: return "WSAEAFNOSUPPORT";
-	case WSAEADDRINUSE: return "WSAEADDRINUSE";
-	case WSAEADDRNOTAVAIL: return "WSAEADDRNOTAVAIL";
-	case WSAENETDOWN: return "WSAENETDOWN";
-	case WSAENETUNREACH: return "WSAENETUNREACH";
-	case WSAENETRESET: return "WSAENETRESET";
-	case WSAECONNABORTED: return "WSWSAECONNABORTEDAEINTR";
-	case WSAECONNRESET: return "WSAECONNRESET";
-	case WSAENOBUFS: return "WSAENOBUFS";
-	case WSAEISCONN: return "WSAEISCONN";
-	case WSAENOTCONN: return "WSAENOTCONN";
-	case WSAESHUTDOWN: return "WSAESHUTDOWN";
-	case WSAETOOMANYREFS: return "WSAETOOMANYREFS";
-	case WSAETIMEDOUT: return "WSAETIMEDOUT";
-	case WSAECONNREFUSED: return "WSAECONNREFUSED";
-	case WSAELOOP: return "WSAELOOP";
-	case WSAENAMETOOLONG: return "WSAENAMETOOLONG";
-	case WSAEHOSTDOWN: return "WSAEHOSTDOWN";
-	case WSASYSNOTREADY: return "WSASYSNOTREADY";
-	case WSAVERNOTSUPPORTED: return "WSAVERNOTSUPPORTED";
-	case WSANOTINITIALISED: return "WSANOTINITIALISED";
-	case WSAHOST_NOT_FOUND: return "WSAHOST_NOT_FOUND";
-	case WSATRY_AGAIN: return "WSATRY_AGAIN";
-	case WSANO_RECOVERY: return "WSANO_RECOVERY";
-	case WSANO_DATA: return "WSANO_DATA";
-	default: return "NO ERROR";
-	}
+static void NET_SendPacket(netsrc_t sock, int length, void *data, netadr_t to) {
+	assert(to.type == NA_LOOPBACK);
+	NET_SendLoopPacket(sock, length, data, to);
 }
 
 #include <fcntl.h>
@@ -90436,9 +89717,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		fixedtime = COM_GetCvar("fixedtime", "0", 0);
 		logfile_active = COM_GetCvar("logfile", "0", 0);
 		showtrace = COM_GetCvar("showtrace", "0", 0);
-		noudp = COM_GetCvar("noudp", "0", CVAR_NOSET);
-		noipx = COM_GetCvar("noipx", "0", CVAR_NOSET);
-		net_shownet = COM_GetCvar("net_shownet", "0", 0);
 	}
 
 	{
