@@ -5621,7 +5621,7 @@ typedef struct
 	// The edict array is allocated in the game dll so it
 	// can vary in size from one game to another.
 	//
-	// The size will be fixed when ge->Init() is called
+	// The size will be fixed when globals.Init() is called
 	struct edict_s	*edicts;
 	int			edict_size;
 	int			num_edicts;		// current number, <= max_edicts
@@ -10196,8 +10196,8 @@ typedef struct
 	bool	timedemo;		// don't time sync
 } server_t;
 
-#define EDICT_NUM(n) ((edict_t *)((u8 *)ge->edicts + ge->edict_size*(n)))
-#define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)ge->edicts ) / ge->edict_size)
+#define EDICT_NUM(n) ((edict_t *)((u8 *)globals.edicts + globals.edict_size*(n)))
+#define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)globals.edicts ) / globals.edict_size)
 
 
 typedef enum
@@ -10408,8 +10408,6 @@ void SV_Error (char *error, ...);
 //
 // sv_game.c
 //
-extern	game_export_t	*ge;
-
 void SV_InitEdict (edict_t *e);
 
 
@@ -10661,7 +10659,7 @@ void SV_WriteLevelFile (void)
 	fclose (f);
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
-	ge->WriteLevel (name);
+	globals.WriteLevel (name);
 }
 
 /*
@@ -10690,7 +10688,7 @@ void SV_ReadLevelFile (void)
 	fclose (f);
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
-	ge->ReadLevel (name);
+	globals.ReadLevel (name);
 }
 
 /*
@@ -10763,7 +10761,7 @@ void SV_WriteServerFile (bool autosave)
 
 	// write game state
 	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
-	ge->WriteGame (name, autosave);
+	globals.WriteGame (name, autosave);
 }
 
 void SV_ReadServerFile (void)
@@ -10806,7 +10804,7 @@ void SV_ReadServerFile (void)
 
 	// read game state
 	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
-	ge->ReadGame (name);
+	globals.ReadGame (name);
 }
 
 // Puts the server in demo mode on a specific map/cinematic
@@ -11240,22 +11238,9 @@ void SV_KillServer_f (void)
 	NET_Config ( false );	// close network sockets
 }
 
-/*
-===============
-SV_ServerCommand_f
-
-Let the game dll handle a command
-===============
-*/
-void SV_ServerCommand_f (void)
-{
-	if (!ge)
-	{
-		Com_Printf ("No game loaded.\n");
-		return;
-	}
-
-	ge->ServerCommand();
+// Let the game dll handle a command
+void SV_ServerCommand_f() {
+	globals.ServerCommand();
 }
 
 //===========================================================
@@ -11814,7 +11799,7 @@ void SV_BuildClientFrame (client_t *client)
 	frame->num_entities = 0;
 	frame->first_entity = svs.next_client_entities;
 
-	for (e=1 ; e<ge->num_edicts ; e++)
+	for (e=1 ; e<globals.num_edicts ; e++)
 	{
 		ent = EDICT_NUM(e);
 
@@ -11942,7 +11927,7 @@ void SV_RecordDemoMessage (void)
 
 	e = 1;
 	ent = EDICT_NUM(e);
-	while (e < ge->num_edicts)
+	while (e < globals.num_edicts)
 	{
 		// ignore ents without visible models unless they have an effect
 		if (ent->inuse &&
@@ -11967,23 +11952,7 @@ void SV_RecordDemoMessage (void)
 	fwrite (buf.data, buf.cursize, 1, svs.demofile);
 }
 
-/* ============ end source: server/sv_ents.c ============ */
-/* ============ begin source: server/sv_game.c ============ */
-
-// sv_game.c -- interface to the game dll
-
-/* already inlined above: server/server.h */
-
-game_export_t	*ge;
-
-
-/*
-===============
-PF_Unicast
-
-Sends the contents of the mutlicast buffer to a single client
-===============
-*/
+// Sends the contents of the mutlicast buffer to a single client
 void PF_Unicast (edict_t *ent, bool reliable)
 {
 	int		p;
@@ -12197,9 +12166,8 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 
 // Called when either the entire server is being killed, or it is changing to a different game directory.
 static void SV_ShutdownGameProgs() {
-	if (ge) {
-		ge->Shutdown();
-		ge = NULL;
+	if (globals.Shutdown) {
+		globals.Shutdown();
 	}
 }
 
@@ -12213,10 +12181,8 @@ void SV_InitGameProgs() {
 	void GetGameAPI();
 	GetGameAPI();
 
-	assert(ge);
-	assert(ge->apiversion == GAME_API_VERSION);
-
-	ge->Init();
+	assert(globals.apiversion == GAME_API_VERSION);
+	globals.Init();
 }
 
 server_static_t	svs;				// persistant server info
@@ -12283,7 +12249,7 @@ void SV_CreateBaseline (void)
 	edict_t			*svent;
 	int				entnum;
 
-	for (entnum = 1; entnum < ge->num_edicts ; entnum++)
+	for (entnum = 1; entnum < globals.num_edicts ; entnum++)
 	{
 		svent = EDICT_NUM(entnum);
 		if (!svent->inuse)
@@ -12342,7 +12308,7 @@ void SV_CheckForSavegame (void)
 		previousState = sv.state;				// PGM
 		sv.state = ss_loading;					// PGM
 		for (i=0 ; i<100 ; i++)
-			ge->RunFrame ();
+			globals.RunFrame ();
 
 		sv.state = previousState;				// PGM
 	}
@@ -12449,11 +12415,11 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	Com_SetServerState (sv.state);
 
 	// load and spawn all other entities
-	ge->SpawnEntities ( sv.name, map_entitystring, spawnpoint );
+	globals.SpawnEntities ( sv.name, map_entitystring, spawnpoint );
 
 	// run two frames to allow everything to settle
-	ge->RunFrame ();
-	ge->RunFrame ();
+	globals.RunFrame ();
+	globals.RunFrame ();
 
 	// all precaches are complete
 	sv.state = serverstate;
@@ -12717,7 +12683,7 @@ void SV_DropClient (client_t *drop)
 	{
 		// call the prog function for removing a client
 		// this will remove the body, among other things
-		ge->ClientDisconnect (drop->edict);
+		globals.ClientDisconnect (drop->edict);
 	}
 
 	if (drop->download)
@@ -12990,7 +12956,7 @@ gotnewcl:
 	newcl->challenge = challenge; // save challenge for checksumming
 
 	// get the game a chance to reject this connection or modify the userinfo
-	if (!(ge->ClientConnect (ent, userinfo)))
+	if (!(globals.ClientConnect (ent, userinfo)))
 	{
 		if (*Info_ValueForKey (userinfo, "rejmsg"))
 			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\n%s\nConnection refused.\n",
@@ -13296,7 +13262,7 @@ void SV_PrepWorldFrame (void)
 	edict_t	*ent;
 	int		i;
 
-	for (i=0 ; i<ge->num_edicts ; i++, ent++)
+	for (i=0 ; i<globals.num_edicts ; i++, ent++)
 	{
 		ent = EDICT_NUM(i);
 		// events only last for a single message
@@ -13326,7 +13292,7 @@ void SV_RunGameFrame (void)
 	// don't run if paused
 	if (!sv_paused->value || maxclients->value > 1)
 	{
-		ge->RunFrame ();
+		globals.RunFrame ();
 
 		// never get more than one tic behind
 		if ((int)sv.time < svs.realtime)
@@ -13360,7 +13326,7 @@ void SV_UserinfoChanged (client_t *cl)
 	char	*val;
 
 	// call prog code to allow overrides
-	ge->ClientUserinfoChanged (cl->edict, cl->userinfo);
+	globals.ClientUserinfoChanged (cl->edict, cl->userinfo);
 
 	// name for C code
 	strncpy (cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name)-1);
@@ -14219,7 +14185,7 @@ void SV_Begin_f (void)
 	sv_client->state = cs_spawned;
 
 	// call the game begin function
-	ge->ClientBegin (sv_player);
+	globals.ClientBegin (sv_player);
 
 	Cbuf_InsertText(defer_text_buf);
 	defer_text_buf[0] = 0;
@@ -14461,7 +14427,7 @@ void SV_ExecuteUserCommand (char *s)
 		}
 
 	if (!u->name && sv.state == ss_game)
-		ge->ClientCommand (sv_player);
+		globals.ClientCommand (sv_player);
 
 //	SV_EndRedirect ();
 }
@@ -14487,7 +14453,7 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd)
 		return;
 	}
 
-	ge->ClientThink (cl->edict, cmd);
+	globals.ClientThink (cl->edict, cmd);
 }
 
 
@@ -14793,7 +14759,7 @@ void SV_LinkEdict (edict_t *ent)
 	if (ent->area.prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
 
-	if (ent == ge->edicts)
+	if (ent == globals.edicts)
 		return;		// don't add the world
 
 	if (!ent->inuse)
@@ -15232,7 +15198,7 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 	// clip to world
 	clip.trace = CM_BoxTrace (start, end, mins, maxs, 0, contentmask);
-	clip.trace.ent = ge->edicts;
+	clip.trace.ent = globals.edicts;
 	if (clip.trace.fraction == 0)
 		return clip.trace;		// blocked by the world
 
@@ -43021,8 +42987,6 @@ void GetGameAPI() {
 	globals.ServerCommand = ServerCommand;
 
 	globals.edict_size = sizeof(edict_t);
-
-	ge = &globals;
 }
 
 //======================================================================
