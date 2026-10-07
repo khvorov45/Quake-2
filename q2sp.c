@@ -80632,28 +80632,6 @@ void GL_FreeUnusedImages (void)
 	}
 }
 
-static void Draw_GetPalette() {
-	u8* pic = 0;
-	u8* pal = 0;
-	int width = 0;
-	int height = 0;
-	LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
-	assert(pal);
-
-	for (u32 ind = 0; ind < 256; ind++) {
-		u32 r = pal[ind * 3 + 0];
-		u32 g = pal[ind * 3 + 1];
-		u32 b = pal[ind * 3 + 2];
-
-		u32 v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
-		d_8to24table[ind] = LittleLong(v);
-	}
-	d_8to24table[255] &= LittleLong(0xffffff);
-
-	free(pic);
-	free(pal);
-}
-
 int	r_dlightframecount;
 
 #define	DLIGHT_CUTOFF	64
@@ -88764,8 +88742,6 @@ static void VID_UpdateWindowPosAndSize() {
 	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );
 }
 
-static HINSTANCE global_hInstance;
-
 extern cvar_t *scr_viewsize;
 
 static cvar_t *gl_picmip;
@@ -89249,9 +89225,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 
-	// TODO: Remove
-	global_hInstance = hInstance;
-
 	// NOTE: Parse command line
 	// TODO: Simplify
 	{
@@ -89561,12 +89534,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		con.initialized = true;
 	}
 
+	// NOTE: Colormap init
+	{
+		u8* pic = 0;
+		u8* pal = 0;
+		int width = 0;
+		int height = 0;
+		LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
+		assert(pal);
+
+		for (u32 ind = 0; ind < 256; ind++) {
+			u32 r = pal[ind * 3 + 0];
+			u32 g = pal[ind * 3 + 1];
+			u32 b = pal[ind * 3 + 2];
+
+			u32 v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
+			d_8to24table[ind] = LittleLong(v);
+		}
+		d_8to24table[255] &= LittleLong(0xffffff);
+
+		free(pic);
+		free(pal);
+	}
+
 	// NOTE: Video init
 	{
-		Draw_GetPalette();
-
-		glw_state.allowdisplaydepthchange = false;
-		glw_state.hInstance = global_hInstance;
+		glw_state.hInstance = hInstance;
 		glw_state.wndproc = MainWndProc;
 
 		vid.width  = 1600;
