@@ -26,6 +26,7 @@
 #define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0)
 
 typedef uint8_t u8;
+typedef uint32_t u32;
 typedef int64_t i64;
 
 #define Byte ((i64)1)
@@ -80631,35 +80632,26 @@ void GL_FreeUnusedImages (void)
 	}
 }
 
-int Draw_GetPalette (void)
-{
-	int		i;
-	int		r, g, b;
-	unsigned	v;
-	u8	*pic, *pal;
-	int		width, height;
-
-	// get the palette
-
-	LoadPCX ("pics/colormap.pcx", &pic, &pal, &width, &height);
+static void Draw_GetPalette() {
+	u8* pic = 0;
+	u8* pal = 0;
+	int width = 0;
+	int height = 0;
+	LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
 	assert(pal);
 
-	for (i=0 ; i<256 ; i++)
-	{
-		r = pal[i*3+0];
-		g = pal[i*3+1];
-		b = pal[i*3+2];
+	for (u32 ind = 0; ind < 256; ind++) {
+		u32 r = pal[ind * 3 + 0];
+		u32 g = pal[ind * 3 + 1];
+		u32 b = pal[ind * 3 + 2];
 
-		v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
-		d_8to24table[i] = LittleLong(v);
+		u32 v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
+		d_8to24table[ind] = LittleLong(v);
 	}
+	d_8to24table[255] &= LittleLong(0xffffff);
 
-	d_8to24table[255] &= LittleLong(0xffffff);	// 255 is transparent
-
-	free (pic);
-	free (pal);
-
-	return 0;
+	free(pic);
+	free(pal);
 }
 
 int	r_dlightframecount;
@@ -89571,42 +89563,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Video init
 	{
-		S_StopAllSounds();
-
-		// refresh has changed
-		cl.refresh_prepped = false;
-		cls.disable_screen = true;
-
-		// NOTE: Free nods
-		for (int i = 0; i < mod_numknown; i++) {
-			if (mod_known[i].extradatasize) {
-				Mod_Free(&mod_known[i]);
-			}
-		}
-
-		// NOTE: Free images
-		{
-			image_t* image = gltextures;
-			for (int i = 0; i < numgltextures; i++, image++) {
-				if (image->registration_sequence) {
-					glDeleteTextures(1, (GLuint*)&image->texnum);
-					memset(image, 0, sizeof(*image));
-				}
-			}
-		}
-
-		wglMakeCurrent(NULL, NULL);
-		wglDeleteContext(glw_state.hGLRC);
-		glw_state.hGLRC = NULL;
-
-		ReleaseDC(glw_state.hWnd, glw_state.hDC);
-		glw_state.hDC = NULL;
-
-		DestroyWindow(glw_state.hWnd);
-		glw_state.hWnd = NULL;
-
-		UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
-
 		Draw_GetPalette();
 
 		glw_state.allowdisplaydepthchange = false;
@@ -89751,12 +89707,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// init intensity conversions
 			intensity = COM_GetCvar("intensity", "2", 0);
 
-			if (intensity->value <= 1)
+			if (intensity->value <= 1) {
 				COM_SetCvar("intensity", "1");
+			}
 
 			gl_state.inverse_intensity = 1 / intensity->value;
-
-			Draw_GetPalette();
 
 			for (i64 ind = 0; ind < 256; ind++) {
 				gammatable[ind] = ind;
@@ -89819,8 +89774,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Com_Printf("glGetError() = 0x%x\n", err);
 			}
 		}
-
-		cls.disable_screen = false;
 
 		// update our window position
 		if (vid_xpos->modified || vid_ypos->modified) {
