@@ -78714,12 +78714,6 @@ void Weapon_BFG (edict_t *ent)
 #include <windows.h>
 #include <GL/gl.h>
 
-// coordinates from main game
-static struct {
-	unsigned width, height;
-} vid;
-
-
 /*
 
   skins will be outline flood filled and mip mapped
@@ -79395,9 +79389,9 @@ void Draw_FadeScreen (void)
 	glBegin (GL_QUADS);
 
 	glVertex2f (0,0);
-	glVertex2f (vid.width, 0);
-	glVertex2f (vid.width, vid.height);
-	glVertex2f (0, vid.height);
+	glVertex2f (viddef.width, 0);
+	glVertex2f (viddef.width, viddef.height);
+	glVertex2f (0, viddef.height);
 
 	glEnd ();
 	glColor4f (1,1,1,1);
@@ -83729,7 +83723,7 @@ void R_SetupFrame (void)
 	{
 		glEnable( GL_SCISSOR_TEST );
 		glClearColor( 0.3, 0.3, 0.3, 1 );
-		glScissor( r_newrefdef.x, vid.height - r_newrefdef.height - r_newrefdef.y, r_newrefdef.width, r_newrefdef.height );
+		glScissor( r_newrefdef.x, viddef.height - r_newrefdef.height - r_newrefdef.y, r_newrefdef.width, r_newrefdef.height );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		glClearColor( 1, 0, 0.5, 0.5 );
 		glDisable( GL_SCISSOR_TEST );
@@ -83766,10 +83760,10 @@ void R_SetupGL (void)
 	//
 	// set up viewport
 	//
-	x = floor((float)r_newrefdef.x * (float)vid.width / (float)vid.width);
-	x2 = ceil((float)((float)r_newrefdef.x + (float)r_newrefdef.width) * (float)vid.width / (float)vid.width);
-	y = floor((float)vid.height - (float)r_newrefdef.y * (float)vid.height / (float)vid.height);
-	y2 = ceil((float)vid.height - (float)((float)r_newrefdef.y + (float)r_newrefdef.height) * (float)vid.height / (float)vid.height);
+	x = floor((float)r_newrefdef.x * (float)viddef.width / (float)viddef.width);
+	x2 = ceil((float)((float)r_newrefdef.x + (float)r_newrefdef.width) * (float)viddef.width / (float)viddef.width);
+	y = floor((float)viddef.height - (float)r_newrefdef.y * (float)viddef.height / (float)viddef.height);
+	y2 = ceil((float)viddef.height - (float)((float)r_newrefdef.y + (float)r_newrefdef.height) * (float)viddef.height / (float)viddef.height);
 
 	w = x2 - x;
 	h = y - y2;
@@ -83920,10 +83914,10 @@ void R_RenderView (refdef_t *fd)
 void	R_SetGL2D (void)
 {
 	// set 2D virtual screen size
-	glViewport (0,0, vid.width, vid.height);
+	glViewport (0,0, viddef.width, viddef.height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity ();
-	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
+	glOrtho  (0, viddef.width, viddef.height, 0, -99999, 99999);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity ();
 	glDisable (GL_DEPTH_TEST);
@@ -83999,10 +83993,10 @@ static void R_BeginFrame() {
 	/*
 	** go into 2D mode
 	*/
-	glViewport (0,0, vid.width, vid.height);
+	glViewport (0,0, viddef.width, viddef.height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity ();
-	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
+	glOrtho  (0, viddef.width, viddef.height, 0, -99999, 99999);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity ();
 	glDisable (GL_DEPTH_TEST);
@@ -84221,19 +84215,19 @@ void GL_ScreenShot_f(void)
  	}
 
 
-	buffer = malloc(vid.width*vid.height*3 + 18);
+	buffer = malloc(viddef.width*viddef.height*3 + 18);
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
-	buffer[12] = vid.width&255;
-	buffer[13] = vid.width>>8;
-	buffer[14] = vid.height&255;
-	buffer[15] = vid.height>>8;
+	buffer[12] = viddef.width&255;
+	buffer[13] = viddef.width>>8;
+	buffer[14] = viddef.height&255;
+	buffer[15] = viddef.height>>8;
 	buffer[16] = 24;	// pixel size
 
-	glReadPixels (0, 0, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 );
+	glReadPixels (0, 0, viddef.width, viddef.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 );
 
 	// swap rgb to bgr
-	c = 18+vid.width*vid.height*3;
+	c = 18+viddef.width*viddef.height*3;
 	for (i=18 ; i<c ; i+=3)
 	{
 		temp = buffer[i];
@@ -89549,8 +89543,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Video init
 	// TODO: unglobal
 	{
-		vid.width  = 1600;
-		vid.height = 1200;
+		viddef.width = 1600;
+		viddef.height = 1200;
 
 		{
 			WNDCLASS wc = {
@@ -89569,7 +89563,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			ATOM register_class_result = RegisterClass(&wc);
 			assert(register_class_result);
 
-			RECT r = {.left = 0, .top = 0, .right = vid.width, .bottom = vid.height};
+			RECT r = {.left = 0, .top = 0, .right = viddef.width, .bottom = viddef.height};
 			AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
 
 			int x = vid_xpos->value;
@@ -89628,9 +89622,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			SetForegroundWindow(window_handle);
 			SetFocus(window_handle);
-
-			viddef.width  = vid.width;
-			viddef.height = vid.height;
 		}
 
 		// NOTE: Must happen after GL context is created
