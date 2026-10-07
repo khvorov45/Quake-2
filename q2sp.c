@@ -5075,8 +5075,6 @@ void Pmove (pmove_t *pmove);
 #define	MZ_NUKE4			38
 #define	MZ_NUKE8			39
 
-#define	GAME_API_VERSION	3
-
 // edict->svflags
 #define	SVF_NOCLIENT			0x00000001	// don't send entity to clients, even if it has effects
 #define	SVF_DEADMONSTER			0x00000002	// treat as CONTENTS_DEADMONSTER for collision
@@ -5571,62 +5569,16 @@ typedef enum {
 	MULTICAST_PVS_R
 } multicast_t;
 
-//
-// functions exported by the game subsystem
-//
-typedef struct
-{
-	int			apiversion;
-
-	// the init function will only be called when a game starts,
-	// not each time a level is loaded.  Persistant data for clients
-	// and the server can be allocated in init
-	void		(*Init) (void);
-	void		(*Shutdown) (void);
-
-	// each new level entered will cause a call to SpawnEntities
-	void		(*SpawnEntities) (char *mapname, char *entstring, char *spawnpoint);
-
-	// Read/Write Game is for storing persistant cross level information
-	// about the world state and the clients.
-	// WriteGame is called every time a level is exited.
-	// ReadGame is called on a loadgame.
-	void		(*WriteGame) (char *filename, bool autosave);
-	void		(*ReadGame) (char *filename);
-
-	// ReadLevel is called after the default map information has been
-	// loaded with SpawnEntities
-	void		(*WriteLevel) (char *filename);
-	void		(*ReadLevel) (char *filename);
-
-	bool	(*ClientConnect) (edict_t *ent, char *userinfo);
-	void		(*ClientBegin) (edict_t *ent);
-	void		(*ClientUserinfoChanged) (edict_t *ent, char *userinfo);
-	void		(*ClientDisconnect) (edict_t *ent);
-	void		(*ClientCommand) (edict_t *ent);
-	void		(*ClientThink) (edict_t *ent, usercmd_t *cmd);
-
-	void		(*RunFrame) (void);
-
-	// ServerCommand will be called when an "sv <command>" command is issued on the
-	// server console.
-	// The game can issue cmd_argc / Cmd_Argv() commands to get the rest
-	// of the parameters
-	void		(*ServerCommand) (void);
-
-	//
-	// global variables shared between game and server
-	//
-
+static struct {
 	// The edict array is allocated in the game dll so it
 	// can vary in size from one game to another.
 	//
-	// The size will be fixed when globals.Init() is called
+	// The size will be fixed when InitGame() is called
 	struct edict_s	*edicts;
 	int			edict_size;
 	int			num_edicts;		// current number, <= max_edicts
 	int			max_edicts;
-} game_export_t;
+} globals;
 
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
@@ -5901,7 +5853,6 @@ static struct {
 } game;
 
 static level_locals_t	level;
-static game_export_t	globals;
 static spawn_temp_t		st;
 
 static int sm_meat_index;
@@ -10633,13 +10584,6 @@ static void SV_CopySaveGame(char *src, char *dst) {
 	Sys_FindClose ();
 }
 
-
-/*
-==============
-SV_WriteLevelFile
-
-==============
-*/
 void SV_WriteLevelFile (void)
 {
 	char	name[MAX_OSPATH];
@@ -10659,7 +10603,9 @@ void SV_WriteLevelFile (void)
 	fclose (f);
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
-	globals.WriteLevel (name);
+
+	void WriteLevel (char *filename);
+	WriteLevel (name);
 }
 
 /*
@@ -10688,7 +10634,9 @@ void SV_ReadLevelFile (void)
 	fclose (f);
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
-	globals.ReadLevel (name);
+
+	void ReadLevel (char *filename);
+	ReadLevel (name);
 }
 
 /*
@@ -10761,7 +10709,8 @@ void SV_WriteServerFile (bool autosave)
 
 	// write game state
 	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
-	globals.WriteGame (name, autosave);
+	void WriteGame (char *filename, bool autosave);
+	WriteGame (name, autosave);
 }
 
 void SV_ReadServerFile (void)
@@ -10804,7 +10753,9 @@ void SV_ReadServerFile (void)
 
 	// read game state
 	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
-	globals.ReadGame (name);
+
+	void ReadGame (char *filename);
+	ReadGame (name);
 }
 
 // Puts the server in demo mode on a specific map/cinematic
@@ -11240,7 +11191,7 @@ void SV_KillServer_f (void)
 
 // Let the game dll handle a command
 void SV_ServerCommand_f() {
-	globals.ServerCommand();
+	ServerCommand();
 }
 
 //===========================================================
@@ -12164,15 +12115,20 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 	SV_StartSound (NULL, entity, channel, sound_num, volume, attenuation, timeofs);
 }
 
+static void ShutdownGame() {
+	Z_FreeTags(TAG_LEVEL);
+	Z_FreeTags(TAG_GAME);
+}
+
 // Called when either the entire server is being killed, or it is changing to a different game directory.
 static void SV_ShutdownGameProgs() {
-	if (globals.Shutdown) {
-		globals.Shutdown();
-	}
+	ShutdownGame();
 }
 
 // Init the game subsystem for a new map
-void SCR_DebugGraph (float value, int color);
+void SCR_DebugGraph(float value, int color);
+
+void InitGame(void);
 
 void SV_InitGameProgs() {
 	// unload anything we have now
@@ -12181,8 +12137,7 @@ void SV_InitGameProgs() {
 	void GetGameAPI();
 	GetGameAPI();
 
-	assert(globals.apiversion == GAME_API_VERSION);
-	globals.Init();
+	InitGame();
 }
 
 server_static_t	svs;				// persistant server info
@@ -12266,12 +12221,8 @@ void SV_CreateBaseline (void)
 	}
 }
 
+void G_RunFrame (void);
 
-/*
-=================
-SV_CheckForSavegame
-=================
-*/
 void SV_CheckForSavegame (void)
 {
 	char		name[MAX_OSPATH];
@@ -12308,7 +12259,7 @@ void SV_CheckForSavegame (void)
 		previousState = sv.state;				// PGM
 		sv.state = ss_loading;					// PGM
 		for (i=0 ; i<100 ; i++)
-			globals.RunFrame ();
+			G_RunFrame ();
 
 		sv.state = previousState;				// PGM
 	}
@@ -12415,11 +12366,12 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	Com_SetServerState (sv.state);
 
 	// load and spawn all other entities
-	globals.SpawnEntities ( sv.name, map_entitystring, spawnpoint );
+	void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
+	SpawnEntities ( sv.name, map_entitystring, spawnpoint );
 
 	// run two frames to allow everything to settle
-	globals.RunFrame ();
-	globals.RunFrame ();
+	G_RunFrame ();
+	G_RunFrame ();
 
 	// all precaches are complete
 	sv.state = serverstate;
@@ -12665,6 +12617,13 @@ cvar_t	*public_server;			// should heartbeats be sent
 
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
+void ClientThink (edict_t *ent, usercmd_t *cmd);
+bool ClientConnect (edict_t *ent, char *userinfo);
+void ClientUserinfoChanged (edict_t *ent, char *userinfo);
+void ClientDisconnect (edict_t *ent);
+void ClientBegin (edict_t *ent);
+void ClientCommand (edict_t *ent);
+
 /*
 =====================
 SV_DropClient
@@ -12683,7 +12642,7 @@ void SV_DropClient (client_t *drop)
 	{
 		// call the prog function for removing a client
 		// this will remove the body, among other things
-		globals.ClientDisconnect (drop->edict);
+		ClientDisconnect (drop->edict);
 	}
 
 	if (drop->download)
@@ -12956,7 +12915,7 @@ gotnewcl:
 	newcl->challenge = challenge; // save challenge for checksumming
 
 	// get the game a chance to reject this connection or modify the userinfo
-	if (!(globals.ClientConnect (ent, userinfo)))
+	if (!(ClientConnect (ent, userinfo)))
 	{
 		if (*Info_ValueForKey (userinfo, "rejmsg"))
 			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\n%s\nConnection refused.\n",
@@ -13292,7 +13251,7 @@ void SV_RunGameFrame (void)
 	// don't run if paused
 	if (!sv_paused->value || maxclients->value > 1)
 	{
-		globals.RunFrame ();
+		G_RunFrame ();
 
 		// never get more than one tic behind
 		if ((int)sv.time < svs.realtime)
@@ -13326,7 +13285,7 @@ void SV_UserinfoChanged (client_t *cl)
 	char	*val;
 
 	// call prog code to allow overrides
-	globals.ClientUserinfoChanged (cl->edict, cl->userinfo);
+	ClientUserinfoChanged (cl->edict, cl->userinfo);
 
 	// name for C code
 	strncpy (cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name)-1);
@@ -14185,7 +14144,7 @@ void SV_Begin_f (void)
 	sv_client->state = cs_spawned;
 
 	// call the game begin function
-	globals.ClientBegin (sv_player);
+	ClientBegin (sv_player);
 
 	Cbuf_InsertText(defer_text_buf);
 	defer_text_buf[0] = 0;
@@ -14427,7 +14386,7 @@ void SV_ExecuteUserCommand (char *s)
 		}
 
 	if (!u->name && sv.state == ss_game)
-		globals.ClientCommand (sv_player);
+		ClientCommand (sv_player);
 
 //	SV_EndRedirect ();
 }
@@ -14453,7 +14412,7 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd)
 		return;
 	}
 
-	globals.ClientThink (cl->edict, cmd);
+	ClientThink (cl->edict, cmd);
 }
 
 
@@ -42931,72 +42890,13 @@ void SetItemNames (void)
 	power_screen_index = ITEM_INDEX(FindItem("Power Screen"));
 	power_shield_index = ITEM_INDEX(FindItem("Power Shield"));
 }
-/* ============ end source: game/g_items.c ============ */
-/* ============ begin source: game/g_main.c ============ */
 
-
-/* already inlined above: game/g_local.h */
-
-void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
-void ClientThink (edict_t *ent, usercmd_t *cmd);
-bool ClientConnect (edict_t *ent, char *userinfo);
-void ClientUserinfoChanged (edict_t *ent, char *userinfo);
-void ClientDisconnect (edict_t *ent);
-void ClientBegin (edict_t *ent);
-void ClientCommand (edict_t *ent);
 void RunEntity (edict_t *ent);
-void WriteGame (char *filename, bool autosave);
-void ReadGame (char *filename);
-void WriteLevel (char *filename);
-void ReadLevel (char *filename);
-void InitGame (void);
-void G_RunFrame (void);
-
-
-//===================================================================
-
-
-void ShutdownGame (void)
-{
-	PF_dprintf ("==== ShutdownGame ====\n");
-
-	Z_FreeTags (TAG_LEVEL);
-	Z_FreeTags (TAG_GAME);
-}
 
 void GetGameAPI() {
-	globals.apiversion = GAME_API_VERSION;
-	globals.Init = InitGame;
-	globals.Shutdown = ShutdownGame;
-	globals.SpawnEntities = SpawnEntities;
-
-	globals.WriteGame = WriteGame;
-	globals.ReadGame = ReadGame;
-	globals.WriteLevel = WriteLevel;
-	globals.ReadLevel = ReadLevel;
-
-	globals.ClientThink = ClientThink;
-	globals.ClientConnect = ClientConnect;
-	globals.ClientUserinfoChanged = ClientUserinfoChanged;
-	globals.ClientDisconnect = ClientDisconnect;
-	globals.ClientBegin = ClientBegin;
-	globals.ClientCommand = ClientCommand;
-
-	globals.RunFrame = G_RunFrame;
-
-	globals.ServerCommand = ServerCommand;
-
 	globals.edict_size = sizeof(edict_t);
 }
 
-//======================================================================
-
-
-/*
-=================
-ClientEndServerFrames
-=================
-*/
 void ClientEndServerFrames (void)
 {
 	int		i;
@@ -47170,20 +47070,9 @@ void ReadClient (FILE *f, gclient_t *client)
 	}
 }
 
-/*
-============
-WriteGame
-
-This will be called whenever the game goes to a new level,
-and when the user explicitly saves the game.
-
-Game information include cross level data, like multi level
-triggers, help computer info, and all client states.
-
-A single player death will automatically restore from the
-last save position.
-============
-*/
+// This will be called whenever the game goes to a new level, and when the user explicitly saves the game.
+// Game information include cross level data, like multi level triggers, help computer info, and all client states.
+// A single player death will automatically restore from the last save position.
 void WriteGame (char *filename, bool autosave)
 {
 	FILE	*f;
@@ -47340,12 +47229,6 @@ void ReadLevelLocals (FILE *f)
 	}
 }
 
-/*
-=================
-WriteLevel
-
-=================
-*/
 void WriteLevel (char *filename)
 {
 	int		i;
@@ -47382,23 +47265,10 @@ void WriteLevel (char *filename)
 	fclose (f);
 }
 
-
-/*
-=================
-ReadLevel
-
-SpawnEntities will allready have been called on the
-level the same way it was when the level was saved.
-
-That is necessary to get the baselines
-set up identically.
-
-The server will have cleared all of the world links before
-calling ReadLevel.
-
-No clients are connected yet.
-=================
-*/
+// SpawnEntities will allready have been called on the level the same way it was when the level was saved.
+// That is necessary to get the baselines set up identically.
+// The server will have cleared all of the world links before calling this.
+// No clients are connected yet.
 void ReadLevel (char *filename)
 {
 	int		entnum;
@@ -47957,14 +47827,7 @@ void G_FindTeams (void)
 	PF_dprintf ("%i teams with %i entities\n", c, c2);
 }
 
-/*
-==============
-SpawnEntities
-
-Creates a server's entity / program execution context by
-parsing textual entity definitions out of an ent file.
-==============
-*/
+// Creates a server's entity / program execution context by parsing textual entity definitions out of an ent file.
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 {
 	edict_t		*ent;
