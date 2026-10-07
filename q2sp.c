@@ -1588,8 +1588,6 @@ typedef struct {
 	u8		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
 } netchan_t;
 
-cvar_t		*showpackets;
-cvar_t		*showdrop;
 cvar_t		*qport;
 
 netadr_t	net_from;
@@ -8650,23 +8648,6 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 
 // send the datagram
 	NET_SendPacket (chan->sock, send.cursize, send.data, chan->remote_address);
-
-	if (showpackets->value)
-	{
-		if (send_reliable)
-			Com_Printf ("send %4i : s=%i reliable=%i ack=%i rack=%i\n"
-				, send.cursize
-				, chan->outgoing_sequence - 1
-				, chan->reliable_sequence
-				, chan->incoming_sequence
-				, chan->incoming_reliable_sequence);
-		else
-			Com_Printf ("send %4i : s=%i ack=%i rack=%i\n"
-				, send.cursize
-				, chan->outgoing_sequence - 1
-				, chan->incoming_sequence
-				, chan->incoming_reliable_sequence);
-	}
 }
 
 /*
@@ -8697,31 +8678,9 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 	sequence &= ~(1<<31);
 	sequence_ack &= ~(1<<31);
 
-	if (showpackets->value)
-	{
-		if (reliable_message)
-			Com_Printf ("recv %4i : s=%i reliable=%i ack=%i rack=%i\n"
-				, msg->cursize
-				, sequence
-				, chan->incoming_reliable_sequence ^ 1
-				, sequence_ack
-				, reliable_ack);
-		else
-			Com_Printf ("recv %4i : s=%i ack=%i rack=%i\n"
-				, msg->cursize
-				, sequence
-				, sequence_ack
-				, reliable_ack);
-	}
-
 	// discard stale or duplicated packets
 	if ((int)sequence <= chan->incoming_sequence)
 	{
-		if (showdrop->value)
-			Com_Printf ("%s:Out of order packet %i at %i\n"
-				, NET_AdrToString (chan->remote_address)
-				,  sequence
-				, chan->incoming_sequence);
 		return false;
 	}
 
@@ -8729,14 +8688,6 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 // dropped packets don't keep the message from being used
 //
 	chan->dropped = sequence - (chan->incoming_sequence+1);
-	if (chan->dropped > 0)
-	{
-		if (showdrop->value)
-			Com_Printf ("%s:Dropped %i packets at %i\n"
-			, NET_AdrToString (chan->remote_address)
-			, chan->dropped
-			, sequence);
-	}
 
 	// if the current outgoing reliable message has been acknowledged clear the buffer to make way for the next
 	if ((int)reliable_ack == chan->reliable_sequence)
@@ -88321,9 +88272,6 @@ void	NET_Config (bool multiplayer)
 
 //===================================================================
 
-
-static WSADATA		winsockdata;
-
 /*
 ====================
 NET_Shutdown
@@ -90572,17 +90520,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		net_shownet = COM_GetCvar("net_shownet", "0", 0);
 	}
 
-	// NOTE: NET Init
-	{
-		int WSAStartup_result = WSAStartup(MAKEWORD(1, 1), &winsockdata);
-		assert(!WSAStartup_result);
-	}
-
 	// NOTE: Netchan Init
 	{
-		showpackets = COM_GetCvar("showpackets", "0", 0);
-		showdrop = COM_GetCvar("showdrop", "0", 0);
-
 		// pick a port value that should be nice and random
 		int port = Sys_Milliseconds() & 0xffff;
 		qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
