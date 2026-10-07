@@ -1766,7 +1766,6 @@ static void Con_Print(char *txt) {
 //
 
 #define	MAXPRINTMSG		4096
-#define MAX_NUM_ARGVS	50
 #define	MAX_TOKEN_CHARS	128		// max length of an individual token
 
 #define	MAX_QPATH 64 // max length of a quake game pathname
@@ -1778,9 +1777,6 @@ static void		(*rd_flush)(int target, char *buffer);
 
 static cvar_t*	logfile_active; // 1 = buffer log, 2 = flush after each print
 static FILE*	logfile;
-
-static int		com_argc;
-static char*	com_argv[MAX_NUM_ARGVS + 1];
 
 static char com_token[MAX_TOKEN_CHARS];
 
@@ -1920,20 +1916,6 @@ static char* COM_Parse(char** data_p) {
 
 	*data_p = data;
 	return com_token;
-}
-
-static char* COM_Argv(int arg) {
-	if (arg < 0 || arg >= com_argc || !com_argv[arg]) {
-		return "";
-	}
-	return com_argv[arg];
-}
-
-static void COM_ClearArgv(int arg) {
-	if (arg < 0 || arg >= com_argc || !com_argv[arg]) {
-		return;
-	}
-	com_argv[arg] = "";
 }
 
 // creates the variable if it doesn't exist, or returns the existing one
@@ -2150,82 +2132,6 @@ static void Cbuf_InsertText(char* text) {
 		SZ_Write(&cmd_text, temp, templen);
 		Z_Free(temp);
 	}
-}
-
-// Adds command line parameters as script statements
-// Commands lead with a +, and continue until another +
-// Set commands are added early, so they are guaranteed to be set before the client and server initialize for the first time.
-// Other commands are added late, after all initialization is complete.
-static void Cbuf_AddEarlyCommands(bool clear) {
-	for (int i = 0; i < com_argc; i++) {
-		char* s = COM_Argv(i);
-		if (strcmp (s, "+set")) {
-			continue;
-		}
-		Cbuf_AddText(va("set %s %s\n", COM_Argv(i + 1), COM_Argv(i + 2)));
-		if (clear) {
-			COM_ClearArgv(i);
-			COM_ClearArgv(i+1);
-			COM_ClearArgv(i+2);
-		}
-		i+=2;
-	}
-}
-
-// Adds command line parameters as script statements
-// Commands lead with a + and continue until another + or -
-// quake +map amlev1
-// Returns true if any late commands were added, which will keep the demoloop from immediately starting
-static bool Cbuf_AddLateCommands() {
-	// build the combined string to parse from
-	int s = 0;
-	int argc = com_argc;
-	for (int i=1 ; i<argc ; i++) {
-		s += strlen(COM_Argv(i)) + 1;
-	}
-	if (!s) {
-		return false;
-	}
-
-	char* text = Z_Malloc(s+1);
-	text[0] = 0;
-	for (int i=1 ; i<argc ; i++) {
-		strcat(text, COM_Argv(i));
-		if (i != argc-1) {
-			strcat(text, " ");
-		}
-	}
-
-	// pull out the commands
-	char* build = Z_Malloc(s+1);
-	build[0] = 0;
-
-	for (int i=0; i < s - 1; i++) {
-		if (text[i] == '+') {
-			i++;
-
-			int j = i;
-			while ((text[j] != '+') && (text[j] != '-') && (text[j] != 0)) {j++;}
-
-			char c = text[j];
-			text[j] = 0;
-
-			strcat(build, text+i);
-			strcat(build, "\n");
-			text[j] = c;
-			i = j-1;
-		}
-	}
-
-	bool ret = (build[0] != 0);
-	if (ret) {
-		Cbuf_AddText(build);
-	}
-
-	Z_Free(text);
-	Z_Free(build);
-
-	return ret;
 }
 
 //
@@ -20082,7 +19988,7 @@ void CL_ClearEffects (void)
 
 cvar_t	*cl_nodelta;
 
-extern	unsigned	sys_frame_time;
+static unsigned sys_frame_time;
 unsigned	frame_msec;
 unsigned	old_sys_frame_time;
 
@@ -20446,8 +20352,6 @@ usercmd_t CL_CreateCmd (void)
 	CL_FinishMove (&cmd);
 
 	old_sys_frame_time = sys_frame_time;
-
-//cmd.impulse = cls.framecount;
 
 	return cmd;
 }
@@ -86027,432 +85931,10 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 		}
 	}
 }
-/* ============ end source: ref_gl/gl_warp.c ============ */
-
-/* ============ begin source: win32/conproc.c ============ */
-
-// conproc.c -- support for qhost
-#include <process.h>
-/* ============ begin inlined header: win32/conproc.h ============ */
-
-#ifndef CONPROC_H
-#define CONPROC_H
-
-// conproc.h -- support for qhost
-
-void InitConProc (int argc, char **argv);
-
-
-#endif	// CONPROC_H
-
-/* ============ end inlined header: win32/conproc.h ============ */
-
-#define CCOM_WRITE_TEXT		0x2
-// Param1 : Text
-
-#define CCOM_GET_TEXT		0x3
-// Param1 : Begin line
-// Param2 : End line
-
-#define CCOM_GET_SCR_LINES	0x4
-// No params
-
-#define CCOM_SET_SCR_LINES	0x5
-// Param1 : Number of lines
-
-
-HANDLE	heventDone;
-HANDLE	hfileBuffer;
-HANDLE	heventChildSend;
-HANDLE	heventParentSend;
-HANDLE	hStdout;
-HANDLE	hStdin;
-
-static unsigned _stdcall RequestProc(void* arg);
-LPVOID GetMappedBuffer (HANDLE hfileBuffer);
-void ReleaseMappedBuffer (LPVOID pBuffer);
-BOOL GetScreenBufferLines (int *piLines);
-BOOL SetScreenBufferLines (int iLines);
-BOOL ReadText (LPTSTR pszText, int iBeginLine, int iEndLine);
-BOOL WriteText (LPCTSTR szText);
-int CharToCode (char c);
-BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy);
-
-int		ccom_argc;
-char	**ccom_argv;
-
-/*
-================
-CCheckParm
-
-Returns the position (1 to argc-1) in the program's argument list
-where the given parameter apears, or 0 if not present
-================
-*/
-int CCheckParm (char *parm)
-{
-	int             i;
-
-	for (i=1 ; i<ccom_argc ; i++)
-	{
-		if (!ccom_argv[i])
-			continue;
-		if (!strcmp (parm,ccom_argv[i]))
-			return i;
-	}
-
-	return 0;
-}
-
-
-void InitConProc (int argc, char **argv)
-{
-	unsigned	threadAddr;
-	HANDLE		hFile = NULL;
-	HANDLE		heventParent = NULL;
-	HANDLE		heventChild = NULL;
-	int			t;
-
-	ccom_argc = argc;
-	ccom_argv = argv;
-
-// give QHOST a chance to hook into the console
-	if ((t = CCheckParm ("-HFILE")) > 0)
-	{
-		if (t < argc)
-			hFile = (HANDLE)atoll (ccom_argv[t+1]);
-	}
-
-	if ((t = CCheckParm ("-HPARENT")) > 0)
-	{
-		if (t < argc)
-			heventParent = (HANDLE)atoll (ccom_argv[t+1]);
-	}
-
-	if ((t = CCheckParm ("-HCHILD")) > 0)
-	{
-		if (t < argc)
-			heventChild = (HANDLE)atoll (ccom_argv[t+1]);
-	}
-
-
-// ignore if we don't have all the events.
-	if (!hFile || !heventParent || !heventChild)
-	{
-		printf ("Qhost not present.\n");
-		return;
-	}
-
-	printf ("Initializing for qhost.\n");
-
-	hfileBuffer = hFile;
-	heventParentSend = heventParent;
-	heventChildSend = heventChild;
-
-// so we'll know when to go away.
-	heventDone = CreateEvent (NULL, FALSE, FALSE, NULL);
-
-	if (!heventDone)
-	{
-		printf ("Couldn't create heventDone\n");
-		return;
-	}
-
-	if (!_beginthreadex (NULL, 0, RequestProc, NULL, 0, &threadAddr))
-	{
-		CloseHandle (heventDone);
-		printf ("Couldn't create QHOST thread\n");
-		return;
-	}
-
-// save off the input/output handles.
-	hStdout = GetStdHandle (STD_OUTPUT_HANDLE);
-	hStdin = GetStdHandle (STD_INPUT_HANDLE);
-
-// force 80 character width, at least 25 character height
-	SetConsoleCXCY (hStdout, 80, 25);
-}
-
-
-void DeinitConProc (void)
-{
-	if (heventDone)
-		SetEvent (heventDone);
-}
-
-static unsigned _stdcall RequestProc(void *arg) {
-	UNUSED(arg);
-
-	int		*pBuffer;
-	DWORD	dwRet;
-	HANDLE	heventWait[2];
-	int		iBeginLine, iEndLine;
-
-	heventWait[0] = heventParentSend;
-	heventWait[1] = heventDone;
-
-	while (1)
-	{
-		dwRet = WaitForMultipleObjects (2, heventWait, FALSE, INFINITE);
-
-	// heventDone fired, so we're exiting.
-		if (dwRet == WAIT_OBJECT_0 + 1)
-			break;
-
-		pBuffer = (int *) GetMappedBuffer (hfileBuffer);
-
-	// hfileBuffer is invalid.  Just leave.
-		if (!pBuffer)
-		{
-			printf ("Invalid hfileBuffer\n");
-			break;
-		}
-
-		switch (pBuffer[0])
-		{
-			case CCOM_WRITE_TEXT:
-			// Param1 : Text
-				pBuffer[0] = WriteText ((LPCTSTR) (pBuffer + 1));
-				break;
-
-			case CCOM_GET_TEXT:
-			// Param1 : Begin line
-			// Param2 : End line
-				iBeginLine = pBuffer[1];
-				iEndLine = pBuffer[2];
-				pBuffer[0] = ReadText ((LPTSTR) (pBuffer + 1), iBeginLine,
-									   iEndLine);
-				break;
-
-			case CCOM_GET_SCR_LINES:
-			// No params
-				pBuffer[0] = GetScreenBufferLines (&pBuffer[1]);
-				break;
-
-			case CCOM_SET_SCR_LINES:
-			// Param1 : Number of lines
-				pBuffer[0] = SetScreenBufferLines (pBuffer[1]);
-				break;
-		}
-
-		ReleaseMappedBuffer (pBuffer);
-		SetEvent (heventChildSend);
-	}
-
-	_endthreadex (0);
-	return 0;
-}
-
-
-LPVOID GetMappedBuffer (HANDLE hfileBuffer)
-{
-	LPVOID pBuffer;
-
-	pBuffer = MapViewOfFile (hfileBuffer,
-							FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-
-	return pBuffer;
-}
-
-
-void ReleaseMappedBuffer (LPVOID pBuffer)
-{
-	UnmapViewOfFile (pBuffer);
-}
-
-
-BOOL GetScreenBufferLines (int *piLines)
-{
-	CONSOLE_SCREEN_BUFFER_INFO	info;
-	BOOL						bRet;
-
-	bRet = GetConsoleScreenBufferInfo (hStdout, &info);
-
-	if (bRet)
-		*piLines = info.dwSize.Y;
-
-	return bRet;
-}
-
-
-BOOL SetScreenBufferLines (int iLines)
-{
-
-	return SetConsoleCXCY (hStdout, 80, iLines);
-}
-
-
-BOOL ReadText (LPTSTR pszText, int iBeginLine, int iEndLine)
-{
-	COORD	coord;
-	DWORD	dwRead;
-	BOOL	bRet;
-
-	coord.X = 0;
-	coord.Y = iBeginLine;
-
-	bRet = ReadConsoleOutputCharacter(
-		hStdout,
-		pszText,
-		80 * (iEndLine - iBeginLine + 1),
-		coord,
-		&dwRead);
-
-	// Make sure it's null terminated.
-	if (bRet)
-		pszText[dwRead] = '\0';
-
-	return bRet;
-}
-
-
-BOOL WriteText (LPCTSTR szText)
-{
-	DWORD			dwWritten;
-	INPUT_RECORD	rec;
-	char			upper, *sz;
-
-	sz = (LPTSTR) szText;
-
-	while (*sz)
-	{
-	// 13 is the code for a carriage return (\n) instead of 10.
-		if (*sz == 10)
-			*sz = 13;
-
-		upper = toupper(*sz);
-
-		rec.EventType = KEY_EVENT;
-		rec.Event.KeyEvent.bKeyDown = TRUE;
-		rec.Event.KeyEvent.wRepeatCount = 1;
-		rec.Event.KeyEvent.wVirtualKeyCode = upper;
-		rec.Event.KeyEvent.wVirtualScanCode = CharToCode (*sz);
-		rec.Event.KeyEvent.uChar.AsciiChar = *sz;
-		rec.Event.KeyEvent.uChar.UnicodeChar = *sz;
-		rec.Event.KeyEvent.dwControlKeyState = isupper(*sz) ? 0x80 : 0x0;
-
-		WriteConsoleInput(
-			hStdin,
-			&rec,
-			1,
-			&dwWritten);
-
-		rec.Event.KeyEvent.bKeyDown = FALSE;
-
-		WriteConsoleInput(
-			hStdin,
-			&rec,
-			1,
-			&dwWritten);
-
-		sz++;
-	}
-
-	return TRUE;
-}
-
-
-int CharToCode (char c)
-{
-	char upper;
-
-	upper = toupper(c);
-
-	switch (c)
-	{
-		case 13:
-			return 28;
-
-		default:
-			break;
-	}
-
-	if (isalpha(c))
-		return (30 + upper - 65);
-
-	if (isdigit(c))
-		return (1 + upper - 47);
-
-	return c;
-}
-
-
-BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
-{
-	CONSOLE_SCREEN_BUFFER_INFO	info;
-	COORD						coordMax;
-
-	coordMax = GetLargestConsoleWindowSize(hStdout);
-
-	if (cy > coordMax.Y)
-		cy = coordMax.Y;
-
-	if (cx > coordMax.X)
-		cx = coordMax.X;
-
-	if (!GetConsoleScreenBufferInfo(hStdout, &info))
-		return FALSE;
-
-// height
-	info.srWindow.Left = 0;
-	info.srWindow.Right = info.dwSize.X - 1;
-	info.srWindow.Top = 0;
-	info.srWindow.Bottom = cy - 1;
-
-	if (cy < info.dwSize.Y) {
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
-
-		info.dwSize.Y = cy;
-
-		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
-	} else if (cy > info.dwSize.Y) {
-		info.dwSize.Y = cy;
-
-		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
-
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
-	}
-
-	if (!GetConsoleScreenBufferInfo(hStdout, &info))
-		return FALSE;
-
-// width
-	info.srWindow.Left = 0;
-	info.srWindow.Right = cx - 1;
-	info.srWindow.Top = 0;
-	info.srWindow.Bottom = info.dwSize.Y - 1;
-
-	if (cx < info.dwSize.X)
-	{
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
-
-		info.dwSize.X = cx;
-
-		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
-	}
-	else if (cx > info.dwSize.X)
-	{
-		info.dwSize.X = cx;
-
-		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
-
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
-	}
-
-	return TRUE;
-}
 
 #include <dsound.h>
 
-#define	WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_CAPTION|WS_VISIBLE)
+
 
 extern LPDIRECTSOUND pDS;
 extern LPDIRECTSOUNDBUFFER pDSBuf;
@@ -86467,10 +85949,6 @@ void IN_MouseEvent (int mstate);
 
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
-
-/* ============ end inlined header: win32/winquake.h ============ */
-
-extern	unsigned	sys_msg_time;
 
 // joystick defines and variables
 // where should defines be moved?
@@ -86672,11 +86150,9 @@ void IN_StartupMouse (void)
 	mouse_buttons = 3;
 }
 
-/*
-===========
-IN_MouseEvent
-===========
-*/
+static unsigned sys_msg_time;
+
+
 void IN_MouseEvent (int mstate)
 {
 	int		i;
@@ -88430,18 +87906,6 @@ void S_Activate (bool active)
 #define MINIMUM_WIN_MEMORY	0x0a00000
 #define MAXIMUM_WIN_MEMORY	0x1000000
 
-bool s_win95;
-
-int			starttime;
-
-unsigned	sys_msg_time;
-unsigned	sys_frame_time;
-
-#undef MAX_NUM_ARGVS
-#define	MAX_NUM_ARGVS	128
-int			argc;
-char		*argv[MAX_NUM_ARGVS];
-
 char *Sys_GetClipboardData( void )
 {
 	char *data = NULL;
@@ -88494,9 +87958,6 @@ HINSTANCE	reflib_library;		// Handle to refresh DLL
 
 
 HWND        cl_hwnd;            // Main window handle for life of program
-
-
-extern	unsigned	sys_msg_time;
 
 u8        scantokey[128] =
 					{
@@ -89176,6 +88637,7 @@ static void windows_print_gl_strings() {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
 	UNUSED(hPrevInstance); // NOTE: always zero
+	UNUSED(lpCmdLine); // NOTE: not parsing commands
 
 	// NOTE: Timer resolution
 	timeBeginPeriod(1);
@@ -89195,50 +88657,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 
-	// NOTE: Parse command line
-	// TODO: Simplify
-	{
-		argc = 1;
-		argv[0] = "exe";
-
-		while (*lpCmdLine && (argc < MAX_NUM_ARGVS)) {
-			while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126))) {
-				lpCmdLine++;
-			}
-
-			if (*lpCmdLine) {
-				argv[argc] = lpCmdLine;
-				argc++;
-
-				while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126))) {
-					lpCmdLine++;
-				}
-
-				if (*lpCmdLine) {
-					*lpCmdLine = 0;
-					lpCmdLine++;
-				}
-			}
-		}
-	}
-
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
 	z_chain.next = z_chain.prev = &z_chain;
-
-	// NOTE: Init COM argc/argv
-	// TODO: Remove
-	{
-		assert(argc <= MAX_NUM_ARGVS);
-		com_argc = argc;
-		for (int i = 0; i < argc; i++) {
-			if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
-				com_argv[i] = "";
-			} else {
-				com_argv[i] = argv[i];
-			}
-		}
-	}
 
 	// NOTE: Key Init
 	// TODO: unglobal
@@ -89325,7 +88746,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// TODO: Remove non-essentials
 	{
 		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
-		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("exec", Cmd_Exec_f);
 		Cmd_AddCommand("echo", Cmd_Echo_f);
 		Cmd_AddCommand("alias", Cmd_Alias_f);
@@ -89359,44 +88779,40 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("imagelist", GL_ImageList_f);
 		Cmd_AddCommand("screenshot", GL_ScreenShot_f);
 		Cmd_AddCommand("modellist", Mod_Modellist_f);
+		Cmd_AddCommand("path", FS_Path_f);
+		Cmd_AddCommand("link", FS_Link_f);
+		Cmd_AddCommand("dir", FS_Dir_f );
+
+		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
 	}
 
-	// NOTE: Startup command execution
+	// NOTE: Init Filesystem
 	// TODO: Remove
 	{
-		// we need to add the early commands twice, because a basedir or cddir needs to be set before execing
-		// config files, but we want other parms to override the settings of the config files
-		Cbuf_AddEarlyCommands(false);
-		Cmd_ExecuteCbuf();
+		// basedir <path>
+		// allows the game to run from outside the data tree
+		fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
 
-		// NOTE: Init Filesystem
-		{
-			Cmd_AddCommand("path", FS_Path_f);
-			Cmd_AddCommand("link", FS_Link_f);
-			Cmd_AddCommand("dir", FS_Dir_f );
+		// start up with baseq2 by default
+		FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
 
-			// basedir <path>
-			// allows the game to run from outside the data tree
-			fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
+		// any set gamedirs will be freed up to here
+		fs_base_searchpaths = fs_searchpaths;
 
-			// start up with baseq2 by default
-			FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
-
-			// any set gamedirs will be freed up to here
-			fs_base_searchpaths = fs_searchpaths;
-
-			// check for game override
-			fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
-			if (fs_gamedirvar->string[0]) {
-				FS_SetGamedir(fs_gamedirvar->string);
-			}
+		// check for game override
+		fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+		if (fs_gamedirvar->string[0]) {
+			FS_SetGamedir(fs_gamedirvar->string);
 		}
+	}
 
+	// NOTE: Startup command execution
+	// TODO: Simplify
+	{
 		Cbuf_AddText("exec default.cfg\n");
 		Cbuf_AddText("exec config.cfg\n");
 
-		Cbuf_AddEarlyCommands(true);
 		Cmd_ExecuteCbuf();
 	}
 
@@ -89550,7 +88966,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		assert(register_class_result);
 
 		RECT r = {.left = 0, .top = 0, .right = viddef.width, .bottom = viddef.height};
-		AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
+
+		DWORD window_style = WS_OVERLAPPED|WS_BORDER|WS_CAPTION|WS_VISIBLE;
+		AdjustWindowRect(&r, window_style, FALSE);
 
 		int x = vid_xpos->value;
 		int y = vid_ypos->value;
@@ -89561,7 +88979,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			0,
 			WINDOW_CLASS_NAME,
 			"Quake 2",
-			WINDOW_STYLE,
+			window_style,
 			x, y, w, h,
 			NULL,
 			NULL,
@@ -89811,16 +89229,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			FS_ExecAutoexec();
 			Cmd_ExecuteCbuf();
-		}
 
-		// add + commands from command line
-		if (!Cbuf_AddLateCommands()) {
-			// if the user didn't give any commands, run default action
 			Cbuf_AddText("d1\n");
 			Cmd_ExecuteCbuf();
-		} else {
-			// the user asked for something explicit so drop the loading plaque
-			SCR_EndLoadingPlaque();
 		}
 	}
 
