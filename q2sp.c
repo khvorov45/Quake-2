@@ -15070,12 +15070,6 @@ struct sfx_s *S_FindName (char *name, bool create);
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin (int ent, vec3_t org);
-/* ============ end inlined header: client/sound.h ============ */
-/* ============ begin inlined header: client/input.h ============ */
-
-// input.h -- external (non-keyboard) input devices
-
-void IN_Init (void);
 
 void IN_Shutdown (void);
 
@@ -15584,7 +15578,6 @@ extern	kbutton_t	in_mlook, in_klook;
 extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
-void CL_InitInput (void);
 void CL_SendCmd (void);
 void CL_SendMove (usercmd_t *cmd);
 
@@ -20323,11 +20316,6 @@ void IN_CenterView (void)
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
-/*
-============
-CL_InitInput
-============
-*/
 void CL_InitInput (void)
 {
 	Cmd_AddCommand ("centerview",IN_CenterView);
@@ -21706,135 +21694,6 @@ static void write_config() {
 		String config_string = string_builder_end(&builder);
 		context.write_config_string(config_string);
 	}}
-}
-
-void CL_InitLocal (void)
-{
-	cls.state = ca_disconnected;
-	cls.realtime = Sys_Milliseconds ();
-
-	CL_InitInput ();
-
-	adr0 = COM_GetCvar( "adr0", "", CVAR_ARCHIVE );
-	adr1 = COM_GetCvar( "adr1", "", CVAR_ARCHIVE );
-	adr2 = COM_GetCvar( "adr2", "", CVAR_ARCHIVE );
-	adr3 = COM_GetCvar( "adr3", "", CVAR_ARCHIVE );
-	adr4 = COM_GetCvar( "adr4", "", CVAR_ARCHIVE );
-	adr5 = COM_GetCvar( "adr5", "", CVAR_ARCHIVE );
-	adr6 = COM_GetCvar( "adr6", "", CVAR_ARCHIVE );
-	adr7 = COM_GetCvar( "adr7", "", CVAR_ARCHIVE );
-	adr8 = COM_GetCvar( "adr8", "", CVAR_ARCHIVE );
-
-	// register our variables
-	cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
-	cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
-	cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
-	cl_add_entities = COM_GetCvar ("cl_entities", "1", 0);
-	cl_gun = COM_GetCvar ("cl_gun", "1", 0);
-	cl_footsteps = COM_GetCvar ("cl_footsteps", "1", 0);
-	cl_noskins = COM_GetCvar ("cl_noskins", "0", 0);
-	cl_autoskins = COM_GetCvar ("cl_autoskins", "0", 0);
-	cl_predict = COM_GetCvar ("cl_predict", "1", 0);
-	cl_maxfps = COM_GetCvar ("cl_maxfps", "90", 0);
-
-	cl_upspeed = COM_GetCvar ("cl_upspeed", "200", 0);
-	cl_forwardspeed = COM_GetCvar ("cl_forwardspeed", "200", 0);
-	cl_sidespeed = COM_GetCvar ("cl_sidespeed", "200", 0);
-	cl_yawspeed = COM_GetCvar ("cl_yawspeed", "140", 0);
-	cl_pitchspeed = COM_GetCvar ("cl_pitchspeed", "150", 0);
-	cl_anglespeedkey = COM_GetCvar ("cl_anglespeedkey", "1.5", 0);
-
-	cl_run = COM_GetCvar ("cl_run", "0", CVAR_ARCHIVE);
-	freelook = COM_GetCvar( "freelook", "0", CVAR_ARCHIVE );
-	lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
-	lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
-	sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
-
-	m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
-	m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
-	m_forward = COM_GetCvar ("m_forward", "1", 0);
-	m_side = COM_GetCvar ("m_side", "1", 0);
-
-	cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
-	cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
-	cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
-	cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
-	cl_paused = COM_GetCvar ("paused", "0", 0);
-	cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
-
-	rcon_client_password = COM_GetCvar ("rcon_password", "", 0);
-
-	cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
-
-	//
-	// userinfo
-	//
-	info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
-	info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
-	name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
-	skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
-	rate = COM_GetCvar ("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// FIXME
-	msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
-	hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
-	fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
-	gender = COM_GetCvar ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
-	gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
-	gender->modified = false; // clear this so we know when user sets it manually
-
-	cl_vwep = COM_GetCvar ("cl_vwep", "1", CVAR_ARCHIVE);
-
-
-	//
-	// register our commands
-	//
-	Cmd_AddCommand("cmd", CL_ForwardToServer_f);
-	Cmd_AddCommand("pause", CL_Pause_f);
-	Cmd_AddCommand("skins", CL_Skins_f);
-
-	Cmd_AddCommand ("userinfo", CL_Userinfo_f);
-	Cmd_AddCommand ("snd_restart", CL_Snd_Restart_f);
-
-	Cmd_AddCommand ("changing", CL_Changing_f);
-	Cmd_AddCommand ("record", CL_Record_f);
-	Cmd_AddCommand ("stop", CL_Stop_f);
-
-	Cmd_AddCommand ("write_config", write_config);
-	Cmd_AddCommand ("quit", context.exit_process);
-
-	Cmd_AddCommand ("connect", CL_Connect_f);
-	Cmd_AddCommand ("reconnect", CL_Reconnect_f);
-
-	Cmd_AddCommand ("setenv", CL_Setenv_f );
-
-	Cmd_AddCommand ("precache", CL_Precache_f);
-
-	Cmd_AddCommand ("download", CL_Download_f);
-
-	//
-	// forward to server commands
-	//
-	// the only thing this does is allow command completion
-	// to work -- all unknown commands are automatically
-	// forwarded to the server
-	Cmd_AddCommand ("wave", NULL);
-	Cmd_AddCommand ("inven", NULL);
-	Cmd_AddCommand ("kill", NULL);
-	Cmd_AddCommand ("use", NULL);
-	Cmd_AddCommand ("drop", NULL);
-	Cmd_AddCommand ("say", NULL);
-	Cmd_AddCommand ("say_team", NULL);
-	Cmd_AddCommand ("info", NULL);
-	Cmd_AddCommand ("prog", NULL);
-	Cmd_AddCommand ("give", NULL);
-	Cmd_AddCommand ("god", NULL);
-	Cmd_AddCommand ("notarget", NULL);
-	Cmd_AddCommand ("noclip", NULL);
-	Cmd_AddCommand ("invuse", NULL);
-	Cmd_AddCommand ("invprev", NULL);
-	Cmd_AddCommand ("invnext", NULL);
-	Cmd_AddCommand ("invdrop", NULL);
-	Cmd_AddCommand ("weapnext", NULL);
-	Cmd_AddCommand ("weapprev", NULL);
 }
 
 typedef struct {
@@ -86178,11 +86037,6 @@ cvar_t	*v_centermove;
 cvar_t	*v_centerspeed;
 
 
-/*
-===========
-IN_Init
-===========
-*/
 void IN_Init (void)
 {
 	// mouse variables
@@ -88674,7 +88528,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("gun_next", V_Gun_Next_f);
 		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
 		Cmd_AddCommand("gun_model", V_Gun_Model_f);
-		Cmd_AddCommand ("viewpos", V_Viewpos_f);
+		Cmd_AddCommand("viewpos", V_Viewpos_f);
 		Cmd_AddCommand("menu_main", M_Menu_Main_f);
 		Cmd_AddCommand("menu_game", M_Menu_Game_f);
 		Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
@@ -88696,6 +88550,40 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("sizeup",SCR_SizeUp_f);
 		Cmd_AddCommand("sizedown",SCR_SizeDown_f);
 		Cmd_AddCommand("sky",SCR_Sky_f);
+		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
+		Cmd_AddCommand("pause", CL_Pause_f);
+		Cmd_AddCommand("skins", CL_Skins_f);
+		Cmd_AddCommand("userinfo", CL_Userinfo_f);
+		Cmd_AddCommand("snd_restart", CL_Snd_Restart_f);
+		Cmd_AddCommand("changing", CL_Changing_f);
+		Cmd_AddCommand("record", CL_Record_f);
+		Cmd_AddCommand("stop", CL_Stop_f);
+		Cmd_AddCommand("write_config", write_config);
+		Cmd_AddCommand("quit", context.exit_process);
+		Cmd_AddCommand("connect", CL_Connect_f);
+		Cmd_AddCommand("reconnect", CL_Reconnect_f);
+		Cmd_AddCommand("setenv", CL_Setenv_f );
+		Cmd_AddCommand("precache", CL_Precache_f);
+		Cmd_AddCommand("download", CL_Download_f);
+		Cmd_AddCommand("wave", NULL);
+		Cmd_AddCommand("inven", NULL);
+		Cmd_AddCommand("kill", NULL);
+		Cmd_AddCommand("use", NULL);
+		Cmd_AddCommand("drop", NULL);
+		Cmd_AddCommand("say", NULL);
+		Cmd_AddCommand("say_team", NULL);
+		Cmd_AddCommand("info", NULL);
+		Cmd_AddCommand("prog", NULL);
+		Cmd_AddCommand("give", NULL);
+		Cmd_AddCommand("god", NULL);
+		Cmd_AddCommand("notarget", NULL);
+		Cmd_AddCommand("noclip", NULL);
+		Cmd_AddCommand("invuse", NULL);
+		Cmd_AddCommand("invprev", NULL);
+		Cmd_AddCommand("invnext", NULL);
+		Cmd_AddCommand("invdrop", NULL);
+		Cmd_AddCommand("weapnext", NULL);
+		Cmd_AddCommand("weapprev", NULL);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -88798,6 +88686,60 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
 		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
 		scr_drawall = COM_GetCvar("scr_drawall", "0", 0);
+		adr0 = COM_GetCvar("adr0", "", CVAR_ARCHIVE);
+		adr1 = COM_GetCvar("adr1", "", CVAR_ARCHIVE);
+		adr2 = COM_GetCvar("adr2", "", CVAR_ARCHIVE);
+		adr3 = COM_GetCvar("adr3", "", CVAR_ARCHIVE);
+		adr4 = COM_GetCvar("adr4", "", CVAR_ARCHIVE);
+		adr5 = COM_GetCvar("adr5", "", CVAR_ARCHIVE);
+		adr6 = COM_GetCvar("adr6", "", CVAR_ARCHIVE);
+		adr7 = COM_GetCvar("adr7", "", CVAR_ARCHIVE);
+		adr8 = COM_GetCvar("adr8", "", CVAR_ARCHIVE);
+		cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
+		cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
+		cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
+		cl_add_entities = COM_GetCvar ("cl_entities", "1", 0);
+		cl_gun = COM_GetCvar ("cl_gun", "1", 0);
+		cl_footsteps = COM_GetCvar ("cl_footsteps", "1", 0);
+		cl_noskins = COM_GetCvar ("cl_noskins", "0", 0);
+		cl_autoskins = COM_GetCvar ("cl_autoskins", "0", 0);
+		cl_predict = COM_GetCvar ("cl_predict", "1", 0);
+		cl_maxfps = COM_GetCvar ("cl_maxfps", "90", 0);
+		cl_upspeed = COM_GetCvar ("cl_upspeed", "200", 0);
+		cl_forwardspeed = COM_GetCvar ("cl_forwardspeed", "200", 0);
+		cl_sidespeed = COM_GetCvar ("cl_sidespeed", "200", 0);
+		cl_yawspeed = COM_GetCvar ("cl_yawspeed", "140", 0);
+		cl_pitchspeed = COM_GetCvar ("cl_pitchspeed", "150", 0);
+		cl_anglespeedkey = COM_GetCvar ("cl_anglespeedkey", "1.5", 0);
+		cl_run = COM_GetCvar ("cl_run", "0", CVAR_ARCHIVE);
+		freelook = COM_GetCvar( "freelook", "0", CVAR_ARCHIVE );
+		lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
+		lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
+		sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
+		m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
+		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
+		m_forward = COM_GetCvar ("m_forward", "1", 0);
+		m_side = COM_GetCvar ("m_side", "1", 0);
+		cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
+		cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
+		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
+		cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
+		cl_paused = COM_GetCvar ("paused", "0", 0);
+		cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
+		rcon_client_password = COM_GetCvar ("rcon_password", "", 0);
+		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
+		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
+		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
+		name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
+		skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
+		rate = COM_GetCvar ("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// FIXME
+		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
+		hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
+		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
+		gender = COM_GetCvar ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
+		gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
+		gender->modified = false; // clear this so we know when user sets it manually
+		cl_vwep = COM_GetCvar ("cl_vwep", "1", CVAR_ARCHIVE);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
@@ -89059,6 +89001,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: load console characters (don't bilerp characters)
+	// TODO: unglobal
 	{
 		draw_chars = GL_FindImage("pics/conchars.pcx", it_pic);
 		GL_Bind(draw_chars->texnum);
@@ -89073,22 +89016,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: sound must be initialized after window is created
+	// TODO: inline
 	S_Init();
 
-	// NOTE: client init
+	// NOTE: Net message
+	// TODO: remove
 	{
 		net_message.data = net_message_buffer;
 		net_message.maxsize = sizeof(net_message_buffer);
-
-		CL_InitLocal();
-		IN_Init();
-
-		FS_ExecAutoexec();
-		Cmd_ExecuteCbuf();
-
-		Cbuf_AddText("menu_main\n");
-		Cmd_ExecuteCbuf();
 	}
+
+	// NOTE: cls
+	// TODO: unglobal
+	{
+		cls.state = ca_disconnected;
+		cls.realtime = Sys_Milliseconds();
+	}
+
+	// TODO: inline
+	CL_InitInput();
+
+	// TODO: inline
+	IN_Init();
+
+	// TODO: inline
+	FS_ExecAutoexec();
+	Cmd_ExecuteCbuf();
+
+	Cbuf_AddText("menu_main\n");
+	Cmd_ExecuteCbuf();
 
 	// NOTE: Mainloop
 	for (int oldtime = Sys_Milliseconds();;) {
@@ -89118,6 +89074,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Qcommon_Frame(delta_time_msec);
 	}
 
-	// never gets here
-	return TRUE;
+	// NOTE: never gets here
+	return 0;
 }
