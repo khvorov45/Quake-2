@@ -89516,12 +89516,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.memory.temp = (Arena){.base = (u8*)base + perm_size, .size = total_size - perm_size};
 	}
 
+	// NOTE: Platform procs
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 
+	// TODO: Remove
 	global_hInstance = hInstance;
 
 	// NOTE: Parse command line
+	// TODO: Simplify
 	{
 		argc = 1;
 		argv[0] = "exe";
@@ -89548,9 +89551,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Z chain (tagged malloc)
+	// TODO: Remove
 	z_chain.next = z_chain.prev = &z_chain;
 
 	// NOTE: Init COM argc/argv
+	// TODO: Remove
 	{
 		assert(argc <= MAX_NUM_ARGVS);
 		com_argc = argc;
@@ -89564,6 +89569,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Key Init
+	// TODO: unglobal
 	{
 		for (int i = 0; i < 32; i++) {
 			key_lines[i][0] = ']';
@@ -89643,22 +89649,49 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-	// NOTE: command buffer
-	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+	// NOTE: Console commands
+	// TODO: Remove non-essentials
+	{
+		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+		Cmd_AddCommand("cmdlist", Cmd_List_f);
+		Cmd_AddCommand("exec", Cmd_Exec_f);
+		Cmd_AddCommand("echo", Cmd_Echo_f);
+		Cmd_AddCommand("alias", Cmd_Alias_f);
+		Cmd_AddCommand("wait",  Cmd_Wait_f);
+		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
+		Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
+		Cmd_AddCommand("bind", Key_Bind_f);
+		Cmd_AddCommand("unbind", Key_Unbind_f);
+		Cmd_AddCommand("unbindall", Key_Unbindall_f);
+		Cmd_AddCommand("bindlist", Key_Bindlist_f);
+		Cmd_AddCommand("kick", SV_Kick_f);
+		Cmd_AddCommand("status", SV_Status_f);
+		Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
+		Cmd_AddCommand("dumpuser", SV_DumpUser_f);
+		Cmd_AddCommand("map", SV_Map_f);
+		Cmd_AddCommand("demomap", SV_DemoMap_f);
+		Cmd_AddCommand("gamemap", SV_GameMap_f);
+		Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
+		Cmd_AddCommand("serverstop", SV_ServerStop_f);
+		Cmd_AddCommand("save", SV_Savegame_f);
+		Cmd_AddCommand("load", SV_Loadgame_f);
+		Cmd_AddCommand("killserver", SV_KillServer_f);
+		Cmd_AddCommand("sv", SV_ServerCommand_f);
+		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
+		Cmd_AddCommand("togglechat", Con_ToggleChat_f);
+		Cmd_AddCommand("messagemode", Con_MessageMode_f);
+		Cmd_AddCommand("messagemode2", Con_MessageMode2_f);
+		Cmd_AddCommand("clear", Con_Clear_f);
+		Cmd_AddCommand("condump", Con_Dump_f);
+		Cmd_AddCommand("vid_front", VID_Front_f);
+		Cmd_AddCommand("imagelist", GL_ImageList_f );
+		Cmd_AddCommand("screenshot", GL_ScreenShot_f );
+		Cmd_AddCommand("modellist", Mod_Modellist_f );
+		Cmd_AddCommand("gl_strings", GL_Strings_f );
+	}
 
-	Cmd_AddCommand("cmdlist", Cmd_List_f);
-	Cmd_AddCommand("exec", Cmd_Exec_f);
-	Cmd_AddCommand("echo", Cmd_Echo_f);
-	Cmd_AddCommand("alias", Cmd_Alias_f);
-	Cmd_AddCommand("wait",  Cmd_Wait_f);
-	Cmd_AddCommand("set", Cmd_Cvar_Set_f);
-	Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
-	Cmd_AddCommand("bind", Key_Bind_f);
-	Cmd_AddCommand("unbind", Key_Unbind_f);
-	Cmd_AddCommand("unbindall", Key_Unbindall_f);
-	Cmd_AddCommand("bindlist", Key_Bindlist_f);
-
-	// NOTE: startup command execution
+	// NOTE: Startup command execution
+	// TODO: Remove
 	{
 		// we need to add the early commands twice, because a basedir or cddir needs to be set before execing
 		// config files, but we want other parms to override the settings of the config files
@@ -89695,7 +89728,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_ExecuteCbuf();
 	}
 
-	// NOTE: Cvars that are also globals
+	// NOTE: Cvars
+	// TODO: Remove non-essentials
 	{
 		host_speeds = COM_GetCvar("host_speeds", "0", 0);
 		log_stats = COM_GetCvar("log_stats", "0", 0);
@@ -89704,152 +89738,106 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		fixedtime = COM_GetCvar("fixedtime", "0", 0);
 		logfile_active = COM_GetCvar("logfile", "0", 0);
 		showtrace = COM_GetCvar("showtrace", "0", 0);
+		rcon_password = COM_GetCvar("rcon_password", "", 0);
+		maxclients = COM_GetCvar("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
+		hostname = COM_GetCvar("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
+		timeout = COM_GetCvar("timeout", "125", 0);
+		zombietime = COM_GetCvar("zombietime", "2", 0);
+		sv_showclamp = COM_GetCvar("showclamp", "0", 0);
+		sv_paused = COM_GetCvar("paused", "0", 0);
+		sv_timedemo = COM_GetCvar("timedemo", "0", 0);
+		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
+		allow_download = COM_GetCvar("allow_download", "0", CVAR_ARCHIVE);
+		allow_download_players = COM_GetCvar("allow_download_players", "0", CVAR_ARCHIVE);
+		allow_download_models = COM_GetCvar("allow_download_models", "1", CVAR_ARCHIVE);
+		allow_download_sounds = COM_GetCvar("allow_download_sounds", "1", CVAR_ARCHIVE);
+		allow_download_maps = COM_GetCvar("allow_download_maps", "1", CVAR_ARCHIVE);
+		sv_noreload = COM_GetCvar("sv_noreload", "0", 0);
+		sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
+		public_server = COM_GetCvar("public", "0", 0);
+		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
+		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
+		vid_xpos = COM_GetCvar("vid_xpos", "3", CVAR_ARCHIVE);
+		vid_ypos = COM_GetCvar("vid_ypos", "22", CVAR_ARCHIVE);
+		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
+		r_norefresh = COM_GetCvar("r_norefresh", "0", 0);
+		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
+		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
+		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
+		r_novis = COM_GetCvar("r_novis", "0", 0);
+		r_nocull = COM_GetCvar("r_nocull", "0", 0);
+		r_lerpmodels = COM_GetCvar("r_lerpmodels", "1", 0);
+		r_speeds = COM_GetCvar("r_speeds", "0", 0);
+		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
+		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
+		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
+		gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
+		gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
+		gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
+		gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
+		gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
+		gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
+		gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
+		gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
+		gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
+		gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
+		gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
+		gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
+		gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
+		gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
+		gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
+		gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
+		gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
+		gl_clear = COM_GetCvar ("gl_clear", "0", 0);
+		gl_cull = COM_GetCvar ("gl_cull", "1", 0);
+		gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
+		gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
+		gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
+		gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
+		gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
+		gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
+		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
+		gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
+		gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
+		gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
+		gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
+		gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
+		gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
+		gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
+		gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
+		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
+		gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
+
+		COM_GetCvar("skill", "1", 0);
+		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
+		COM_GetCvar("coop", "0", CVAR_LATCH);
+		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
+		COM_GetCvar("fraglimit", "0", CVAR_SERVERINFO);
+		COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
+		COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
+		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
 	}
 
+	// NOTE: Server init
+	// TODO: Remove
 	{
-		// NOTE: Server init
-		{
-			// NOTE: Init operator commands
-			{
-				Cmd_AddCommand("kick", SV_Kick_f);
-				Cmd_AddCommand("status", SV_Status_f);
-				Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
-				Cmd_AddCommand("dumpuser", SV_DumpUser_f);
-				Cmd_AddCommand("map", SV_Map_f);
-				Cmd_AddCommand("demomap", SV_DemoMap_f);
-				Cmd_AddCommand("gamemap", SV_GameMap_f);
-				Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
-				Cmd_AddCommand("serverstop", SV_ServerStop_f);
-				Cmd_AddCommand("save", SV_Savegame_f);
-				Cmd_AddCommand("load", SV_Loadgame_f);
-				Cmd_AddCommand("killserver", SV_KillServer_f);
-				Cmd_AddCommand("sv", SV_ServerCommand_f);
-			}
+		SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
+	}
 
-			rcon_password = COM_GetCvar("rcon_password", "", 0);
-			maxclients = COM_GetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-			hostname = COM_GetCvar ("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
-			timeout = COM_GetCvar ("timeout", "125", 0);
-			zombietime = COM_GetCvar ("zombietime", "2", 0);
-			sv_showclamp = COM_GetCvar ("showclamp", "0", 0);
-			sv_paused = COM_GetCvar ("paused", "0", 0);
-			sv_timedemo = COM_GetCvar ("timedemo", "0", 0);
-			sv_enforcetime = COM_GetCvar ("sv_enforcetime", "0", 0);
-			allow_download = COM_GetCvar ("allow_download", "0", CVAR_ARCHIVE);
-			allow_download_players  = COM_GetCvar ("allow_download_players", "0", CVAR_ARCHIVE);
-			allow_download_models = COM_GetCvar ("allow_download_models", "1", CVAR_ARCHIVE);
-			allow_download_sounds = COM_GetCvar ("allow_download_sounds", "1", CVAR_ARCHIVE);
-			allow_download_maps	  = COM_GetCvar ("allow_download_maps", "1", CVAR_ARCHIVE);
-			sv_noreload = COM_GetCvar ("sv_noreload", "0", 0);
-			sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
-			public_server = COM_GetCvar ("public", "0", 0);
-			sv_reconnect_limit = COM_GetCvar ("sv_reconnect_limit", "3", CVAR_ARCHIVE);
+	// NOTE: Console init
+	// TODO: Unglobal
+	{
+		con.linewidth = -1;
+		Con_CheckResize();
+		con.initialized = true;
+	}
 
-			COM_GetCvar("skill", "1", 0);
-			COM_GetCvar("deathmatch", "0", CVAR_LATCH);
-			COM_GetCvar("coop", "0", CVAR_LATCH);
-			COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
-			COM_GetCvar("fraglimit", "0", CVAR_SERVERINFO);
-			COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
-			COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
-			COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
+	// NOTE: Video init
+	VID_Restart();
 
-			SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
-		}
-
+	{
 		// NOTE: client init
 		{
-			// NOTE: Console init
-			// all archived variables will now be loaded
-			{
-				con.linewidth = -1;
-				Con_CheckResize();
-				Com_Printf("Console initialized.\n");
-
-				con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
-				Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
-				Cmd_AddCommand("togglechat", Con_ToggleChat_f);
-				Cmd_AddCommand("messagemode", Con_MessageMode_f);
-				Cmd_AddCommand("messagemode2", Con_MessageMode2_f);
-				Cmd_AddCommand("clear", Con_Clear_f);
-				Cmd_AddCommand("condump", Con_Dump_f);
-
-				con.initialized = true;
-			}
-
-			// NOTE: Video init
-			{
-				// Create the video variables so we know how to start the graphics drivers
-				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
-				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
-
-				Cmd_AddCommand("vid_front", VID_Front_f);
-
-				r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-				r_norefresh = COM_GetCvar ("r_norefresh", "0", 0);
-				r_fullbright = COM_GetCvar ("r_fullbright", "0", 0);
-				r_drawentities = COM_GetCvar ("r_drawentities", "1", 0);
-				r_drawworld = COM_GetCvar ("r_drawworld", "1", 0);
-				r_novis = COM_GetCvar ("r_novis", "0", 0);
-				r_nocull = COM_GetCvar ("r_nocull", "0", 0);
-				r_lerpmodels = COM_GetCvar ("r_lerpmodels", "1", 0);
-				r_speeds = COM_GetCvar ("r_speeds", "0", 0);
-
-				r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
-
-				gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
-
-				gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
-				gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
-				gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
-				gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
-				gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
-				gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
-
-				gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
-				gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
-				gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
-				gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
-				gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
-				gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
-				gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
-				gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
-				gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
-				gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
-				gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
-				gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
-				gl_clear = COM_GetCvar ("gl_clear", "0", 0);
-				gl_cull = COM_GetCvar ("gl_cull", "1", 0);
-				gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
-				gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
-				gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-				gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-				gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
-				gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
-				gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-
-				gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
-
-				gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-				gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
-				gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-				gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-				gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
-
-				gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
-				gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
-
-				gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
-
-				gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
-
-				Cmd_AddCommand( "imagelist", GL_ImageList_f );
-				Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
-				Cmd_AddCommand( "modellist", Mod_Modellist_f );
-				Cmd_AddCommand( "gl_strings", GL_Strings_f );
-
-				VID_Restart();
-			}
 
 			// sound must be initialized after window is created
 			S_Init();
