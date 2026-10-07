@@ -5569,16 +5569,7 @@ typedef enum {
 	MULTICAST_PVS_R
 } multicast_t;
 
-static struct {
-	// The edict array is allocated in the game dll so it
-	// can vary in size from one game to another.
-	//
-	// The size will be fixed when InitGame() is called
-	struct edict_s	*edicts;
-	int			edict_size;
-	int			num_edicts;		// current number, <= max_edicts
-	int			max_edicts;
-} globals;
+static int global_num_edicts;
 
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
@@ -10147,8 +10138,8 @@ typedef struct
 	bool	timedemo;		// don't time sync
 } server_t;
 
-#define EDICT_NUM(n) ((edict_t *)((u8 *)globals.edicts + globals.edict_size*(n)))
-#define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)globals.edicts ) / globals.edict_size)
+#define EDICT_NUM(n) ((edict_t *)((u8 *)g_edicts + sizeof(edict_t)*(n)))
+#define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)g_edicts ) / sizeof(edict_t))
 
 
 typedef enum
@@ -11750,7 +11741,7 @@ void SV_BuildClientFrame (client_t *client)
 	frame->num_entities = 0;
 	frame->first_entity = svs.next_client_entities;
 
-	for (e=1 ; e<globals.num_edicts ; e++)
+	for (e=1 ; e<global_num_edicts ; e++)
 	{
 		ent = EDICT_NUM(e);
 
@@ -11878,7 +11869,7 @@ void SV_RecordDemoMessage (void)
 
 	e = 1;
 	ent = EDICT_NUM(e);
-	while (e < globals.num_edicts)
+	while (e < global_num_edicts)
 	{
 		// ignore ents without visible models unless they have an effect
 		if (ent->inuse &&
@@ -12131,12 +12122,7 @@ void SCR_DebugGraph(float value, int color);
 void InitGame(void);
 
 void SV_InitGameProgs() {
-	// unload anything we have now
 	SV_ShutdownGameProgs();
-
-	void GetGameAPI();
-	GetGameAPI();
-
 	InitGame();
 }
 
@@ -12204,7 +12190,7 @@ void SV_CreateBaseline (void)
 	edict_t			*svent;
 	int				entnum;
 
-	for (entnum = 1; entnum < globals.num_edicts ; entnum++)
+	for (entnum = 1; entnum < global_num_edicts ; entnum++)
 	{
 		svent = EDICT_NUM(entnum);
 		if (!svent->inuse)
@@ -13221,7 +13207,7 @@ void SV_PrepWorldFrame (void)
 	edict_t	*ent;
 	int		i;
 
-	for (i=0 ; i<globals.num_edicts ; i++, ent++)
+	for (i=0 ; i<global_num_edicts ; i++, ent++)
 	{
 		ent = EDICT_NUM(i);
 		// events only last for a single message
@@ -14718,7 +14704,7 @@ void SV_LinkEdict (edict_t *ent)
 	if (ent->area.prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
 
-	if (ent == globals.edicts)
+	if (ent == g_edicts)
 		return;		// don't add the world
 
 	if (!ent->inuse)
@@ -15157,7 +15143,7 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 	// clip to world
 	clip.trace = CM_BoxTrace (start, end, mins, maxs, 0, contentmask);
-	clip.trace.ent = globals.edicts;
+	clip.trace.ent = g_edicts;
 	if (clip.trace.fraction == 0)
 		return clip.trace;		// blocked by the world
 
@@ -42893,10 +42879,6 @@ void SetItemNames (void)
 
 void RunEntity (edict_t *ent);
 
-void GetGameAPI() {
-	globals.edict_size = sizeof(edict_t);
-}
-
 void ClientEndServerFrames (void)
 {
 	int		i;
@@ -43098,7 +43080,7 @@ void G_RunFrame (void)
 	// even the world gets a chance to think
 	//
 	ent = &g_edicts[0];
-	for (i=0 ; i<globals.num_edicts ; i++, ent++)
+	for (i=0 ; i<global_num_edicts ; i++, ent++)
 	{
 		if (!ent->inuse)
 			continue;
@@ -46158,7 +46140,7 @@ bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 
 // see if any solid entities are inside the final position
 	check = g_edicts+1;
-	for (e = 1; e < globals.num_edicts; e++, check++)
+	for (e = 1; e < global_num_edicts; e++, check++)
 	{
 		if (!check->inuse)
 			continue;
@@ -46840,13 +46822,11 @@ static void InitGame() {
 	// initialize all entities for this game
 	game.maxentities = maxentities->value;
 	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
-	globals.edicts = g_edicts;
-	globals.max_edicts = game.maxentities;
 
 	// initialize all clients for this game
 	game.maxclients = maxclients->value;
 	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	globals.num_edicts = game.maxclients+1;
+	global_num_edicts = game.maxclients+1;
 }
 
 //=========================================================
@@ -47114,7 +47094,6 @@ void ReadGame (char *filename)
 	assert(!strcmp(str, __DATE__));
 
 	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
-	globals.edicts = g_edicts;
 
 	fread (&game, sizeof(game), 1, f);
 	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
@@ -47124,16 +47103,7 @@ void ReadGame (char *filename)
 	fclose (f);
 }
 
-//==========================================================
-
-
-/*
-==============
-WriteEdict
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
+// All pointer variables (except function pointers) must be handled specially.
 void WriteEdict (FILE *f, edict_t *ent)
 {
 	field_t		*field;
@@ -47251,7 +47221,7 @@ void WriteLevel (char *filename)
 	WriteLevelLocals (f);
 
 	// write out all the entities
-	for (i=0 ; i<globals.num_edicts ; i++)
+	for (i=0 ; i<global_num_edicts ; i++)
 	{
 		ent = &g_edicts[i];
 		if (!ent->inuse)
@@ -47286,7 +47256,7 @@ void ReadLevel (char *filename)
 
 	// wipe all the entities
 	memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));
-	globals.num_edicts = maxclients->value+1;
+	global_num_edicts = maxclients->value+1;
 
 	// check edict size
 	fread (&i, sizeof(i), 1, f);
@@ -47307,8 +47277,8 @@ void ReadLevel (char *filename)
 
 		if (entnum == -1)
 			break;
-		if (entnum >= globals.num_edicts)
-			globals.num_edicts = entnum+1;
+		if (entnum >= global_num_edicts)
+			global_num_edicts = entnum+1;
 
 		ent = &g_edicts[entnum];
 		ReadEdict (f, ent);
@@ -47329,7 +47299,7 @@ void ReadLevel (char *filename)
 	}
 
 	// do any load time things at this point
-	for (i=0 ; i<globals.num_edicts ; i++)
+	for (i=0 ; i<global_num_edicts ; i++)
 	{
 		ent = &g_edicts[i];
 
@@ -47793,7 +47763,7 @@ void G_FindTeams (void)
 
 	c = 0;
 	c2 = 0;
-	for (i=1, e=g_edicts+i ; i < globals.num_edicts ; i++,e++)
+	for (i=1, e=g_edicts+i ; i < global_num_edicts ; i++,e++)
 	{
 		if (!e->inuse)
 			continue;
@@ -47805,7 +47775,7 @@ void G_FindTeams (void)
 		e->teammaster = e;
 		c++;
 		c2++;
-		for (j=i+1, e2=e+1 ; j < globals.num_edicts ; j++,e2++)
+		for (j=i+1, e2=e+1 ; j < global_num_edicts ; j++,e2++)
 		{
 			if (!e2->inuse)
 				continue;
@@ -49326,7 +49296,7 @@ void target_earthquake_think (edict_t* self)
 		self->last_move_time = level.time + 0.5;
 	}
 
-	for (i=1, e=g_edicts+i; i < globals.num_edicts; i++,e++)
+	for (i=1, e=g_edicts+i; i < global_num_edicts; i++,e++)
 	{
 		if (!e->inuse)
 			continue;
@@ -50425,7 +50395,7 @@ edict_t *G_Find (edict_t *from, int fieldofs, char *match)
 	else
 		from++;
 
-	for ( ; from < &g_edicts[globals.num_edicts] ; from++)
+	for ( ; from < &g_edicts[global_num_edicts] ; from++)
 	{
 		if (!from->inuse)
 			continue;
@@ -50458,7 +50428,7 @@ edict_t *findradius (edict_t *from, vec3_t org, float rad)
 		from = g_edicts;
 	else
 		from++;
-	for ( ; from < &g_edicts[globals.num_edicts]; from++)
+	for ( ; from < &g_edicts[global_num_edicts]; from++)
 	{
 		if (!from->inuse)
 			continue;
@@ -50787,7 +50757,7 @@ edict_t *G_Spawn (void)
 	edict_t		*e;
 
 	e = &g_edicts[(int)maxclients->value+1];
-	for ( i=maxclients->value+1 ; i<globals.num_edicts ; i++, e++)
+	for ( i=maxclients->value+1 ; i<global_num_edicts ; i++, e++)
 	{
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
@@ -50800,7 +50770,7 @@ edict_t *G_Spawn (void)
 
 	assert(i != game.maxentities);
 
-	globals.num_edicts++;
+	global_num_edicts++;
 	G_InitEdict (e);
 	return e;
 }
