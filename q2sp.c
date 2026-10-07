@@ -7912,7 +7912,7 @@ void FS_SetGamedir (char *dir)
 	//
 	// flush all data, so it will be forced to reload
 	//
-	Cbuf_AddText ("vid_restart\nsnd_restart\n");
+	Cbuf_AddText("snd_restart\n");
 
 	Com_sprintf (fs_gamedir, sizeof(fs_gamedir), "%s/%s", fs_basedir->string, dir);
 
@@ -84006,9 +84006,6 @@ void R_RenderFrame (refdef_t *fd)
 	R_SetGL2D ();
 }
 
-
-static bool video_should_restart = false;
-
 typedef struct {
 	HINSTANCE	hInstance;
 	void	*wndproc;
@@ -88750,10 +88747,6 @@ static LONG WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return result;
 }
 
-static void VID_Restart_f() {
-	video_should_restart = true;
-}
-
 void VID_Front_f( void )
 {
 	SetWindowLong( cl_hwnd, GWL_EXSTYLE, WS_EX_TOPMOST );
@@ -88785,8 +88778,6 @@ static HINSTANCE global_hInstance;
 // is to check to see if any of the video mode parameters have changed, and if they have to
 // update the rendering DLL and/or video mode to match.
 static void VID_Restart() {
-	video_should_restart = false;
-
 	S_StopAllSounds();
 
 	// refresh has changed
@@ -89374,10 +89365,6 @@ void CL_Frame (int msec) {
 	// predict all unacknowledged movements
 	CL_PredictMovement ();
 
-	// allow rendering DLL change
-	if (video_should_restart) {
-		VID_Restart();
-	}
 	if (!cl.refresh_prepped && cls.state == ca_active)
 		CL_PrepRefresh ();
 
@@ -89722,7 +89709,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		// NOTE: Server init
 		{
-
 			// NOTE: Init operator commands
 			{
 				Cmd_AddCommand("kick", SV_Kick_f);
@@ -89797,7 +89783,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				vid_xpos = COM_GetCvar ("vid_xpos", "3", CVAR_ARCHIVE);
 				vid_ypos = COM_GetCvar ("vid_ypos", "22", CVAR_ARCHIVE);
 
-				Cmd_AddCommand("vid_restart", VID_Restart_f);
 				Cmd_AddCommand("vid_front", VID_Front_f);
 
 				r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
