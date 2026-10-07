@@ -90365,6 +90365,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
 	UNUSED(hPrevInstance); // NOTE: always zero
 
+	// NOTE: Timer resolution
+	timeBeginPeriod(1);
+
 	// NOTE: Memory
 	{
 		i64 total_size = (i64)4 * Gigabyte;
@@ -90407,126 +90410,119 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-	// NOTE: Init
+	// NOTE: Z chain (tagged malloc)
+	z_chain.next = z_chain.prev = &z_chain;
+
+	// NOTE: Init COM argc/argv
 	{
-		z_chain.next = z_chain.prev = &z_chain;
-
-		// NOTE: Init COM argc/argv
-		{
-			assert(argc <= MAX_NUM_ARGVS);
-			com_argc = argc;
-			for (int i = 0; i < argc; i++) {
-				if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
-					com_argv[i] = "";
-				} else {
-					com_argv[i] = argv[i];
-				}
+		assert(argc <= MAX_NUM_ARGVS);
+		com_argc = argc;
+		for (int i = 0; i < argc; i++) {
+			if (!argv[i] || strlen(argv[i]) >= MAX_TOKEN_CHARS) {
+				com_argv[i] = "";
+			} else {
+				com_argv[i] = argv[i];
 			}
 		}
+	}
 
-		// NOTE: Swap init
-		{
-			u8 swaptest[2] = {1,0};
-			bool little_endian = *(short*)swaptest == 1;
-			assert(little_endian);
+	// NOTE: Key Init
+	{
+		for (int i = 0; i < 32; i++) {
+			key_lines[i][0] = ']';
+			key_lines[i][1] = 0;
+		}
+		key_linepos = 1;
+
+		// init ascii characters in console mode
+		for (int i = 32; i < 128; i++) {
+			consolekeys[i] = true;
 		}
 
-		// NOTE: Cbuf: allocates an initial text buffer that will grow as needed
-		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+		consolekeys[K_ENTER] = true;
+		consolekeys[K_KP_ENTER] = true;
+		consolekeys[K_TAB] = true;
+		consolekeys[K_LEFTARROW] = true;
+		consolekeys[K_KP_LEFTARROW] = true;
+		consolekeys[K_RIGHTARROW] = true;
+		consolekeys[K_KP_RIGHTARROW] = true;
+		consolekeys[K_UPARROW] = true;
+		consolekeys[K_KP_UPARROW] = true;
+		consolekeys[K_DOWNARROW] = true;
+		consolekeys[K_KP_DOWNARROW] = true;
+		consolekeys[K_BACKSPACE] = true;
+		consolekeys[K_HOME] = true;
+		consolekeys[K_KP_HOME] = true;
+		consolekeys[K_END] = true;
+		consolekeys[K_KP_END] = true;
+		consolekeys[K_PGUP] = true;
+		consolekeys[K_KP_PGUP] = true;
+		consolekeys[K_PGDN] = true;
+		consolekeys[K_KP_PGDN] = true;
+		consolekeys[K_SHIFT] = true;
+		consolekeys[K_INS] = true;
+		consolekeys[K_KP_INS] = true;
+		consolekeys[K_KP_DEL] = true;
+		consolekeys[K_KP_SLASH] = true;
+		consolekeys[K_KP_PLUS] = true;
+		consolekeys[K_KP_MINUS] = true;
+		consolekeys[K_KP_5] = true;
 
-		Cmd_AddCommand("cmdlist", Cmd_List_f);
-		Cmd_AddCommand("exec", Cmd_Exec_f);
-		Cmd_AddCommand("echo", Cmd_Echo_f);
-		Cmd_AddCommand("alias", Cmd_Alias_f);
-		Cmd_AddCommand("wait",  Cmd_Wait_f);
-		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
-		Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
+		consolekeys['`'] = false;
+		consolekeys['~'] = false;
 
-		// NOTE: Key Init;
-		{
-			for (int i = 0; i < 32; i++) {
-				key_lines[i][0] = ']';
-				key_lines[i][1] = 0;
-			}
-			key_linepos = 1;
-
-			// init ascii characters in console mode
-			for (int i = 32; i < 128; i++) {
-				consolekeys[i] = true;
-			}
-
-			consolekeys[K_ENTER] = true;
-			consolekeys[K_KP_ENTER] = true;
-			consolekeys[K_TAB] = true;
-			consolekeys[K_LEFTARROW] = true;
-			consolekeys[K_KP_LEFTARROW] = true;
-			consolekeys[K_RIGHTARROW] = true;
-			consolekeys[K_KP_RIGHTARROW] = true;
-			consolekeys[K_UPARROW] = true;
-			consolekeys[K_KP_UPARROW] = true;
-			consolekeys[K_DOWNARROW] = true;
-			consolekeys[K_KP_DOWNARROW] = true;
-			consolekeys[K_BACKSPACE] = true;
-			consolekeys[K_HOME] = true;
-			consolekeys[K_KP_HOME] = true;
-			consolekeys[K_END] = true;
-			consolekeys[K_KP_END] = true;
-			consolekeys[K_PGUP] = true;
-			consolekeys[K_KP_PGUP] = true;
-			consolekeys[K_PGDN] = true;
-			consolekeys[K_KP_PGDN] = true;
-			consolekeys[K_SHIFT] = true;
-			consolekeys[K_INS] = true;
-			consolekeys[K_KP_INS] = true;
-			consolekeys[K_KP_DEL] = true;
-			consolekeys[K_KP_SLASH] = true;
-			consolekeys[K_KP_PLUS] = true;
-			consolekeys[K_KP_MINUS] = true;
-			consolekeys[K_KP_5] = true;
-
-			consolekeys['`'] = false;
-			consolekeys['~'] = false;
-
-			for (int i = 0; i < 256; i++) {
-				keyshift[i] = i;
-			}
-			for (int i = 'a'; i <= 'z'; i++) {
-				keyshift[i] = i - 'a' + 'A';
-			}
-
-			keyshift['1'] = '!';
-			keyshift['2'] = '@';
-			keyshift['3'] = '#';
-			keyshift['4'] = '$';
-			keyshift['5'] = '%';
-			keyshift['6'] = '^';
-			keyshift['7'] = '&';
-			keyshift['8'] = '*';
-			keyshift['9'] = '(';
-			keyshift['0'] = ')';
-			keyshift['-'] = '_';
-			keyshift['='] = '+';
-			keyshift[','] = '<';
-			keyshift['.'] = '>';
-			keyshift['/'] = '?';
-			keyshift[';'] = ':';
-			keyshift['\''] = '"';
-			keyshift['['] = '{';
-			keyshift[']'] = '}';
-			keyshift['`'] = '~';
-			keyshift['\\'] = '|';
-
-			menubound[K_ESCAPE] = true;
-			for (int i = 0; i < 12; i++) {
-				menubound[K_F1+i] = true;
-			}
-
-			Cmd_AddCommand("bind", Key_Bind_f);
-			Cmd_AddCommand("unbind", Key_Unbind_f);
-			Cmd_AddCommand("unbindall", Key_Unbindall_f);
-			Cmd_AddCommand("bindlist", Key_Bindlist_f);
+		for (int i = 0; i < 256; i++) {
+			keyshift[i] = i;
+		}
+		for (int i = 'a'; i <= 'z'; i++) {
+			keyshift[i] = i - 'a' + 'A';
 		}
 
+		keyshift['1'] = '!';
+		keyshift['2'] = '@';
+		keyshift['3'] = '#';
+		keyshift['4'] = '$';
+		keyshift['5'] = '%';
+		keyshift['6'] = '^';
+		keyshift['7'] = '&';
+		keyshift['8'] = '*';
+		keyshift['9'] = '(';
+		keyshift['0'] = ')';
+		keyshift['-'] = '_';
+		keyshift['='] = '+';
+		keyshift[','] = '<';
+		keyshift['.'] = '>';
+		keyshift['/'] = '?';
+		keyshift[';'] = ':';
+		keyshift['\''] = '"';
+		keyshift['['] = '{';
+		keyshift[']'] = '}';
+		keyshift['`'] = '~';
+		keyshift['\\'] = '|';
+
+		menubound[K_ESCAPE] = true;
+		for (int i = 0; i < 12; i++) {
+			menubound[K_F1+i] = true;
+		}
+	}
+
+	// NOTE: command buffer
+	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+
+	Cmd_AddCommand("cmdlist", Cmd_List_f);
+	Cmd_AddCommand("exec", Cmd_Exec_f);
+	Cmd_AddCommand("echo", Cmd_Echo_f);
+	Cmd_AddCommand("alias", Cmd_Alias_f);
+	Cmd_AddCommand("wait",  Cmd_Wait_f);
+	Cmd_AddCommand("set", Cmd_Cvar_Set_f);
+	Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
+	Cmd_AddCommand("bind", Key_Bind_f);
+	Cmd_AddCommand("unbind", Key_Unbind_f);
+	Cmd_AddCommand("unbindall", Key_Unbindall_f);
+	Cmd_AddCommand("bindlist", Key_Bindlist_f);
+
+	// NOTE: startup command execution
+	{
 		// we need to add the early commands twice, because a basedir or cddir needs to be set before execing
 		// config files, but we want other parms to override the settings of the config files
 		Cbuf_AddEarlyCommands(false);
@@ -90560,7 +90556,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		Cbuf_AddEarlyCommands(true);
 		Cmd_ExecuteCbuf();
+	}
 
+	// NOTE: Cvars that are also globals
+	{
 		host_speeds = COM_GetCvar("host_speeds", "0", 0);
 		log_stats = COM_GetCvar("log_stats", "0", 0);
 		developer = COM_GetCvar("developer", "0", 0);
@@ -90568,34 +90567,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		fixedtime = COM_GetCvar("fixedtime", "0", 0);
 		logfile_active = COM_GetCvar("logfile", "0", 0);
 		showtrace = COM_GetCvar("showtrace", "0", 0);
+		noudp = COM_GetCvar("noudp", "0", CVAR_NOSET);
+		noipx = COM_GetCvar("noipx", "0", CVAR_NOSET);
+		net_shownet = COM_GetCvar("net_shownet", "0", 0);
+	}
 
-		{
-			char* version_text = va("%4.2f %s %s %s", VERSION, CPUSTRING, __DATE__, BUILDSTRING);
-			COM_GetCvar("version", version_text, CVAR_SERVERINFO|CVAR_NOSET);
-		}
+	// NOTE: NET Init
+	{
+		int WSAStartup_result = WSAStartup(MAKEWORD(1, 1), &winsockdata);
+		assert(!WSAStartup_result);
+	}
 
-		timeBeginPeriod(1);
+	// NOTE: Netchan Init
+	{
+		showpackets = COM_GetCvar("showpackets", "0", 0);
+		showdrop = COM_GetCvar("showdrop", "0", 0);
 
-		// NOTE: NET Init
-		{
-			int WSAStartup_result = WSAStartup(MAKEWORD(1, 1), &winsockdata);
-			assert(!WSAStartup_result);
-			Com_Printf("Winsock Initialized\n");
-			noudp = COM_GetCvar("noudp", "0", CVAR_NOSET);
-			noipx = COM_GetCvar("noipx", "0", CVAR_NOSET);
-			net_shownet = COM_GetCvar("net_shownet", "0", 0);
-		}
+		// pick a port value that should be nice and random
+		int port = Sys_Milliseconds() & 0xffff;
+		qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
+	}
 
-		// NOTE: Netchan Init
-		{
-			showpackets = COM_GetCvar("showpackets", "0", 0);
-			showdrop = COM_GetCvar("showdrop", "0", 0);
-
-			// pick a port value that should be nice and random
-			int port = Sys_Milliseconds() & 0xffff;
-			qport = COM_GetCvar("qport", va("%i", port), CVAR_NOSET);
-		}
-
+	{
 		// NOTE: Server init
 		{
 
