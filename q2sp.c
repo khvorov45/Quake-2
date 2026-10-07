@@ -79136,13 +79136,6 @@ void	GL_FreeUnusedImages (void);
 */
 void GL_DrawParticles( int n, const particle_t particles[], const unsigned colortable[768] );
 
-static struct {
-	const char* renderer_string;
-	const char* vendor_string;
-	const char* version_string;
-	const char* extensions_string;
-} gl_config;
-
 typedef struct
 {
 	float inverse_intensity;
@@ -83177,8 +83170,6 @@ int			c_brush_polys, c_alias_polys;
 
 float		v_blend[4];			// final blending color
 
-void GL_Strings_f( void );
-
 //
 // view origin
 //
@@ -84241,17 +84232,6 @@ void GL_ScreenShot_f(void)
 
 	free (buffer);
 	Com_Printf("Wrote %s\n", picname);
-}
-
-/*
-** GL_Strings_f
-*/
-void GL_Strings_f( void )
-{
-	Com_Printf("GL_VENDOR: %s\n", gl_config.vendor_string );
-	Com_Printf("GL_RENDERER: %s\n", gl_config.renderer_string );
-	Com_Printf("GL_VERSION: %s\n", gl_config.version_string );
-	Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 }
 
 static vec3_t	modelorg;		// relative to viewpoint
@@ -89186,6 +89166,13 @@ static void windows_write_config_string(String text) {temp_memory_block(&context
 	CloseHandle(file_handle);
 }}
 
+static void windows_print_gl_strings() {
+	Com_Printf("GL_VENDOR: %s\n", (char*)glGetString(GL_VENDOR));
+	Com_Printf("GL_RENDERER: %s\n", (char*)glGetString(GL_RENDERER));
+	Com_Printf("GL_VERSION: %s\n", (char*)glGetString(GL_VERSION));
+	Com_Printf("GL_EXTENSIONS: %s\n", (char*)glGetString(GL_EXTENSIONS));
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
 	UNUSED(hPrevInstance); // NOTE: always zero
@@ -89369,10 +89356,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("clear", Con_Clear_f);
 		Cmd_AddCommand("condump", Con_Dump_f);
 		Cmd_AddCommand("vid_front", VID_Front_f);
-		Cmd_AddCommand("imagelist", GL_ImageList_f );
-		Cmd_AddCommand("screenshot", GL_ScreenShot_f );
-		Cmd_AddCommand("modellist", Mod_Modellist_f );
-		Cmd_AddCommand("gl_strings", GL_Strings_f );
+		Cmd_AddCommand("imagelist", GL_ImageList_f);
+		Cmd_AddCommand("screenshot", GL_ScreenShot_f);
+		Cmd_AddCommand("modellist", Mod_Modellist_f);
+		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
 	}
 
 	// NOTE: Startup command execution
@@ -89540,101 +89527,97 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		free(pal);
 	}
 
-	// NOTE: Video init
+	// NOTE: Game window resolution
 	// TODO: unglobal
 	{
 		viddef.width = 1600;
 		viddef.height = 1200;
+	}
+
+	// NOTE: Window
+	// TODO: unglobal
+	HWND window_handle = 0;
+	{
+		WNDCLASS wc = {
+			.lpfnWndProc   = MainWndProc,
+			.hInstance     = hInstance,
+			.hCursor       = LoadCursor(NULL, IDC_ARROW),
+			.hbrBackground = (void*)COLOR_GRAYTEXT,
+			.lpszClassName = WINDOW_CLASS_NAME,
+		};
+
+		ATOM register_class_result = RegisterClass(&wc);
+		assert(register_class_result);
+
+		RECT r = {.left = 0, .top = 0, .right = viddef.width, .bottom = viddef.height};
+		AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
+
+		int x = vid_xpos->value;
+		int y = vid_ypos->value;
+		int w = r.right - r.left;
+		int h = r.bottom - r.top;
+
+		window_handle = CreateWindowEx(
+			0,
+			WINDOW_CLASS_NAME,
+			"Quake 2",
+			WINDOW_STYLE,
+			x, y, w, h,
+			NULL,
+			NULL,
+			hInstance,
+			NULL
+		);
+		assert(window_handle);
+
+		ShowWindow(window_handle, SW_SHOW);
+		UpdateWindow(window_handle);
+		SetForegroundWindow(window_handle);
+		SetFocus(window_handle);
+	}
+
+	// NOTE: GL context
+	// TODO: unglobal
+	{
+		PIXELFORMATDESCRIPTOR pfd = {
+			.nSize = sizeof(PIXELFORMATDESCRIPTOR),
+			.nVersion = 1,
+			.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+			.iPixelType = PFD_TYPE_RGBA,
+			.cColorBits = 24,
+			.cDepthBits = 32,
+			.iLayerType = PFD_MAIN_PLANE,
+		};
+
+		// Get a DC for the specified window
+		assert(glw_state.hDC == NULL);
+		glw_state.hDC = GetDC(window_handle);
+		assert(glw_state.hDC != NULL);
+
+		int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
+		assert(pixelformat);
+		BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
+		assert(set_pixel_format_result);
+		int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
+		assert(describe_pixel_format_result);
+
+		glw_state.hGLRC = wglCreateContext(glw_state.hDC);
+		assert(glw_state.hGLRC);
 
 		{
-			WNDCLASS wc = {
-				.style         = 0,
-				.lpfnWndProc   = MainWndProc,
-				.cbClsExtra    = 0,
-				.cbWndExtra    = 0,
-				.hInstance     = hInstance,
-				.hIcon         = 0,
-				.hCursor       = LoadCursor (NULL,IDC_ARROW),
-				.hbrBackground = (void*)COLOR_GRAYTEXT,
-				.lpszMenuName  = 0,
-				.lpszClassName = WINDOW_CLASS_NAME,
-			};
-
-			ATOM register_class_result = RegisterClass(&wc);
-			assert(register_class_result);
-
-			RECT r = {.left = 0, .top = 0, .right = viddef.width, .bottom = viddef.height};
-			AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
-
-			int x = vid_xpos->value;
-			int y = vid_ypos->value;
-			int w = r.right - r.left;
-			int h = r.bottom - r.top;
-
-			HWND window_handle = CreateWindowEx(
-				0,
-				WINDOW_CLASS_NAME,
-				"Quake 2",
-				WINDOW_STYLE,
-				x, y, w, h,
-				NULL,
-				NULL,
-				hInstance,
-				NULL
-			);
-			assert(window_handle);
-
-			ShowWindow(window_handle, SW_SHOW);
-			UpdateWindow(window_handle);
-
-			// NOTE: GL context
-			{
-				PIXELFORMATDESCRIPTOR pfd = {
-					.nSize = sizeof(PIXELFORMATDESCRIPTOR),
-					.nVersion = 1,
-					.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-					.iPixelType = PFD_TYPE_RGBA,
-					.cColorBits = 24,
-					.cDepthBits = 32,
-					.iLayerType = PFD_MAIN_PLANE,
-				};
-
-				// Get a DC for the specified window
-				assert(glw_state.hDC == NULL);
-				glw_state.hDC = GetDC(window_handle);
-				assert(glw_state.hDC != NULL);
-
-				int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
-				assert(pixelformat);
-				BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
-				assert(set_pixel_format_result);
-				int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
-				assert(describe_pixel_format_result);
-
-				glw_state.hGLRC = wglCreateContext(glw_state.hDC);
-				assert(glw_state.hGLRC);
-
-				{
-					BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-					assert(make_current_result);
-				}
-			}
-
-			SetForegroundWindow(window_handle);
-			SetFocus(window_handle);
+			BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+			assert(make_current_result);
 		}
+	}
 
-		// NOTE: Must happen after GL context is created
-		wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
-		assert(wglSwapIntervalEXT);
+	// NOTE: Init GL procs that need context create beforehand
+	wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
+	assert(wglSwapIntervalEXT);
 
+	// NOTE: Video init
+	// TODO: unglobal
+	{
 		VID_MenuInit();
-
-		// get our various GL strings
-		gl_config.vendor_string = (char*)glGetString(GL_VENDOR);
-		gl_config.renderer_string = (char*)glGetString(GL_RENDERER);
-		gl_config.version_string = (char*)glGetString(GL_VERSION);
-		gl_config.extensions_string = (char*)glGetString(GL_EXTENSIONS);
 
 		COM_SetCvar("scr_drawall", "0");
 
