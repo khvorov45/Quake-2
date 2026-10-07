@@ -9911,11 +9911,9 @@ typedef enum {
 // some qc commands are only valid before the server has finished
 // initializing (precache commands, static sounds / objects, etc)
 
-typedef struct
-{
+typedef struct {
 	server_state_t	state;			// precache commands are only valid during load
 
-	bool	attractloop;		// running cinematics and demos for the local system only
 	bool	loadgame;			// client begins should reuse existing entity
 
 	unsigned	time;				// always sv.framenum * 100 msec
@@ -10093,7 +10091,7 @@ void Master_Packet (void);
 // sv_init.c
 //
 void SV_InitGame (void);
-void SV_Map (bool attractloop, char *levelstring, bool loadgame);
+void SV_Map (char *levelstring, bool loadgame);
 
 
 //
@@ -10546,11 +10544,6 @@ void SV_ReadServerFile (void)
 	ReadGame (name);
 }
 
-// Puts the server in demo mode on a specific map/cinematic
-static void SV_DemoMap_f() {
-	SV_Map(true, Cmd_Argv(1), false);
-}
-
 // Saves the state of the map just being exited and goes to a new map.
 // If the initial character of the map string is '*', the next map is in a new unit, so the current savegame directory is cleared of map files.
 // Example:
@@ -10602,7 +10595,7 @@ static void SV_GameMap_f() {
 	}
 
 	// start up the next map
-	SV_Map(false, Cmd_Argv(1), false);
+	SV_Map(Cmd_Argv(1), false);
 
 	// archive server state
 	strncpy (svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
@@ -10667,7 +10660,7 @@ static void SV_Loadgame_f() {
 
 	// go to the map
 	sv.state = ss_dead;		// don't save current level when changing
-	SV_Map (false, svs.mapcmd, true);
+	SV_Map(svs.mapcmd, true);
 }
 
 static void SV_Savegame_f() {
@@ -12039,23 +12032,10 @@ void SV_CheckForSavegame (void)
 	}
 }
 
-
-/*
-================
-SV_SpawnServer
-
-Change the server to a new map, taking all connected
-clients along with it.
-
-================
-*/
-void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate, bool attractloop, bool loadgame)
-{
+// Change the server to a new map, taking all connected clients along with it.
+void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, bool loadgame) {
 	int			i;
 	unsigned	checksum;
-
-	if (attractloop)
-		COM_SetCvar ("paused", "0");
 
 	Com_Printf ("------- Server Initialization -------\n");
 
@@ -12072,7 +12052,6 @@ void SV_SpawnServer (char *server, char *spawnpoint, server_state_t serverstate,
 	memset (&sv, 0, sizeof(sv));
 	svs.realtime = 0;
 	sv.loadgame = loadgame;
-	sv.attractloop = attractloop;
 
 	// save name for levels that don't set message
 	strcpy (sv.configstrings[CS_NAME], server);
@@ -12272,7 +12251,7 @@ another level:
 	map tram.cin+jail_e3
 ======================
 */
-void SV_Map (bool attractloop, char *levelstring, bool loadgame)
+void SV_Map(char *levelstring, bool loadgame)
 {
 	char	level[MAX_QPATH];
 	char	*ch;
@@ -12280,7 +12259,6 @@ void SV_Map (bool attractloop, char *levelstring, bool loadgame)
 	char	spawnpoint[MAX_QPATH];
 
 	sv.loadgame = loadgame;
-	sv.attractloop = attractloop;
 
 	if (sv.state == ss_dead && !sv.loadgame)
 		SV_InitGame ();	// the game is just starting
@@ -12320,26 +12298,26 @@ void SV_Map (bool attractloop, char *levelstring, bool loadgame)
 	{
 		SCR_BeginLoadingPlaque ();			// for local system
 		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_cinematic, attractloop, loadgame);
+		SV_SpawnServer (level, spawnpoint, ss_cinematic, loadgame);
 	}
 	else if (l > 4 && !strcmp (level+l-4, ".dm2") )
 	{
 		SCR_BeginLoadingPlaque ();			// for local system
 		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_demo, attractloop, loadgame);
+		SV_SpawnServer (level, spawnpoint, ss_demo, loadgame);
 	}
 	else if (l > 4 && !strcmp (level+l-4, ".pcx") )
 	{
 		SCR_BeginLoadingPlaque ();			// for local system
 		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_pic, attractloop, loadgame);
+		SV_SpawnServer (level, spawnpoint, ss_pic, loadgame);
 	}
 	else
 	{
 		SCR_BeginLoadingPlaque ();			// for local system
 		SV_BroadcastCommand ("changing\n");
 		SV_SendClientMessages ();
-		SV_SpawnServer (level, spawnpoint, ss_game, attractloop, loadgame);
+		SV_SpawnServer (level, spawnpoint, ss_game, loadgame);
 
 		// NOTE: Copy to defer
 		{
@@ -12596,17 +12574,6 @@ void SVC_DirectConnect (void)
 
 	// force the IP key/value pair so the game can filter based on ip
 	Info_SetValueForKey (userinfo, "ip", NET_AdrToString(net_from));
-
-	// attractloop servers are ONLY for local clients
-	if (sv.attractloop)
-	{
-		if (!NET_IsLocalAddress (adr))
-		{
-			Com_Printf ("Remote connect in attract loop.  Ignored.\n");
-			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nConnection refused.\n");
-			return;
-		}
-	}
 
 	// see if the challenge is valid
 	if (!NET_IsLocalAddress (adr))
@@ -13728,7 +13695,6 @@ void SV_New_f (void)
 	MSG_WriteByte (&sv_client->netchan.message, svc_serverdata);
 	MSG_WriteLong (&sv_client->netchan.message, PROTOCOL_VERSION);
 	MSG_WriteLong (&sv_client->netchan.message, svs.spawncount);
-	MSG_WriteByte (&sv_client->netchan.message, sv.attractloop);
 	MSG_WriteString (&sv_client->netchan.message, gamedir);
 
 	if (sv.state == ss_cinematic || sv.state == ss_pic)
@@ -15252,7 +15218,6 @@ void Con_Print (char *txt);
 void Con_CenteredPrint (char *text);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
-void Con_ToggleConsole_f (void);
 
 
 //=============================================================================
@@ -15366,7 +15331,6 @@ typedef struct
 	//
 	// server state information
 	//
-	bool	attractloop;		// running the attract loop, any key will menu
 	int			servercount;	// server identification for prespawns
 	char		gamedir[MAX_QPATH];
 	int			playernum;
@@ -16866,9 +16830,6 @@ void CL_ParsePlayerstate (frame_t *oldframe, frame_t *newframe)
 		state->pmove.delta_angles[1] = MSG_ReadShort (&net_message);
 		state->pmove.delta_angles[2] = MSG_ReadShort (&net_message);
 	}
-
-	if (cl.attractloop)
-		state->pmove.pm_type = PM_FREEZE;		// demo playback
 
 	//
 	// parse the rest of the player_state_t
@@ -20454,8 +20415,7 @@ void CL_SendCmd (void)
 
 	SZ_Init (&buf, data, sizeof(data));
 
-	if (cmd->buttons && cl.cinematictime > 0 && !cl.attractloop
-		&& cls.realtime - cl.cinematictime > 1000)
+	if (cmd->buttons && cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)
 	{	// skip the rest of the cinematic
 		SCR_FinishCinematic ();
 	}
@@ -23236,7 +23196,6 @@ void CL_ParseServerData (void)
 	assert((Com_ServerState() && PROTOCOL_VERSION == 34) || i == PROTOCOL_VERSION);
 
 	cl.servercount = MSG_ReadLong (&net_message);
-	cl.attractloop = MSG_ReadByte (&net_message);
 
 	// game directory
 	str = MSG_ReadString (&net_message);
@@ -27457,43 +27416,21 @@ void Key_ClearTyping (void)
 	key_linepos = 1;
 }
 
-/*
-================
-Con_ToggleConsole_f
-================
-*/
-void Con_ToggleConsole_f (void)
-{
-	SCR_EndLoadingPlaque ();	// get rid of loading plaque
+static void Con_ToggleConsole_f() {
+	SCR_EndLoadingPlaque();
 
-	if (cl.attractloop)
-	{
-		Cbuf_AddText ("killserver\n");
-		return;
-	}
+	Key_ClearTyping();
+	console_reset_line_timestamps();
 
-	if (cls.state == ca_disconnected)
-	{	// start the demo loop again
-		Cbuf_AddText ("d1\n");
-		return;
-	}
-
-	Key_ClearTyping ();
-	console_reset_line_timestamps ();
-
-	if (cls.key_dest == key_console)
-	{
-		M_ForceMenuOff ();
-		COM_SetCvar ("paused", "0");
-	}
-	else
-	{
-		M_ForceMenuOff ();
+	if (cls.key_dest == key_console) {
+		M_ForceMenuOff();
+		COM_SetCvar("paused", "0");
+	} else {
+		M_ForceMenuOff();
 		cls.key_dest = key_console;
-
-		if (Cvar_VariableValue ("maxclients") == 1
-			&& Com_ServerState ())
-			COM_SetCvar ("paused", "1");
+		if (Cvar_VariableValue("maxclients") == 1 && Com_ServerState()) {
+			COM_SetCvar("paused", "1");
+		}
 	}
 }
 
@@ -28561,10 +28498,6 @@ void Key_Event (int key, bool down, unsigned time)
 		Con_ToggleConsole_f ();
 		return;
 	}
-
-	// any key during the attract mode will bring up the menu
-	if (cl.attractloop && cls.key_dest != key_menu)
-		key = K_ESCAPE;
 
 	// menu key is hardcoded, so the user can never unbind it
 	if (key == K_ESCAPE)
@@ -29940,12 +29873,6 @@ static void ConsoleFunc(void* unused)
 	** the proper way to do this is probably to have ToggleConsole_f accept a parameter
 	*/
 	extern void Key_ClearTyping( void );
-
-	if ( cl.attractloop )
-	{
-		Cbuf_AddText ("killserver\n");
-		return;
-	}
 
 	Key_ClearTyping ();
 	console_reset_line_timestamps ();
@@ -88761,7 +88688,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
 		Cmd_AddCommand("dumpuser", SV_DumpUser_f);
 		Cmd_AddCommand("map", SV_Map_f);
-		Cmd_AddCommand("demomap", SV_DemoMap_f);
 		Cmd_AddCommand("gamemap", SV_GameMap_f);
 		Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
 		Cmd_AddCommand("serverstop", SV_ServerStop_f);
@@ -89222,15 +89148,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				scr_initialized = true;
 			}
 
-			cls.disable_screen = true; // don't draw yet
-
 			CL_InitLocal();
 			IN_Init();
 
 			FS_ExecAutoexec();
 			Cmd_ExecuteCbuf();
 
-			Cbuf_AddText("d1\n");
+			Cbuf_AddText("menu_main\n");
 			Cmd_ExecuteCbuf();
 		}
 	}
