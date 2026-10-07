@@ -687,7 +687,7 @@ typedef struct entity_state_s {
 	int		renderfx;
 
 	// for client side prediction, 8*(bits 0-4) is x/y radius 8*(bits 5-9)
-	// is z down distance, 8(bits10-15) is z up gi.linkentity sets this properly
+	// is z down distance, 8(bits10-15) is z up SV_LinkEdict sets this properly
 	int		solid;
 
 	// for looping sounds, to guarantee shutoff
@@ -2281,8 +2281,6 @@ static bool cmd_wait;
 static cmd_function_t*	cmd_functions;	// possible commands to execute
 static cmdalias_t*		cmd_alias;
 static int 				alias_count;	// for detecting runaway loops
-
-static int Cmd_Argc() {return cmd_argc;}
 
 static char* Cmd_Argv(int arg) {
 	if (arg >= cmd_argc) {
@@ -4967,7 +4965,7 @@ void Pmove (pmove_t *pmove);
 #define	MAX_ITEMS			256
 #define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
 
-// gi.BoxEdicts() can return a list of either solid or trigger entities
+// SV_AreaEdicts() can return a list of either solid or trigger entities
 // FIXME: eliminate AREA_ distinction?
 #define	AREA_SOLID		1
 #define	AREA_TRIGGERS	2
@@ -5563,7 +5561,7 @@ typedef struct gclient_s {
 
 //===============================================================
 
-// destination class for gi.multicast()
+// destination class for SV_Multicast()
 typedef enum {
 	MULTICAST_ALL,
 	MULTICAST_PHS,
@@ -5572,83 +5570,6 @@ typedef enum {
 	MULTICAST_PHS_R,
 	MULTICAST_PVS_R
 } multicast_t;
-
-//
-// functions provided by the main engine
-//
-typedef struct
-{
-	// special messages
-	void	(*bprintf) (int printlevel, char *fmt, ...);
-	void	(*dprintf) (char *fmt, ...);
-	void	(*cprintf) (edict_t *ent, int printlevel, char *fmt, ...);
-	void	(*centerprintf) (edict_t *ent, char *fmt, ...);
-	void	(*sound) (edict_t *ent, int channel, int soundindex, float volume, float attenuation, float timeofs);
-	void	(*positioned_sound) (vec3_t origin, edict_t *ent, int channel, int soundinedex, float volume, float attenuation, float timeofs);
-
-	// config strings hold all the index strings, the lightstyles,
-	// and misc data like the sky definition and cdtrack.
-	// All of the current configstrings are sent to clients when
-	// they connect, and changes are sent to all connected clients.
-	void	(*configstring) (int num, char *string);
-
-	// the *index functions create configstrings and some internal server state
-	int		(*modelindex) (char *name);
-	int		(*soundindex) (char *name);
-	int		(*imageindex) (char *name);
-
-	void	(*setmodel) (edict_t *ent, char *name);
-
-	// collision detection
-	trace_t	(*trace) (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passent, int contentmask);
-	int		(*pointcontents) (vec3_t point);
-	bool	(*inPVS) (vec3_t p1, vec3_t p2);
-	bool	(*inPHS) (vec3_t p1, vec3_t p2);
-	void		(*SetAreaPortalState) (int portalnum, bool open);
-	bool	(*AreasConnected) (int area1, int area2);
-
-	// an entity will never be sent to a client or used for collision
-	// if it is not passed to linkentity.  If the size, position, or
-	// solidity changes, it must be relinked.
-	void	(*linkentity) (edict_t *ent);
-	void	(*unlinkentity) (edict_t *ent);		// call before removing an interactive edict
-	int		(*BoxEdicts) (vec3_t mins, vec3_t maxs, edict_t **list,	int maxcount, int areatype);
-	void	(*Pmove) (pmove_t *pmove);		// player movement code common with client prediction
-
-	// network messaging
-	void	(*multicast) (vec3_t origin, multicast_t to);
-	void	(*unicast) (edict_t *ent, bool reliable);
-	void	(*WriteChar) (int c);
-	void	(*WriteByte) (int c);
-	void	(*WriteShort) (int c);
-	void	(*WriteLong) (int c);
-	void	(*WriteFloat) (float f);
-	void	(*WriteString) (char *s);
-	void	(*WritePosition) (vec3_t pos);	// some fractional bits
-	void	(*WriteDir) (vec3_t pos);		// single u8 encoded, very coarse
-	void	(*WriteAngle) (float f);
-
-	// managed memory allocation
-	void	*(*TagMalloc) (int size, int tag);
-	void	(*TagFree) (void *block);
-	void	(*FreeTags) (int tag);
-
-	// console variable interaction
-	cvar_t	*(*cvar) (char *var_name, char *value, int flags);
-	cvar_t	*(*cvar_set) (char *var_name, char *value);
-	cvar_t	*(*cvar_forceset) (char *var_name, char *value);
-
-	// ClientCommand and ServerCommand parameter access
-	int		(*argc) (void);
-	char	*(*argv) (int n);
-	char	*(*args) (void);	// concatenation of all argv >= 1
-
-	// add commands to the server console as if they were typed in
-	// for map changing, etc
-	void	(*AddCommandString) (char *text);
-
-	void	(*DebugGraph) (float value, int color);
-} game_import_t;
 
 //
 // functions exported by the game subsystem
@@ -5689,7 +5610,7 @@ typedef struct
 
 	// ServerCommand will be called when an "sv <command>" command is issued on the
 	// server console.
-	// The game can issue gi.argc() / gi.argv() commands to get the rest
+	// The game can issue cmd_argc / Cmd_Argv() commands to get the rest
 	// of the parameters
 	void		(*ServerCommand) (void);
 
@@ -5980,7 +5901,6 @@ static struct {
 } game;
 
 static level_locals_t	level;
-static game_import_t	gi;
 static game_export_t	globals;
 static spawn_temp_t		st;
 
@@ -12290,59 +12210,6 @@ void SV_InitGameProgs() {
 	// unload anything we have now
 	SV_ShutdownGameProgs();
 
-	// load a new game dll
-	gi.multicast = SV_Multicast;
-	gi.unicast = PF_Unicast;
-	gi.bprintf = SV_BroadcastPrintf;
-	gi.dprintf = PF_dprintf;
-	gi.cprintf = PF_cprintf;
-	gi.centerprintf = PF_centerprintf;
-
-	gi.linkentity = SV_LinkEdict;
-	gi.unlinkentity = SV_UnlinkEdict;
-	gi.BoxEdicts = SV_AreaEdicts;
-	gi.trace = SV_Trace;
-	gi.pointcontents = SV_PointContents;
-	gi.setmodel = PF_setmodel;
-	gi.inPVS = PF_inPVS;
-	gi.inPHS = PF_inPHS;
-	gi.Pmove = Pmove;
-
-	gi.modelindex = SV_ModelIndex;
-	gi.soundindex = SV_SoundIndex;
-	gi.imageindex = SV_ImageIndex;
-
-	gi.configstring = PF_Configstring;
-	gi.sound = PF_StartSound;
-	gi.positioned_sound = SV_StartSound;
-
-	gi.WriteChar = PF_WriteChar;
-	gi.WriteByte = PF_WriteByte;
-	gi.WriteShort = PF_WriteShort;
-	gi.WriteLong = PF_WriteLong;
-	gi.WriteFloat = PF_WriteFloat;
-	gi.WriteString = PF_WriteString;
-	gi.WritePosition = PF_WritePos;
-	gi.WriteDir = PF_WriteDir;
-	gi.WriteAngle = PF_WriteAngle;
-
-	gi.TagMalloc = Z_TagMalloc;
-	gi.TagFree = Z_Free;
-	gi.FreeTags = Z_FreeTags;
-
-	gi.cvar = COM_GetCvar;
-	gi.cvar_set = COM_SetCvar;
-	gi.cvar_forceset = Com_ForceSetCvar;
-
-	gi.argc = Cmd_Argc;
-	gi.argv = Cmd_Argv;
-	gi.args = Cmd_Args;
-	gi.AddCommandString = Cbuf_AddText;
-
-	gi.DebugGraph = SCR_DebugGraph;
-	gi.SetAreaPortalState = CM_SetAreaPortalState;
-	gi.AreasConnected = CM_AreasConnected;
-
 	void GetGameAPI();
 	GetGameAPI();
 
@@ -13720,19 +13587,11 @@ void SV_BroadcastCommand (char *fmt, ...)
 	SV_Multicast (NULL, MULTICAST_ALL_R);
 }
 
-
-/*
-=================
-SV_Multicast
-
-Sends the contents of sv.multicast to a subset of the clients,
-then clears sv.multicast.
-
-MULTICAST_ALL	same as broadcast (origin can be NULL)
-MULTICAST_PVS	send to clients potentially visible from org
-MULTICAST_PHS	send to clients potentially hearable from org
-=================
-*/
+// Sends the contents of sv.multicast to a subset of the clients,
+// then clears sv.multicast.
+// MULTICAST_ALL	same as broadcast (origin can be NULL)
+// MULTICAST_PVS	send to clients potentially visible from org
+// MULTICAST_PHS	send to clients potentially hearable from org
 void SV_Multicast (vec3_t origin, multicast_t to)
 {
 	client_t	*client;
@@ -36227,7 +36086,7 @@ bool visible (edict_t* self, edict_t* other)
 	spot1[2] += self->viewheight;
 	VectorCopy (other->s.origin, spot2);
 	spot2[2] += other->viewheight;
-	trace = gi.trace (spot1, vec3_origin, vec3_origin, spot2, self, MASK_OPAQUE);
+	trace = SV_Trace (spot1, vec3_origin, vec3_origin, spot2, self, MASK_OPAQUE);
 
 	if (trace.fraction == 1.0)
 		return true;
@@ -36303,7 +36162,7 @@ void FoundTarget (edict_t* self)
 	{
 		self->goalentity = self->movetarget = self->enemy;
 		HuntTarget (self);
-		gi.dprintf("%s at %s, combattarget %s not found\n", self->classname, vtos(self->s.origin), self->combattarget);
+		PF_dprintf("%s at %s, combattarget %s not found\n", self->classname, vtos(self->s.origin), self->combattarget);
 		return;
 	}
 
@@ -36480,7 +36339,7 @@ bool FindTarget (edict_t* self)
 		}
 		else
 		{
-			if (!gi.inPHS(self->s.origin, client->s.origin))
+			if (!PF_inPHS(self->s.origin, client->s.origin))
 				return false;
 		}
 
@@ -36493,7 +36352,7 @@ bool FindTarget (edict_t* self)
 
 		// check area portals - if they are different and not connected then we can't hear it
 		if (client->areanum != self->areanum)
-			if (!gi.AreasConnected(self->areanum, client->areanum))
+			if (!CM_AreasConnected(self->areanum, client->areanum))
 				return false;
 
 		self->ideal_yaw = vectoyaw(temp);
@@ -36551,7 +36410,7 @@ bool M_CheckAttack (edict_t* self)
 		VectorCopy (self->enemy->s.origin, spot2);
 		spot2[2] += self->enemy->viewheight;
 
-		tr = gi.trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA|CONTENTS_WINDOW);
+		tr = SV_Trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA|CONTENTS_WINDOW);
 
 		// do we have a clear shot?
 		if (tr.ent != self->enemy)
@@ -36966,9 +36825,9 @@ void ai_run (edict_t* self, float dist)
 
 	if (new)
 	{
-//		gi.dprintf("checking for course correction\n");
+//		PF_dprintf("checking for course correction\n");
 
-		tr = gi.trace(self->s.origin, self->mins, self->maxs, self->monsterinfo.last_sighting, self, MASK_PLAYERSOLID);
+		tr = SV_Trace(self->s.origin, self->mins, self->maxs, self->monsterinfo.last_sighting, self, MASK_PLAYERSOLID);
 		if (tr.fraction < 1)
 		{
 			VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
@@ -36980,12 +36839,12 @@ void ai_run (edict_t* self, float dist)
 
 			VectorSet(v, d2, -16, 0);
 			G_ProjectSource (self->s.origin, v, v_forward, v_right, left_target);
-			tr = gi.trace(self->s.origin, self->mins, self->maxs, left_target, self, MASK_PLAYERSOLID);
+			tr = SV_Trace(self->s.origin, self->mins, self->maxs, left_target, self, MASK_PLAYERSOLID);
 			left = tr.fraction;
 
 			VectorSet(v, d2, 16, 0);
 			G_ProjectSource (self->s.origin, v, v_forward, v_right, right_target);
-			tr = gi.trace(self->s.origin, self->mins, self->maxs, right_target, self, MASK_PLAYERSOLID);
+			tr = SV_Trace(self->s.origin, self->mins, self->maxs, right_target, self, MASK_PLAYERSOLID);
 			right = tr.fraction;
 
 			center = (d1*center)/d2;
@@ -36995,7 +36854,7 @@ void ai_run (edict_t* self, float dist)
 				{
 					VectorSet(v, d2 * left * 0.5, -16, 0);
 					G_ProjectSource (self->s.origin, v, v_forward, v_right, left_target);
-//					gi.dprintf("incomplete path, go part way and adjust again\n");
+//					PF_dprintf("incomplete path, go part way and adjust again\n");
 				}
 				VectorCopy (self->monsterinfo.last_sighting, self->monsterinfo.saved_goal);
 				self->monsterinfo.aiflags |= AI_PURSUE_TEMP;
@@ -37003,7 +36862,7 @@ void ai_run (edict_t* self, float dist)
 				VectorCopy (left_target, self->monsterinfo.last_sighting);
 				VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
 				self->s.angles[YAW] = self->ideal_yaw = vectoyaw(v);
-//				gi.dprintf("adjusted left\n");
+//				PF_dprintf("adjusted left\n");
 //				debug_drawline(self.origin, self.last_sighting, 152);
 			}
 			else if (right >= center && right > left)
@@ -37012,7 +36871,7 @@ void ai_run (edict_t* self, float dist)
 				{
 					VectorSet(v, d2 * right * 0.5, 16, 0);
 					G_ProjectSource (self->s.origin, v, v_forward, v_right, right_target);
-//					gi.dprintf("incomplete path, go part way and adjust again\n");
+//					PF_dprintf("incomplete path, go part way and adjust again\n");
 				}
 				VectorCopy (self->monsterinfo.last_sighting, self->monsterinfo.saved_goal);
 				self->monsterinfo.aiflags |= AI_PURSUE_TEMP;
@@ -37020,11 +36879,11 @@ void ai_run (edict_t* self, float dist)
 				VectorCopy (right_target, self->monsterinfo.last_sighting);
 				VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
 				self->s.angles[YAW] = self->ideal_yaw = vectoyaw(v);
-//				gi.dprintf("adjusted right\n");
+//				PF_dprintf("adjusted right\n");
 //				debug_drawline(self.origin, self.last_sighting, 152);
 			}
 		}
-//		else gi.dprintf("course was fine\n");
+//		else PF_dprintf("course was fine\n");
 	}
 
 	M_MoveToGoal (self, dist);
@@ -37082,7 +36941,7 @@ void UpdateChaseCam(edict_t *ent)
 	if (!targ->groundentity)
 		o[2] += 16;
 
-	trace = gi.trace(ownerv, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+	trace = SV_Trace(ownerv, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
 
 	VectorCopy(trace.endpos, goal);
 
@@ -37091,7 +36950,7 @@ void UpdateChaseCam(edict_t *ent)
 	// pad for floors and ceilings
 	VectorCopy(goal, o);
 	o[2] += 6;
-	trace = gi.trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+	trace = SV_Trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
 	if (trace.fraction < 1) {
 		VectorCopy(trace.endpos, goal);
 		goal[2] -= 6;
@@ -37099,7 +36958,7 @@ void UpdateChaseCam(edict_t *ent)
 
 	VectorCopy(goal, o);
 	o[2] -= 6;
-	trace = gi.trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+	trace = SV_Trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
 	if (trace.fraction < 1) {
 		VectorCopy(trace.endpos, goal);
 		goal[2] += 6;
@@ -37125,7 +36984,7 @@ void UpdateChaseCam(edict_t *ent)
 
 	ent->viewheight = 0;
 	ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
-	gi.linkentity(ent);
+	SV_LinkEdict(ent);
 }
 
 void ChaseNext(edict_t *ent)
@@ -37190,7 +37049,7 @@ void GetChaseTarget(edict_t *ent)
 			return;
 		}
 	}
-	gi.centerprintf(ent, "No other players to chase.");
+	PF_centerprintf(ent, "No other players to chase.");
 }
 
 /* ============ end source: game/g_chase.c ============ */
@@ -37546,21 +37405,21 @@ void Cmd_Give_f (edict_t *ent)
 
 	if (deathmatch->value && !sv_cheats->value)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
+		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
 		return;
 	}
 
-	name = gi.args();
+	name = Cmd_Args();
 
 	if (Q_stricmp(name, "all") == 0)
 		give_all = true;
 	else
 		give_all = false;
 
-	if (give_all || Q_stricmp(gi.argv(1), "health") == 0)
+	if (give_all || Q_stricmp(Cmd_Argv(1), "health") == 0)
 	{
-		if (gi.argc() == 3)
-			ent->health = atoi(gi.argv(2));
+		if (cmd_argc == 3)
+			ent->health = atoi(Cmd_Argv(2));
 		else
 			ent->health = ent->max_health;
 		if (!give_all)
@@ -37646,18 +37505,18 @@ void Cmd_Give_f (edict_t *ent)
 	it = FindItem (name);
 	if (!it)
 	{
-		name = gi.argv(1);
+		name = Cmd_Argv(1);
 		it = FindItem (name);
 		if (!it)
 		{
-			gi.cprintf (ent, PRINT_HIGH, "unknown item\n");
+			PF_cprintf (ent, PRINT_HIGH, "unknown item\n");
 			return;
 		}
 	}
 
 	if (!it->pickup)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "non-pickup item\n");
+		PF_cprintf (ent, PRINT_HIGH, "non-pickup item\n");
 		return;
 	}
 
@@ -37665,8 +37524,8 @@ void Cmd_Give_f (edict_t *ent)
 
 	if (it->flags & IT_AMMO)
 	{
-		if (gi.argc() == 3)
-			ent->client->pers.inventory[index] = atoi(gi.argv(2));
+		if (cmd_argc == 3)
+			ent->client->pers.inventory[index] = atoi(Cmd_Argv(2));
 		else
 			ent->client->pers.inventory[index] += it->quantity;
 	}
@@ -37697,7 +37556,7 @@ void Cmd_God_f (edict_t *ent)
 
 	if (deathmatch->value && !sv_cheats->value)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
+		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
 		return;
 	}
 
@@ -37707,7 +37566,7 @@ void Cmd_God_f (edict_t *ent)
 	else
 		msg = "godmode ON\n";
 
-	gi.cprintf (ent, PRINT_HIGH, msg);
+	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
 
@@ -37726,7 +37585,7 @@ void Cmd_Notarget_f (edict_t *ent)
 
 	if (deathmatch->value && !sv_cheats->value)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
+		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
 		return;
 	}
 
@@ -37736,7 +37595,7 @@ void Cmd_Notarget_f (edict_t *ent)
 	else
 		msg = "notarget ON\n";
 
-	gi.cprintf (ent, PRINT_HIGH, msg);
+	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
 
@@ -37753,7 +37612,7 @@ void Cmd_Noclip_f (edict_t *ent)
 
 	if (deathmatch->value && !sv_cheats->value)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
+		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
 		return;
 	}
 
@@ -37768,7 +37627,7 @@ void Cmd_Noclip_f (edict_t *ent)
 		msg = "noclip ON\n";
 	}
 
-	gi.cprintf (ent, PRINT_HIGH, msg);
+	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
 
@@ -37785,22 +37644,22 @@ void Cmd_Use_f (edict_t *ent)
 	gitem_t		*it;
 	char		*s;
 
-	s = gi.args();
+	s = Cmd_Args();
 	it = FindItem (s);
 	if (!it)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
+		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
 		return;
 	}
 	if (!it->use)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
+		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
 		return;
 	}
 	index = ITEM_INDEX(it);
 	if (!ent->client->pers.inventory[index])
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
+		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
 		return;
 	}
 
@@ -37821,22 +37680,22 @@ void Cmd_Drop_f (edict_t *ent)
 	gitem_t		*it;
 	char		*s;
 
-	s = gi.args();
+	s = Cmd_Args();
 	it = FindItem (s);
 	if (!it)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
+		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
 		return;
 	}
 	if (!it->drop)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
+		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
 		return;
 	}
 	index = ITEM_INDEX(it);
 	if (!ent->client->pers.inventory[index])
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
+		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
 		return;
 	}
 
@@ -37867,12 +37726,12 @@ void Cmd_Inven_f (edict_t *ent)
 
 	cl->showinventory = true;
 
-	gi.WriteByte (svc_inventory);
+	PF_WriteByte (svc_inventory);
 	for (i=0 ; i<MAX_ITEMS ; i++)
 	{
-		gi.WriteShort (cl->pers.inventory[i]);
+		PF_WriteShort (cl->pers.inventory[i]);
 	}
-	gi.unicast (ent, true);
+	PF_Unicast (ent, true);
 }
 
 /*
@@ -37888,14 +37747,14 @@ void Cmd_InvUse_f (edict_t *ent)
 
 	if (ent->client->pers.selected_item == -1)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "No item to use.\n");
+		PF_cprintf (ent, PRINT_HIGH, "No item to use.\n");
 		return;
 	}
 
 	it = &itemlist[ent->client->pers.selected_item];
 	if (!it->use)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
+		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
 		return;
 	}
 	it->use (ent, it);
@@ -38013,14 +37872,14 @@ void Cmd_InvDrop_f (edict_t *ent)
 
 	if (ent->client->pers.selected_item == -1)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "No item to drop.\n");
+		PF_cprintf (ent, PRINT_HIGH, "No item to drop.\n");
 		return;
 	}
 
 	it = &itemlist[ent->client->pers.selected_item];
 	if (!it->drop)
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
+		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
 		return;
 	}
 	it->drop (ent, it);
@@ -38111,7 +37970,7 @@ void Cmd_Players_f (edict_t *ent)
 		strcat (large, small);
 	}
 
-	gi.cprintf (ent, PRINT_HIGH, "%s\n%i players\n", large, count);
+	PF_cprintf (ent, PRINT_HIGH, "%s\n%i players\n", large, count);
 }
 
 /*
@@ -38123,7 +37982,7 @@ void Cmd_Wave_f (edict_t *ent)
 {
 	int		i;
 
-	i = atoi (gi.argv(1));
+	i = atoi (Cmd_Argv(1));
 
 	// can't wave when ducked
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -38137,39 +37996,34 @@ void Cmd_Wave_f (edict_t *ent)
 	switch (i)
 	{
 	case 0:
-		gi.cprintf (ent, PRINT_HIGH, "flipoff\n");
+		PF_cprintf (ent, PRINT_HIGH, "flipoff\n");
 		ent->s.frame = FRAME_flip01-1;
 		ent->client->anim_end = FRAME_flip12;
 		break;
 	case 1:
-		gi.cprintf (ent, PRINT_HIGH, "salute\n");
+		PF_cprintf (ent, PRINT_HIGH, "salute\n");
 		ent->s.frame = FRAME_salute01-1;
 		ent->client->anim_end = FRAME_salute11;
 		break;
 	case 2:
-		gi.cprintf (ent, PRINT_HIGH, "taunt\n");
+		PF_cprintf (ent, PRINT_HIGH, "taunt\n");
 		ent->s.frame = FRAME_taunt01-1;
 		ent->client->anim_end = FRAME_taunt17;
 		break;
 	case 3:
-		gi.cprintf (ent, PRINT_HIGH, "wave\n");
+		PF_cprintf (ent, PRINT_HIGH, "wave\n");
 		ent->s.frame = FRAME_wave01-1;
 		ent->client->anim_end = FRAME_wave11;
 		break;
 	case 4:
 	default:
-		gi.cprintf (ent, PRINT_HIGH, "point\n");
+		PF_cprintf (ent, PRINT_HIGH, "point\n");
 		ent->s.frame = FRAME_point01-1;
 		ent->client->anim_end = FRAME_point12;
 		break;
 	}
 }
 
-/*
-==================
-Cmd_Say_f
-==================
-*/
 void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 {
 	int		i, j;
@@ -38178,7 +38032,7 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 	char	text[2048];
 	gclient_t *cl;
 
-	if (gi.argc () < 2 && !arg0)
+	if (cmd_argc < 2 && !arg0)
 		return;
 
 	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
@@ -38191,13 +38045,13 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 
 	if (arg0)
 	{
-		strcat (text, gi.argv(0));
+		strcat (text, Cmd_Argv(0));
 		strcat (text, " ");
-		strcat (text, gi.args());
+		strcat (text, Cmd_Args());
 	}
 	else
 	{
-		p = gi.args();
+		p = Cmd_Args();
 
 		if (*p == '"')
 		{
@@ -38217,7 +38071,7 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 		cl = ent->client;
 
 		if (level.time < cl->flood_locktill) {
-			gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
+			PF_cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
 				(int)(cl->flood_locktill - level.time));
 			return;
 		}
@@ -38227,7 +38081,7 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 		if (cl->flood_when[i] &&
 			level.time - cl->flood_when[i] < flood_persecond->value) {
 			cl->flood_locktill = level.time + flood_waitdelay->value;
-			gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
+			PF_cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
 				(int)flood_waitdelay->value);
 			return;
 		}
@@ -38248,7 +38102,7 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 			if (!OnSameTeam(ent, other))
 				continue;
 		}
-		gi.cprintf(other, PRINT_CHAT, "%s", text);
+		PF_cprintf(other, PRINT_CHAT, "%s", text);
 	}
 }
 
@@ -38274,12 +38128,12 @@ void Cmd_PlayerList_f(edict_t *ent)
 			e2->client->resp.spectator ? " (spectator)" : "");
 		if (strlen(text) + strlen(st) > sizeof(text) - 50) {
 			sprintf(text+strlen(text), "And more...\n");
-			gi.cprintf(ent, PRINT_HIGH, "%s", text);
+			PF_cprintf(ent, PRINT_HIGH, "%s", text);
 			return;
 		}
 		strcat(text, st);
 	}
-	gi.cprintf(ent, PRINT_HIGH, "%s", text);
+	PF_cprintf(ent, PRINT_HIGH, "%s", text);
 }
 
 
@@ -38295,7 +38149,7 @@ void ClientCommand (edict_t *ent)
 	if (!ent->client)
 		return;		// not fully in game yet
 
-	cmd = gi.argv(0);
+	cmd = Cmd_Argv(0);
 
 	if (Q_stricmp (cmd, "players") == 0)
 	{
@@ -38398,7 +38252,7 @@ bool CanDamage (edict_t *targ, edict_t* inflictor)
 	{
 		VectorAdd (targ->absmin, targ->absmax, dest);
 		VectorScale (dest, 0.5, dest);
-		trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+		trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 		if (trace.fraction == 1.0)
 			return true;
 		if (trace.ent == targ)
@@ -38406,35 +38260,35 @@ bool CanDamage (edict_t *targ, edict_t* inflictor)
 		return false;
 	}
 
-	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
+	trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
 
 	VectorCopy (targ->s.origin, dest);
 	dest[0] += 15.0;
 	dest[1] += 15.0;
-	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
 
 	VectorCopy (targ->s.origin, dest);
 	dest[0] += 15.0;
 	dest[1] -= 15.0;
-	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
 
 	VectorCopy (targ->s.origin, dest);
 	dest[0] -= 15.0;
 	dest[1] += 15.0;
-	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
 
 	VectorCopy (targ->s.origin, dest);
 	dest[0] -= 15.0;
 	dest[1] -= 15.0;
-	trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	trace = SV_Trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return true;
 
@@ -38484,24 +38338,16 @@ void Killed (edict_t *targ, edict_t* inflictor, edict_t* attacker, int damage, v
 	targ->die (targ, inflictor, attacker, damage, point);
 }
 
-
-/*
-================
-SpawnDamage
-================
-*/
 void SpawnDamage (int type, vec3_t origin, vec3_t normal, int damage)
 {
 	if (damage > 255)
 		damage = 255;
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (type);
-//	gi.WriteByte (damage);
-	gi.WritePosition (origin);
-	gi.WriteDir (normal);
-	gi.multicast (origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (type);
+	PF_WritePos (origin);
+	PF_WriteDir (normal);
+	SV_Multicast (origin, MULTICAST_PVS);
 }
-
 
 /*
 ============
@@ -38823,7 +38669,7 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 	{
 		if (targ->pain_debounce_time < level.time)
 		{
-			gi.sound(targ, CHAN_ITEM, gi.soundindex("items/protect4.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(targ, CHAN_ITEM, SV_SoundIndex("items/protect4.wav"), 1, ATTN_NORM, 0);
 			targ->pain_debounce_time = level.time + 2;
 		}
 		take = 0;
@@ -39280,7 +39126,7 @@ void plat_hit_top (edict_t *ent)
 	if (!(ent->flags & FL_TEAMSLAVE))
 	{
 		if (ent->moveinfo.sound_end)
-			gi.sound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+			PF_StartSound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
 		ent->s.sound = 0;
 	}
 	ent->moveinfo.state = STATE_TOP;
@@ -39294,7 +39140,7 @@ void plat_hit_bottom (edict_t *ent)
 	if (!(ent->flags & FL_TEAMSLAVE))
 	{
 		if (ent->moveinfo.sound_end)
-			gi.sound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+			PF_StartSound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_end, 1, ATTN_STATIC, 0);
 		ent->s.sound = 0;
 	}
 	ent->moveinfo.state = STATE_BOTTOM;
@@ -39305,7 +39151,7 @@ void plat_go_down (edict_t *ent)
 	if (!(ent->flags & FL_TEAMSLAVE))
 	{
 		if (ent->moveinfo.sound_start)
-			gi.sound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+			PF_StartSound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 		ent->s.sound = ent->moveinfo.sound_middle;
 	}
 	ent->moveinfo.state = STATE_DOWN;
@@ -39317,7 +39163,7 @@ void plat_go_up (edict_t *ent)
 	if (!(ent->flags & FL_TEAMSLAVE))
 	{
 		if (ent->moveinfo.sound_start)
-			gi.sound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+			PF_StartSound (ent, CHAN_NO_PHS_ADD+CHAN_VOICE, ent->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 		ent->s.sound = ent->moveinfo.sound_middle;
 	}
 	ent->moveinfo.state = STATE_UP;
@@ -39411,7 +39257,7 @@ void plat_spawn_inside_trigger (edict_t *ent)
 	VectorCopy (tmin, trigger->mins);
 	VectorCopy (tmax, trigger->maxs);
 
-	gi.linkentity (trigger);
+	SV_LinkEdict (trigger);
 }
 
 
@@ -39438,7 +39284,7 @@ void SP_func_plat (edict_t *ent)
 	ent->solid = SOLID_BSP;
 	ent->movetype = MOVETYPE_PUSH;
 
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 
 	ent->blocked = plat_blocked;
 
@@ -39482,7 +39328,7 @@ void SP_func_plat (edict_t *ent)
 	else
 	{
 		VectorCopy (ent->pos2, ent->s.origin);
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 		ent->moveinfo.state = STATE_BOTTOM;
 	}
 
@@ -39495,9 +39341,9 @@ void SP_func_plat (edict_t *ent)
 	VectorCopy (ent->pos2, ent->moveinfo.end_origin);
 	VectorCopy (ent->s.angles, ent->moveinfo.end_angles);
 
-	ent->moveinfo.sound_start = gi.soundindex ("plats/pt1_strt.wav");
-	ent->moveinfo.sound_middle = gi.soundindex ("plats/pt1_mid.wav");
-	ent->moveinfo.sound_end = gi.soundindex ("plats/pt1_end.wav");
+	ent->moveinfo.sound_start = SV_SoundIndex ("plats/pt1_strt.wav");
+	ent->moveinfo.sound_middle = SV_SoundIndex ("plats/pt1_mid.wav");
+	ent->moveinfo.sound_end = SV_SoundIndex ("plats/pt1_end.wav");
 }
 
 //====================================================================
@@ -39586,8 +39432,8 @@ void SP_func_rotating (edict_t *ent)
 	if (ent->spawnflags & 128)
 		ent->s.effects |= EF_ANIM_ALLFAST;
 
-	gi.setmodel (ent, ent->model);
-	gi.linkentity (ent);
+	PF_setmodel (ent, ent->model);
+	SV_LinkEdict (ent);
 }
 
 /*
@@ -39656,7 +39502,7 @@ void button_fire (edict_t* self)
 
 	self->moveinfo.state = STATE_UP;
 	if (self->moveinfo.sound_start && !(self->flags & FL_TEAMSLAVE))
-		gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+		PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 	Move_Calc (self, self->moveinfo.end_origin, button_wait);
 }
 
@@ -39699,10 +39545,10 @@ void SP_func_button (edict_t *ent)
 	G_SetMovedir (ent->s.angles, ent->movedir);
 	ent->movetype = MOVETYPE_STOP;
 	ent->solid = SOLID_BSP;
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 
 	if (ent->sounds != 1)
-		ent->moveinfo.sound_start = gi.soundindex ("switches/butn2.wav");
+		ent->moveinfo.sound_start = SV_SoundIndex ("switches/butn2.wav");
 
 	if (!ent->speed)
 		ent->speed = 40;
@@ -39746,7 +39592,7 @@ void SP_func_button (edict_t *ent)
 	VectorCopy (ent->pos2, ent->moveinfo.end_origin);
 	VectorCopy (ent->s.angles, ent->moveinfo.end_angles);
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*
@@ -39791,7 +39637,7 @@ void door_use_areaportals (edict_t* self, bool open)
 	{
 		if (Q_stricmp(t->classname, "func_areaportal") == 0)
 		{
-			gi.SetAreaPortalState (t->style, open);
+			CM_SetAreaPortalState (t->style, open);
 		}
 	}
 }
@@ -39803,7 +39649,7 @@ void door_hit_top (edict_t* self)
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_end)
-			gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+			PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
 		self->s.sound = 0;
 	}
 	self->moveinfo.state = STATE_TOP;
@@ -39821,7 +39667,7 @@ void door_hit_bottom (edict_t* self)
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_end)
-			gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+			PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
 		self->s.sound = 0;
 	}
 	self->moveinfo.state = STATE_BOTTOM;
@@ -39833,7 +39679,7 @@ void door_go_down (edict_t* self)
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_start)
-			gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+			PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 		self->s.sound = self->moveinfo.sound_middle;
 	}
 	if (self->max_health)
@@ -39864,7 +39710,7 @@ void door_go_up (edict_t* self, edict_t* activator)
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_start)
-			gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+			PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 		self->s.sound = self->moveinfo.sound_middle;
 	}
 	self->moveinfo.state = STATE_UP;
@@ -39999,7 +39845,7 @@ void Think_SpawnDoorTrigger (edict_t *ent)
 	other->solid = SOLID_TRIGGER;
 	other->movetype = MOVETYPE_NONE;
 	other->touch = Touch_DoorTrigger;
-	gi.linkentity (other);
+	SV_LinkEdict (other);
 
 	if (ent->spawnflags & DOOR_START_OPEN)
 		door_use_areaportals (ent, true);
@@ -40070,8 +39916,8 @@ static void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface
 		return;
 	self->touch_debounce_time = level.time + 5.0;
 
-	gi.centerprintf (other, "%s", self->message);
-	gi.sound (other, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+	PF_centerprintf (other, "%s", self->message);
+	PF_StartSound (other, CHAN_AUTO, SV_SoundIndex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
 }
 
 void SP_func_door (edict_t *ent)
@@ -40080,15 +39926,15 @@ void SP_func_door (edict_t *ent)
 
 	if (ent->sounds != 1)
 	{
-		ent->moveinfo.sound_start = gi.soundindex  ("doors/dr1_strt.wav");
-		ent->moveinfo.sound_middle = gi.soundindex  ("doors/dr1_mid.wav");
-		ent->moveinfo.sound_end = gi.soundindex  ("doors/dr1_end.wav");
+		ent->moveinfo.sound_start = SV_SoundIndex  ("doors/dr1_strt.wav");
+		ent->moveinfo.sound_middle = SV_SoundIndex  ("doors/dr1_mid.wav");
+		ent->moveinfo.sound_end = SV_SoundIndex  ("doors/dr1_end.wav");
 	}
 
 	G_SetMovedir (ent->s.angles, ent->movedir);
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 
 	ent->blocked = door_blocked;
 	ent->use = door_use;
@@ -40136,7 +39982,7 @@ void SP_func_door (edict_t *ent)
 	}
 	else if (ent->targetname && ent->message)
 	{
-		gi.soundindex ("misc/talk.wav");
+		SV_SoundIndex ("misc/talk.wav");
 		ent->touch = door_touch;
 	}
 
@@ -40158,7 +40004,7 @@ void SP_func_door (edict_t *ent)
 	if (!ent->team)
 		ent->teammaster = ent;
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	ent->nextthink = level.time + FRAMETIME;
 	if (ent->health || ent->targetname)
@@ -40216,7 +40062,7 @@ void SP_func_door_rotating (edict_t *ent)
 
 	if (!st.distance)
 	{
-		gi.dprintf("%s at %s with no distance set\n", ent->classname, vtos(ent->s.origin));
+		PF_dprintf("%s at %s with no distance set\n", ent->classname, vtos(ent->s.origin));
 		st.distance = 90;
 	}
 
@@ -40226,7 +40072,7 @@ void SP_func_door_rotating (edict_t *ent)
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 
 	ent->blocked = door_blocked;
 	ent->use = door_use;
@@ -40245,9 +40091,9 @@ void SP_func_door_rotating (edict_t *ent)
 
 	if (ent->sounds != 1)
 	{
-		ent->moveinfo.sound_start = gi.soundindex  ("doors/dr1_strt.wav");
-		ent->moveinfo.sound_middle = gi.soundindex  ("doors/dr1_mid.wav");
-		ent->moveinfo.sound_end = gi.soundindex  ("doors/dr1_end.wav");
+		ent->moveinfo.sound_start = SV_SoundIndex  ("doors/dr1_strt.wav");
+		ent->moveinfo.sound_middle = SV_SoundIndex  ("doors/dr1_mid.wav");
+		ent->moveinfo.sound_end = SV_SoundIndex  ("doors/dr1_end.wav");
 	}
 
 	// if it starts open, switch the positions
@@ -40268,7 +40114,7 @@ void SP_func_door_rotating (edict_t *ent)
 
 	if (ent->targetname && ent->message)
 	{
-		gi.soundindex ("misc/talk.wav");
+		SV_SoundIndex ("misc/talk.wav");
 		ent->touch = door_touch;
 	}
 
@@ -40289,7 +40135,7 @@ void SP_func_door_rotating (edict_t *ent)
 	if (!ent->team)
 		ent->teammaster = ent;
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	ent->nextthink = level.time + FRAMETIME;
 	if (ent->health || ent->targetname)
@@ -40321,7 +40167,7 @@ void SP_func_water (edict_t* self)
 	G_SetMovedir (self->s.angles, self->movedir);
 	self->movetype = MOVETYPE_PUSH;
 	self->solid = SOLID_BSP;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	switch (self->sounds)
 	{
@@ -40329,13 +40175,13 @@ void SP_func_water (edict_t* self)
 			break;
 
 		case 1: // water
-			self->moveinfo.sound_start = gi.soundindex  ("world/mov_watr.wav");
-			self->moveinfo.sound_end = gi.soundindex  ("world/stp_watr.wav");
+			self->moveinfo.sound_start = SV_SoundIndex  ("world/mov_watr.wav");
+			self->moveinfo.sound_end = SV_SoundIndex  ("world/stp_watr.wav");
 			break;
 
 		case 2: // lava
-			self->moveinfo.sound_start = gi.soundindex  ("world/mov_watr.wav");
-			self->moveinfo.sound_end = gi.soundindex  ("world/stp_watr.wav");
+			self->moveinfo.sound_start = SV_SoundIndex  ("world/mov_watr.wav");
+			self->moveinfo.sound_end = SV_SoundIndex  ("world/stp_watr.wav");
 			break;
 	}
 
@@ -40377,7 +40223,7 @@ void SP_func_water (edict_t* self)
 
 	self->classname = "func_door";
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -40454,7 +40300,7 @@ void train_wait (edict_t* self)
 		if (!(self->flags & FL_TEAMSLAVE))
 		{
 			if (self->moveinfo.sound_end)
-				gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
+				PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_end, 1, ATTN_STATIC, 0);
 			self->s.sound = 0;
 		}
 	}
@@ -40475,14 +40321,14 @@ void train_next (edict_t* self)
 again:
 	if (!self->target)
 	{
-//		gi.dprintf ("train_next: no next target\n");
+//		PF_dprintf ("train_next: no next target\n");
 		return;
 	}
 
 	ent = G_PickTarget (self->target);
 	if (!ent)
 	{
-		gi.dprintf ("train_next: bad target %s\n", self->target);
+		PF_dprintf ("train_next: bad target %s\n", self->target);
 		return;
 	}
 
@@ -40493,14 +40339,14 @@ again:
 	{
 		if (!first)
 		{
-			gi.dprintf ("connected teleport path_corners, see %s at %s\n", ent->classname, vtos(ent->s.origin));
+			PF_dprintf ("connected teleport path_corners, see %s at %s\n", ent->classname, vtos(ent->s.origin));
 			return;
 		}
 		first = false;
 		VectorSubtract (ent->s.origin, self->mins, self->s.origin);
 		VectorCopy (self->s.origin, self->s.old_origin);
 		self->s.event = EV_OTHER_TELEPORT;
-		gi.linkentity (self);
+		SV_LinkEdict (self);
 		goto again;
 	}
 
@@ -40510,7 +40356,7 @@ again:
 	if (!(self->flags & FL_TEAMSLAVE))
 	{
 		if (self->moveinfo.sound_start)
-			gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+			PF_StartSound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
 		self->s.sound = self->moveinfo.sound_middle;
 	}
 
@@ -40543,19 +40389,19 @@ void func_train_find (edict_t* self)
 
 	if (!self->target)
 	{
-		gi.dprintf ("train_find: no target\n");
+		PF_dprintf ("train_find: no target\n");
 		return;
 	}
 	ent = G_PickTarget (self->target);
 	if (!ent)
 	{
-		gi.dprintf ("train_find: target %s not found\n", self->target);
+		PF_dprintf ("train_find: target %s not found\n", self->target);
 		return;
 	}
 	self->target = ent->target;
 
 	VectorSubtract (ent->s.origin, self->mins, self->s.origin);
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	// if not triggered, start immediately
 	if (!self->targetname)
@@ -40605,10 +40451,10 @@ void SP_func_train (edict_t* self)
 			self->dmg = 100;
 	}
 	self->solid = SOLID_BSP;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	if (st.noise)
-		self->moveinfo.sound_middle = gi.soundindex  (st.noise);
+		self->moveinfo.sound_middle = SV_SoundIndex  (st.noise);
 
 	if (!self->speed)
 		self->speed = 100;
@@ -40618,7 +40464,7 @@ void SP_func_train (edict_t* self)
 
 	self->use = train_use;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (self->target)
 	{
@@ -40629,7 +40475,7 @@ void SP_func_train (edict_t* self)
 	}
 	else
 	{
-		gi.dprintf ("func_train without a target at %s\n", vtos(self->absmin));
+		PF_dprintf ("func_train without a target at %s\n", vtos(self->absmin));
 	}
 }
 
@@ -40641,20 +40487,20 @@ static void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activa
 
 	if (self->movetarget->nextthink)
 	{
-//		gi.dprintf("elevator busy\n");
+//		PF_dprintf("elevator busy\n");
 		return;
 	}
 
 	if (!other->pathtarget)
 	{
-		gi.dprintf("elevator used with no pathtarget\n");
+		PF_dprintf("elevator used with no pathtarget\n");
 		return;
 	}
 
 	target = G_PickTarget (other->pathtarget);
 	if (!target)
 	{
-		gi.dprintf("elevator used with bad pathtarget: %s\n", other->pathtarget);
+		PF_dprintf("elevator used with bad pathtarget: %s\n", other->pathtarget);
 		return;
 	}
 
@@ -40666,18 +40512,18 @@ void trigger_elevator_init (edict_t* self)
 {
 	if (!self->target)
 	{
-		gi.dprintf("trigger_elevator has no target\n");
+		PF_dprintf("trigger_elevator has no target\n");
 		return;
 	}
 	self->movetarget = G_PickTarget (self->target);
 	if (!self->movetarget)
 	{
-		gi.dprintf("trigger_elevator unable to find target %s\n", self->target);
+		PF_dprintf("trigger_elevator unable to find target %s\n", self->target);
 		return;
 	}
 	if (strcmp(self->movetarget->classname, "func_train") != 0)
 	{
-		gi.dprintf("trigger_elevator target %s is not a train\n", self->target);
+		PF_dprintf("trigger_elevator target %s is not a train\n", self->target);
 		return;
 	}
 
@@ -40743,7 +40589,7 @@ void SP_func_timer (edict_t* self)
 	if (self->random >= self->wait)
 	{
 		self->random = self->wait - FRAMETIME;
-		gi.dprintf("func_timer at %s has random >= wait\n", vtos(self->s.origin));
+		PF_dprintf("func_timer at %s has random >= wait\n", vtos(self->s.origin));
 	}
 
 	if (self->spawnflags & 1)
@@ -40794,9 +40640,9 @@ void SP_func_conveyor (edict_t* self)
 
 	self->use = func_conveyor_use;
 
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 	self->solid = SOLID_BSP;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -40917,13 +40763,13 @@ void SP_func_door_secret (edict_t *ent)
 	float	width;
 	float	length;
 
-	ent->moveinfo.sound_start = gi.soundindex  ("doors/dr1_strt.wav");
-	ent->moveinfo.sound_middle = gi.soundindex  ("doors/dr1_mid.wav");
-	ent->moveinfo.sound_end = gi.soundindex  ("doors/dr1_end.wav");
+	ent->moveinfo.sound_start = SV_SoundIndex  ("doors/dr1_strt.wav");
+	ent->moveinfo.sound_middle = SV_SoundIndex  ("doors/dr1_mid.wav");
+	ent->moveinfo.sound_end = SV_SoundIndex  ("doors/dr1_end.wav");
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 
 	ent->blocked = door_secret_blocked;
 	ent->use = door_secret_use;
@@ -40968,13 +40814,13 @@ void SP_func_door_secret (edict_t *ent)
 	}
 	else if (ent->targetname && ent->message)
 	{
-		gi.soundindex ("misc/talk.wav");
+		SV_SoundIndex ("misc/talk.wav");
 		ent->touch = door_touch;
 	}
 
 	ent->classname = "func_door";
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -40989,7 +40835,7 @@ static void use_killbox(edict_t* self, edict_t* other, edict_t* activator) {
 
 void SP_func_killbox (edict_t *ent)
 {
-	gi.setmodel (ent, ent->model);
+	PF_setmodel (ent, ent->model);
 	ent->use = use_killbox;
 	ent->svflags = SVF_NOCLIENT;
 }
@@ -41111,7 +40957,7 @@ void DoRespawn (edict_t *ent)
 
 	ent->svflags &= ~SVF_NOCLIENT;
 	ent->solid = SOLID_TRIGGER;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	// send an effect
 	ent->s.event = EV_ITEM_RESPAWN;
@@ -41124,7 +40970,7 @@ void SetRespawn (edict_t *ent, float delay)
 	ent->solid = SOLID_NOT;
 	ent->nextthink = level.time + delay;
 	ent->think = DoRespawn;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -41332,7 +41178,7 @@ void Use_Quad (edict_t *ent, gitem_t *item)
 	else
 		ent->client->quad_framenum = level.framenum + timeout;
 
-	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
 //======================================================================
@@ -41347,7 +41193,7 @@ void Use_Breather (edict_t *ent, gitem_t *item)
 	else
 		ent->client->breather_framenum = level.framenum + 300;
 
-//	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
+//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
 //======================================================================
@@ -41362,7 +41208,7 @@ void Use_Envirosuit (edict_t *ent, gitem_t *item)
 	else
 		ent->client->enviro_framenum = level.framenum + 300;
 
-//	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
+//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
 //======================================================================
@@ -41377,7 +41223,7 @@ void	Use_Invulnerability (edict_t *ent, gitem_t *item)
 	else
 		ent->client->invincible_framenum = level.framenum + 300;
 
-	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/protect.wav"), 1, ATTN_NORM, 0);
 }
 
 //======================================================================
@@ -41388,7 +41234,7 @@ void	Use_Silencer (edict_t *ent, gitem_t *item)
 	ValidateSelectedItem (ent);
 	ent->client->silencer_shots += 30;
 
-//	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
+//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
 //======================================================================
@@ -41500,7 +41346,7 @@ void Drop_Ammo (edict_t *ent, gitem_t *item)
 		ent->client->pers.weapon->tag == AMMO_GRENADES &&
 		item->tag == AMMO_GRENADES &&
 		ent->client->pers.inventory[index] - dropped->count <= 0) {
-		gi.cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
+		PF_cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
 		G_FreeEdict(dropped);
 		return;
 	}
@@ -41684,18 +41530,18 @@ static void Use_PowerArmor(edict_t *ent, gitem_t *item) {
 	if (ent->flags & FL_POWER_ARMOR)
 	{
 		ent->flags &= ~FL_POWER_ARMOR;
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("misc/power2.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power2.wav"), 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		index = ITEM_INDEX(FindItem("cells"));
 		if (!ent->client->pers.inventory[index])
 		{
-			gi.cprintf (ent, PRINT_HIGH, "No cells for power armor.\n");
+			PF_cprintf (ent, PRINT_HIGH, "No cells for power armor.\n");
 			return;
 		}
 		ent->flags |= FL_POWER_ARMOR;
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("misc/power1.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power1.wav"), 1, ATTN_NORM, 0);
 	}
 }
 
@@ -41747,7 +41593,7 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 		other->client->bonus_alpha = 0.25;
 
 		// show icon and name on status bar
-		other->client->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(ent->item->icon);
+		other->client->ps.stats[STAT_PICKUP_ICON] = SV_ImageIndex(ent->item->icon);
 		other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS+ITEM_INDEX(ent->item);
 		other->client->pickup_msg_time = level.time + 3.0;
 
@@ -41758,17 +41604,17 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 		if (ent->item->pickup == Pickup_Health)
 		{
 			if (ent->count == 2)
-				gi.sound(other, CHAN_ITEM, gi.soundindex("items/s_health.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/s_health.wav"), 1, ATTN_NORM, 0);
 			else if (ent->count == 10)
-				gi.sound(other, CHAN_ITEM, gi.soundindex("items/n_health.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/n_health.wav"), 1, ATTN_NORM, 0);
 			else if (ent->count == 25)
-				gi.sound(other, CHAN_ITEM, gi.soundindex("items/l_health.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/l_health.wav"), 1, ATTN_NORM, 0);
 			else // (ent->count == 100)
-				gi.sound(other, CHAN_ITEM, gi.soundindex("items/m_health.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/m_health.wav"), 1, ATTN_NORM, 0);
 		}
 		else if (ent->item->pickup_sound)
 		{
-			gi.sound(other, CHAN_ITEM, gi.soundindex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
+			PF_StartSound(other, CHAN_ITEM, SV_SoundIndex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
 		}
 	}
 
@@ -41825,7 +41671,7 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 	dropped->s.renderfx = RF_GLOW;
 	VectorSet (dropped->mins, -15, -15, -15);
 	VectorSet (dropped->maxs, 15, 15, 15);
-	gi.setmodel (dropped, dropped->item->world_model);
+	PF_setmodel (dropped, dropped->item->world_model);
 	dropped->solid = SOLID_TRIGGER;
 	dropped->movetype = MOVETYPE_TOSS;
 	dropped->touch = drop_temp_touch;
@@ -41838,7 +41684,7 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 		AngleVectors (ent->client->v_angle, forward, right, NULL);
 		VectorSet(offset, 24, 0, -16);
 		G_ProjectSource (ent->s.origin, offset, forward, right, dropped->s.origin);
-		trace = gi.trace (ent->s.origin, dropped->mins, dropped->maxs,
+		trace = SV_Trace (ent->s.origin, dropped->mins, dropped->maxs,
 			dropped->s.origin, ent, CONTENTS_SOLID);
 		VectorCopy (trace.endpos, dropped->s.origin);
 	}
@@ -41854,7 +41700,7 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 	dropped->think = drop_make_touchable;
 	dropped->nextthink = level.time + 1;
 
-	gi.linkentity (dropped);
+	SV_LinkEdict (dropped);
 
 	return dropped;
 }
@@ -41877,7 +41723,7 @@ static void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
 		ent->touch = Touch_Item;
 	}
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 //======================================================================
@@ -41899,9 +41745,9 @@ void droptofloor (edict_t *ent)
 	VectorCopy (v, ent->maxs);
 
 	if (ent->model)
-		gi.setmodel (ent, ent->model);
+		PF_setmodel (ent, ent->model);
 	else
-		gi.setmodel (ent, ent->item->world_model);
+		PF_setmodel (ent, ent->item->world_model);
 	ent->solid = SOLID_TRIGGER;
 	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
@@ -41909,10 +41755,10 @@ void droptofloor (edict_t *ent)
 	v = tv(0,0,-128);
 	VectorAdd (ent->s.origin, v, dest);
 
-	tr = gi.trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
+	tr = SV_Trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
 	if (tr.startsolid)
 	{
-		gi.dprintf ("droptofloor: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
+		PF_dprintf ("droptofloor: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -41949,7 +41795,7 @@ void droptofloor (edict_t *ent)
 		ent->use = Use_Item;
 	}
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -41973,13 +41819,13 @@ void PrecacheItem (gitem_t *it)
 		return;
 
 	if (it->pickup_sound)
-		gi.soundindex (it->pickup_sound);
+		SV_SoundIndex (it->pickup_sound);
 	if (it->world_model)
-		gi.modelindex (it->world_model);
+		SV_ModelIndex (it->world_model);
 	if (it->view_model)
-		gi.modelindex (it->view_model);
+		SV_ModelIndex (it->view_model);
 	if (it->icon)
-		gi.imageindex (it->icon);
+		SV_ImageIndex (it->icon);
 
 	// parse everything for its ammo
 	if (it->ammo && it->ammo[0])
@@ -42009,13 +41855,13 @@ void PrecacheItem (gitem_t *it)
 
 		// determine type based on extension
 		if (!strcmp(data+len-3, "md2"))
-			gi.modelindex (data);
+			SV_ModelIndex (data);
 		else if (!strcmp(data+len-3, "sp2"))
-			gi.modelindex (data);
+			SV_ModelIndex (data);
 		else if (!strcmp(data+len-3, "wav"))
-			gi.soundindex (data);
+			SV_SoundIndex (data);
 		if (!strcmp(data+len-3, "pcx"))
-			gi.imageindex (data);
+			SV_ImageIndex (data);
 	}
 }
 
@@ -42038,7 +41884,7 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 		if (strcmp(ent->classname, "key_power_cube") != 0)
 		{
 			ent->spawnflags = 0;
-			gi.dprintf("%s at %s has invalid spawnflags set\n", ent->classname, vtos(ent->s.origin));
+			PF_dprintf("%s at %s has invalid spawnflags set\n", ent->classname, vtos(ent->s.origin));
 		}
 	}
 
@@ -42097,7 +41943,7 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 	ent->s.effects = item->world_model_flags;
 	ent->s.renderfx = RF_GLOW;
 	if (ent->model)
-		gi.modelindex (ent->model);
+		SV_ModelIndex (ent->model);
 }
 
 //======================================================================
@@ -43034,7 +42880,7 @@ void SP_item_health (edict_t* self)
 	self->model = "models/items/healing/medium/tris.md2";
 	self->count = 10;
 	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/n_health.wav");
+	SV_SoundIndex ("items/n_health.wav");
 }
 
 /*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -43051,7 +42897,7 @@ void SP_item_health_small (edict_t* self)
 	self->count = 2;
 	SpawnItem (self, FindItem ("Health"));
 	self->style = HEALTH_IGNORE_MAX;
-	gi.soundindex ("items/s_health.wav");
+	SV_SoundIndex ("items/s_health.wav");
 }
 
 /*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -43067,7 +42913,7 @@ void SP_item_health_large (edict_t* self)
 	self->model = "models/items/healing/large/tris.md2";
 	self->count = 25;
 	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/l_health.wav");
+	SV_SoundIndex ("items/l_health.wav");
 }
 
 /*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -43083,7 +42929,7 @@ void SP_item_health_mega (edict_t* self)
 	self->model = "models/items/mega_h/tris.md2";
 	self->count = 100;
 	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/m_health.wav");
+	SV_SoundIndex ("items/m_health.wav");
 	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;
 }
 
@@ -43110,7 +42956,7 @@ void SetItemNames (void)
 	for (i=0 ; i<game.num_items ; i++)
 	{
 		it = &itemlist[i];
-		gi.configstring (CS_ITEMS+i, it->pickup_name);
+		PF_Configstring (CS_ITEMS+i, it->pickup_name);
 	}
 
 	jacket_armor_index = ITEM_INDEX(FindItem("Jacket Armor"));
@@ -43146,10 +42992,10 @@ void G_RunFrame (void);
 
 void ShutdownGame (void)
 {
-	gi.dprintf ("==== ShutdownGame ====\n");
+	PF_dprintf ("==== ShutdownGame ====\n");
 
-	gi.FreeTags (TAG_LEVEL);
-	gi.FreeTags (TAG_GAME);
+	Z_FreeTags (TAG_LEVEL);
+	Z_FreeTags (TAG_GAME);
 }
 
 void GetGameAPI() {
@@ -43302,7 +43148,7 @@ void CheckDMRules (void)
 	{
 		if (level.time >= timelimit->value*60)
 		{
-			gi.bprintf (PRINT_HIGH, "Timelimit hit.\n");
+			SV_BroadcastPrintf (PRINT_HIGH, "Timelimit hit.\n");
 			EndDMLevel ();
 			return;
 		}
@@ -43318,7 +43164,7 @@ void CheckDMRules (void)
 
 			if (cl->resp.score >= fraglimit->value)
 			{
-				gi.bprintf (PRINT_HIGH, "Fraglimit hit.\n");
+				SV_BroadcastPrintf (PRINT_HIGH, "Fraglimit hit.\n");
 				EndDMLevel ();
 				return;
 			}
@@ -43339,7 +43185,7 @@ void ExitLevel (void)
 	char	command [256];
 
 	Com_sprintf (command, sizeof(command), "gamemap \"%s\"\n", level.changemap);
-	gi.AddCommandString (command);
+	Cbuf_AddText (command);
 	level.changemap = NULL;
 	level.exitintermission = 0;
 	level.intermissiontime = 0;
@@ -43431,7 +43277,7 @@ static void Use_Areaportal(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(activator);
 
 	ent->count ^= 1; // toggle state
-	gi.SetAreaPortalState (ent->style, ent->count);
+	CM_SetAreaPortalState (ent->style, ent->count);
 }
 
 /*QUAKED func_areaportal (0 0 0) ?
@@ -43508,7 +43354,7 @@ static void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_
 
 	if (plane)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/fhit3.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/fhit3.wav"), 1, ATTN_NORM, 0);
 
 		vectoangles (plane->normal, normal_angles);
 		AngleVectors (normal_angles, NULL, right, NULL);
@@ -43548,7 +43394,7 @@ void ThrowGib (edict_t* self, char *gibname, int damage, int type)
 	gib->s.origin[1] = origin[1] + crandom() * size[1];
 	gib->s.origin[2] = origin[2] + crandom() * size[2];
 
-	gi.setmodel (gib, gibname);
+	PF_setmodel (gib, gibname);
 	gib->solid = SOLID_NOT;
 	gib->s.effects |= EF_GIB;
 	gib->flags |= FL_NO_KNOCKBACK;
@@ -43577,7 +43423,7 @@ void ThrowGib (edict_t* self, char *gibname, int damage, int type)
 	gib->think = G_FreeEdict;
 	gib->nextthink = level.time + 10 + random()*10;
 
-	gi.linkentity (gib);
+	SV_LinkEdict (gib);
 }
 
 void ThrowHead (edict_t* self, char *gibname, int damage, int type)
@@ -43591,7 +43437,7 @@ void ThrowHead (edict_t* self, char *gibname, int damage, int type)
 	VectorClear (self->maxs);
 
 	self->s.modelindex2 = 0;
-	gi.setmodel (self, gibname);
+	PF_setmodel (self, gibname);
 	self->solid = SOLID_NOT;
 	self->s.effects |= EF_GIB;
 	self->s.effects &= ~EF_FLIES;
@@ -43622,7 +43468,7 @@ void ThrowHead (edict_t* self, char *gibname, int damage, int type)
 	self->think = G_FreeEdict;
 	self->nextthink = level.time + 10 + random()*10;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -43644,7 +43490,7 @@ void ThrowClientHead (edict_t* self, int damage)
 
 	self->s.origin[2] += 32;
 	self->s.frame = 0;
-	gi.setmodel (self, gibname);
+	PF_setmodel (self, gibname);
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 16);
 
@@ -43669,7 +43515,7 @@ void ThrowClientHead (edict_t* self, int damage)
 		self->nextthink = 0;
 	}
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -43690,7 +43536,7 @@ void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin)
 
 	chunk = G_Spawn();
 	VectorCopy (origin, chunk->s.origin);
-	gi.setmodel (chunk, modelname);
+	PF_setmodel (chunk, modelname);
 	v[0] = 100 * crandom();
 	v[1] = 100 * crandom();
 	v[2] = 100 + 100 * crandom();
@@ -43707,16 +43553,16 @@ void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin)
 	chunk->classname = "debris";
 	chunk->takedamage = DAMAGE_YES;
 	chunk->die = debris_die;
-	gi.linkentity (chunk);
+	SV_LinkEdict (chunk);
 }
 
 
 void BecomeExplosion1 (edict_t* self)
 {
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_EXPLOSION1);
-	gi.WritePosition (self->s.origin);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_EXPLOSION1);
+	PF_WritePos (self->s.origin);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 
 	G_FreeEdict (self);
 }
@@ -43724,10 +43570,10 @@ void BecomeExplosion1 (edict_t* self)
 
 void BecomeExplosion2 (edict_t* self)
 {
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_EXPLOSION2);
-	gi.WritePosition (self->s.origin);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_EXPLOSION2);
+	PF_WritePos (self->s.origin);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 
 	G_FreeEdict (self);
 }
@@ -43802,7 +43648,7 @@ void SP_path_corner (edict_t* self)
 {
 	if (!self->targetname)
 	{
-		gi.dprintf ("path_corner with no targetname at %s\n", vtos(self->s.origin));
+		PF_dprintf ("path_corner with no targetname at %s\n", vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -43812,7 +43658,7 @@ void SP_path_corner (edict_t* self)
 	VectorSet (self->mins, -8, -8, -8);
 	VectorSet (self->maxs, 8, 8, 8);
 	self->svflags |= SVF_NOCLIENT;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -43836,7 +43682,7 @@ static void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 		other->goalentity = other->movetarget = G_PickTarget(other->target);
 		if (!other->goalentity)
 		{
-			gi.dprintf("%s at %s target %s does not exist\n", self->classname, vtos(self->s.origin), self->target);
+			PF_dprintf("%s at %s target %s does not exist\n", self->classname, vtos(self->s.origin), self->target);
 			other->movetarget = self;
 		}
 		self->target = NULL;
@@ -43887,7 +43733,7 @@ void SP_point_combat (edict_t* self)
 	VectorSet (self->mins, -8, -8, -16);
 	VectorSet (self->maxs, 8, 8, 16);
 	self->svflags = SVF_NOCLIENT;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 };
 
 
@@ -43902,15 +43748,15 @@ void TH_viewthing(edict_t *ent)
 
 void SP_viewthing(edict_t *ent)
 {
-	gi.dprintf ("viewthing spawned\n");
+	PF_dprintf ("viewthing spawned\n");
 
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
 	ent->s.renderfx = RF_FRAMELERP;
 	VectorSet (ent->mins, -16, -16, -24);
 	VectorSet (ent->maxs, 16, 16, 32);
-	ent->s.modelindex = gi.modelindex ("models/objects/banner/tris.md2");
-	gi.linkentity (ent);
+	ent->s.modelindex = SV_ModelIndex ("models/objects/banner/tris.md2");
+	SV_LinkEdict (ent);
 	ent->nextthink = level.time + 0.5;
 	ent->think = TH_viewthing;
 	return;
@@ -43952,12 +43798,12 @@ static void light_use(edict_t* self, edict_t* other, edict_t* activator) {
 
 	if (self->spawnflags & START_OFF)
 	{
-		gi.configstring (CS_LIGHTS+self->style, "m");
+		PF_Configstring (CS_LIGHTS+self->style, "m");
 		self->spawnflags &= ~START_OFF;
 	}
 	else
 	{
-		gi.configstring (CS_LIGHTS+self->style, "a");
+		PF_Configstring (CS_LIGHTS+self->style, "a");
 		self->spawnflags |= START_OFF;
 	}
 }
@@ -43975,9 +43821,9 @@ void SP_light (edict_t* self)
 	{
 		self->use = light_use;
 		if (self->spawnflags & START_OFF)
-			gi.configstring (CS_LIGHTS+self->style, "a");
+			PF_Configstring (CS_LIGHTS+self->style, "a");
 		else
-			gi.configstring (CS_LIGHTS+self->style, "m");
+			PF_Configstring (CS_LIGHTS+self->style, "m");
 	}
 }
 
@@ -44011,7 +43857,7 @@ static void func_wall_use(edict_t* self, edict_t* other, edict_t* activator) {
 		self->solid = SOLID_NOT;
 		self->svflags |= SVF_NOCLIENT;
 	}
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (!(self->spawnflags & 2))
 		self->use = NULL;
@@ -44020,7 +43866,7 @@ static void func_wall_use(edict_t* self, edict_t* other, edict_t* activator) {
 void SP_func_wall (edict_t* self)
 {
 	self->movetype = MOVETYPE_PUSH;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	if (self->spawnflags & 8)
 		self->s.effects |= EF_ANIM_ALL;
@@ -44031,14 +43877,14 @@ void SP_func_wall (edict_t* self)
 	if ((self->spawnflags & 7) == 0)
 	{
 		self->solid = SOLID_BSP;
-		gi.linkentity (self);
+		SV_LinkEdict (self);
 		return;
 	}
 
 	// it must be TRIGGER_SPAWN
 	if (!(self->spawnflags & 1))
 	{
-//		gi.dprintf("func_wall missing TRIGGER_SPAWN\n");
+//		PF_dprintf("func_wall missing TRIGGER_SPAWN\n");
 		self->spawnflags |= 1;
 	}
 
@@ -44047,7 +43893,7 @@ void SP_func_wall (edict_t* self)
 	{
 		if (!(self->spawnflags & 2))
 		{
-			gi.dprintf("func_wall START_ON without TOGGLE\n");
+			PF_dprintf("func_wall START_ON without TOGGLE\n");
 			self->spawnflags |= 2;
 		}
 	}
@@ -44062,7 +43908,7 @@ void SP_func_wall (edict_t* self)
 		self->solid = SOLID_NOT;
 		self->svflags |= SVF_NOCLIENT;
 	}
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -44102,7 +43948,7 @@ static void func_object_use (edict_t* self, edict_t* other, edict_t* activator) 
 
 void SP_func_object (edict_t* self)
 {
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	self->mins[0] += 1;
 	self->mins[1] += 1;
@@ -44136,7 +43982,7 @@ void SP_func_object (edict_t* self)
 
 	self->clipmask = MASK_MONSTERSOLID;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -44233,7 +44079,7 @@ static void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activa
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = NULL;
 	KillBox (self);
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void SP_func_explosive (edict_t* self)
@@ -44246,10 +44092,10 @@ void SP_func_explosive (edict_t* self)
 
 	self->movetype = MOVETYPE_PUSH;
 
-	gi.modelindex ("models/objects/debris1/tris.md2");
-	gi.modelindex ("models/objects/debris2/tris.md2");
+	SV_ModelIndex ("models/objects/debris1/tris.md2");
+	SV_ModelIndex ("models/objects/debris2/tris.md2");
 
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	if (self->spawnflags & 1)
 	{
@@ -44277,7 +44123,7 @@ void SP_func_explosive (edict_t* self)
 		self->takedamage = DAMAGE_YES;
 	}
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -44399,15 +44245,15 @@ void SP_misc_explobox (edict_t* self)
 		return;
 	}
 
-	gi.modelindex ("models/objects/debris1/tris.md2");
-	gi.modelindex ("models/objects/debris2/tris.md2");
-	gi.modelindex ("models/objects/debris3/tris.md2");
+	SV_ModelIndex ("models/objects/debris1/tris.md2");
+	SV_ModelIndex ("models/objects/debris2/tris.md2");
+	SV_ModelIndex ("models/objects/debris3/tris.md2");
 
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_STEP;
 
 	self->model = "models/objects/barrels/tris.md2";
-	self->s.modelindex = gi.modelindex (self->model);
+	self->s.modelindex = SV_ModelIndex (self->model);
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 40);
 
@@ -44427,7 +44273,7 @@ void SP_misc_explobox (edict_t* self)
 	self->think = M_droptofloor;
 	self->nextthink = level.time + 2 * FRAMETIME;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -44462,12 +44308,12 @@ void SP_misc_blackhole (edict_t *ent)
 	ent->solid = SOLID_NOT;
 	VectorSet (ent->mins, -64, -64, 0);
 	VectorSet (ent->maxs, 64, 64, 8);
-	ent->s.modelindex = gi.modelindex ("models/objects/black/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/objects/black/tris.md2");
 	ent->s.renderfx = RF_TRANSLUCENT;
 	ent->use = misc_blackhole_use;
 	ent->think = misc_blackhole_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32)
@@ -44490,11 +44336,11 @@ void SP_misc_eastertank (edict_t *ent)
 	ent->solid = SOLID_BBOX;
 	VectorSet (ent->mins, -32, -32, -16);
 	VectorSet (ent->maxs, 32, 32, 32);
-	ent->s.modelindex = gi.modelindex ("models/monsters/tank/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/monsters/tank/tris.md2");
 	ent->s.frame = 254;
 	ent->think = misc_eastertank_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_easterchick (1 .5 0) (-32 -32 0) (32 32 32)
@@ -44518,11 +44364,11 @@ void SP_misc_easterchick (edict_t *ent)
 	ent->solid = SOLID_BBOX;
 	VectorSet (ent->mins, -32, -32, 0);
 	VectorSet (ent->maxs, 32, 32, 32);
-	ent->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/monsters/bitch/tris.md2");
 	ent->s.frame = 208;
 	ent->think = misc_easterchick_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_easterchick2 (1 .5 0) (-32 -32 0) (32 32 32)
@@ -44546,11 +44392,11 @@ void SP_misc_easterchick2 (edict_t *ent)
 	ent->solid = SOLID_BBOX;
 	VectorSet (ent->mins, -32, -32, 0);
 	VectorSet (ent->maxs, 32, 32, 32);
-	ent->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/monsters/bitch/tris.md2");
 	ent->s.frame = 248;
 	ent->think = misc_easterchick2_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -44567,7 +44413,7 @@ void commander_body_think (edict_t* self)
 		self->nextthink = 0;
 
 	if (self->s.frame == 22)
-		gi.sound (self, CHAN_BODY, gi.soundindex ("tank/thud.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("tank/thud.wav"), 1, ATTN_NORM, 0);
 }
 
 static void commander_body_use(edict_t* self, edict_t* other, edict_t* activator) {
@@ -44576,7 +44422,7 @@ static void commander_body_use(edict_t* self, edict_t* other, edict_t* activator
 
 	self->think = commander_body_think;
 	self->nextthink = level.time + FRAMETIME;
-	gi.sound (self, CHAN_BODY, gi.soundindex ("tank/pain.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("tank/pain.wav"), 1, ATTN_NORM, 0);
 }
 
 void commander_body_drop (edict_t* self)
@@ -44590,17 +44436,17 @@ void SP_monster_commander_body (edict_t* self)
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_BBOX;
 	self->model = "models/monsters/commandr/tris.md2";
-	self->s.modelindex = gi.modelindex (self->model);
+	self->s.modelindex = SV_ModelIndex (self->model);
 	VectorSet (self->mins, -32, -32, 0);
 	VectorSet (self->maxs, 32, 32, 48);
 	self->use = commander_body_use;
 	self->takedamage = DAMAGE_YES;
 	self->flags = FL_GODMODE;
 	self->s.renderfx |= RF_FRAMELERP;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
-	gi.soundindex ("tank/thud.wav");
-	gi.soundindex ("tank/pain.wav");
+	SV_SoundIndex ("tank/thud.wav");
+	SV_SoundIndex ("tank/pain.wav");
 
 	self->think = commander_body_drop;
 	self->nextthink = level.time + 5 * FRAMETIME;
@@ -44621,9 +44467,9 @@ void SP_misc_banner (edict_t *ent)
 {
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_NOT;
-	ent->s.modelindex = gi.modelindex ("models/objects/banner/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/objects/banner/tris.md2");
 	ent->s.frame = rand() % 16;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	ent->think = misc_banner_think;
 	ent->nextthink = level.time + FRAMETIME;
@@ -44642,7 +44488,7 @@ static void misc_deadsoldier_die(edict_t* self, edict_t* inflictor, edict_t* att
 	if (self->health > -80)
 		return;
 
-	gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 	for (n= 0; n < 4; n++)
 		ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 	ThrowHead (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
@@ -44658,7 +44504,7 @@ void SP_misc_deadsoldier (edict_t *ent)
 
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
-	ent->s.modelindex=gi.modelindex ("models/deadbods/dude/tris.md2");
+	ent->s.modelindex=SV_ModelIndex ("models/deadbods/dude/tris.md2");
 
 	// Defaults to frame 0
 	if (ent->spawnflags & 2)
@@ -44682,7 +44528,7 @@ void SP_misc_deadsoldier (edict_t *ent)
 	ent->die = misc_deadsoldier_die;
 	ent->monsterinfo.aiflags |= AI_GOOD_GUY;
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_viper (1 .5 0) (-16 -16 0) (16 16 32)
@@ -44707,7 +44553,7 @@ void SP_misc_viper (edict_t *ent)
 {
 	if (!ent->target)
 	{
-		gi.dprintf ("misc_viper without a target at %s\n", vtos(ent->absmin));
+		PF_dprintf ("misc_viper without a target at %s\n", vtos(ent->absmin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -44717,7 +44563,7 @@ void SP_misc_viper (edict_t *ent)
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_NOT;
-	ent->s.modelindex = gi.modelindex ("models/ships/viper/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/ships/viper/tris.md2");
 	VectorSet (ent->mins, -16, -16, 0);
 	VectorSet (ent->maxs, 16, 16, 32);
 
@@ -44727,7 +44573,7 @@ void SP_misc_viper (edict_t *ent)
 	ent->svflags |= SVF_NOCLIENT;
 	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -44740,8 +44586,8 @@ void SP_misc_bigviper (edict_t *ent)
 	ent->solid = SOLID_BBOX;
 	VectorSet (ent->mins, -176, -120, -24);
 	VectorSet (ent->maxs, 176, 120, 72);
-	ent->s.modelindex = gi.modelindex ("models/ships/bigviper/tris.md2");
-	gi.linkentity (ent);
+	ent->s.modelindex = SV_ModelIndex ("models/ships/bigviper/tris.md2");
+	SV_LinkEdict (ent);
 }
 
 
@@ -44807,7 +44653,7 @@ void SP_misc_viper_bomb (edict_t* self)
 	VectorSet (self->mins, -8, -8, -8);
 	VectorSet (self->maxs, 8, 8, 8);
 
-	self->s.modelindex = gi.modelindex ("models/objects/bomb/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/objects/bomb/tris.md2");
 
 	if (!self->dmg)
 		self->dmg = 1000;
@@ -44815,7 +44661,7 @@ void SP_misc_viper_bomb (edict_t* self)
 	self->use = misc_viper_bomb_use;
 	self->svflags |= SVF_NOCLIENT;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -44841,7 +44687,7 @@ void SP_misc_strogg_ship (edict_t *ent)
 {
 	if (!ent->target)
 	{
-		gi.dprintf ("%s without a target at %s\n", ent->classname, vtos(ent->absmin));
+		PF_dprintf ("%s without a target at %s\n", ent->classname, vtos(ent->absmin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -44851,7 +44697,7 @@ void SP_misc_strogg_ship (edict_t *ent)
 
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_NOT;
-	ent->s.modelindex = gi.modelindex ("models/ships/strogg1/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/ships/strogg1/tris.md2");
 	VectorSet (ent->mins, -16, -16, 0);
 	VectorSet (ent->maxs, 16, 16, 32);
 
@@ -44861,7 +44707,7 @@ void SP_misc_strogg_ship (edict_t *ent)
 	ent->svflags |= SVF_NOCLIENT;
 	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -44889,9 +44735,9 @@ void SP_misc_satellite_dish (edict_t *ent)
 	ent->solid = SOLID_BBOX;
 	VectorSet (ent->mins, -64, -64, 0);
 	VectorSet (ent->maxs, 64, 64, 128);
-	ent->s.modelindex = gi.modelindex ("models/objects/satellite/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/objects/satellite/tris.md2");
 	ent->use = misc_satellite_dish_use;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -44901,8 +44747,8 @@ void SP_light_mine1 (edict_t *ent)
 {
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
-	ent->s.modelindex = gi.modelindex ("models/objects/minelite/light1/tris.md2");
-	gi.linkentity (ent);
+	ent->s.modelindex = SV_ModelIndex ("models/objects/minelite/light1/tris.md2");
+	SV_LinkEdict (ent);
 }
 
 
@@ -44912,8 +44758,8 @@ void SP_light_mine2 (edict_t *ent)
 {
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
-	ent->s.modelindex = gi.modelindex ("models/objects/minelite/light2/tris.md2");
-	gi.linkentity (ent);
+	ent->s.modelindex = SV_ModelIndex ("models/objects/minelite/light2/tris.md2");
+	SV_LinkEdict (ent);
 }
 
 
@@ -44922,7 +44768,7 @@ Intended for use with the target_spawner
 */
 void SP_misc_gib_arm (edict_t *ent)
 {
-	gi.setmodel (ent, "models/objects/gibs/arm/tris.md2");
+	PF_setmodel (ent, "models/objects/gibs/arm/tris.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = DAMAGE_YES;
@@ -44935,7 +44781,7 @@ void SP_misc_gib_arm (edict_t *ent)
 	ent->avelocity[2] = random()*200;
 	ent->think = G_FreeEdict;
 	ent->nextthink = level.time + 30;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_gib_leg (1 0 0) (-8 -8 -8) (8 8 8)
@@ -44943,7 +44789,7 @@ Intended for use with the target_spawner
 */
 void SP_misc_gib_leg (edict_t *ent)
 {
-	gi.setmodel (ent, "models/objects/gibs/leg/tris.md2");
+	PF_setmodel (ent, "models/objects/gibs/leg/tris.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = DAMAGE_YES;
@@ -44956,7 +44802,7 @@ void SP_misc_gib_leg (edict_t *ent)
 	ent->avelocity[2] = random()*200;
 	ent->think = G_FreeEdict;
 	ent->nextthink = level.time + 30;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*QUAKED misc_gib_head (1 0 0) (-8 -8 -8) (8 8 8)
@@ -44964,7 +44810,7 @@ Intended for use with the target_spawner
 */
 void SP_misc_gib_head (edict_t *ent)
 {
-	gi.setmodel (ent, "models/objects/gibs/head/tris.md2");
+	PF_setmodel (ent, "models/objects/gibs/head/tris.md2");
 	ent->solid = SOLID_NOT;
 	ent->s.effects |= EF_GIB;
 	ent->takedamage = DAMAGE_YES;
@@ -44977,7 +44823,7 @@ void SP_misc_gib_head (edict_t *ent)
 	ent->avelocity[2] = random()*200;
 	ent->think = G_FreeEdict;
 	ent->nextthink = level.time + 30;
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 //=====================================================
@@ -44990,10 +44836,10 @@ used with target_string (must be on same "team")
 void SP_target_character (edict_t* self)
 {
 	self->movetype = MOVETYPE_PUSH;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 	self->solid = SOLID_BSP;
 	self->s.frame = 12;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 	return;
 }
 
@@ -45181,14 +45027,14 @@ void SP_func_clock (edict_t* self)
 {
 	if (!self->target)
 	{
-		gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	if ((self->spawnflags & 2) && (!self->count))
 	{
-		gi.dprintf("%s with no count at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s with no count at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -45198,7 +45044,7 @@ void SP_func_clock (edict_t* self)
 
 	func_clock_reset (self);
 
-	self->message = gi.TagMalloc (CLOCK_MESSAGE_SIZE, TAG_LEVEL);
+	self->message = Z_TagMalloc (CLOCK_MESSAGE_SIZE, TAG_LEVEL);
 
 	self->think = func_clock_think;
 
@@ -45222,12 +45068,12 @@ static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csu
 	dest = G_Find (NULL, FOFS(targetname), self->target);
 	if (!dest)
 	{
-		gi.dprintf ("Couldn't find destination\n");
+		PF_dprintf ("Couldn't find destination\n");
 		return;
 	}
 
 	// unlink to make sure it can't possibly interfere with KillBox
-	gi.unlinkentity (other);
+	SV_UnlinkEdict (other);
 
 	VectorCopy (dest->s.origin, other->s.origin);
 	VectorCopy (dest->s.origin, other->s.old_origin);
@@ -45253,7 +45099,7 @@ static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csu
 	// kill anything at the destination
 	KillBox (other);
 
-	gi.linkentity (other);
+	SV_LinkEdict (other);
 }
 
 /*QUAKED misc_teleporter (1 0 0) (-32 -32 -24) (32 32 -16)
@@ -45265,20 +45111,20 @@ void SP_misc_teleporter (edict_t *ent)
 
 	if (!ent->target)
 	{
-		gi.dprintf ("teleporter without a target.\n");
+		PF_dprintf ("teleporter without a target.\n");
 		G_FreeEdict (ent);
 		return;
 	}
 
-	gi.setmodel (ent, "models/objects/dmspot/tris.md2");
+	PF_setmodel (ent, "models/objects/dmspot/tris.md2");
 	ent->s.skinnum = 1;
 	ent->s.effects = EF_TELEPORTER;
-	ent->s.sound = gi.soundindex ("world/amb10.wav");
+	ent->s.sound = SV_SoundIndex ("world/amb10.wav");
 	ent->solid = SOLID_BBOX;
 
 	VectorSet (ent->mins, -32, -32, -24);
 	VectorSet (ent->maxs, 32, 32, -16);
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	trig = G_Spawn ();
 	trig->touch = teleporter_touch;
@@ -45288,7 +45134,7 @@ void SP_misc_teleporter (edict_t *ent)
 	VectorCopy (ent->s.origin, trig->s.origin);
 	VectorSet (trig->mins, -8, -8, 8);
 	VectorSet (trig->maxs, 8, 8, 24);
-	gi.linkentity (trig);
+	SV_LinkEdict (trig);
 
 }
 
@@ -45297,13 +45143,13 @@ Point teleporters at these.
 */
 void SP_misc_teleporter_dest (edict_t *ent)
 {
-	gi.setmodel (ent, "models/objects/dmspot/tris.md2");
+	PF_setmodel (ent, "models/objects/dmspot/tris.md2");
 	ent->s.skinnum = 0;
 	ent->solid = SOLID_BBOX;
 //	ent->s.effects |= EF_FLIES;
 	VectorSet (ent->mins, -32, -32, -24);
 	VectorSet (ent->maxs, 32, 32, -16);
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /* ============ end source: game/g_misc.c ============ */
@@ -45324,69 +45170,69 @@ void monster_fire_bullet (edict_t* self, vec3_t start, vec3_t dir, int damage, i
 {
 	fire_bullet (self, start, dir, damage, kick, hspread, vspread, MOD_UNKNOWN);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 void monster_fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype)
 {
 	fire_shotgun (self, start, aimdir, damage, kick, hspread, vspread, count, MOD_UNKNOWN);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 void monster_fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
 {
 	fire_blaster (self, start, dir, damage, speed, effect, false);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 void monster_fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
 	fire_grenade (self, start, aimdir, damage, speed, 2.5, damage+40);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 void monster_fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype)
 {
 	fire_rocket (self, start, dir, damage, speed, damage+20, damage);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
 {
 	fire_rail (self, start, aimdir, damage, kick);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 static void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, int flashtype) {
 	fire_bfg(self, start, aimdir, damage, speed, damage_radius);
 
-	gi.WriteByte (svc_muzzleflash2);
-	gi.WriteShort (self - g_edicts);
-	gi.WriteByte (flashtype);
-	gi.multicast (start, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash2);
+	PF_WriteShort (self - g_edicts);
+	PF_WriteByte (flashtype);
+	SV_Multicast (start, MULTICAST_PVS);
 }
 
 
@@ -45406,7 +45252,7 @@ static void M_FliesOn (edict_t* self)
 	if (self->waterlevel)
 		return;
 	self->s.effects |= EF_FLIES;
-	self->s.sound = gi.soundindex ("infantry/inflies1.wav");
+	self->s.sound = SV_SoundIndex ("infantry/inflies1.wav");
 	self->think = M_FliesOff;
 	self->nextthink = level.time + 60;
 }
@@ -45448,7 +45294,7 @@ void M_CheckGround (edict_t *ent)
 	point[1] = ent->s.origin[1];
 	point[2] = ent->s.origin[2] - 0.25;
 
-	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, point, ent, MASK_MONSTERSOLID);
+	trace = SV_Trace (ent->s.origin, ent->mins, ent->maxs, point, ent, MASK_MONSTERSOLID);
 
 	// check steepness
 	if ( trace.plane.normal[2] < 0.7 && !trace.startsolid)
@@ -45482,7 +45328,7 @@ void M_CatagorizePosition (edict_t *ent)
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
 	point[2] = ent->s.origin[2] + ent->mins[2] + 1;
-	cont = gi.pointcontents (point);
+	cont = SV_PointContents (point);
 
 	if (!(cont & MASK_WATER))
 	{
@@ -45494,13 +45340,13 @@ void M_CatagorizePosition (edict_t *ent)
 	ent->watertype = cont;
 	ent->waterlevel = 1;
 	point[2] += 26;
-	cont = gi.pointcontents (point);
+	cont = SV_PointContents (point);
 	if (!(cont & MASK_WATER))
 		return;
 
 	ent->waterlevel = 2;
 	point[2] += 22;
-	cont = gi.pointcontents (point);
+	cont = SV_PointContents (point);
 	if (cont & MASK_WATER)
 		ent->waterlevel = 3;
 }
@@ -45554,7 +45400,7 @@ void M_WorldEffects (edict_t *ent)
 	{
 		if (ent->flags & FL_INWATER)
 		{
-			gi.sound (ent, CHAN_BODY, gi.soundindex("player/watr_out.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (ent, CHAN_BODY, SV_SoundIndex("player/watr_out.wav"), 1, ATTN_NORM, 0);
 			ent->flags &= ~FL_INWATER;
 		}
 		return;
@@ -45583,13 +45429,13 @@ void M_WorldEffects (edict_t *ent)
 		{
 			if (ent->watertype & CONTENTS_LAVA)
 				if (random() <= 0.5)
-					gi.sound (ent, CHAN_BODY, gi.soundindex("player/lava1.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (ent, CHAN_BODY, SV_SoundIndex("player/lava1.wav"), 1, ATTN_NORM, 0);
 				else
-					gi.sound (ent, CHAN_BODY, gi.soundindex("player/lava2.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (ent, CHAN_BODY, SV_SoundIndex("player/lava2.wav"), 1, ATTN_NORM, 0);
 			else if (ent->watertype & CONTENTS_SLIME)
-				gi.sound (ent, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound (ent, CHAN_BODY, SV_SoundIndex("player/watr_in.wav"), 1, ATTN_NORM, 0);
 			else if (ent->watertype & CONTENTS_WATER)
-				gi.sound (ent, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound (ent, CHAN_BODY, SV_SoundIndex("player/watr_in.wav"), 1, ATTN_NORM, 0);
 		}
 
 		ent->flags |= FL_INWATER;
@@ -45607,14 +45453,14 @@ void M_droptofloor (edict_t *ent)
 	VectorCopy (ent->s.origin, end);
 	end[2] -= 256;
 
-	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
+	trace = SV_Trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1 || trace.allsolid)
 		return;
 
 	VectorCopy (trace.endpos, ent->s.origin);
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 	M_CheckGround (ent);
 	M_CatagorizePosition (ent);
 }
@@ -45753,7 +45599,7 @@ void monster_triggered_spawn (edict_t* self)
 	self->movetype = MOVETYPE_STEP;
 	self->svflags &= ~SVF_NOCLIENT;
 	self->air_finished = level.time + 12;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	monster_start_go (self);
 
@@ -45832,7 +45678,7 @@ bool monster_start (edict_t* self)
 	{
 		self->spawnflags &= ~4;
 		self->spawnflags |= 1;
-//		gi.dprintf("fixed spawnflags on %s at %s\n", self->classname, vtos(self->s.origin));
+//		PF_dprintf("fixed spawnflags on %s at %s\n", self->classname, vtos(self->s.origin));
 	}
 
 	if (!(self->monsterinfo.aiflags & AI_GOOD_GUY))
@@ -45859,7 +45705,7 @@ bool monster_start (edict_t* self)
 	{
 		self->item = FindItemByClassname (st.item);
 		if (!self->item)
-			gi.dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
+			PF_dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
 	}
 
 	// randomize what frame they start on
@@ -45899,7 +45745,7 @@ void monster_start_go (edict_t* self)
 			}
 		}
 		if (notcombat && self->combattarget)
-			gi.dprintf("%s at %s has target with mixed types\n", self->classname, vtos(self->s.origin));
+			PF_dprintf("%s at %s has target with mixed types\n", self->classname, vtos(self->s.origin));
 		if (fixup)
 			self->target = NULL;
 	}
@@ -45914,7 +45760,7 @@ void monster_start_go (edict_t* self)
 		{
 			if (strcmp(target->classname, "point_combat") != 0)
 			{
-				gi.dprintf("%s at (%i %i %i) has a bad combattarget %s : %s at (%i %i %i)\n",
+				PF_dprintf("%s at (%i %i %i) has a bad combattarget %s : %s at (%i %i %i)\n",
 					self->classname, (int)self->s.origin[0], (int)self->s.origin[1], (int)self->s.origin[2],
 					self->combattarget, target->classname, (int)target->s.origin[0], (int)target->s.origin[1],
 					(int)target->s.origin[2]);
@@ -45927,7 +45773,7 @@ void monster_start_go (edict_t* self)
 		self->goalentity = self->movetarget = G_PickTarget(self->target);
 		if (!self->movetarget)
 		{
-			gi.dprintf ("%s can't find target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
+			PF_dprintf ("%s can't find target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
 			self->target = NULL;
 			self->monsterinfo.pausetime = 100000000;
 			self->monsterinfo.stand (self);
@@ -45965,7 +45811,7 @@ void walkmonster_start_go (edict_t* self)
 
 		if (self->groundentity)
 			if (!M_walkmove (self, 0, 0))
-				gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
+				PF_dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 	}
 
 	if (!self->yaw_speed)
@@ -45988,7 +45834,7 @@ void walkmonster_start (edict_t* self)
 void flymonster_start_go (edict_t* self)
 {
 	if (!M_walkmove (self, 0, 0))
-		gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 
 	if (!self->yaw_speed)
 		self->yaw_speed = 10;
@@ -46068,7 +45914,7 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 		mask = ent->clipmask;
 	else
 		mask = MASK_SOLID;
-	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask);
+	trace = SV_Trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask);
 
 	if (trace.startsolid)
 		return g_edicts;
@@ -46211,7 +46057,7 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 		for (i=0 ; i<3 ; i++)
 			end[i] = ent->s.origin[i] + time_left * ent->velocity[i];
 
-		trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, mask);
+		trace = SV_Trace (ent->s.origin, ent->mins, ent->maxs, end, ent, mask);
 
 		if (trace.allsolid)
 		{	// entity is trapped in another solid
@@ -46290,7 +46136,7 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 		{	// go along the crease
 			if (numplanes != 2)
 			{
-//				gi.dprintf ("clip velocity, numplanes == %i\n",numplanes);
+//				PF_dprintf ("clip velocity, numplanes == %i\n",numplanes);
 				VectorCopy (vec3_origin, ent->velocity);
 				return 7;
 			}
@@ -46356,10 +46202,10 @@ retry:
 	else
 		mask = MASK_SOLID;
 
-	trace = gi.trace (start, ent->mins, ent->maxs, end, ent, mask);
+	trace = SV_Trace (start, ent->mins, ent->maxs, end, ent, mask);
 
 	VectorCopy (trace.endpos, ent->s.origin);
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	if (trace.fraction != 1.0)
 	{
@@ -46370,7 +46216,7 @@ retry:
 		{
 			// move the pusher back and try again
 			VectorCopy (start, ent->s.origin);
-			gi.linkentity (ent);
+			SV_LinkEdict (ent);
 			goto retry;
 		}
 	}
@@ -46444,7 +46290,7 @@ bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 // move the pusher to it's final position
 	VectorAdd (pusher->s.origin, move, pusher->s.origin);
 	VectorAdd (pusher->s.angles, amove, pusher->s.angles);
-	gi.linkentity (pusher);
+	SV_LinkEdict (pusher);
 
 // see if any solid entities are inside the final position
 	check = g_edicts+1;
@@ -46508,7 +46354,7 @@ bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 			block = SV_TestEntityPosition (check);
 			if (!block)
 			{	// pushed ok
-				gi.linkentity (check);
+				SV_LinkEdict (check);
 				// impact?
 				continue;
 			}
@@ -46539,7 +46385,7 @@ bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 			{
 				p->ent->client->ps.pmove.delta_angles[YAW] = p->deltayaw;
 			}
-			gi.linkentity (p->ent);
+			SV_LinkEdict (p->ent);
 		}
 		return false;
 	}
@@ -46649,7 +46495,7 @@ void SV_Physics_Noclip (edict_t *ent)
 	VectorMA (ent->s.angles, FRAMETIME, ent->avelocity, ent->s.angles);
 	VectorMA (ent->s.origin, FRAMETIME, ent->velocity, ent->s.origin);
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 /*
@@ -46741,7 +46587,7 @@ void SV_Physics_Toss (edict_t *ent)
 
 // check for water transition
 	wasinwater = (ent->watertype & MASK_WATER);
-	ent->watertype = gi.pointcontents (ent->s.origin);
+	ent->watertype = SV_PointContents (ent->s.origin);
 	isinwater = ent->watertype & MASK_WATER;
 
 	if (isinwater)
@@ -46750,15 +46596,15 @@ void SV_Physics_Toss (edict_t *ent)
 		ent->waterlevel = 0;
 
 	if (!wasinwater && isinwater)
-		gi.positioned_sound (old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
+		SV_StartSound (old_origin, g_edicts, CHAN_AUTO, SV_SoundIndex("misc/h2ohit1.wav"), 1, 1, 0);
 	else if (wasinwater && !isinwater)
-		gi.positioned_sound (ent->s.origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
+		SV_StartSound (ent->s.origin, g_edicts, CHAN_AUTO, SV_SoundIndex("misc/h2ohit1.wav"), 1, 1, 0);
 
 // move teamslaves
 	for (slave = ent->teamchain; slave; slave = slave->teamchain)
 	{
 		VectorCopy (ent->s.origin, slave->s.origin);
-		gi.linkentity (slave);
+		SV_LinkEdict (slave);
 	}
 }
 
@@ -46907,7 +46753,7 @@ void SV_Physics_Step (edict_t *ent)
 			mask = MASK_SOLID;
 		SV_FlyMove (ent, FRAMETIME, mask);
 
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 		G_TouchTriggers (ent);
 		if (!ent->inuse)
 			return;
@@ -46915,7 +46761,7 @@ void SV_Physics_Step (edict_t *ent)
 		if (ent->groundentity)
 			if (!wasonground)
 				if (hitsound)
-					gi.sound (ent, 0, gi.soundindex("world/land.wav"), 1, 1, 0);
+					PF_StartSound (ent, 0, SV_SoundIndex("world/land.wav"), 1, 1, 0);
 	}
 
 	// regular thinking
@@ -47072,53 +46918,53 @@ static field_t clientfields[] = {
 // This will be called when the dll is first loaded,
 // which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
-	gi.dprintf ("==== InitGame ====\n");
+	PF_dprintf ("==== InitGame ====\n");
 
-	gun_x = gi.cvar ("gun_x", "0", 0);
-	gun_y = gi.cvar ("gun_y", "0", 0);
-	gun_z = gi.cvar ("gun_z", "0", 0);
+	gun_x = COM_GetCvar ("gun_x", "0", 0);
+	gun_y = COM_GetCvar ("gun_y", "0", 0);
+	gun_z = COM_GetCvar ("gun_z", "0", 0);
 
 	//FIXME: sv_ prefix is wrong for these
-	sv_rollspeed = gi.cvar ("sv_rollspeed", "200", 0);
-	sv_rollangle = gi.cvar ("sv_rollangle", "2", 0);
-	sv_maxvelocity = gi.cvar ("sv_maxvelocity", "2000", 0);
-	sv_gravity = gi.cvar ("sv_gravity", "800", 0);
+	sv_rollspeed = COM_GetCvar ("sv_rollspeed", "200", 0);
+	sv_rollangle = COM_GetCvar ("sv_rollangle", "2", 0);
+	sv_maxvelocity = COM_GetCvar ("sv_maxvelocity", "2000", 0);
+	sv_gravity = COM_GetCvar ("sv_gravity", "800", 0);
 
 	// latched vars
-	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
-	gi.cvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
-	gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
+	sv_cheats = COM_GetCvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
+	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
-	maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-	maxspectators = gi.cvar ("maxspectators", "4", CVAR_SERVERINFO);
-	deathmatch = gi.cvar ("deathmatch", "0", CVAR_LATCH);
-	coop = gi.cvar ("coop", "0", CVAR_LATCH);
-	skill = gi.cvar ("skill", "1", CVAR_LATCH);
-	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
+	maxclients = COM_GetCvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
+	maxspectators = COM_GetCvar ("maxspectators", "4", CVAR_SERVERINFO);
+	deathmatch = COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
+	coop = COM_GetCvar ("coop", "0", CVAR_LATCH);
+	skill = COM_GetCvar ("skill", "1", CVAR_LATCH);
+	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
-	dmflags = gi.cvar ("dmflags", "0", CVAR_SERVERINFO);
-	fraglimit = gi.cvar ("fraglimit", "0", CVAR_SERVERINFO);
-	timelimit = gi.cvar ("timelimit", "0", CVAR_SERVERINFO);
-	password = gi.cvar ("password", "", CVAR_USERINFO);
-	spectator_password = gi.cvar ("spectator_password", "", CVAR_USERINFO);
-	filterban = gi.cvar ("filterban", "1", 0);
+	dmflags = COM_GetCvar ("dmflags", "0", CVAR_SERVERINFO);
+	fraglimit = COM_GetCvar ("fraglimit", "0", CVAR_SERVERINFO);
+	timelimit = COM_GetCvar ("timelimit", "0", CVAR_SERVERINFO);
+	password = COM_GetCvar ("password", "", CVAR_USERINFO);
+	spectator_password = COM_GetCvar ("spectator_password", "", CVAR_USERINFO);
+	filterban = COM_GetCvar ("filterban", "1", 0);
 
-	g_select_empty = gi.cvar ("g_select_empty", "0", CVAR_ARCHIVE);
+	g_select_empty = COM_GetCvar ("g_select_empty", "0", CVAR_ARCHIVE);
 
-	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
-	run_roll = gi.cvar ("run_roll", "0.005", 0);
-	bob_up  = gi.cvar ("bob_up", "0.005", 0);
-	bob_pitch = gi.cvar ("bob_pitch", "0.002", 0);
-	bob_roll = gi.cvar ("bob_roll", "0.002", 0);
+	run_pitch = COM_GetCvar ("run_pitch", "0.002", 0);
+	run_roll = COM_GetCvar ("run_roll", "0.005", 0);
+	bob_up  = COM_GetCvar ("bob_up", "0.005", 0);
+	bob_pitch = COM_GetCvar ("bob_pitch", "0.002", 0);
+	bob_roll = COM_GetCvar ("bob_roll", "0.002", 0);
 
 	// flood control
-	flood_msgs = gi.cvar ("flood_msgs", "4", 0);
-	flood_persecond = gi.cvar ("flood_persecond", "4", 0);
-	flood_waitdelay = gi.cvar ("flood_waitdelay", "10", 0);
+	flood_msgs = COM_GetCvar ("flood_msgs", "4", 0);
+	flood_persecond = COM_GetCvar ("flood_persecond", "4", 0);
+	flood_waitdelay = COM_GetCvar ("flood_waitdelay", "10", 0);
 
 	// dm map list
-	sv_maplist = gi.cvar ("sv_maplist", "", 0);
+	sv_maplist = COM_GetCvar ("sv_maplist", "", 0);
 
 	// items
 	InitItems ();
@@ -47129,13 +46975,13 @@ static void InitGame() {
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->value;
-	g_edicts =  gi.TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 	globals.edicts = g_edicts;
 	globals.max_edicts = game.maxentities;
 
 	// initialize all clients for this game
 	game.maxclients = maxclients->value;
-	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
+	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients+1;
 }
 
@@ -47260,7 +47106,7 @@ void ReadField (FILE *f, field_t *field, u8 *base)
 			*(char **)p = NULL;
 		else
 		{
-			*(char **)p = gi.TagMalloc (len, TAG_LEVEL);
+			*(char **)p = Z_TagMalloc (len, TAG_LEVEL);
 			fread (*(char **)p, len, 1, f);
 		}
 		break;
@@ -47406,7 +47252,7 @@ void ReadGame (char *filename)
 	int		i;
 	char	str[16];
 
-	gi.FreeTags (TAG_GAME);
+	Z_FreeTags (TAG_GAME);
 
 	f = fopen (filename, "rb");
 	assert(f);
@@ -47414,11 +47260,11 @@ void ReadGame (char *filename)
 	fread (str, sizeof(str), 1, f);
 	assert(!strcmp(str, __DATE__));
 
-	g_edicts =  gi.TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 	globals.edicts = g_edicts;
 
 	fread (&game, sizeof(game), 1, f);
-	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
+	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	for (i=0 ; i<game.maxclients ; i++)
 		ReadClient (f, &game.clients[i]);
 
@@ -47602,7 +47448,7 @@ void ReadLevel (char *filename)
 
 	// free any dynamic memory allocated by loading the level
 	// base state
-	gi.FreeTags (TAG_LEVEL);
+	Z_FreeTags (TAG_LEVEL);
 
 	// wipe all the entities
 	memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));
@@ -47635,7 +47481,7 @@ void ReadLevel (char *filename)
 
 		// let the server rebuild world links for this ent
 		memset (&ent->area, 0, sizeof(ent->area));
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 	}
 
 	fclose (f);
@@ -47929,7 +47775,7 @@ void ED_CallSpawn (edict_t *ent)
 
 	if (!ent->classname)
 	{
-		gi.dprintf ("ED_CallSpawn: NULL classname\n");
+		PF_dprintf ("ED_CallSpawn: NULL classname\n");
 		return;
 	}
 
@@ -47954,7 +47800,7 @@ void ED_CallSpawn (edict_t *ent)
 			return;
 		}
 	}
-	gi.dprintf ("%s doesn't have a spawn function\n", ent->classname);
+	PF_dprintf ("%s doesn't have a spawn function\n", ent->classname);
 }
 
 /*
@@ -47969,7 +47815,7 @@ char *ED_NewString (char *string)
 
 	l = strlen(string) + 1;
 
-	newb = gi.TagMalloc (l, TAG_LEVEL);
+	newb = Z_TagMalloc (l, TAG_LEVEL);
 
 	new_p = newb;
 
@@ -48048,7 +47894,7 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 			return;
 		}
 	}
-	gi.dprintf ("%s is not a field\n", key);
+	PF_dprintf ("%s is not a field\n", key);
 }
 
 // Parses an edict out of the given string, returning the new position
@@ -48144,7 +47990,7 @@ void G_FindTeams (void)
 		}
 	}
 
-	gi.dprintf ("%i teams with %i entities\n", c, c2);
+	PF_dprintf ("%i teams with %i entities\n", c, c2);
 }
 
 /*
@@ -48169,11 +48015,11 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	if (skill_level > 3)
 		skill_level = 3;
 	if (skill->value != skill_level)
-		gi.cvar_forceset("skill", va("%f", skill_level));
+		Com_ForceSetCvar("skill", va("%f", skill_level));
 
 	SaveClientData ();
 
-	gi.FreeTags (TAG_LEVEL);
+	Z_FreeTags (TAG_LEVEL);
 
 	memset (&level, 0, sizeof(level));
 	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
@@ -48239,7 +48085,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		ED_CallSpawn (ent);
 	}
 
-	gi.dprintf ("%i entities inhibited\n", inhibit);
+	PF_dprintf ("%i entities inhibited\n", inhibit);
 
 	G_FindTeams ();
 
@@ -48442,171 +48288,171 @@ void SP_worldspawn (edict_t *ent)
 
 	if (ent->message && ent->message[0])
 	{
-		gi.configstring (CS_NAME, ent->message);
+		PF_Configstring (CS_NAME, ent->message);
 		strncpy (level.level_name, ent->message, sizeof(level.level_name));
 	}
 	else
 		strncpy (level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.sky && st.sky[0])
-		gi.configstring (CS_SKY, st.sky);
+		PF_Configstring (CS_SKY, st.sky);
 	else
-		gi.configstring (CS_SKY, "unit1_");
+		PF_Configstring (CS_SKY, "unit1_");
 
-	gi.configstring (CS_SKYROTATE, va("%f", st.skyrotate) );
+	PF_Configstring (CS_SKYROTATE, va("%f", st.skyrotate) );
 
-	gi.configstring (CS_SKYAXIS, va("%f %f %f",
+	PF_Configstring (CS_SKYAXIS, va("%f %f %f",
 		st.skyaxis[0], st.skyaxis[1], st.skyaxis[2]) );
 
-	gi.configstring (CS_CDTRACK, va("%i", ent->sounds) );
+	PF_Configstring (CS_CDTRACK, va("%i", ent->sounds) );
 
-	gi.configstring (CS_MAXCLIENTS, va("%i", (int)(maxclients->value) ) );
+	PF_Configstring (CS_MAXCLIENTS, va("%i", (int)(maxclients->value) ) );
 
 	// status bar program
 	if (deathmatch->value)
-		gi.configstring (CS_STATUSBAR, dm_statusbar);
+		PF_Configstring (CS_STATUSBAR, dm_statusbar);
 	else
-		gi.configstring (CS_STATUSBAR, single_statusbar);
+		PF_Configstring (CS_STATUSBAR, single_statusbar);
 
 	//---------------
 
 
 	// help icon for statusbar
-	gi.imageindex ("i_help");
-	level.pic_health = gi.imageindex ("i_health");
-	gi.imageindex ("help");
-	gi.imageindex ("field_3");
+	SV_ImageIndex ("i_help");
+	level.pic_health = SV_ImageIndex ("i_health");
+	SV_ImageIndex ("help");
+	SV_ImageIndex ("field_3");
 
 	if (!st.gravity)
-		gi.cvar_set("sv_gravity", "800");
+		COM_SetCvar("sv_gravity", "800");
 	else
-		gi.cvar_set("sv_gravity", st.gravity);
+		COM_SetCvar("sv_gravity", st.gravity);
 
-	snd_fry = gi.soundindex ("player/fry.wav");	// standing in lava / slime
+	snd_fry = SV_SoundIndex ("player/fry.wav");	// standing in lava / slime
 
 	PrecacheItem (FindItem ("Blaster"));
 
-	gi.soundindex ("player/lava1.wav");
-	gi.soundindex ("player/lava2.wav");
+	SV_SoundIndex ("player/lava1.wav");
+	SV_SoundIndex ("player/lava2.wav");
 
-	gi.soundindex ("misc/pc_up.wav");
-	gi.soundindex ("misc/talk1.wav");
+	SV_SoundIndex ("misc/pc_up.wav");
+	SV_SoundIndex ("misc/talk1.wav");
 
-	gi.soundindex ("misc/udeath.wav");
+	SV_SoundIndex ("misc/udeath.wav");
 
 	// gibs
-	gi.soundindex ("items/respawn1.wav");
+	SV_SoundIndex ("items/respawn1.wav");
 
 	// sexed sounds
-	gi.soundindex ("*death1.wav");
-	gi.soundindex ("*death2.wav");
-	gi.soundindex ("*death3.wav");
-	gi.soundindex ("*death4.wav");
-	gi.soundindex ("*fall1.wav");
-	gi.soundindex ("*fall2.wav");
-	gi.soundindex ("*gurp1.wav");		// drowning damage
-	gi.soundindex ("*gurp2.wav");
-	gi.soundindex ("*jump1.wav");		// player jump
-	gi.soundindex ("*pain25_1.wav");
-	gi.soundindex ("*pain25_2.wav");
-	gi.soundindex ("*pain50_1.wav");
-	gi.soundindex ("*pain50_2.wav");
-	gi.soundindex ("*pain75_1.wav");
-	gi.soundindex ("*pain75_2.wav");
-	gi.soundindex ("*pain100_1.wav");
-	gi.soundindex ("*pain100_2.wav");
+	SV_SoundIndex ("*death1.wav");
+	SV_SoundIndex ("*death2.wav");
+	SV_SoundIndex ("*death3.wav");
+	SV_SoundIndex ("*death4.wav");
+	SV_SoundIndex ("*fall1.wav");
+	SV_SoundIndex ("*fall2.wav");
+	SV_SoundIndex ("*gurp1.wav");		// drowning damage
+	SV_SoundIndex ("*gurp2.wav");
+	SV_SoundIndex ("*jump1.wav");		// player jump
+	SV_SoundIndex ("*pain25_1.wav");
+	SV_SoundIndex ("*pain25_2.wav");
+	SV_SoundIndex ("*pain50_1.wav");
+	SV_SoundIndex ("*pain50_2.wav");
+	SV_SoundIndex ("*pain75_1.wav");
+	SV_SoundIndex ("*pain75_2.wav");
+	SV_SoundIndex ("*pain100_1.wav");
+	SV_SoundIndex ("*pain100_2.wav");
 
 	// sexed models
 	// THIS ORDER MUST MATCH THE DEFINES IN g_local.h
 	// you can add more, max 15
-	gi.modelindex ("#w_blaster.md2");
-	gi.modelindex ("#w_shotgun.md2");
-	gi.modelindex ("#w_sshotgun.md2");
-	gi.modelindex ("#w_machinegun.md2");
-	gi.modelindex ("#w_chaingun.md2");
-	gi.modelindex ("#a_grenades.md2");
-	gi.modelindex ("#w_glauncher.md2");
-	gi.modelindex ("#w_rlauncher.md2");
-	gi.modelindex ("#w_hyperblaster.md2");
-	gi.modelindex ("#w_railgun.md2");
-	gi.modelindex ("#w_bfg.md2");
+	SV_ModelIndex ("#w_blaster.md2");
+	SV_ModelIndex ("#w_shotgun.md2");
+	SV_ModelIndex ("#w_sshotgun.md2");
+	SV_ModelIndex ("#w_machinegun.md2");
+	SV_ModelIndex ("#w_chaingun.md2");
+	SV_ModelIndex ("#a_grenades.md2");
+	SV_ModelIndex ("#w_glauncher.md2");
+	SV_ModelIndex ("#w_rlauncher.md2");
+	SV_ModelIndex ("#w_hyperblaster.md2");
+	SV_ModelIndex ("#w_railgun.md2");
+	SV_ModelIndex ("#w_bfg.md2");
 
 	//-------------------
 
-	gi.soundindex ("player/gasp1.wav");		// gasping for air
-	gi.soundindex ("player/gasp2.wav");		// head breaking surface, not gasping
+	SV_SoundIndex ("player/gasp1.wav");		// gasping for air
+	SV_SoundIndex ("player/gasp2.wav");		// head breaking surface, not gasping
 
-	gi.soundindex ("player/watr_in.wav");	// feet hitting water
-	gi.soundindex ("player/watr_out.wav");	// feet leaving water
+	SV_SoundIndex ("player/watr_in.wav");	// feet hitting water
+	SV_SoundIndex ("player/watr_out.wav");	// feet leaving water
 
-	gi.soundindex ("player/watr_un.wav");	// head going underwater
+	SV_SoundIndex ("player/watr_un.wav");	// head going underwater
 
-	gi.soundindex ("player/u_breath1.wav");
-	gi.soundindex ("player/u_breath2.wav");
+	SV_SoundIndex ("player/u_breath1.wav");
+	SV_SoundIndex ("player/u_breath2.wav");
 
-	gi.soundindex ("items/pkup.wav");		// bonus item pickup
-	gi.soundindex ("world/land.wav");		// landing thud
-	gi.soundindex ("misc/h2ohit1.wav");		// landing splash
+	SV_SoundIndex ("items/pkup.wav");		// bonus item pickup
+	SV_SoundIndex ("world/land.wav");		// landing thud
+	SV_SoundIndex ("misc/h2ohit1.wav");		// landing splash
 
-	gi.soundindex ("items/damage.wav");
-	gi.soundindex ("items/protect.wav");
-	gi.soundindex ("items/protect4.wav");
-	gi.soundindex ("weapons/noammo.wav");
+	SV_SoundIndex ("items/damage.wav");
+	SV_SoundIndex ("items/protect.wav");
+	SV_SoundIndex ("items/protect4.wav");
+	SV_SoundIndex ("weapons/noammo.wav");
 
-	gi.soundindex ("infantry/inflies1.wav");
+	SV_SoundIndex ("infantry/inflies1.wav");
 
-	sm_meat_index = gi.modelindex ("models/objects/gibs/sm_meat/tris.md2");
-	gi.modelindex ("models/objects/gibs/arm/tris.md2");
-	gi.modelindex ("models/objects/gibs/bone/tris.md2");
-	gi.modelindex ("models/objects/gibs/bone2/tris.md2");
-	gi.modelindex ("models/objects/gibs/chest/tris.md2");
-	gi.modelindex ("models/objects/gibs/skull/tris.md2");
-	gi.modelindex ("models/objects/gibs/head2/tris.md2");
+	sm_meat_index = SV_ModelIndex ("models/objects/gibs/sm_meat/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/arm/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/bone/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/bone2/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/chest/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/skull/tris.md2");
+	SV_ModelIndex ("models/objects/gibs/head2/tris.md2");
 
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is doublebright.
 //
 
 	// 0 normal
-	gi.configstring(CS_LIGHTS+0, "m");
+	PF_Configstring(CS_LIGHTS+0, "m");
 
 	// 1 FLICKER (first variety)
-	gi.configstring(CS_LIGHTS+1, "mmnmmommommnonmmonqnmmo");
+	PF_Configstring(CS_LIGHTS+1, "mmnmmommommnonmmonqnmmo");
 
 	// 2 SLOW STRONG PULSE
-	gi.configstring(CS_LIGHTS+2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
+	PF_Configstring(CS_LIGHTS+2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
 
 	// 3 CANDLE (first variety)
-	gi.configstring(CS_LIGHTS+3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
+	PF_Configstring(CS_LIGHTS+3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
 
 	// 4 FAST STROBE
-	gi.configstring(CS_LIGHTS+4, "mamamamamama");
+	PF_Configstring(CS_LIGHTS+4, "mamamamamama");
 
 	// 5 GENTLE PULSE 1
-	gi.configstring(CS_LIGHTS+5,"jklmnopqrstuvwxyzyxwvutsrqponmlkj");
+	PF_Configstring(CS_LIGHTS+5,"jklmnopqrstuvwxyzyxwvutsrqponmlkj");
 
 	// 6 FLICKER (second variety)
-	gi.configstring(CS_LIGHTS+6, "nmonqnmomnmomomno");
+	PF_Configstring(CS_LIGHTS+6, "nmonqnmomnmomomno");
 
 	// 7 CANDLE (second variety)
-	gi.configstring(CS_LIGHTS+7, "mmmaaaabcdefgmmmmaaaammmaamm");
+	PF_Configstring(CS_LIGHTS+7, "mmmaaaabcdefgmmmmaaaammmaamm");
 
 	// 8 CANDLE (third variety)
-	gi.configstring(CS_LIGHTS+8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
+	PF_Configstring(CS_LIGHTS+8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
 
 	// 9 SLOW STROBE (fourth variety)
-	gi.configstring(CS_LIGHTS+9, "aaaaaaaazzzzzzzz");
+	PF_Configstring(CS_LIGHTS+9, "aaaaaaaazzzzzzzz");
 
 	// 10 FLUORESCENT FLICKER
-	gi.configstring(CS_LIGHTS+10, "mmamammmmammamamaaamammma");
+	PF_Configstring(CS_LIGHTS+10, "mmamammmmammamamaaamammma");
 
 	// 11 SLOW PULSE NOT FADE TO BLACK
-	gi.configstring(CS_LIGHTS+11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
+	PF_Configstring(CS_LIGHTS+11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
 
 	// styles 32-62 are assigned by the light program for switchable lights
 
 	// 63 testing
-	gi.configstring(CS_LIGHTS+63, "a");
+	PF_Configstring(CS_LIGHTS+63, "a");
 }
 
 /* ============ end source: game/g_spawn.c ============ */
@@ -48618,7 +48464,7 @@ void SP_worldspawn (edict_t *ent)
 
 void	Svcmd_Test_f (void)
 {
-	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
+	PF_cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
 /*
@@ -48685,7 +48531,7 @@ static bool StringToFilter (char *s, ipfilter_t *f)
 	{
 		if (*s < '0' || *s > '9')
 		{
-			gi.cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
+			PF_cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
 			return false;
 		}
 
@@ -48754,8 +48600,8 @@ void SVCmd_AddIP_f (void)
 {
 	int		i;
 
-	if (gi.argc() < 3) {
-		gi.cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
+	if (cmd_argc < 3) {
+		PF_cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
 		return;
 	}
 
@@ -48766,13 +48612,13 @@ void SVCmd_AddIP_f (void)
 	{
 		if (numipfilters == MAX_IPFILTERS)
 		{
-			gi.cprintf (NULL, PRINT_HIGH, "IP filter list is full\n");
+			PF_cprintf (NULL, PRINT_HIGH, "IP filter list is full\n");
 			return;
 		}
 		numipfilters++;
 	}
 
-	if (!StringToFilter (gi.argv(2), &ipfilters[i]))
+	if (!StringToFilter (Cmd_Argv(2), &ipfilters[i]))
 		ipfilters[i].compare = 0xffffffff;
 }
 
@@ -48786,12 +48632,12 @@ void SVCmd_RemoveIP_f (void)
 	ipfilter_t	f;
 	int			i, j;
 
-	if (gi.argc() < 3) {
-		gi.cprintf(NULL, PRINT_HIGH, "Usage:  sv removeip <ip-mask>\n");
+	if (cmd_argc < 3) {
+		PF_cprintf(NULL, PRINT_HIGH, "Usage:  sv removeip <ip-mask>\n");
 		return;
 	}
 
-	if (!StringToFilter (gi.argv(2), &f))
+	if (!StringToFilter (Cmd_Argv(2), &f))
 		return;
 
 	for (i=0 ; i<numipfilters ; i++)
@@ -48801,10 +48647,10 @@ void SVCmd_RemoveIP_f (void)
 			for (j=i+1 ; j<numipfilters ; j++)
 				ipfilters[j-1] = ipfilters[j];
 			numipfilters--;
-			gi.cprintf (NULL, PRINT_HIGH, "Removed.\n");
+			PF_cprintf (NULL, PRINT_HIGH, "Removed.\n");
 			return;
 		}
-	gi.cprintf (NULL, PRINT_HIGH, "Didn't find %s.\n", gi.argv(2));
+	PF_cprintf (NULL, PRINT_HIGH, "Didn't find %s.\n", Cmd_Argv(2));
 }
 
 /*
@@ -48817,11 +48663,11 @@ void SVCmd_ListIP_f (void)
 	int		i;
 	u8	b[4];
 
-	gi.cprintf (NULL, PRINT_HIGH, "Filter list:\n");
+	PF_cprintf (NULL, PRINT_HIGH, "Filter list:\n");
 	for (i=0 ; i<numipfilters ; i++)
 	{
 		*(unsigned *)b = ipfilters[i].compare;
-		gi.cprintf (NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n", b[0], b[1], b[2], b[3]);
+		PF_cprintf (NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n", b[0], b[1], b[2], b[3]);
 	}
 }
 
@@ -48838,19 +48684,19 @@ void SVCmd_WriteIP_f (void)
 	int		i;
 	cvar_t	*game;
 
-	game = gi.cvar("game", "", 0);
+	game = COM_GetCvar("game", "", 0);
 
 	if (!*game->string)
 		sprintf (name, "%s/listip.cfg", GAMEVERSION);
 	else
 		sprintf (name, "%s/listip.cfg", game->string);
 
-	gi.cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
+	PF_cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
 
 	f = fopen (name, "wb");
 	if (!f)
 	{
-		gi.cprintf (NULL, PRINT_HIGH, "Couldn't open %s\n", name);
+		PF_cprintf (NULL, PRINT_HIGH, "Couldn't open %s\n", name);
 		return;
 	}
 
@@ -48870,7 +48716,7 @@ void SVCmd_WriteIP_f (void)
 ServerCommand
 
 ServerCommand will be called when an "sv" command is issued.
-The game can issue gi.argc() / gi.argv() commands to get the rest
+The game can issue cmd_argc / Cmd_Argv() commands to get the rest
 of the parameters
 =================
 */
@@ -48878,7 +48724,7 @@ void	ServerCommand (void)
 {
 	char	*cmd;
 
-	cmd = gi.argv(1);
+	cmd = Cmd_Argv(1);
 	if (Q_stricmp (cmd, "test") == 0)
 		Svcmd_Test_f ();
 	else if (Q_stricmp (cmd, "addip") == 0)
@@ -48890,7 +48736,7 @@ void	ServerCommand (void)
 	else if (Q_stricmp (cmd, "writeip") == 0)
 		SVCmd_WriteIP_f ();
 	else
-		gi.cprintf (NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
+		PF_cprintf (NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
 }
 
 /* ============ end source: game/g_svcmds.c ============ */
@@ -48906,10 +48752,10 @@ static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (ent->style);
-	gi.WritePosition (ent->s.origin);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (ent->style);
+	PF_WritePos (ent->s.origin);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 }
 
 void SP_target_temp_entity (edict_t *ent)
@@ -48957,7 +48803,7 @@ static void Use_Target_Speaker(edict_t *ent, edict_t* other, edict_t* activator)
 			chan = CHAN_VOICE;
 		// use a positioned_sound, because this entity won't normally be
 		// sent to any clients because it is invisible
-		gi.positioned_sound (ent->s.origin, ent, chan, ent->noise_index, ent->volume, ent->attenuation, 0);
+		SV_StartSound (ent->s.origin, ent, chan, ent->noise_index, ent->volume, ent->attenuation, 0);
 	}
 }
 
@@ -48967,14 +48813,14 @@ void SP_target_speaker (edict_t *ent)
 
 	if(!st.noise)
 	{
-		gi.dprintf("target_speaker with no noise set at %s\n", vtos(ent->s.origin));
+		PF_dprintf("target_speaker with no noise set at %s\n", vtos(ent->s.origin));
 		return;
 	}
 	if (!strstr (st.noise, ".wav"))
 		Com_sprintf (buffer, sizeof(buffer), "%s.wav", st.noise);
 	else
 		strncpy (buffer, st.noise, sizeof(buffer));
-	ent->noise_index = gi.soundindex (buffer);
+	ent->noise_index = SV_SoundIndex (buffer);
 
 	if (!ent->volume)
 		ent->volume = 1.0;
@@ -48992,7 +48838,7 @@ void SP_target_speaker (edict_t *ent)
 
 	// must link the entity so we get areas and clusters so
 	// the server can determine who to send updates to
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 }
 
 
@@ -49023,7 +48869,7 @@ void SP_target_help(edict_t *ent)
 
 	if (!ent->message)
 	{
-		gi.dprintf ("%s with no message at %s\n", ent->classname, vtos(ent->s.origin));
+		PF_dprintf ("%s with no message at %s\n", ent->classname, vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -49040,7 +48886,7 @@ static void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
-	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
+	PF_StartSound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_secrets++;
 
@@ -49059,7 +48905,7 @@ void SP_target_secret (edict_t *ent)
 	ent->use = use_target_secret;
 	if (!st.noise)
 		st.noise = "misc/secret.wav";
-	ent->noise_index = gi.soundindex (st.noise);
+	ent->noise_index = SV_SoundIndex (st.noise);
 	ent->svflags = SVF_NOCLIENT;
 	level.total_secrets++;
 	// map bug hack
@@ -49077,12 +48923,12 @@ static void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
-	gi.sound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
+	PF_StartSound (ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_goals++;
 
 	if (level.found_goals == level.total_goals)
-		gi.configstring (CS_CDTRACK, "0");
+		PF_Configstring (CS_CDTRACK, "0");
 
 	G_UseTargets (ent, activator);
 	G_FreeEdict (ent);
@@ -49099,7 +48945,7 @@ void SP_target_goal (edict_t *ent)
 	ent->use = use_target_goal;
 	if (!st.noise)
 		st.noise = "misc/secret.wav";
-	ent->noise_index = gi.soundindex (st.noise);
+	ent->noise_index = SV_SoundIndex (st.noise);
 	ent->svflags = SVF_NOCLIENT;
 	level.total_goals++;
 }
@@ -49117,10 +48963,10 @@ void target_explosion_explode (edict_t* self)
 {
 	float		save;
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_EXPLOSION1);
-	gi.WritePosition (self->s.origin);
-	gi.multicast (self->s.origin, MULTICAST_PHS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_EXPLOSION1);
+	PF_WritePos (self->s.origin);
+	SV_Multicast (self->s.origin, MULTICAST_PHS);
 
 	T_RadiusDamage (self, self->activator, self->dmg, NULL, self->dmg+40, MOD_EXPLOSIVE);
 
@@ -49180,7 +49026,7 @@ void use_target_changelevel (edict_t* self, edict_t* other, edict_t* activator)
 	if (deathmatch->value)
 	{
 		if (activator && activator->client)
-			gi.bprintf (PRINT_HIGH, "%s exited the level.\n", activator->client->pers.netname);
+			SV_BroadcastPrintf (PRINT_HIGH, "%s exited the level.\n", activator->client->pers.netname);
 	}
 
 	// if going to a new unit, clear cross triggers
@@ -49194,7 +49040,7 @@ void SP_target_changelevel (edict_t *ent)
 {
 	if (!ent->map)
 	{
-		gi.dprintf("target_changelevel with no map at %s\n", vtos(ent->s.origin));
+		PF_dprintf("target_changelevel with no map at %s\n", vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -49229,13 +49075,13 @@ Set "sounds" to one of the following:
 static void use_target_splash(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_SPLASH);
-	gi.WriteByte (self->count);
-	gi.WritePosition (self->s.origin);
-	gi.WriteDir (self->movedir);
-	gi.WriteByte (self->sounds);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_SPLASH);
+	PF_WriteByte (self->count);
+	PF_WritePos (self->s.origin);
+	PF_WriteDir (self->movedir);
+	PF_WriteByte (self->sounds);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 
 	if (self->dmg)
 		T_RadiusDamage (self, activator, self->dmg, NULL, self->dmg+40, MOD_SPLASH);
@@ -49280,9 +49126,9 @@ static void use_target_spawner (edict_t* self, edict_t* other, edict_t* activato
 	VectorCopy (self->s.origin, ent->s.origin);
 	VectorCopy (self->s.angles, ent->s.angles);
 	ED_CallSpawn (ent);
-	gi.unlinkentity (ent);
+	SV_UnlinkEdict (ent);
 	KillBox (ent);
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 	if (self->speed)
 		VectorCopy (self->movedir, ent->velocity);
 }
@@ -49311,14 +49157,14 @@ static void use_target_blaster (edict_t* self, edict_t* other, edict_t* activato
 	UNUSED(other);
 	UNUSED(activator);
 	fire_blaster (self, self->s.origin, self->movedir, self->dmg, self->speed, EF_BLASTER, MOD_TARGET_BLASTER);
-	gi.sound (self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
 void SP_target_blaster (edict_t* self)
 {
 	self->use = use_target_blaster;
 	G_SetMovedir (self->s.angles, self->movedir);
-	self->noise_index = gi.soundindex ("weapons/laser2.wav");
+	self->noise_index = SV_SoundIndex ("weapons/laser2.wav");
 
 	if (!self->dmg)
 		self->dmg = 15;
@@ -49409,7 +49255,7 @@ void target_laser_think (edict_t* self)
 	VectorMA (start, 2048, self->movedir, end);
 	while(1)
 	{
-		tr = gi.trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+		tr = SV_Trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
 
 		if (!tr.ent)
 			break;
@@ -49424,13 +49270,13 @@ void target_laser_think (edict_t* self)
 			if (self->spawnflags & 0x80000000)
 			{
 				self->spawnflags &= ~0x80000000;
-				gi.WriteByte (svc_temp_entity);
-				gi.WriteByte (TE_LASER_SPARKS);
-				gi.WriteByte (count);
-				gi.WritePosition (tr.endpos);
-				gi.WriteDir (tr.plane.normal);
-				gi.WriteByte (self->s.skinnum);
-				gi.multicast (tr.endpos, MULTICAST_PVS);
+				PF_WriteByte (svc_temp_entity);
+				PF_WriteByte (TE_LASER_SPARKS);
+				PF_WriteByte (count);
+				PF_WritePos (tr.endpos);
+				PF_WriteDir (tr.plane.normal);
+				PF_WriteByte (self->s.skinnum);
+				SV_Multicast (tr.endpos, MULTICAST_PVS);
 			}
 			break;
 		}
@@ -49503,7 +49349,7 @@ void target_laser_start (edict_t* self)
 		{
 			ent = G_Find (NULL, FOFS(targetname), self->target);
 			if (!ent)
-				gi.dprintf ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
+				PF_dprintf ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
 			self->enemy = ent;
 		}
 		else
@@ -49519,7 +49365,7 @@ void target_laser_start (edict_t* self)
 
 	VectorSet (self->mins, -8, -8, -8);
 	VectorSet (self->maxs, 8, 8, 8);
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (self->spawnflags & 1)
 		target_laser_on (self);
@@ -49547,7 +49393,7 @@ void target_lightramp_think (edict_t* self)
 
 	style[0] = 'a' + self->movedir[0] + (level.time - self->timestamp) / FRAMETIME * self->movedir[2];
 	style[1] = 0;
-	gi.configstring (CS_LIGHTS+self->enemy->style, style);
+	PF_Configstring (CS_LIGHTS+self->enemy->style, style);
 
 	if ((level.time - self->timestamp) < self->speed)
 	{
@@ -49581,8 +49427,8 @@ static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activat
 				break;
 			if (strcmp(e->classname, "light") != 0)
 			{
-				gi.dprintf("%s at %s ", self->classname, vtos(self->s.origin));
-				gi.dprintf("target %s (%s at %s) is not a light\n", self->target, e->classname, vtos(e->s.origin));
+				PF_dprintf("%s at %s ", self->classname, vtos(self->s.origin));
+				PF_dprintf("target %s (%s at %s) is not a light\n", self->target, e->classname, vtos(e->s.origin));
 			}
 			else
 			{
@@ -49592,7 +49438,7 @@ static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activat
 
 		if (!self->enemy)
 		{
-			gi.dprintf("%s target %s not found at %s\n", self->classname, self->target, vtos(self->s.origin));
+			PF_dprintf("%s target %s not found at %s\n", self->classname, self->target, vtos(self->s.origin));
 			G_FreeEdict (self);
 			return;
 		}
@@ -49606,7 +49452,7 @@ void SP_target_lightramp (edict_t* self)
 {
 	if (!self->message || strlen(self->message) != 2 || self->message[0] < 'a' || self->message[0] > 'z' || self->message[1] < 'a' || self->message[1] > 'z' || self->message[0] == self->message[1])
 	{
-		gi.dprintf("target_lightramp has bad ramp (%s) at %s\n", self->message, vtos(self->s.origin));
+		PF_dprintf("target_lightramp has bad ramp (%s) at %s\n", self->message, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -49619,7 +49465,7 @@ void SP_target_lightramp (edict_t* self)
 
 	if (!self->target)
 	{
-		gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -49649,7 +49495,7 @@ void target_earthquake_think (edict_t* self)
 
 	if (self->last_move_time < level.time)
 	{
-		gi.positioned_sound (self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0, ATTN_NONE, 0);
+		SV_StartSound (self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0, ATTN_NONE, 0);
 		self->last_move_time = level.time + 0.5;
 	}
 
@@ -49684,7 +49530,7 @@ static void target_earthquake_use(edict_t* self, edict_t* other, edict_t* activa
 void SP_target_earthquake (edict_t* self)
 {
 	if (!self->targetname)
-		gi.dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
 
 	if (!self->count)
 		self->count = 5;
@@ -49696,7 +49542,7 @@ void SP_target_earthquake (edict_t* self)
 	self->think = target_earthquake_think;
 	self->use = target_earthquake_use;
 
-	self->noise_index = gi.soundindex ("world/quake.wav");
+	self->noise_index = SV_SoundIndex ("world/quake.wav");
 }
 /* ============ end source: game/g_target.c ============ */
 /* ============ begin source: game/g_trigger.c ============ */
@@ -49711,7 +49557,7 @@ void InitTrigger (edict_t* self)
 
 	self->solid = SOLID_TRIGGER;
 	self->movetype = MOVETYPE_NONE;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 	self->svflags = SVF_NOCLIENT;
 }
 
@@ -49801,17 +49647,17 @@ static void trigger_enable (edict_t* self, edict_t* other, edict_t* activator) {
 
 	self->solid = SOLID_TRIGGER;
 	self->use = Use_Multi;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void SP_trigger_multiple (edict_t *ent)
 {
 	if (ent->sounds == 1)
-		ent->noise_index = gi.soundindex ("misc/secret.wav");
+		ent->noise_index = SV_SoundIndex ("misc/secret.wav");
 	else if (ent->sounds == 2)
-		ent->noise_index = gi.soundindex ("misc/talk.wav");
+		ent->noise_index = SV_SoundIndex ("misc/talk.wav");
 	else if (ent->sounds == 3)
-		ent->noise_index = gi.soundindex ("misc/trigger1.wav");
+		ent->noise_index = SV_SoundIndex ("misc/trigger1.wav");
 
 	if (!ent->wait)
 		ent->wait = 0.2;
@@ -49834,8 +49680,8 @@ void SP_trigger_multiple (edict_t *ent)
 	if (!VectorCompare(ent->s.angles, vec3_origin))
 		G_SetMovedir (ent->s.angles, ent->movedir);
 
-	gi.setmodel (ent, ent->model);
-	gi.linkentity (ent);
+	PF_setmodel (ent, ent->model);
+	SV_LinkEdict (ent);
 }
 
 
@@ -49865,7 +49711,7 @@ void SP_trigger_once(edict_t *ent)
 		VectorMA (ent->mins, 0.5, ent->size, v);
 		ent->spawnflags &= ~1;
 		ent->spawnflags |= 4;
-		gi.dprintf("fixed TRIGGERED flag on %s at %s\n", ent->classname, vtos(v));
+		PF_dprintf("fixed TRIGGERED flag on %s at %s\n", ent->classname, vtos(v));
 	}
 
 	ent->wait = -1;
@@ -49915,12 +49761,12 @@ static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
 		if (level.time < self->touch_debounce_time)
 			return;
 		self->touch_debounce_time = level.time + 5.0;
-		gi.centerprintf (activator, "You need the %s", self->item->pickup_name);
-		gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/keytry.wav"), 1, ATTN_NORM, 0);
+		PF_centerprintf (activator, "You need the %s", self->item->pickup_name);
+		PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/keytry.wav"), 1, ATTN_NORM, 0);
 		return;
 	}
 
-	gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/keyuse.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/keyuse.wav"), 1, ATTN_NORM, 0);
 	if (coop->value)
 	{
 		int		player;
@@ -49974,25 +49820,25 @@ void SP_trigger_key (edict_t* self)
 {
 	if (!st.item)
 	{
-		gi.dprintf("no key item for trigger_key at %s\n", vtos(self->s.origin));
+		PF_dprintf("no key item for trigger_key at %s\n", vtos(self->s.origin));
 		return;
 	}
 	self->item = FindItemByClassname (st.item);
 
 	if (!self->item)
 	{
-		gi.dprintf("item %s not found for trigger_key at %s\n", st.item, vtos(self->s.origin));
+		PF_dprintf("item %s not found for trigger_key at %s\n", st.item, vtos(self->s.origin));
 		return;
 	}
 
 	if (!self->target)
 	{
-		gi.dprintf("%s at %s has no target\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s at %s has no target\n", self->classname, vtos(self->s.origin));
 		return;
 	}
 
-	gi.soundindex ("misc/keytry.wav");
-	gi.soundindex ("misc/keyuse.wav");
+	SV_SoundIndex ("misc/keytry.wav");
+	SV_SoundIndex ("misc/keyuse.wav");
 
 	self->use = trigger_key_use;
 }
@@ -50026,16 +49872,16 @@ static void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activato
 	{
 		if (! (self->spawnflags & 1))
 		{
-			gi.centerprintf(activator, "%i more to go...", self->count);
-			gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+			PF_centerprintf(activator, "%i more to go...", self->count);
+			PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
 		}
 		return;
 	}
 
 	if (! (self->spawnflags & 1))
 	{
-		gi.centerprintf(activator, "Sequence completed!");
-		gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+		PF_centerprintf(activator, "Sequence completed!");
+		PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
 	}
 	self->activator = activator;
 	multi_trigger (self);
@@ -50102,7 +49948,7 @@ static void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 			if (other->fly_sound_debounce_time < level.time)
 			{
 				other->fly_sound_debounce_time = level.time + 1.5;
-				gi.sound (other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
+				PF_StartSound (other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
 			}
 		}
 	}
@@ -50118,11 +49964,11 @@ Pushes the player
 void SP_trigger_push (edict_t* self)
 {
 	InitTrigger (self);
-	windsound = gi.soundindex ("misc/windfly.wav");
+	windsound = SV_SoundIndex ("misc/windfly.wav");
 	self->touch = trigger_push_touch;
 	if (!self->speed)
 		self->speed = 1000;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -50154,7 +50000,7 @@ static void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
 		self->solid = SOLID_TRIGGER;
 	else
 		self->solid = SOLID_NOT;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (!(self->spawnflags & 2))
 		self->use = NULL;
@@ -50181,7 +50027,7 @@ static void hurt_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_
 	if (!(self->spawnflags & 4))
 	{
 		if ((level.framenum % 10) == 0)
-			gi.sound (other, CHAN_AUTO, self->noise_index, 1, ATTN_NORM, 0);
+			PF_StartSound (other, CHAN_AUTO, self->noise_index, 1, ATTN_NORM, 0);
 	}
 
 	if (self->spawnflags & 8)
@@ -50195,7 +50041,7 @@ void SP_trigger_hurt (edict_t* self)
 {
 	InitTrigger (self);
 
-	self->noise_index = gi.soundindex ("world/electro.wav");
+	self->noise_index = SV_SoundIndex ("world/electro.wav");
 	self->touch = hurt_touch;
 
 	if (!self->dmg)
@@ -50209,7 +50055,7 @@ void SP_trigger_hurt (edict_t* self)
 	if (self->spawnflags & 2)
 		self->use = hurt_use;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -50238,7 +50084,7 @@ void SP_trigger_gravity (edict_t* self)
 {
 	if (st.gravity == 0)
 	{
-		gi.dprintf("trigger_gravity without gravity set at %s\n", vtos(self->s.origin));
+		PF_dprintf("trigger_gravity without gravity set at %s\n", vtos(self->s.origin));
 		G_FreeEdict  (self);
 		return;
 	}
@@ -50374,7 +50220,7 @@ void turret_breach_fire (edict_t* self)
 	damage = 100 + random() * 50;
 	speed = 550 + 50 * skill->value;
 	fire_rocket (self->teammaster->owner, start, f, damage, speed, 150, damage);
-	gi.positioned_sound (start, self, CHAN_WEAPON, gi.soundindex("weapons/rocklf1a.wav"), 1, ATTN_NORM, 0);
+	SV_StartSound (start, self, CHAN_WEAPON, SV_SoundIndex("weapons/rocklf1a.wav"), 1, ATTN_NORM, 0);
 }
 
 void turret_breach_think (edict_t* self)
@@ -50487,7 +50333,7 @@ void turret_breach_finish_init (edict_t* self)
 	// get and save info for muzzle location
 	if (!self->target)
 	{
-		gi.dprintf("%s at %s needs a target\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s at %s needs a target\n", self->classname, vtos(self->s.origin));
 	}
 	else
 	{
@@ -50505,7 +50351,7 @@ void SP_turret_breach (edict_t* self)
 {
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 
 	if (!self->speed)
 		self->speed = 50;
@@ -50531,7 +50377,7 @@ void SP_turret_breach (edict_t* self)
 
 	self->think = turret_breach_finish_init;
 	self->nextthink = level.time + FRAMETIME;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -50544,9 +50390,9 @@ void SP_turret_base (edict_t* self)
 {
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
-	gi.setmodel (self, self->model);
+	PF_setmodel (self, self->model);
 	self->blocked = turret_blocked;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -50679,7 +50525,7 @@ void SP_turret_driver (edict_t* self)
 
 	self->movetype = MOVETYPE_PUSH;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/infantry/tris.md2");
+	self->s.modelindex = SV_ModelIndex("models/monsters/infantry/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -50707,13 +50553,13 @@ void SP_turret_driver (edict_t* self)
 	{
 		self->item = FindItemByClassname (st.item);
 		if (!self->item)
-			gi.dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
+			PF_dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
 	}
 
 	self->think = turret_driver_link;
 	self->nextthink = level.time + FRAMETIME;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 /* ============ end source: game/g_turret.c ============ */
 /* ============ begin source: game/g_utils.c ============ */
@@ -50824,7 +50670,7 @@ edict_t *G_PickTarget (char *targetname)
 
 	if (!targetname)
 	{
-		gi.dprintf("G_PickTarget called with NULL targetname\n");
+		PF_dprintf("G_PickTarget called with NULL targetname\n");
 		return NULL;
 	}
 
@@ -50840,7 +50686,7 @@ edict_t *G_PickTarget (char *targetname)
 
 	if (!num_choices)
 	{
-		gi.dprintf("G_PickTarget: target %s not found\n", targetname);
+		PF_dprintf("G_PickTarget: target %s not found\n", targetname);
 		return NULL;
 	}
 
@@ -50887,7 +50733,7 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 		t->think = Think_Delay;
 		t->activator = activator;
 		if (!activator)
-			gi.dprintf ("Think_Delay with no activator\n");
+			PF_dprintf ("Think_Delay with no activator\n");
 		t->message = ent->message;
 		t->target = ent->target;
 		t->killtarget = ent->killtarget;
@@ -50900,11 +50746,11 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 //
 	if ((ent->message) && !(activator->svflags & SVF_MONSTER))
 	{
-		gi.centerprintf (activator, "%s", ent->message);
+		PF_centerprintf (activator, "%s", ent->message);
 		if (ent->noise_index)
-			gi.sound (activator, CHAN_AUTO, ent->noise_index, 1, ATTN_NORM, 0);
+			PF_StartSound (activator, CHAN_AUTO, ent->noise_index, 1, ATTN_NORM, 0);
 		else
-			gi.sound (activator, CHAN_AUTO, gi.soundindex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/talk1.wav"), 1, ATTN_NORM, 0);
 	}
 
 //
@@ -50918,7 +50764,7 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 			G_FreeEdict (t);
 			if (!ent->inuse)
 			{
-				gi.dprintf("entity was removed while using killtargets\n");
+				PF_dprintf("entity was removed while using killtargets\n");
 				return;
 			}
 		}
@@ -50939,7 +50785,7 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 
 			if (t == ent)
 			{
-				gi.dprintf ("WARNING: Entity used itself.\n");
+				PF_dprintf ("WARNING: Entity used itself.\n");
 			}
 			else
 			{
@@ -50948,7 +50794,7 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 			}
 			if (!ent->inuse)
 			{
-				gi.dprintf("entity was removed while using targets\n");
+				PF_dprintf("entity was removed while using targets\n");
 				return;
 			}
 		}
@@ -51141,11 +50987,11 @@ Marks the edict as free
 */
 void G_FreeEdict (edict_t *ed)
 {
-	gi.unlinkentity (ed);		// unlink from world
+	SV_UnlinkEdict (ed);		// unlink from world
 
 	if ((ed - g_edicts) <= (maxclients->value + BODY_QUEUE_SIZE))
 	{
-//		gi.dprintf("tried to free special edict\n");
+//		PF_dprintf("tried to free special edict\n");
 		return;
 	}
 
@@ -51171,7 +51017,7 @@ void	G_TouchTriggers (edict_t *ent)
 	if ((ent->client || (ent->svflags & SVF_MONSTER)) && (ent->health <= 0))
 		return;
 
-	num = gi.BoxEdicts (ent->absmin, ent->absmax, touch
+	num = SV_AreaEdicts (ent->absmin, ent->absmax, touch
 		, MAX_EDICTS, AREA_TRIGGERS);
 
 	// be careful, it is possible to have an entity in this
@@ -51200,7 +51046,7 @@ void	G_TouchSolids (edict_t *ent)
 	int			i, num;
 	edict_t		*touch[MAX_EDICTS], *hit;
 
-	num = gi.BoxEdicts (ent->absmin, ent->absmax, touch
+	num = SV_AreaEdicts (ent->absmin, ent->absmax, touch
 		, MAX_EDICTS, AREA_SOLID);
 
 	// be careful, it is possible to have an entity in this
@@ -51242,7 +51088,7 @@ bool KillBox (edict_t *ent)
 
 	while (1)
 	{
-		tr = gi.trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, NULL, MASK_PLAYERSOLID);
+		tr = SV_Trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, NULL, MASK_PLAYERSOLID);
 		if (!tr.ent)
 			break;
 
@@ -51285,7 +51131,7 @@ static void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
 			return;
 	}
 	VectorMA (start, 8192, dir, end);
-	tr = gi.trace (start, NULL, NULL, end, self, MASK_SHOT);
+	tr = SV_Trace (start, NULL, NULL, end, self, MASK_SHOT);
 	if ((tr.ent) && (tr.ent->svflags & SVF_MONSTER) && (tr.ent->health > 0) && (tr.ent->monsterinfo.dodge) && infront(tr.ent, self))
 	{
 		VectorSubtract (tr.endpos, start, v);
@@ -51333,7 +51179,7 @@ bool fire_hit (edict_t* self, vec3_t aim, int damage, int kick)
 
 	VectorMA (self->s.origin, range, dir, point);
 
-	tr = gi.trace (self->s.origin, NULL, NULL, point, self, MASK_SHOT);
+	tr = SV_Trace (self->s.origin, NULL, NULL, point, self, MASK_SHOT);
 	if (tr.fraction < 1)
 	{
 		if (!tr.ent->takedamage)
@@ -51385,7 +51231,7 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 	bool	water = false;
 	int			content_mask = MASK_SHOT | MASK_WATER;
 
-	tr = gi.trace (self->s.origin, NULL, NULL, start, self, MASK_SHOT);
+	tr = SV_Trace (self->s.origin, NULL, NULL, start, self, MASK_SHOT);
 	if (!(tr.fraction < 1.0))
 	{
 		vectoangles (aimdir, dir);
@@ -51397,14 +51243,14 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 		VectorMA (end, r, right, end);
 		VectorMA (end, u, up, end);
 
-		if (gi.pointcontents (start) & MASK_WATER)
+		if (SV_PointContents (start) & MASK_WATER)
 		{
 			water = true;
 			VectorCopy (start, water_start);
 			content_mask &= ~MASK_WATER;
 		}
 
-		tr = gi.trace (start, NULL, NULL, end, self, content_mask);
+		tr = SV_Trace (start, NULL, NULL, end, self, content_mask);
 
 		// see if we hit water
 		if (tr.contents & MASK_WATER)
@@ -51432,13 +51278,13 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 
 				if (color != SPLASH_UNKNOWN)
 				{
-					gi.WriteByte (svc_temp_entity);
-					gi.WriteByte (TE_SPLASH);
-					gi.WriteByte (8);
-					gi.WritePosition (tr.endpos);
-					gi.WriteDir (tr.plane.normal);
-					gi.WriteByte (color);
-					gi.multicast (tr.endpos, MULTICAST_PVS);
+					PF_WriteByte (svc_temp_entity);
+					PF_WriteByte (TE_SPLASH);
+					PF_WriteByte (8);
+					PF_WritePos (tr.endpos);
+					PF_WriteDir (tr.plane.normal);
+					PF_WriteByte (color);
+					SV_Multicast (tr.endpos, MULTICAST_PVS);
 				}
 
 				// change bullet's course when it enters water
@@ -51453,7 +51299,7 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 			}
 
 			// re-trace ignoring water this time
-			tr = gi.trace (water_start, NULL, NULL, end, self, MASK_SHOT);
+			tr = SV_Trace (water_start, NULL, NULL, end, self, MASK_SHOT);
 		}
 	}
 
@@ -51470,11 +51316,11 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 			{
 				if (strncmp (tr.surface->name, "sky", 3) != 0)
 				{
-					gi.WriteByte (svc_temp_entity);
-					gi.WriteByte (te_impact);
-					gi.WritePosition (tr.endpos);
-					gi.WriteDir (tr.plane.normal);
-					gi.multicast (tr.endpos, MULTICAST_PVS);
+					PF_WriteByte (svc_temp_entity);
+					PF_WriteByte (te_impact);
+					PF_WritePos (tr.endpos);
+					PF_WriteDir (tr.plane.normal);
+					SV_Multicast (tr.endpos, MULTICAST_PVS);
 
 					if (self->client)
 						PlayerNoise(self, tr.endpos, PNOISE_IMPACT);
@@ -51491,19 +51337,19 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 		VectorSubtract (tr.endpos, water_start, dir);
 		VectorNormalize (dir);
 		VectorMA (tr.endpos, -2, dir, pos);
-		if (gi.pointcontents (pos) & MASK_WATER)
+		if (SV_PointContents (pos) & MASK_WATER)
 			VectorCopy (pos, tr.endpos);
 		else
-			tr = gi.trace (pos, NULL, NULL, water_start, tr.ent, MASK_WATER);
+			tr = SV_Trace (pos, NULL, NULL, water_start, tr.ent, MASK_WATER);
 
 		VectorAdd (water_start, tr.endpos, pos);
 		VectorScale (pos, 0.5, pos);
 
-		gi.WriteByte (svc_temp_entity);
-		gi.WriteByte (TE_BUBBLETRAIL);
-		gi.WritePosition (water_start);
-		gi.WritePosition (tr.endpos);
-		gi.multicast (pos, MULTICAST_PVS);
+		PF_WriteByte (svc_temp_entity);
+		PF_WriteByte (TE_BUBBLETRAIL);
+		PF_WritePos (water_start);
+		PF_WritePos (tr.endpos);
+		SV_Multicast (pos, MULTICAST_PVS);
 	}
 }
 
@@ -51571,14 +51417,14 @@ void blaster_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* 
 	}
 	else
 	{
-		gi.WriteByte (svc_temp_entity);
-		gi.WriteByte (TE_BLASTER);
-		gi.WritePosition (self->s.origin);
+		PF_WriteByte (svc_temp_entity);
+		PF_WriteByte (TE_BLASTER);
+		PF_WritePos (self->s.origin);
 		if (!plane)
-			gi.WriteDir (vec3_origin);
+			PF_WriteDir (vec3_origin);
 		else
-			gi.WriteDir (plane->normal);
-		gi.multicast (self->s.origin, MULTICAST_PVS);
+			PF_WriteDir (plane->normal);
+		SV_Multicast (self->s.origin, MULTICAST_PVS);
 	}
 
 	G_FreeEdict (self);
@@ -51608,8 +51454,8 @@ void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int spee
 	bolt->s.effects |= effect;
 	VectorClear (bolt->mins);
 	VectorClear (bolt->maxs);
-	bolt->s.modelindex = gi.modelindex ("models/objects/laser/tris.md2");
-	bolt->s.sound = gi.soundindex ("misc/lasfly.wav");
+	bolt->s.modelindex = SV_ModelIndex ("models/objects/laser/tris.md2");
+	bolt->s.sound = SV_SoundIndex ("misc/lasfly.wav");
 	bolt->owner = self;
 	bolt->touch = blaster_touch;
 	bolt->nextthink = level.time + 2;
@@ -51618,12 +51464,12 @@ void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int spee
 	bolt->classname = "bolt";
 	if (hyper)
 		bolt->spawnflags = 1;
-	gi.linkentity (bolt);
+	SV_LinkEdict (bolt);
 
 	if (self->client)
 		check_dodge (self, bolt->s.origin, dir, speed);
 
-	tr = gi.trace (self->s.origin, NULL, NULL, bolt->s.origin, bolt, MASK_SHOT);
+	tr = SV_Trace (self->s.origin, NULL, NULL, bolt->s.origin, bolt, MASK_SHOT);
 	if (tr.fraction < 1.0)
 	{
 		VectorMA (bolt->s.origin, -10, dir, bolt->s.origin);
@@ -51673,23 +51519,23 @@ static void Grenade_Explode (edict_t *ent)
 	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod);
 
 	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
-	gi.WriteByte (svc_temp_entity);
+	PF_WriteByte (svc_temp_entity);
 	if (ent->waterlevel)
 	{
 		if (ent->groundentity)
-			gi.WriteByte (TE_GRENADE_EXPLOSION_WATER);
+			PF_WriteByte (TE_GRENADE_EXPLOSION_WATER);
 		else
-			gi.WriteByte (TE_ROCKET_EXPLOSION_WATER);
+			PF_WriteByte (TE_ROCKET_EXPLOSION_WATER);
 	}
 	else
 	{
 		if (ent->groundentity)
-			gi.WriteByte (TE_GRENADE_EXPLOSION);
+			PF_WriteByte (TE_GRENADE_EXPLOSION);
 		else
-			gi.WriteByte (TE_ROCKET_EXPLOSION);
+			PF_WriteByte (TE_ROCKET_EXPLOSION);
 	}
-	gi.WritePosition (origin);
-	gi.multicast (ent->s.origin, MULTICAST_PHS);
+	PF_WritePos (origin);
+	SV_Multicast (ent->s.origin, MULTICAST_PHS);
 
 	G_FreeEdict (ent);
 }
@@ -51711,13 +51557,13 @@ static void Grenade_Touch(edict_t *ent, edict_t* other, cplane_t* plane, csurfac
 		if (ent->spawnflags & 1)
 		{
 			if (random() > 0.5)
-				gi.sound (ent, CHAN_VOICE, gi.soundindex ("weapons/hgrenb1a.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound (ent, CHAN_VOICE, SV_SoundIndex ("weapons/hgrenb1a.wav"), 1, ATTN_NORM, 0);
 			else
-				gi.sound (ent, CHAN_VOICE, gi.soundindex ("weapons/hgrenb2a.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound (ent, CHAN_VOICE, SV_SoundIndex ("weapons/hgrenb2a.wav"), 1, ATTN_NORM, 0);
 		}
 		else
 		{
-			gi.sound (ent, CHAN_VOICE, gi.soundindex ("weapons/grenlb1b.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (ent, CHAN_VOICE, SV_SoundIndex ("weapons/grenlb1b.wav"), 1, ATTN_NORM, 0);
 		}
 		return;
 	}
@@ -51747,7 +51593,7 @@ void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int s
 	grenade->s.effects |= EF_GRENADE;
 	VectorClear (grenade->mins);
 	VectorClear (grenade->maxs);
-	grenade->s.modelindex = gi.modelindex ("models/objects/grenade/tris.md2");
+	grenade->s.modelindex = SV_ModelIndex ("models/objects/grenade/tris.md2");
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
 	grenade->nextthink = level.time + timer;
@@ -51756,7 +51602,7 @@ void fire_grenade (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int s
 	grenade->dmg_radius = damage_radius;
 	grenade->classname = "grenade";
 
-	gi.linkentity (grenade);
+	SV_LinkEdict (grenade);
 }
 
 void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, bool held)
@@ -51780,7 +51626,7 @@ void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int 
 	grenade->s.effects |= EF_GRENADE;
 	VectorClear (grenade->mins);
 	VectorClear (grenade->maxs);
-	grenade->s.modelindex = gi.modelindex ("models/objects/grenade2/tris.md2");
+	grenade->s.modelindex = SV_ModelIndex ("models/objects/grenade2/tris.md2");
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
 	grenade->nextthink = level.time + timer;
@@ -51792,14 +51638,14 @@ void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int 
 		grenade->spawnflags = 3;
 	else
 		grenade->spawnflags = 1;
-	grenade->s.sound = gi.soundindex("weapons/hgrenc1b.wav");
+	grenade->s.sound = SV_SoundIndex("weapons/hgrenc1b.wav");
 
 	if (timer <= 0.0)
 		Grenade_Explode (grenade);
 	else
 	{
-		gi.sound (self, CHAN_WEAPON, gi.soundindex ("weapons/hgrent1a.wav"), 1, ATTN_NORM, 0);
-		gi.linkentity (grenade);
+		PF_StartSound (self, CHAN_WEAPON, SV_SoundIndex ("weapons/hgrent1a.wav"), 1, ATTN_NORM, 0);
+		SV_LinkEdict (grenade);
 	}
 }
 
@@ -51849,13 +51695,13 @@ void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* su
 
 	T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius, MOD_R_SPLASH);
 
-	gi.WriteByte (svc_temp_entity);
+	PF_WriteByte (svc_temp_entity);
 	if (ent->waterlevel)
-		gi.WriteByte (TE_ROCKET_EXPLOSION_WATER);
+		PF_WriteByte (TE_ROCKET_EXPLOSION_WATER);
 	else
-		gi.WriteByte (TE_ROCKET_EXPLOSION);
-	gi.WritePosition (origin);
-	gi.multicast (ent->s.origin, MULTICAST_PHS);
+		PF_WriteByte (TE_ROCKET_EXPLOSION);
+	PF_WritePos (origin);
+	SV_Multicast (ent->s.origin, MULTICAST_PHS);
 
 	G_FreeEdict (ent);
 }
@@ -51875,7 +51721,7 @@ void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed
 	rocket->s.effects |= EF_ROCKET;
 	VectorClear (rocket->mins);
 	VectorClear (rocket->maxs);
-	rocket->s.modelindex = gi.modelindex ("models/objects/rocket/tris.md2");
+	rocket->s.modelindex = SV_ModelIndex ("models/objects/rocket/tris.md2");
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
 	rocket->nextthink = (float)level.time + 8000.0f/(float)speed;
@@ -51883,13 +51729,13 @@ void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed
 	rocket->dmg = damage;
 	rocket->radius_dmg = radius_damage;
 	rocket->dmg_radius = damage_radius;
-	rocket->s.sound = gi.soundindex ("weapons/rockfly.wav");
+	rocket->s.sound = SV_SoundIndex ("weapons/rockfly.wav");
 	rocket->classname = "rocket";
 
 	if (self->client)
 		check_dodge (self, rocket->s.origin, dir, speed);
 
-	gi.linkentity (rocket);
+	SV_LinkEdict (rocket);
 }
 
 
@@ -51914,7 +51760,7 @@ void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick
 	mask = MASK_SHOT|CONTENTS_SLIME|CONTENTS_LAVA;
 	while (ignore)
 	{
-		tr = gi.trace (from, NULL, NULL, end, ignore, mask);
+		tr = SV_Trace (from, NULL, NULL, end, ignore, mask);
 
 		if (tr.contents & (CONTENTS_SLIME|CONTENTS_LAVA))
 		{
@@ -51936,19 +51782,19 @@ void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick
 	}
 
 	// send gun puff / flash
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_RAILTRAIL);
-	gi.WritePosition (start);
-	gi.WritePosition (tr.endpos);
-	gi.multicast (self->s.origin, MULTICAST_PHS);
-//	gi.multicast (start, MULTICAST_PHS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_RAILTRAIL);
+	PF_WritePos (start);
+	PF_WritePos (tr.endpos);
+	SV_Multicast (self->s.origin, MULTICAST_PHS);
+//	SV_Multicast (start, MULTICAST_PHS);
 	if (water)
 	{
-		gi.WriteByte (svc_temp_entity);
-		gi.WriteByte (TE_RAILTRAIL);
-		gi.WritePosition (start);
-		gi.WritePosition (tr.endpos);
-		gi.multicast (tr.endpos, MULTICAST_PHS);
+		PF_WriteByte (svc_temp_entity);
+		PF_WriteByte (TE_RAILTRAIL);
+		PF_WritePos (start);
+		PF_WritePos (tr.endpos);
+		SV_Multicast (tr.endpos, MULTICAST_PHS);
 	}
 
 	if (self->client)
@@ -51991,10 +51837,10 @@ void bfg_explode (edict_t* self)
 			if (ent == self->owner)
 				points = points * 0.5;
 
-			gi.WriteByte (svc_temp_entity);
-			gi.WriteByte (TE_BFG_EXPLOSION);
-			gi.WritePosition (ent->s.origin);
-			gi.multicast (ent->s.origin, MULTICAST_PHS);
+			PF_WriteByte (svc_temp_entity);
+			PF_WriteByte (TE_BFG_EXPLOSION);
+			PF_WritePos (ent->s.origin);
+			SV_Multicast (ent->s.origin, MULTICAST_PHS);
 			T_Damage (ent, self, self->owner, self->velocity, ent->s.origin, vec3_origin, (int)points, 0, DAMAGE_ENERGY, MOD_BFG_EFFECT);
 		}
 	}
@@ -52024,12 +51870,12 @@ void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf
 		T_Damage (other, self, self->owner, self->velocity, self->s.origin, plane->normal, 200, 0, 0, MOD_BFG_BLAST);
 	T_RadiusDamage(self, self->owner, 200, other, 100, MOD_BFG_BLAST);
 
-	gi.sound (self, CHAN_VOICE, gi.soundindex ("weapons/bfg__x1b.wav"), 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("weapons/bfg__x1b.wav"), 1, ATTN_NORM, 0);
 	self->solid = SOLID_NOT;
 	self->touch = NULL;
 	VectorMA (self->s.origin, -1 * FRAMETIME, self->velocity, self->s.origin);
 	VectorClear (self->velocity);
-	self->s.modelindex = gi.modelindex ("sprites/s_bfg3.sp2");
+	self->s.modelindex = SV_ModelIndex ("sprites/s_bfg3.sp2");
 	self->s.frame = 0;
 	self->s.sound = 0;
 	self->s.effects &= ~EF_ANIM_ALLFAST;
@@ -52037,10 +51883,10 @@ void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf
 	self->nextthink = level.time + FRAMETIME;
 	self->enemy = other;
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_BFG_BIGEXPLOSION);
-	gi.WritePosition (self->s.origin);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_BFG_BIGEXPLOSION);
+	PF_WritePos (self->s.origin);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 }
 
 
@@ -52085,7 +51931,7 @@ void bfg_think (edict_t* self)
 		VectorMA (start, 2048, dir, end);
 		while(1)
 		{
-			tr = gi.trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+			tr = SV_Trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
 
 			if (!tr.ent)
 				break;
@@ -52097,13 +51943,13 @@ void bfg_think (edict_t* self)
 			// if we hit something that's not a monster or player we're done
 			if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
 			{
-				gi.WriteByte (svc_temp_entity);
-				gi.WriteByte (TE_LASER_SPARKS);
-				gi.WriteByte (4);
-				gi.WritePosition (tr.endpos);
-				gi.WriteDir (tr.plane.normal);
-				gi.WriteByte (self->s.skinnum);
-				gi.multicast (tr.endpos, MULTICAST_PVS);
+				PF_WriteByte (svc_temp_entity);
+				PF_WriteByte (TE_LASER_SPARKS);
+				PF_WriteByte (4);
+				PF_WritePos (tr.endpos);
+				PF_WriteDir (tr.plane.normal);
+				PF_WriteByte (self->s.skinnum);
+				SV_Multicast (tr.endpos, MULTICAST_PVS);
 				break;
 			}
 
@@ -52111,11 +51957,11 @@ void bfg_think (edict_t* self)
 			VectorCopy (tr.endpos, start);
 		}
 
-		gi.WriteByte (svc_temp_entity);
-		gi.WriteByte (TE_BFG_LASER);
-		gi.WritePosition (self->s.origin);
-		gi.WritePosition (tr.endpos);
-		gi.multicast (self->s.origin, MULTICAST_PHS);
+		PF_WriteByte (svc_temp_entity);
+		PF_WriteByte (TE_BFG_LASER);
+		PF_WritePos (self->s.origin);
+		PF_WritePos (tr.endpos);
+		SV_Multicast (self->s.origin, MULTICAST_PHS);
 	}
 
 	self->nextthink = level.time + FRAMETIME;
@@ -52137,7 +51983,7 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 	bfg->s.effects |= EF_BFG | EF_ANIM_ALLFAST;
 	VectorClear (bfg->mins);
 	VectorClear (bfg->maxs);
-	bfg->s.modelindex = gi.modelindex ("sprites/s_bfg1.sp2");
+	bfg->s.modelindex = SV_ModelIndex ("sprites/s_bfg1.sp2");
 	bfg->owner = self;
 	bfg->touch = bfg_touch;
 	bfg->nextthink = (float)level.time + 8000.0f/(float)speed;
@@ -52145,7 +51991,7 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 	bfg->radius_dmg = damage;
 	bfg->dmg_radius = damage_radius;
 	bfg->classname = "bfg blast";
-	bfg->s.sound = gi.soundindex ("weapons/bfg__l1a.wav");
+	bfg->s.sound = SV_SoundIndex ("weapons/bfg__l1a.wav");
 
 	bfg->think = bfg_think;
 	bfg->nextthink = level.time + FRAMETIME;
@@ -52155,7 +52001,7 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 	if (self->client)
 		check_dodge (self, bfg->s.origin, dir, speed);
 
-	gi.linkentity (bfg);
+	SV_LinkEdict (bfg);
 }
 /* ============ end source: game/g_weapon.c ============ */
 /* ============ begin source: game/m_actor.c ============ */
@@ -52944,7 +52790,7 @@ static void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-//	gi.sound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
+//	PF_StartSound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
 
 	if ((other->client) && (random() < 0.4))
 	{
@@ -52958,7 +52804,7 @@ static void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		else
 			self->monsterinfo.currentmove = &actor_move_taunt;
 		name = actor_names[(self - g_edicts) % carray_count(actor_names)];
-		gi.cprintf (other, PRINT_CHAT, "%s: %s!\n", name, messages[rand()%3]);
+		PF_cprintf (other, PRINT_CHAT, "%s: %s!\n", name, messages[rand()%3]);
 		return;
 	}
 
@@ -53009,7 +52855,7 @@ void actor_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static mframe_t actor_frames_death1[] = {
@@ -53052,7 +52898,7 @@ static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 // check for gib
 	if (self->health <= -80)
 	{
-//		gi.sound (self, CHAN_VOICE, actor.sound_gib, 1, ATTN_NORM, 0);
+//		PF_StartSound (self, CHAN_VOICE, actor.sound_gib, 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -53066,7 +52912,7 @@ static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 		return;
 
 // regular death
-//	gi.sound (self, CHAN_VOICE, actor.sound_die, 1, ATTN_NORM, 0);
+//	PF_StartSound (self, CHAN_VOICE, actor.sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -53114,7 +52960,7 @@ static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
 	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0))
 	{
-		gi.dprintf ("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
+		PF_dprintf ("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
 		self->target = NULL;
 		self->monsterinfo.pausetime = 100000000;
 		self->monsterinfo.stand (self);
@@ -53141,21 +52987,21 @@ void SP_misc_actor (edict_t* self)
 
 	if (!self->targetname)
 	{
-		gi.dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	if (!self->target)
 	{
-		gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("players/male/tris.md2");
+	self->s.modelindex = SV_ModelIndex("players/male/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -53175,7 +53021,7 @@ void SP_misc_actor (edict_t* self)
 
 	self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &actor_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -53226,7 +53072,7 @@ static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 			ent = &g_edicts[n];
 			if (!ent->inuse)
 				continue;
-			gi.cprintf (ent, PRINT_CHAT, "%s: %s\n", actor_names[(other - g_edicts) % carray_count(actor_names)], self->message);
+			PF_cprintf (ent, PRINT_CHAT, "%s: %s\n", actor_names[(other - g_edicts) % carray_count(actor_names)], self->message);
 		}
 	}
 
@@ -53239,7 +53085,7 @@ static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 		{
 			other->groundentity = NULL;
 			other->velocity[2] = self->movedir[2];
-			gi.sound(other, CHAN_VOICE, gi.soundindex("player/male/jump1.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(other, CHAN_VOICE, SV_SoundIndex("player/male/jump1.wav"), 1, ATTN_NORM, 0);
 		}
 	}
 
@@ -53296,7 +53142,7 @@ static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 void SP_target_actor (edict_t* self)
 {
 	if (!self->targetname)
-		gi.dprintf ("%s with no targetname at %s\n", self->classname, vtos(self->s.origin));
+		PF_dprintf ("%s with no targetname at %s\n", self->classname, vtos(self->s.origin));
 
 	self->solid = SOLID_TRIGGER;
 	self->touch = target_actor_touch;
@@ -53316,7 +53162,7 @@ void SP_target_actor (edict_t* self)
 		self->movedir[2] = st.height;
 	}
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 /* ============ end source: game/m_actor.c ============ */
 /* ============ begin source: game/m_berserk.c ============ */
@@ -53601,11 +53447,11 @@ static int sound_search;
 static void berserk_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 static void berserk_search(edict_t* self) {
-	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
@@ -53657,7 +53503,7 @@ void berserk_fidget (edict_t* self)
 		return;
 
 	self->monsterinfo.currentmove = &berserk_move_stand_fidget;
-	gi.sound (self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 static mframe_t berserk_frames_walk[] = {
@@ -53735,7 +53581,7 @@ void berserk_attack_spike (edict_t* self)
 
 void berserk_swing (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
 
 static mframe_t berserk_frames_attack_spike[] = {
@@ -53852,7 +53698,7 @@ static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) 
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	gi.sound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -53870,7 +53716,7 @@ void berserk_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static mframe_t berserk_frames_death1[] = {
@@ -53913,7 +53759,7 @@ static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -53926,7 +53772,7 @@ static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -53948,14 +53794,14 @@ void SP_monster_berserk (edict_t* self)
 	}
 
 	// pre-caches
-	sound_pain  = gi.soundindex ("berserk/berpain2.wav");
-	sound_die   = gi.soundindex ("berserk/berdeth2.wav");
-	sound_idle  = gi.soundindex ("berserk/beridle1.wav");
-	sound_punch = gi.soundindex ("berserk/attack.wav");
-	sound_search = gi.soundindex ("berserk/bersrch1.wav");
-	sound_sight = gi.soundindex ("berserk/sight.wav");
+	sound_pain  = SV_SoundIndex ("berserk/berpain2.wav");
+	sound_die   = SV_SoundIndex ("berserk/berdeth2.wav");
+	sound_idle  = SV_SoundIndex ("berserk/beridle1.wav");
+	sound_punch = SV_SoundIndex ("berserk/attack.wav");
+	sound_search = SV_SoundIndex ("berserk/bersrch1.wav");
+	sound_sight = SV_SoundIndex ("berserk/sight.wav");
 
-	self->s.modelindex = gi.modelindex("models/monsters/berserk/tris.md2");
+	self->s.modelindex = SV_ModelIndex("models/monsters/berserk/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 	self->movetype = MOVETYPE_STEP;
@@ -53980,7 +53826,7 @@ void SP_monster_berserk (edict_t* self)
 	self->monsterinfo.currentmove = &berserk_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	walkmonster_start (self);
 }
@@ -54258,7 +54104,7 @@ static int	sound_search1;
 void boss2_search (edict_t* self)
 {
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
 
 void boss2_run (edict_t* self);
@@ -54696,17 +54542,17 @@ static void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
 // American wanted these at no attenuation
 	if (damage < 10)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
 	else if (damage < 30)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_heavy;
 	}
 }
@@ -54717,7 +54563,7 @@ static void boss2_dead (edict_t* self) {
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -54726,7 +54572,7 @@ static void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	UNUSED(damage);
 	UNUSED(point);
 
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->count = 0;
@@ -54750,7 +54596,7 @@ bool Boss2_CheckAttack (edict_t* self)
 		VectorCopy (self->enemy->s.origin, spot2);
 		spot2[2] += self->enemy->viewheight;
 
-		tr = gi.trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
+		tr = SV_Trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
 
 		// do we have a clear shot?
 		if (tr.ent != self->enemy)
@@ -54835,17 +54681,17 @@ void SP_monster_boss2 (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("bosshovr/bhvpain1.wav");
-	sound_pain2 = gi.soundindex ("bosshovr/bhvpain2.wav");
-	sound_pain3 = gi.soundindex ("bosshovr/bhvpain3.wav");
-	sound_death = gi.soundindex ("bosshovr/bhvdeth1.wav");
-	sound_search1 = gi.soundindex ("bosshovr/bhvunqv1.wav");
+	sound_pain1 = SV_SoundIndex ("bosshovr/bhvpain1.wav");
+	sound_pain2 = SV_SoundIndex ("bosshovr/bhvpain2.wav");
+	sound_pain3 = SV_SoundIndex ("bosshovr/bhvpain3.wav");
+	sound_death = SV_SoundIndex ("bosshovr/bhvdeth1.wav");
+	sound_search1 = SV_SoundIndex ("bosshovr/bhvunqv1.wav");
 
-	self->s.sound = gi.soundindex ("bosshovr/bhvengn1.wav");
+	self->s.sound = SV_SoundIndex ("bosshovr/bhvengn1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/boss2/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/boss2/tris.md2");
 	VectorSet (self->mins, -56, -56, 0);
 	VectorSet (self->maxs, 56, 56, 80);
 
@@ -54864,7 +54710,7 @@ void SP_monster_boss2 (edict_t* self)
 	self->monsterinfo.attack = boss2_attack;
 	self->monsterinfo.search = boss2_search;
 	self->monsterinfo.checkattack = Boss2_CheckAttack;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &boss2_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -55565,10 +55411,10 @@ boss3
 static void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_BOSSTPORT);
-	gi.WritePosition (ent->s.origin);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_BOSSTPORT);
+	PF_WritePos (ent->s.origin);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 	G_FreeEdict (ent);
 }
 
@@ -55596,10 +55442,10 @@ void SP_monster_boss3_stand (edict_t* self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->model = "models/monsters/boss3/rider/tris.md2";
-	self->s.modelindex = gi.modelindex (self->model);
+	self->s.modelindex = SV_ModelIndex (self->model);
 	self->s.frame = FRAME_stand201;
 
-	gi.soundindex ("misc/bigtele.wav");
+	SV_SoundIndex ("misc/bigtele.wav");
 
 	VectorSet (self->mins, -32, -32, 0);
 	VectorSet (self->maxs, 32, 32, 90);
@@ -55607,7 +55453,7 @@ void SP_monster_boss3_stand (edict_t* self)
 	self->use = Use_Boss3;
 	self->think = Think_Boss3Stand;
 	self->nextthink = level.time + FRAMETIME;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 /* ============ end source: game/m_boss3.c ============ */
 /* ============ begin source: game/m_boss31.c ============ */
@@ -55848,11 +55694,11 @@ void jorg_search (edict_t* self)
 	r = random();
 
 	if (r <= 0.3)
-		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
 	else if (r <= 0.6)
-		gi.sound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_search3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search3, 1, ATTN_NORM, 0);
 }
 
 
@@ -55928,23 +55774,23 @@ mmove_t	jorg_move_stand = {FRAME_stand01, FRAME_stand51, jorg_frames_stand, NULL
 
 void jorg_idle (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_NORM,0);
 }
 
 void jorg_death_hit (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_death_hit, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, sound_death_hit, 1, ATTN_NORM,0);
 }
 
 
 void jorg_step_left (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
 }
 
 void jorg_step_right (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
 }
 
 
@@ -56243,19 +56089,19 @@ static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
 
 	if (damage <= 50)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_pain1;
 	}
 	else if (damage <= 100)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_pain2;
 	}
 	else
 	{
 		if (random() <= 0.3)
 		{
-			gi.sound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
+			PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
 			self->monsterinfo.currentmove = &jorg_move_pain3;
 		}
 	}
@@ -56275,7 +56121,7 @@ void jorgBFG (edict_t* self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
-	gi.sound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
 	monster_fire_bfg(self, start, dir, 50, 300, 200, MZ2_JORG_BFG_1);
 }
 
@@ -56321,13 +56167,13 @@ void jorg_attack(edict_t* self)
 {
 	if (random() <= 0.75)
 	{
-		gi.sound (self, CHAN_VOICE, sound_attack1, 1, ATTN_NORM,0);
-		self->s.sound = gi.soundindex ("boss3/w_loop.wav");
+		PF_StartSound (self, CHAN_VOICE, sound_attack1, 1, ATTN_NORM,0);
+		self->s.sound = SV_SoundIndex ("boss3/w_loop.wav");
 		self->monsterinfo.currentmove = &jorg_move_start_attack1;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_attack2;
 	}
 }
@@ -56342,7 +56188,7 @@ static void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	UNUSED(damage);
 	UNUSED(point);
 
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->s.sound = 0;
@@ -56367,7 +56213,7 @@ bool Jorg_CheckAttack (edict_t* self)
 		VectorCopy (self->enemy->s.origin, spot2);
 		spot2[2] += self->enemy->viewheight;
 
-		tr = gi.trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
+		tr = SV_Trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
 
 		// do we have a clear shot?
 		if (tr.ent != self->enemy)
@@ -56453,27 +56299,27 @@ void SP_monster_jorg (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("boss3/bs3pain1.wav");
-	sound_pain2 = gi.soundindex ("boss3/bs3pain2.wav");
-	sound_pain3 = gi.soundindex ("boss3/bs3pain3.wav");
-	sound_death = gi.soundindex ("boss3/bs3deth1.wav");
-	sound_attack1 = gi.soundindex ("boss3/bs3atck1.wav");
-	sound_attack2 = gi.soundindex ("boss3/bs3atck2.wav");
-	sound_search1 = gi.soundindex ("boss3/bs3srch1.wav");
-	sound_search2 = gi.soundindex ("boss3/bs3srch2.wav");
-	sound_search3 = gi.soundindex ("boss3/bs3srch3.wav");
-	sound_idle = gi.soundindex ("boss3/bs3idle1.wav");
-	sound_step_left = gi.soundindex ("boss3/step1.wav");
-	sound_step_right = gi.soundindex ("boss3/step2.wav");
-	sound_firegun = gi.soundindex ("boss3/xfire.wav");
-	sound_death_hit = gi.soundindex ("boss3/d_hit.wav");
+	sound_pain1 = SV_SoundIndex ("boss3/bs3pain1.wav");
+	sound_pain2 = SV_SoundIndex ("boss3/bs3pain2.wav");
+	sound_pain3 = SV_SoundIndex ("boss3/bs3pain3.wav");
+	sound_death = SV_SoundIndex ("boss3/bs3deth1.wav");
+	sound_attack1 = SV_SoundIndex ("boss3/bs3atck1.wav");
+	sound_attack2 = SV_SoundIndex ("boss3/bs3atck2.wav");
+	sound_search1 = SV_SoundIndex ("boss3/bs3srch1.wav");
+	sound_search2 = SV_SoundIndex ("boss3/bs3srch2.wav");
+	sound_search3 = SV_SoundIndex ("boss3/bs3srch3.wav");
+	sound_idle = SV_SoundIndex ("boss3/bs3idle1.wav");
+	sound_step_left = SV_SoundIndex ("boss3/step1.wav");
+	sound_step_right = SV_SoundIndex ("boss3/step2.wav");
+	sound_firegun = SV_SoundIndex ("boss3/xfire.wav");
+	sound_death_hit = SV_SoundIndex ("boss3/d_hit.wav");
 
 	MakronPrecache ();
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/boss3/rider/tris.md2");
-	self->s.modelindex2 = gi.modelindex ("models/monsters/boss3/jorg/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
+	self->s.modelindex2 = SV_ModelIndex ("models/monsters/boss3/jorg/tris.md2");
 	VectorSet (self->mins, -80, -80, 0);
 	VectorSet (self->maxs, 80, 80, 140);
 
@@ -56492,7 +56338,7 @@ void SP_monster_jorg (edict_t* self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = NULL;
 	self->monsterinfo.checkattack = Jorg_CheckAttack;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &jorg_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -56544,11 +56390,11 @@ void makron_taunt (edict_t* self)
 
 	r=random();
 	if (r <= 0.3)
-		gi.sound (self, CHAN_AUTO, sound_taunt1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, sound_taunt1, 1, ATTN_NONE, 0);
 	else if (r <= 0.6)
-		gi.sound (self, CHAN_AUTO, sound_taunt2, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, sound_taunt2, 1, ATTN_NONE, 0);
 	else
-		gi.sound (self, CHAN_AUTO, sound_taunt3, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, sound_taunt3, 1, ATTN_NONE, 0);
 }
 
 //
@@ -56642,32 +56488,32 @@ mmove_t	makron_move_run = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL
 
 void makron_hit (edict_t* self)
 {
-	gi.sound (self, CHAN_AUTO, sound_hit, 1, ATTN_NONE,0);
+	PF_StartSound (self, CHAN_AUTO, sound_hit, 1, ATTN_NONE,0);
 }
 
 void makron_popup (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_popup, 1, ATTN_NONE,0);
+	PF_StartSound (self, CHAN_BODY, sound_popup, 1, ATTN_NONE,0);
 }
 
 void makron_step_left (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
 }
 
 void makron_step_right (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
 }
 
 void makron_brainsplorch (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_brainsplorch, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_VOICE, sound_brainsplorch, 1, ATTN_NORM,0);
 }
 
 void makron_prerailgun (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
 }
 
 
@@ -56906,7 +56752,7 @@ void makronBFG (edict_t* self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
-	gi.sound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
 	monster_fire_bfg(self, start, dir, 50, 300, 300, MZ2_MAKRON_BFG);
 }
 
@@ -57058,12 +56904,12 @@ static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
 
 	if (damage <= 40)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain4, 1, ATTN_NONE,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain4, 1, ATTN_NONE,0);
 		self->monsterinfo.currentmove = &makron_move_pain4;
 	}
 	else if (damage <= 110)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain5, 1, ATTN_NONE,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain5, 1, ATTN_NONE,0);
 		self->monsterinfo.currentmove = &makron_move_pain5;
 	}
 	else
@@ -57071,10 +56917,10 @@ static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		if (damage <= 150)
 		{
 			if (random() <= 0.45) {
-				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
+				PF_StartSound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			} else if (random() <= 0.35) {
-				gi.sound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
+				PF_StartSound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			}
 		}
@@ -57125,11 +56971,11 @@ void makron_torso (edict_t *ent)
 	VectorSet (ent->mins, -8, -8, 0);
 	VectorSet (ent->maxs, 8, 8, 8);
 	ent->s.frame = 346;
-	ent->s.modelindex = gi.modelindex ("models/monsters/boss3/rider/tris.md2");
+	ent->s.modelindex = SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
 	ent->think = makron_torso_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
-	ent->s.sound = gi.soundindex ("makron/spine.wav");
-	gi.linkentity (ent);
+	ent->s.sound = SV_SoundIndex ("makron/spine.wav");
+	SV_LinkEdict (ent);
 }
 
 
@@ -57144,7 +56990,7 @@ void makron_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -57160,7 +57006,7 @@ static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	// check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 1 /*4*/; n++)
 			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -57174,7 +57020,7 @@ static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -57205,7 +57051,7 @@ bool Makron_CheckAttack (edict_t* self)
 		VectorCopy (self->enemy->s.origin, spot2);
 		spot2[2] += self->enemy->viewheight;
 
-		tr = gi.trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
+		tr = SV_Trace (spot1, NULL, NULL, spot2, self, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_SLIME|CONTENTS_LAVA);
 
 		// do we have a clear shot?
 		if (tr.ent != self->enemy)
@@ -57285,22 +57131,22 @@ bool Makron_CheckAttack (edict_t* self)
 
 void MakronPrecache (void)
 {
-	sound_pain4 = gi.soundindex ("makron/pain3.wav");
-	sound_pain5 = gi.soundindex ("makron/pain2.wav");
-	sound_pain6 = gi.soundindex ("makron/pain1.wav");
-	sound_death = gi.soundindex ("makron/death.wav");
-	sound_step_left = gi.soundindex ("makron/step1.wav");
-	sound_step_right = gi.soundindex ("makron/step2.wav");
-	sound_attack_bfg = gi.soundindex ("makron/bfg_fire.wav");
-	sound_brainsplorch = gi.soundindex ("makron/brain1.wav");
-	sound_prerailgun = gi.soundindex ("makron/rail_up.wav");
-	sound_popup = gi.soundindex ("makron/popup.wav");
-	sound_taunt1 = gi.soundindex ("makron/voice4.wav");
-	sound_taunt2 = gi.soundindex ("makron/voice3.wav");
-	sound_taunt3 = gi.soundindex ("makron/voice.wav");
-	sound_hit = gi.soundindex ("makron/bhit.wav");
+	sound_pain4 = SV_SoundIndex ("makron/pain3.wav");
+	sound_pain5 = SV_SoundIndex ("makron/pain2.wav");
+	sound_pain6 = SV_SoundIndex ("makron/pain1.wav");
+	sound_death = SV_SoundIndex ("makron/death.wav");
+	sound_step_left = SV_SoundIndex ("makron/step1.wav");
+	sound_step_right = SV_SoundIndex ("makron/step2.wav");
+	sound_attack_bfg = SV_SoundIndex ("makron/bfg_fire.wav");
+	sound_brainsplorch = SV_SoundIndex ("makron/brain1.wav");
+	sound_prerailgun = SV_SoundIndex ("makron/rail_up.wav");
+	sound_popup = SV_SoundIndex ("makron/popup.wav");
+	sound_taunt1 = SV_SoundIndex ("makron/voice4.wav");
+	sound_taunt2 = SV_SoundIndex ("makron/voice3.wav");
+	sound_taunt3 = SV_SoundIndex ("makron/voice.wav");
+	sound_hit = SV_SoundIndex ("makron/bhit.wav");
 
-	gi.modelindex ("models/monsters/boss3/rider/tris.md2");
+	SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
 }
 
 /*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) Ambush Trigger_Spawn Sight
@@ -57317,7 +57163,7 @@ void SP_monster_makron (edict_t* self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/boss3/rider/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
 	VectorSet (self->mins, -30, -30, 0);
 	VectorSet (self->maxs, 30, 30, 90);
 
@@ -57336,7 +57182,7 @@ void SP_monster_makron (edict_t* self)
 	self->monsterinfo.sight = makron_sight;
 	self->monsterinfo.checkattack = Makron_CheckAttack;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 //	self->monsterinfo.currentmove = &makron_move_stand;
 	self->monsterinfo.currentmove = &makron_move_sight;
@@ -57777,12 +57623,12 @@ static int	sound_melee3;
 
 static void brain_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void brain_search (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
@@ -57880,7 +57726,7 @@ mmove_t brain_move_idle = {FRAME_stand31, FRAME_stand60, brain_frames_idle, brai
 
 void brain_idle (edict_t* self)
 {
-	gi.sound (self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
 	self->monsterinfo.currentmove = &brain_move_idle;
 }
 
@@ -58047,7 +57893,7 @@ void brain_duck_down (edict_t* self)
 	self->monsterinfo.aiflags |= AI_DUCKED;
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void brain_duck_hold (edict_t* self)
@@ -58063,7 +57909,7 @@ void brain_duck_up (edict_t* self)
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t brain_frames_duck [] =
@@ -58132,7 +57978,7 @@ mmove_t brain_move_death1 = {FRAME_death101, FRAME_death118, brain_frames_death1
 
 void brain_swing_right (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_melee1, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, sound_melee1, 1, ATTN_NORM, 0);
 }
 
 void brain_hit_right (edict_t* self)
@@ -58141,12 +57987,12 @@ void brain_hit_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 8);
 	if (fire_hit (self, aim, (15 + (rand() %5)), 40))
-		gi.sound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
 void brain_swing_left (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_melee2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, sound_melee2, 1, ATTN_NORM, 0);
 }
 
 void brain_hit_left (edict_t* self)
@@ -58155,7 +58001,7 @@ void brain_hit_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	if (fire_hit (self, aim, (15 + (rand() %5)), 40))
-		gi.sound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
 mframe_t brain_frames_attack1 [] =
@@ -58185,7 +58031,7 @@ void brain_chest_open (edict_t* self)
 {
 	self->spawnflags &= ~65536;
 	self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
-	gi.sound (self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
 }
 
 void brain_tentacle_attack (edict_t* self)
@@ -58195,7 +58041,7 @@ void brain_tentacle_attack (edict_t* self)
 	VectorSet (aim, MELEE_DISTANCE, 0, 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), -600) && skill->value > 0)
 		self->spawnflags |= 65536;
-	gi.sound (self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
 
 void brain_chest_closed (edict_t* self)
@@ -58289,17 +58135,17 @@ static void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	r = random();
 	if (r < 0.33)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain1;
 	}
 	else if (r < 0.66)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain2;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain3;
 	}
 }
@@ -58311,7 +58157,7 @@ void brain_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -58327,7 +58173,7 @@ static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -58341,7 +58187,7 @@ static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	if (random() <= 0.5)
@@ -58360,24 +58206,24 @@ void SP_monster_brain (edict_t* self)
 		return;
 	}
 
-	sound_chest_open = gi.soundindex ("brain/brnatck1.wav");
-	sound_tentacles_extend = gi.soundindex ("brain/brnatck2.wav");
-	sound_tentacles_retract = gi.soundindex ("brain/brnatck3.wav");
-	sound_death = gi.soundindex ("brain/brndeth1.wav");
-	sound_idle1 = gi.soundindex ("brain/brnidle1.wav");
-	sound_idle2 = gi.soundindex ("brain/brnidle2.wav");
-	sound_idle3 = gi.soundindex ("brain/brnlens1.wav");
-	sound_pain1 = gi.soundindex ("brain/brnpain1.wav");
-	sound_pain2 = gi.soundindex ("brain/brnpain2.wav");
-	sound_sight = gi.soundindex ("brain/brnsght1.wav");
-	sound_search = gi.soundindex ("brain/brnsrch1.wav");
-	sound_melee1 = gi.soundindex ("brain/melee1.wav");
-	sound_melee2 = gi.soundindex ("brain/melee2.wav");
-	sound_melee3 = gi.soundindex ("brain/melee3.wav");
+	sound_chest_open = SV_SoundIndex ("brain/brnatck1.wav");
+	sound_tentacles_extend = SV_SoundIndex ("brain/brnatck2.wav");
+	sound_tentacles_retract = SV_SoundIndex ("brain/brnatck3.wav");
+	sound_death = SV_SoundIndex ("brain/brndeth1.wav");
+	sound_idle1 = SV_SoundIndex ("brain/brnidle1.wav");
+	sound_idle2 = SV_SoundIndex ("brain/brnidle2.wav");
+	sound_idle3 = SV_SoundIndex ("brain/brnlens1.wav");
+	sound_pain1 = SV_SoundIndex ("brain/brnpain1.wav");
+	sound_pain2 = SV_SoundIndex ("brain/brnpain2.wav");
+	sound_sight = SV_SoundIndex ("brain/brnsght1.wav");
+	sound_search = SV_SoundIndex ("brain/brnsrch1.wav");
+	sound_melee1 = SV_SoundIndex ("brain/melee1.wav");
+	sound_melee2 = SV_SoundIndex ("brain/melee2.wav");
+	sound_melee3 = SV_SoundIndex ("brain/melee3.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/brain/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/brain/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -58401,7 +58247,7 @@ void SP_monster_brain (edict_t* self)
 	self->monsterinfo.power_armor_type = POWER_ARMOR_SCREEN;
 	self->monsterinfo.power_armor_power = 100;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &brain_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -58938,9 +58784,9 @@ static int	sound_search;
 void ChickMoan (edict_t* self)
 {
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
 }
 
 mframe_t chick_frames_fidget [] =
@@ -59161,11 +59007,11 @@ static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 
 	r = random();
 	if (r < 0.33)
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 	else if (r < 0.66)
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -59185,7 +59031,7 @@ void chick_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t chick_frames_death2 [] =
@@ -59244,7 +59090,7 @@ static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -59265,12 +59111,12 @@ static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &chick_move_death1;
-		gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &chick_move_death2;
-		gi.sound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -59283,7 +59129,7 @@ void chick_duck_down (edict_t* self)
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.pausetime = level.time + 1;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void chick_duck_hold (edict_t* self)
@@ -59298,7 +59144,7 @@ static void chick_duck_up (edict_t* self) {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static mframe_t chick_frames_duck[] = {
@@ -59330,7 +59176,7 @@ void ChickSlash (edict_t* self)
 	vec3_t	aim;
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 10);
-	gi.sound (self, CHAN_WEAPON, sound_melee_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_melee_swing, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, (10 + (rand() %6)), 100);
 }
 
@@ -59355,12 +59201,12 @@ void ChickRocket (edict_t* self)
 
 void Chick_PreAttack1 (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
 }
 
 void ChickReload (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
 
 
@@ -59510,7 +59356,7 @@ void chick_attack(edict_t* self)
 static void chick_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 /*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
@@ -59523,25 +59369,25 @@ void SP_monster_chick (edict_t* self)
 		return;
 	}
 
-	sound_missile_prelaunch	= gi.soundindex ("chick/chkatck1.wav");
-	sound_missile_launch	= gi.soundindex ("chick/chkatck2.wav");
-	sound_melee_swing		= gi.soundindex ("chick/chkatck3.wav");
-	sound_melee_hit			= gi.soundindex ("chick/chkatck4.wav");
-	sound_missile_reload	= gi.soundindex ("chick/chkatck5.wav");
-	sound_death1			= gi.soundindex ("chick/chkdeth1.wav");
-	sound_death2			= gi.soundindex ("chick/chkdeth2.wav");
-	sound_fall_down			= gi.soundindex ("chick/chkfall1.wav");
-	sound_idle1				= gi.soundindex ("chick/chkidle1.wav");
-	sound_idle2				= gi.soundindex ("chick/chkidle2.wav");
-	sound_pain1				= gi.soundindex ("chick/chkpain1.wav");
-	sound_pain2				= gi.soundindex ("chick/chkpain2.wav");
-	sound_pain3				= gi.soundindex ("chick/chkpain3.wav");
-	sound_sight				= gi.soundindex ("chick/chksght1.wav");
-	sound_search			= gi.soundindex ("chick/chksrch1.wav");
+	sound_missile_prelaunch	= SV_SoundIndex ("chick/chkatck1.wav");
+	sound_missile_launch	= SV_SoundIndex ("chick/chkatck2.wav");
+	sound_melee_swing		= SV_SoundIndex ("chick/chkatck3.wav");
+	sound_melee_hit			= SV_SoundIndex ("chick/chkatck4.wav");
+	sound_missile_reload	= SV_SoundIndex ("chick/chkatck5.wav");
+	sound_death1			= SV_SoundIndex ("chick/chkdeth1.wav");
+	sound_death2			= SV_SoundIndex ("chick/chkdeth2.wav");
+	sound_fall_down			= SV_SoundIndex ("chick/chkfall1.wav");
+	sound_idle1				= SV_SoundIndex ("chick/chkidle1.wav");
+	sound_idle2				= SV_SoundIndex ("chick/chkidle2.wav");
+	sound_pain1				= SV_SoundIndex ("chick/chkpain1.wav");
+	sound_pain2				= SV_SoundIndex ("chick/chkpain2.wav");
+	sound_pain3				= SV_SoundIndex ("chick/chkpain3.wav");
+	sound_sight				= SV_SoundIndex ("chick/chksght1.wav");
+	sound_search			= SV_SoundIndex ("chick/chksrch1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/bitch/tris.md2");
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 56);
 
@@ -59560,7 +59406,7 @@ void SP_monster_chick (edict_t* self)
 	self->monsterinfo.melee = chick_melee;
 	self->monsterinfo.sight = chick_sight;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &chick_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -59908,7 +59754,7 @@ void flipper_bite (edict_t* self)
 
 void flipper_preattack (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
 
 mframe_t flipper_frames_attack [] =
@@ -59962,12 +59808,12 @@ static void flipper_pain(edict_t* self, edict_t* other, float kick, int damage) 
 	n = (rand() + 1) % 2;
 	if (n == 0)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flipper_move_pain1;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flipper_move_pain2;
 	}
 }
@@ -59979,7 +59825,7 @@ void flipper_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t flipper_frames_death [] =
@@ -60051,7 +59897,7 @@ mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_dea
 static void flipper_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -60064,7 +59910,7 @@ static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, i
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 2; n++)
@@ -60078,7 +59924,7 @@ static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, i
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &flipper_move_death;
@@ -60094,18 +59940,18 @@ void SP_monster_flipper (edict_t* self)
 		return;
 	}
 
-	sound_pain1		= gi.soundindex ("flipper/flppain1.wav");
-	sound_pain2		= gi.soundindex ("flipper/flppain2.wav");
-	sound_death		= gi.soundindex ("flipper/flpdeth1.wav");
-	sound_chomp		= gi.soundindex ("flipper/flpatck1.wav");
-	sound_attack	= gi.soundindex ("flipper/flpatck2.wav");
-	sound_idle		= gi.soundindex ("flipper/flpidle1.wav");
-	sound_search	= gi.soundindex ("flipper/flpsrch1.wav");
-	sound_sight		= gi.soundindex ("flipper/flpsght1.wav");
+	sound_pain1		= SV_SoundIndex ("flipper/flppain1.wav");
+	sound_pain2		= SV_SoundIndex ("flipper/flppain2.wav");
+	sound_death		= SV_SoundIndex ("flipper/flpdeth1.wav");
+	sound_chomp		= SV_SoundIndex ("flipper/flpatck1.wav");
+	sound_attack	= SV_SoundIndex ("flipper/flpatck2.wav");
+	sound_idle		= SV_SoundIndex ("flipper/flpidle1.wav");
+	sound_search	= SV_SoundIndex ("flipper/flpsrch1.wav");
+	sound_sight		= SV_SoundIndex ("flipper/flpsght1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/flipper/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/flipper/tris.md2");
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -60122,7 +59968,7 @@ void SP_monster_flipper (edict_t* self)
 	self->monsterinfo.melee = flipper_melee;
 	self->monsterinfo.sight = flipper_sight;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &flipper_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -60582,11 +60428,11 @@ static int	sound_sight;
 static void floater_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 static void floater_idle (edict_t* self) {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 
@@ -61056,7 +60902,7 @@ void floater_walk (edict_t* self)
 void floater_wham (edict_t* self)
 {
 	static	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
-	gi.sound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, 5 + rand() % 6, -50);
 }
 
@@ -61075,16 +60921,16 @@ void floater_zap (edict_t* self)
 	G_ProjectSource (self->s.origin, offset, forward, right, origin);
 //	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, origin);
 
-	gi.sound (self, CHAN_WEAPON, sound_attack2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_attack2, 1, ATTN_NORM, 0);
 
 	//FIXME use the flash, Luke
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_SPLASH);
-	gi.WriteByte (32);
-	gi.WritePosition (origin);
-	gi.WriteDir (dir);
-	gi.WriteByte (1);	//sparks
-	gi.multicast (origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_SPLASH);
+	PF_WriteByte (32);
+	PF_WritePos (origin);
+	PF_WriteDir (dir);
+	PF_WriteByte (1);	//sparks
+	SV_Multicast (origin, MULTICAST_PVS);
 
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
@@ -61121,12 +60967,12 @@ static void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
 	n = (rand() + 1) % 3;
 	if (n == 0)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &floater_move_pain1;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &floater_move_pain2;
 	}
 }
@@ -61137,7 +60983,7 @@ static void floater_dead(edict_t* self) {
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -61146,7 +60992,7 @@ static void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	UNUSED(damage);
 	UNUSED(point);
 
-	gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
 
@@ -61160,21 +61006,21 @@ void SP_monster_floater (edict_t* self)
 		return;
 	}
 
-	sound_attack2 = gi.soundindex ("floater/fltatck2.wav");
-	sound_attack3 = gi.soundindex ("floater/fltatck3.wav");
-	sound_death1 = gi.soundindex ("floater/fltdeth1.wav");
-	sound_idle = gi.soundindex ("floater/fltidle1.wav");
-	sound_pain1 = gi.soundindex ("floater/fltpain1.wav");
-	sound_pain2 = gi.soundindex ("floater/fltpain2.wav");
-	sound_sight = gi.soundindex ("floater/fltsght1.wav");
+	sound_attack2 = SV_SoundIndex ("floater/fltatck2.wav");
+	sound_attack3 = SV_SoundIndex ("floater/fltatck3.wav");
+	sound_death1 = SV_SoundIndex ("floater/fltdeth1.wav");
+	sound_idle = SV_SoundIndex ("floater/fltidle1.wav");
+	sound_pain1 = SV_SoundIndex ("floater/fltpain1.wav");
+	sound_pain2 = SV_SoundIndex ("floater/fltpain2.wav");
+	sound_sight = SV_SoundIndex ("floater/fltsght1.wav");
 
-	gi.soundindex ("floater/fltatck1.wav");
+	SV_SoundIndex ("floater/fltatck1.wav");
 
-	self->s.sound = gi.soundindex ("floater/fltsrch1.wav");
+	self->s.sound = SV_SoundIndex ("floater/fltsrch1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/float/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/float/tris.md2");
 	VectorSet (self->mins, -24, -24, -24);
 	VectorSet (self->maxs, 24, 24, 32);
 
@@ -61194,7 +61040,7 @@ void SP_monster_floater (edict_t* self)
 	self->monsterinfo.sight = floater_sight;
 	self->monsterinfo.idle = floater_idle;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &floater_move_stand1;
@@ -61512,17 +61358,17 @@ void flyer_nextmove (edict_t* self);
 static void flyer_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void flyer_idle (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void flyer_pop_blades (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
 
 
@@ -61887,7 +61733,7 @@ void flyer_slash_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 0);
 	fire_hit (self, aim, 5, 0);
-	gi.sound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
 void flyer_slash_right (edict_t* self)
@@ -61896,7 +61742,7 @@ void flyer_slash_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 0);
 	fire_hit (self, aim, 5, 0);
-	gi.sound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
 mframe_t flyer_frames_start_melee [] =
@@ -62009,17 +61855,17 @@ static void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	n = rand() % 3;
 	if (n == 0)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain1;
 	}
 	else if (n == 1)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain2;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain3;
 	}
 }
@@ -62030,7 +61876,7 @@ static void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	UNUSED(damage);
 	UNUSED(point);
 
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
 
@@ -62051,23 +61897,23 @@ void SP_monster_flyer (edict_t* self)
 		self->target = NULL;
 	}
 
-	sound_sight = gi.soundindex ("flyer/flysght1.wav");
-	sound_idle = gi.soundindex ("flyer/flysrch1.wav");
-	sound_pain1 = gi.soundindex ("flyer/flypain1.wav");
-	sound_pain2 = gi.soundindex ("flyer/flypain2.wav");
-	sound_slash = gi.soundindex ("flyer/flyatck2.wav");
-	sound_sproing = gi.soundindex ("flyer/flyatck1.wav");
-	sound_die = gi.soundindex ("flyer/flydeth1.wav");
+	sound_sight = SV_SoundIndex ("flyer/flysght1.wav");
+	sound_idle = SV_SoundIndex ("flyer/flysrch1.wav");
+	sound_pain1 = SV_SoundIndex ("flyer/flypain1.wav");
+	sound_pain2 = SV_SoundIndex ("flyer/flypain2.wav");
+	sound_slash = SV_SoundIndex ("flyer/flyatck2.wav");
+	sound_sproing = SV_SoundIndex ("flyer/flyatck1.wav");
+	sound_die = SV_SoundIndex ("flyer/flydeth1.wav");
 
-	gi.soundindex ("flyer/flyatck3.wav");
+	SV_SoundIndex ("flyer/flyatck3.wav");
 
-	self->s.modelindex = gi.modelindex ("models/monsters/flyer/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/flyer/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	self->s.sound = gi.soundindex ("flyer/flyidle1.wav");
+	self->s.sound = SV_SoundIndex ("flyer/flyidle1.wav");
 
 	self->health = 50;
 	self->mass = 50;
@@ -62083,7 +61929,7 @@ void SP_monster_flyer (edict_t* self)
 	self->monsterinfo.sight = flyer_sight;
 	self->monsterinfo.idle = flyer_idle;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &flyer_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -62282,23 +62128,23 @@ static int	sound_sight;
 
 void gladiator_idle (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 static void gladiator_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gladiator_search (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 void gladiator_cleaver_swing (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
 mframe_t gladiator_frames_stand [] =
@@ -62372,9 +62218,9 @@ void GaldiatorMelee (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], -4);
 	if (fire_hit (self, aim, (20 + (rand() %5)), 300))
-		gi.sound (self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
 }
 
 mframe_t gladiator_frames_attack_melee [] =
@@ -62447,7 +62293,7 @@ void gladiator_attack(edict_t* self)
 		return;
 
 	// charge up the railgun
-	gi.sound (self, CHAN_WEAPON, sound_gun, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_gun, 1, ATTN_NORM, 0);
 	VectorCopy (self->enemy->s.origin, self->pos1);	//save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 	self->monsterinfo.currentmove = &gladiator_move_attack_gun;
@@ -62495,9 +62341,9 @@ static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damag
 	self->pain_debounce_time = level.time + 3;
 
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -62517,7 +62363,7 @@ void gladiator_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t gladiator_frames_death [] =
@@ -62557,7 +62403,7 @@ static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -62571,7 +62417,7 @@ static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -62590,20 +62436,20 @@ void SP_monster_gladiator (edict_t* self)
 	}
 
 
-	sound_pain1 = gi.soundindex ("gladiator/pain.wav");
-	sound_pain2 = gi.soundindex ("gladiator/gldpain2.wav");
-	sound_die = gi.soundindex ("gladiator/glddeth2.wav");
-	sound_gun = gi.soundindex ("gladiator/railgun.wav");
-	sound_cleaver_swing = gi.soundindex ("gladiator/melee1.wav");
-	sound_cleaver_hit = gi.soundindex ("gladiator/melee2.wav");
-	sound_cleaver_miss = gi.soundindex ("gladiator/melee3.wav");
-	sound_idle = gi.soundindex ("gladiator/gldidle1.wav");
-	sound_search = gi.soundindex ("gladiator/gldsrch1.wav");
-	sound_sight = gi.soundindex ("gladiator/sight.wav");
+	sound_pain1 = SV_SoundIndex ("gladiator/pain.wav");
+	sound_pain2 = SV_SoundIndex ("gladiator/gldpain2.wav");
+	sound_die = SV_SoundIndex ("gladiator/glddeth2.wav");
+	sound_gun = SV_SoundIndex ("gladiator/railgun.wav");
+	sound_cleaver_swing = SV_SoundIndex ("gladiator/melee1.wav");
+	sound_cleaver_hit = SV_SoundIndex ("gladiator/melee2.wav");
+	sound_cleaver_miss = SV_SoundIndex ("gladiator/melee3.wav");
+	sound_idle = SV_SoundIndex ("gladiator/gldidle1.wav");
+	sound_search = SV_SoundIndex ("gladiator/gldsrch1.wav");
+	sound_sight = SV_SoundIndex ("gladiator/sight.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/gladiatr/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/gladiatr/tris.md2");
 	VectorSet (self->mins, -32, -32, -24);
 	VectorSet (self->maxs, 32, 32, 64);
 
@@ -62624,7 +62470,7 @@ void SP_monster_gladiator (edict_t* self)
 	self->monsterinfo.idle = gladiator_idle;
 	self->monsterinfo.search = gladiator_search;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 	self->monsterinfo.currentmove = &gladiator_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
@@ -63068,18 +62914,18 @@ static int	sound_sight;
 
 void gunner_idlesound (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 static void gunner_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gunner_search (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 
@@ -63322,9 +63168,9 @@ static void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	self->pain_debounce_time = level.time + 3;
 
 	if (rand()&1)
-		gi.sound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -63344,7 +63190,7 @@ void gunner_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t gunner_frames_death [] =
@@ -63373,7 +63219,7 @@ static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -63387,7 +63233,7 @@ static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &gunner_move_death;
@@ -63408,7 +63254,7 @@ void gunner_duck_down (edict_t* self)
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.pausetime = level.time + 1;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void gunner_duck_hold (edict_t* self)
@@ -63424,7 +63270,7 @@ void gunner_duck_up (edict_t* self)
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static mframe_t gunner_frames_duck[] = {
@@ -63455,7 +63301,7 @@ static void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
 
 void gunner_opengun (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
 }
 
 void GunnerFire (edict_t* self)
@@ -63621,20 +63467,20 @@ void SP_monster_gunner (edict_t* self)
 		return;
 	}
 
-	sound_death = gi.soundindex ("gunner/death1.wav");
-	sound_pain = gi.soundindex ("gunner/gunpain2.wav");
-	sound_pain2 = gi.soundindex ("gunner/gunpain1.wav");
-	sound_idle = gi.soundindex ("gunner/gunidle1.wav");
-	sound_open = gi.soundindex ("gunner/gunatck1.wav");
-	sound_search = gi.soundindex ("gunner/gunsrch1.wav");
-	sound_sight = gi.soundindex ("gunner/sight1.wav");
+	sound_death = SV_SoundIndex ("gunner/death1.wav");
+	sound_pain = SV_SoundIndex ("gunner/gunpain2.wav");
+	sound_pain2 = SV_SoundIndex ("gunner/gunpain1.wav");
+	sound_idle = SV_SoundIndex ("gunner/gunidle1.wav");
+	sound_open = SV_SoundIndex ("gunner/gunatck1.wav");
+	sound_search = SV_SoundIndex ("gunner/gunsrch1.wav");
+	sound_sight = SV_SoundIndex ("gunner/sight1.wav");
 
-	gi.soundindex ("gunner/gunatck2.wav");
-	gi.soundindex ("gunner/gunatck3.wav");
+	SV_SoundIndex ("gunner/gunatck2.wav");
+	SV_SoundIndex ("gunner/gunatck3.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/gunner/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/gunner/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -63654,7 +63500,7 @@ void SP_monster_gunner (edict_t* self)
 	self->monsterinfo.sight = gunner_sight;
 	self->monsterinfo.search = gunner_search;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &gunner_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -63960,15 +63806,15 @@ static int	sound_search2;
 static void hover_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void hover_search (edict_t* self)
 {
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 }
 
 
@@ -64420,18 +64266,18 @@ static void hover_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	{
 		if (random() < 0.5)
 		{
-			gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 			self->monsterinfo.currentmove = &hover_move_pain3;
 		}
 		else
 		{
-			gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 			self->monsterinfo.currentmove = &hover_move_pain2;
 		}
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &hover_move_pain1;
 	}
 }
@@ -64454,7 +64300,7 @@ void hover_dead (edict_t* self)
 	self->think = hover_deadthink;
 	self->nextthink = level.time + FRAMETIME;
 	self->timestamp = level.time + 15;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -64467,7 +64313,7 @@ static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 2; n++)
@@ -64482,9 +64328,9 @@ static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 
 // regular death
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &hover_move_death1;
@@ -64500,21 +64346,21 @@ void SP_monster_hover (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("hover/hovpain1.wav");
-	sound_pain2 = gi.soundindex ("hover/hovpain2.wav");
-	sound_death1 = gi.soundindex ("hover/hovdeth1.wav");
-	sound_death2 = gi.soundindex ("hover/hovdeth2.wav");
-	sound_sight = gi.soundindex ("hover/hovsght1.wav");
-	sound_search1 = gi.soundindex ("hover/hovsrch1.wav");
-	sound_search2 = gi.soundindex ("hover/hovsrch2.wav");
+	sound_pain1 = SV_SoundIndex ("hover/hovpain1.wav");
+	sound_pain2 = SV_SoundIndex ("hover/hovpain2.wav");
+	sound_death1 = SV_SoundIndex ("hover/hovdeth1.wav");
+	sound_death2 = SV_SoundIndex ("hover/hovdeth2.wav");
+	sound_sight = SV_SoundIndex ("hover/hovsght1.wav");
+	sound_search1 = SV_SoundIndex ("hover/hovsrch1.wav");
+	sound_search2 = SV_SoundIndex ("hover/hovsrch2.wav");
 
-	gi.soundindex ("hover/hovatck1.wav");
+	SV_SoundIndex ("hover/hovatck1.wav");
 
-	self->s.sound = gi.soundindex ("hover/hovidle1.wav");
+	self->s.sound = SV_SoundIndex ("hover/hovidle1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/hover/tris.md2");
+	self->s.modelindex = SV_ModelIndex("models/monsters/hover/tris.md2");
 	VectorSet (self->mins, -24, -24, -24);
 	VectorSet (self->maxs, 24, 24, 32);
 
@@ -64533,7 +64379,7 @@ void SP_monster_hover (edict_t* self)
 	self->monsterinfo.sight = hover_sight;
 	self->monsterinfo.search = hover_search;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &hover_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -65074,7 +64920,7 @@ mmove_t infantry_move_fidget = {FRAME_stand01, FRAME_stand49, infantry_frames_fi
 void infantry_fidget (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_fidget;
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 mframe_t infantry_frames_walk [] =
@@ -65173,12 +65019,12 @@ static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &infantry_move_pain1;
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &infantry_move_pain2;
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -65239,7 +65085,7 @@ void InfantryMachineGun (edict_t* self)
 static void infantry_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound(self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void infantry_dead (edict_t* self)
@@ -65248,7 +65094,7 @@ void infantry_dead (edict_t* self)
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	M_FlyCheck (self);
 }
@@ -65333,7 +65179,7 @@ static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -65354,17 +65200,17 @@ static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &infantry_move_death1;
-		gi.sound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
 	}
 	else if (n == 1)
 	{
 		self->monsterinfo.currentmove = &infantry_move_death2;
-		gi.sound (self, CHAN_VOICE, sound_die1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_die1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &infantry_move_death3;
-		gi.sound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -65377,7 +65223,7 @@ void infantry_duck_down (edict_t* self)
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.pausetime = level.time + 1;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void infantry_duck_hold (edict_t* self)
@@ -65393,7 +65239,7 @@ void infantry_duck_up (edict_t* self)
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static mframe_t infantry_frames_duck[] = {
@@ -65423,7 +65269,7 @@ void infantry_cock_gun (edict_t* self)
 {
 	int		n;
 
-	gi.sound (self, CHAN_WEAPON, sound_weapon_cock, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_weapon_cock, 1, ATTN_NORM, 0);
 	n = (rand() & 15) + 3 + 7;
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
@@ -65461,7 +65307,7 @@ mmove_t infantry_move_attack1 = {FRAME_attak101, FRAME_attak115, infantry_frames
 
 void infantry_swing (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
 }
 
 void infantry_smack (edict_t* self)
@@ -65470,7 +65316,7 @@ void infantry_smack (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, 0, 0);
 	if (fire_hit (self, aim, (5 + (rand() % 5)), 50))
-		gi.sound (self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
 }
 
 mframe_t infantry_frames_attack2 [] =
@@ -65505,24 +65351,24 @@ void SP_monster_infantry (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("infantry/infpain1.wav");
-	sound_pain2 = gi.soundindex ("infantry/infpain2.wav");
-	sound_die1 = gi.soundindex ("infantry/infdeth1.wav");
-	sound_die2 = gi.soundindex ("infantry/infdeth2.wav");
+	sound_pain1 = SV_SoundIndex ("infantry/infpain1.wav");
+	sound_pain2 = SV_SoundIndex ("infantry/infpain2.wav");
+	sound_die1 = SV_SoundIndex ("infantry/infdeth1.wav");
+	sound_die2 = SV_SoundIndex ("infantry/infdeth2.wav");
 
-	sound_gunshot = gi.soundindex ("infantry/infatck1.wav");
-	sound_weapon_cock = gi.soundindex ("infantry/infatck3.wav");
-	sound_punch_swing = gi.soundindex ("infantry/infatck2.wav");
-	sound_punch_hit = gi.soundindex ("infantry/melee2.wav");
+	sound_gunshot = SV_SoundIndex ("infantry/infatck1.wav");
+	sound_weapon_cock = SV_SoundIndex ("infantry/infatck3.wav");
+	sound_punch_swing = SV_SoundIndex ("infantry/infatck2.wav");
+	sound_punch_hit = SV_SoundIndex ("infantry/melee2.wav");
 
-	sound_sight = gi.soundindex ("infantry/infsght1.wav");
-	sound_search = gi.soundindex ("infantry/infsrch1.wav");
-	sound_idle = gi.soundindex ("infantry/infidle1.wav");
+	sound_sight = SV_SoundIndex ("infantry/infsght1.wav");
+	sound_search = SV_SoundIndex ("infantry/infsrch1.wav");
+	sound_idle = SV_SoundIndex ("infantry/infidle1.wav");
 
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/infantry/tris.md2");
+	self->s.modelindex = SV_ModelIndex("models/monsters/infantry/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -65542,7 +65388,7 @@ void SP_monster_infantry (edict_t* self)
 	self->monsterinfo.sight = infantry_sight;
 	self->monsterinfo.idle = infantry_fidget;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &infantry_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -66004,22 +65850,22 @@ static int	sound_scream[8];
 
 void insane_fist (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
 
 void insane_shake (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
 }
 
 void insane_moan (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 }
 
 void insane_scream (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
 }
 
 
@@ -66465,7 +66311,7 @@ static void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		l = 75;
 	else
 		l = 100;
-	gi.sound (self, CHAN_VOICE, gi.soundindex (va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, SV_SoundIndex (va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -66546,7 +66392,7 @@ void insane_dead (edict_t* self)
 	}
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -66558,7 +66404,7 @@ static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_IDLE, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -66571,7 +66417,7 @@ static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-	gi.sound (self, CHAN_VOICE, gi.soundindex(va("player/male/death%i.wav", (rand()%4)+1)), 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, SV_SoundIndex(va("player/male/death%i.wav", (rand()%4)+1)), 1, ATTN_IDLE, 0);
 
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
@@ -66602,21 +66448,21 @@ void SP_misc_insane (edict_t* self)
 		return;
 	}
 
-	sound_fist = gi.soundindex ("insane/insane11.wav");
-	sound_shake = gi.soundindex ("insane/insane5.wav");
-	sound_moan = gi.soundindex ("insane/insane7.wav");
-	sound_scream[0] = gi.soundindex ("insane/insane1.wav");
-	sound_scream[1] = gi.soundindex ("insane/insane2.wav");
-	sound_scream[2] = gi.soundindex ("insane/insane3.wav");
-	sound_scream[3] = gi.soundindex ("insane/insane4.wav");
-	sound_scream[4] = gi.soundindex ("insane/insane6.wav");
-	sound_scream[5] = gi.soundindex ("insane/insane8.wav");
-	sound_scream[6] = gi.soundindex ("insane/insane9.wav");
-	sound_scream[7] = gi.soundindex ("insane/insane10.wav");
+	sound_fist = SV_SoundIndex ("insane/insane11.wav");
+	sound_shake = SV_SoundIndex ("insane/insane5.wav");
+	sound_moan = SV_SoundIndex ("insane/insane7.wav");
+	sound_scream[0] = SV_SoundIndex ("insane/insane1.wav");
+	sound_scream[1] = SV_SoundIndex ("insane/insane2.wav");
+	sound_scream[2] = SV_SoundIndex ("insane/insane3.wav");
+	sound_scream[3] = SV_SoundIndex ("insane/insane4.wav");
+	sound_scream[4] = SV_SoundIndex ("insane/insane6.wav");
+	sound_scream[5] = SV_SoundIndex ("insane/insane8.wav");
+	sound_scream[6] = SV_SoundIndex ("insane/insane9.wav");
+	sound_scream[7] = SV_SoundIndex ("insane/insane10.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/insane/tris.md2");
+	self->s.modelindex = SV_ModelIndex("models/monsters/insane/tris.md2");
 
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
@@ -66643,7 +66489,7 @@ void SP_misc_insane (edict_t* self)
 //	if (skin > 12)
 //		skin = 0;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	if (self->spawnflags & 16)				// Stand Ground
 		self->monsterinfo.aiflags |= AI_STAND_GROUND;
@@ -67090,7 +66936,7 @@ void medic_idle (edict_t* self)
 {
 	edict_t	*ent;
 
-	gi.sound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
 
 	ent = medic_FindDeadMonster(self);
 	if (ent)
@@ -67106,7 +66952,7 @@ void medic_search (edict_t* self)
 {
 	edict_t	*ent;
 
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_IDLE, 0);
 
 	if (!self->oldenemy)
 	{
@@ -67125,7 +66971,7 @@ void medic_search (edict_t* self)
 static void medic_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 
@@ -67343,12 +67189,12 @@ static void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	if (random() < 0.5)
 	{
 		self->monsterinfo.currentmove = &medic_move_pain1;
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &medic_move_pain2;
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -67385,7 +67231,7 @@ void medic_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t medic_frames_death [] =
@@ -67437,7 +67283,7 @@ static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -67451,7 +67297,7 @@ static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -67467,7 +67313,7 @@ void medic_duck_down (edict_t* self)
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.pausetime = level.time + 1;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void medic_duck_hold (edict_t* self)
@@ -67483,7 +67329,7 @@ void medic_duck_up (edict_t* self)
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t medic_frames_duck [] =
@@ -67571,7 +67417,7 @@ mmove_t medic_move_attackBlaster = {FRAME_attack1, FRAME_attack14, medic_frames_
 
 void medic_hook_launch (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_hook_launch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_hook_launch, 1, ATTN_NORM, 0);
 }
 
 void ED_CallSpawn (edict_t *ent);
@@ -67616,13 +67462,13 @@ void medic_cable_attack (edict_t* self)
 	if (fabs(angles[0]) > 45)
 		return;
 
-	tr = gi.trace (start, NULL, NULL, self->enemy->s.origin, self, MASK_SHOT);
+	tr = SV_Trace (start, NULL, NULL, self->enemy->s.origin, self, MASK_SHOT);
 	if (tr.fraction != 1.0 && tr.ent != self->enemy)
 		return;
 
 	if (self->s.frame == FRAME_attack43)
 	{
-		gi.sound (self->enemy, CHAN_AUTO, sound_hook_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self->enemy, CHAN_AUTO, sound_hook_hit, 1, ATTN_NORM, 0);
 		self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;
 	}
 	else if (self->s.frame == FRAME_attack50)
@@ -67651,7 +67497,7 @@ void medic_cable_attack (edict_t* self)
 	else
 	{
 		if (self->s.frame == FRAME_attack44)
-			gi.sound (self, CHAN_WEAPON, sound_hook_heal, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_WEAPON, sound_hook_heal, 1, ATTN_NORM, 0);
 	}
 
 	// adjust start for beam origin being in middle of a segment
@@ -67661,17 +67507,17 @@ void medic_cable_attack (edict_t* self)
 	VectorCopy (self->enemy->s.origin, end);
 	end[2] = self->enemy->absmin[2] + self->enemy->size[2] / 2;
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_MEDIC_CABLE_ATTACK);
-	gi.WriteShort (self - g_edicts);
-	gi.WritePosition (start);
-	gi.WritePosition (end);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_MEDIC_CABLE_ATTACK);
+	PF_WriteShort (self - g_edicts);
+	PF_WritePos (start);
+	PF_WritePos (end);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 }
 
 void medic_hook_retract (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
 	self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
 }
 
@@ -67739,22 +67585,22 @@ void SP_monster_medic (edict_t* self)
 		return;
 	}
 
-	sound_idle1 = gi.soundindex ("medic/idle.wav");
-	sound_pain1 = gi.soundindex ("medic/medpain1.wav");
-	sound_pain2 = gi.soundindex ("medic/medpain2.wav");
-	sound_die = gi.soundindex ("medic/meddeth1.wav");
-	sound_sight = gi.soundindex ("medic/medsght1.wav");
-	sound_search = gi.soundindex ("medic/medsrch1.wav");
-	sound_hook_launch = gi.soundindex ("medic/medatck2.wav");
-	sound_hook_hit = gi.soundindex ("medic/medatck3.wav");
-	sound_hook_heal = gi.soundindex ("medic/medatck4.wav");
-	sound_hook_retract = gi.soundindex ("medic/medatck5.wav");
+	sound_idle1 = SV_SoundIndex ("medic/idle.wav");
+	sound_pain1 = SV_SoundIndex ("medic/medpain1.wav");
+	sound_pain2 = SV_SoundIndex ("medic/medpain2.wav");
+	sound_die = SV_SoundIndex ("medic/meddeth1.wav");
+	sound_sight = SV_SoundIndex ("medic/medsght1.wav");
+	sound_search = SV_SoundIndex ("medic/medsrch1.wav");
+	sound_hook_launch = SV_SoundIndex ("medic/medatck2.wav");
+	sound_hook_hit = SV_SoundIndex ("medic/medatck3.wav");
+	sound_hook_heal = SV_SoundIndex ("medic/medatck4.wav");
+	sound_hook_retract = SV_SoundIndex ("medic/medatck5.wav");
 
-	gi.soundindex ("medic/medatck1.wav");
+	SV_SoundIndex ("medic/medatck1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/medic/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/medic/tris.md2");
 	VectorSet (self->mins, -24, -24, -24);
 	VectorSet (self->maxs, 24, 24, 32);
 
@@ -67776,7 +67622,7 @@ void SP_monster_medic (edict_t* self)
 	self->monsterinfo.search = medic_search;
 	self->monsterinfo.checkattack = medic_checkattack;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &medic_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -67822,7 +67668,7 @@ bool M_CheckBottom (edict_t *ent)
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
-			if (gi.pointcontents (start) != CONTENTS_SOLID)
+			if (SV_PointContents (start) != CONTENTS_SOLID)
 				goto realcheck;
 		}
 
@@ -67840,7 +67686,7 @@ realcheck:
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
 	stop[2] = start[2] - 2*STEPSIZE;
-	trace = gi.trace (start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
+	trace = SV_Trace (start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1.0)
 		return false;
@@ -67853,7 +67699,7 @@ realcheck:
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
-			trace = gi.trace (start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
+			trace = SV_Trace (start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
@@ -67924,7 +67770,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 						neworg[2] += dz;
 				}
 			}
-			trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, neworg, ent, MASK_MONSTERSOLID);
+			trace = SV_Trace (ent->s.origin, ent->mins, ent->maxs, neworg, ent, MASK_MONSTERSOLID);
 
 			// fly monsters don't enter water voluntarily
 			if (ent->flags & FL_FLY)
@@ -67934,7 +67780,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 					test[0] = trace.endpos[0];
 					test[1] = trace.endpos[1];
 					test[2] = trace.endpos[2] + ent->mins[2] + 1;
-					contents = gi.pointcontents(test);
+					contents = SV_PointContents(test);
 					if (contents & MASK_WATER)
 						return false;
 				}
@@ -67948,7 +67794,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 					test[0] = trace.endpos[0];
 					test[1] = trace.endpos[1];
 					test[2] = trace.endpos[2] + ent->mins[2] + 1;
-					contents = gi.pointcontents(test);
+					contents = SV_PointContents(test);
 					if (!(contents & MASK_WATER))
 						return false;
 				}
@@ -67959,7 +67805,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 				VectorCopy (trace.endpos, ent->s.origin);
 				if (relink)
 				{
-					gi.linkentity (ent);
+					SV_LinkEdict (ent);
 					G_TouchTriggers (ent);
 				}
 				return true;
@@ -67982,7 +67828,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 	VectorCopy (neworg, end);
 	end[2] -= stepsize*2;
 
-	trace = gi.trace (neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
+	trace = SV_Trace (neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
 	if (trace.allsolid)
 		return false;
@@ -67990,7 +67836,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 	if (trace.startsolid)
 	{
 		neworg[2] -= stepsize;
-		trace = gi.trace (neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
+		trace = SV_Trace (neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 		if (trace.allsolid || trace.startsolid)
 			return false;
 	}
@@ -68002,7 +67848,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 		test[0] = trace.endpos[0];
 		test[1] = trace.endpos[1];
 		test[2] = trace.endpos[2] + ent->mins[2] + 1;
-		contents = gi.pointcontents(test);
+		contents = SV_PointContents(test);
 
 		if (contents & MASK_WATER)
 			return false;
@@ -68016,7 +67862,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 			VectorAdd (ent->s.origin, move, ent->s.origin);
 			if (relink)
 			{
-				gi.linkentity (ent);
+				SV_LinkEdict (ent);
 				G_TouchTriggers (ent);
 			}
 			ent->groundentity = NULL;
@@ -68036,7 +67882,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 			// and is trying to correct
 			if (relink)
 			{
-				gi.linkentity (ent);
+				SV_LinkEdict (ent);
 				G_TouchTriggers (ent);
 			}
 			return true;
@@ -68055,7 +67901,7 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 // the move is ok
 	if (relink)
 	{
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 		G_TouchTriggers (ent);
 	}
 	return true;
@@ -68140,11 +67986,11 @@ bool SV_StepDirection (edict_t *ent, float yaw, float dist)
 		{		// not turned far enough, so don't take the step
 			VectorCopy (oldorigin, ent->s.origin);
 		}
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 		G_TouchTriggers (ent);
 		return true;
 	}
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 	G_TouchTriggers (ent);
 	return false;
 }
@@ -68654,27 +68500,27 @@ void mutant_step (edict_t* self)
 	int		n;
 	n = (rand() + 1) % 3;
 	if (n == 0)
-		gi.sound (self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
 	else if (n == 1)
-		gi.sound (self, CHAN_VOICE, sound_step2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_step2, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
 }
 
 static void mutant_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void mutant_search (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 void mutant_swing (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
 }
 
 
@@ -68780,7 +68626,7 @@ static mmove_t mutant_move_idle = {FRAME_stand152, FRAME_stand164, mutant_frames
 void mutant_idle (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_idle;
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 
@@ -68861,9 +68707,9 @@ void mutant_hit_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), 100))
-		gi.sound (self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
 }
 
 void mutant_hit_right (edict_t* self)
@@ -68872,9 +68718,9 @@ void mutant_hit_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), 100))
-		gi.sound (self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
 }
 
 void mutant_check_refire (edict_t* self)
@@ -68951,7 +68797,7 @@ void mutant_jump_takeoff (edict_t* self)
 {
 	vec3_t	forward;
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	self->s.origin[2] += 1;
 	VectorScale (forward, 600, self->velocity);
@@ -68966,7 +68812,7 @@ void mutant_check_landing (edict_t* self)
 {
 	if (self->groundentity)
 	{
-		gi.sound (self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
 		self->monsterinfo.attack_finished = 0;
 		self->monsterinfo.aiflags &= ~AI_DUCKED;
 		return;
@@ -69119,17 +68965,17 @@ static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) 
 	r = random();
 	if (r < 0.33)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain1;
 	}
 	else if (r < 0.66)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain2;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain3;
 	}
 }
@@ -69145,7 +68991,7 @@ void mutant_dead (edict_t* self)
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	M_FlyCheck (self);
 }
@@ -69188,7 +69034,7 @@ static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -69201,7 +69047,7 @@ static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->s.skinnum = 1;
@@ -69227,23 +69073,23 @@ void SP_monster_mutant (edict_t* self)
 		return;
 	}
 
-	sound_swing = gi.soundindex ("mutant/mutatck1.wav");
-	sound_hit = gi.soundindex ("mutant/mutatck2.wav");
-	sound_hit2 = gi.soundindex ("mutant/mutatck3.wav");
-	sound_death = gi.soundindex ("mutant/mutdeth1.wav");
-	sound_idle = gi.soundindex ("mutant/mutidle1.wav");
-	sound_pain1 = gi.soundindex ("mutant/mutpain1.wav");
-	sound_pain2 = gi.soundindex ("mutant/mutpain2.wav");
-	sound_sight = gi.soundindex ("mutant/mutsght1.wav");
-	sound_search = gi.soundindex ("mutant/mutsrch1.wav");
-	sound_step1 = gi.soundindex ("mutant/step1.wav");
-	sound_step2 = gi.soundindex ("mutant/step2.wav");
-	sound_step3 = gi.soundindex ("mutant/step3.wav");
-	sound_thud = gi.soundindex ("mutant/thud1.wav");
+	sound_swing = SV_SoundIndex ("mutant/mutatck1.wav");
+	sound_hit = SV_SoundIndex ("mutant/mutatck2.wav");
+	sound_hit2 = SV_SoundIndex ("mutant/mutatck3.wav");
+	sound_death = SV_SoundIndex ("mutant/mutdeth1.wav");
+	sound_idle = SV_SoundIndex ("mutant/mutidle1.wav");
+	sound_pain1 = SV_SoundIndex ("mutant/mutpain1.wav");
+	sound_pain2 = SV_SoundIndex ("mutant/mutpain2.wav");
+	sound_sight = SV_SoundIndex ("mutant/mutsght1.wav");
+	sound_search = SV_SoundIndex ("mutant/mutsrch1.wav");
+	sound_step1 = SV_SoundIndex ("mutant/step1.wav");
+	sound_step2 = SV_SoundIndex ("mutant/step2.wav");
+	sound_step3 = SV_SoundIndex ("mutant/step3.wav");
+	sound_thud = SV_SoundIndex ("mutant/thud1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/mutant/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/mutant/tris.md2");
 	VectorSet (self->mins, -32, -32, -24);
 	VectorSet (self->maxs, 32, 32, 48);
 
@@ -69265,7 +69111,7 @@ void SP_monster_mutant (edict_t* self)
 	self->monsterinfo.idle = mutant_idle;
 	self->monsterinfo.checkattack = mutant_checkattack;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &mutant_move_stand;
 
@@ -69503,33 +69349,33 @@ void parasite_refidget (edict_t* self);
 
 void parasite_launch (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
 }
 
 void parasite_reel_in (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
 
 static void parasite_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void parasite_tap (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_tap, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_tap, 1, ATTN_IDLE, 0);
 }
 
 void parasite_scratch (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_scratch, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_scratch, 1, ATTN_IDLE, 0);
 }
 
 void parasite_search (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
 
 
@@ -69736,9 +69582,9 @@ static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage)
 		return;		// no pain anims in nightmare
 
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
 	self->monsterinfo.currentmove = &parasite_move_pain1;
 }
@@ -69786,28 +69632,28 @@ void parasite_drain_attack (edict_t* self)
 	}
 	VectorCopy (self->enemy->s.origin, end);
 
-	tr = gi.trace (start, NULL, NULL, end, self, MASK_SHOT);
+	tr = SV_Trace (start, NULL, NULL, end, self, MASK_SHOT);
 	if (tr.ent != self->enemy)
 		return;
 
 	if (self->s.frame == FRAME_drain03)
 	{
 		damage = 5;
-		gi.sound (self->enemy, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
+		PF_StartSound (self->enemy, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		if (self->s.frame == FRAME_drain04)
-			gi.sound (self, CHAN_WEAPON, sound_suck, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_WEAPON, sound_suck, 1, ATTN_NORM, 0);
 		damage = 2;
 	}
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_PARASITE_ATTACK);
-	gi.WriteShort (self - g_edicts);
-	gi.WritePosition (start);
-	gi.WritePosition (end);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_PARASITE_ATTACK);
+	PF_WriteShort (self - g_edicts);
+	PF_WritePos (start);
+	PF_WritePos (end);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 
 	VectorSubtract (start, end, dir);
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, damage, 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
@@ -69903,7 +69749,7 @@ void parasite_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t parasite_frames_death [] =
@@ -69928,7 +69774,7 @@ static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 2; n++)
 			ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -69942,7 +69788,7 @@ static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &parasite_move_death;
@@ -69964,19 +69810,19 @@ void SP_monster_parasite (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("parasite/parpain1.wav");
-	sound_pain2 = gi.soundindex ("parasite/parpain2.wav");
-	sound_die = gi.soundindex ("parasite/pardeth1.wav");
-	sound_launch = gi.soundindex("parasite/paratck1.wav");
-	sound_impact = gi.soundindex("parasite/paratck2.wav");
-	sound_suck = gi.soundindex("parasite/paratck3.wav");
-	sound_reelin = gi.soundindex("parasite/paratck4.wav");
-	sound_sight = gi.soundindex("parasite/parsght1.wav");
-	sound_tap = gi.soundindex("parasite/paridle1.wav");
-	sound_scratch = gi.soundindex("parasite/paridle2.wav");
-	sound_search = gi.soundindex("parasite/parsrch1.wav");
+	sound_pain1 = SV_SoundIndex ("parasite/parpain1.wav");
+	sound_pain2 = SV_SoundIndex ("parasite/parpain2.wav");
+	sound_die = SV_SoundIndex ("parasite/pardeth1.wav");
+	sound_launch = SV_SoundIndex("parasite/paratck1.wav");
+	sound_impact = SV_SoundIndex("parasite/paratck2.wav");
+	sound_suck = SV_SoundIndex("parasite/paratck3.wav");
+	sound_reelin = SV_SoundIndex("parasite/paratck4.wav");
+	sound_sight = SV_SoundIndex("parasite/parsght1.wav");
+	sound_tap = SV_SoundIndex("parasite/paridle1.wav");
+	sound_scratch = SV_SoundIndex("parasite/paridle2.wav");
+	sound_search = SV_SoundIndex("parasite/parsrch1.wav");
 
-	self->s.modelindex = gi.modelindex ("models/monsters/parasite/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/parasite/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 24);
 	self->movetype = MOVETYPE_STEP;
@@ -69996,7 +69842,7 @@ void SP_monster_parasite (edict_t* self)
 	self->monsterinfo.sight = parasite_sight;
 	self->monsterinfo.idle = parasite_idle;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &parasite_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -70767,15 +70613,15 @@ static int	sound_cock;
 void soldier_idle (edict_t* self)
 {
 	if (random() > 0.8)
-		gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void soldier_cock (edict_t* self)
 {
 	if (self->s.frame == FRAME_stand322)
-		gi.sound (self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
 	else
-		gi.sound (self, CHAN_WEAPON, sound_cock, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_NORM, 0);
 }
 
 
@@ -71150,11 +70996,11 @@ static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
 
 	n = self->s.skinnum | 1;
 	if (n == 1)
-		gi.sound (self, CHAN_VOICE, sound_pain_light, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain_light, 1, ATTN_NORM, 0);
 	else if (n == 3)
-		gi.sound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_pain_ss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain_ss, 1, ATTN_NORM, 0);
 
 	if (self->velocity[2] > 100)
 	{
@@ -71364,7 +71210,7 @@ void soldier_duck_down (edict_t* self)
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.pausetime = level.time + 1;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void soldier_duck_up (edict_t* self)
@@ -71372,7 +71218,7 @@ void soldier_duck_up (edict_t* self)
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 void soldier_fire3 (edict_t* self)
@@ -71518,9 +71364,9 @@ static void soldier_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
 
 	if ((skill->value > 0) && (range(self, self->enemy) >= RANGE_MID))
 	{
@@ -71614,7 +71460,7 @@ void soldier_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t soldier_frames_death1 [] =
@@ -71876,7 +71722,7 @@ static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 3; n++)
 			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 		ThrowGib (self, "models/objects/gibs/chest/tris.md2", damage, GIB_ORGANIC);
@@ -71894,11 +71740,11 @@ static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	self->s.skinnum |= 1;
 
 	if (self->s.skinnum == 1)
-		gi.sound (self, CHAN_VOICE, sound_death_light, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death_light, 1, ATTN_NORM, 0);
 	else if (self->s.skinnum == 3)
-		gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	else // (self->s.skinnum == 5)
-		gi.sound (self, CHAN_VOICE, sound_death_ss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_death_ss, 1, ATTN_NORM, 0);
 
 	if (fabs((self->s.origin[2] + self->viewheight) - point[2]) <= 4)
 	{
@@ -71928,17 +71774,17 @@ static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 void SP_monster_soldier_x (edict_t* self)
 {
 
-	self->s.modelindex = gi.modelindex ("models/monsters/soldier/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/soldier/tris.md2");
 	self->monsterinfo.scale = MODEL_SCALE;
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	sound_idle =	gi.soundindex ("soldier/solidle1.wav");
-	sound_sight1 =	gi.soundindex ("soldier/solsght1.wav");
-	sound_sight2 =	gi.soundindex ("soldier/solsrch1.wav");
-	sound_cock =	gi.soundindex ("infantry/infatck3.wav");
+	sound_idle =	SV_SoundIndex ("soldier/solidle1.wav");
+	sound_sight1 =	SV_SoundIndex ("soldier/solsght1.wav");
+	sound_sight2 =	SV_SoundIndex ("soldier/solsrch1.wav");
+	sound_cock =	SV_SoundIndex ("infantry/infatck3.wav");
 
 	self->mass = 100;
 
@@ -71953,7 +71799,7 @@ void SP_monster_soldier_x (edict_t* self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = soldier_sight;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.stand (self);
 
@@ -71973,11 +71819,11 @@ void SP_monster_soldier_light (edict_t* self)
 
 	SP_monster_soldier_x (self);
 
-	sound_pain_light = gi.soundindex ("soldier/solpain2.wav");
-	sound_death_light =	gi.soundindex ("soldier/soldeth2.wav");
-	gi.modelindex ("models/objects/laser/tris.md2");
-	gi.soundindex ("misc/lasfly.wav");
-	gi.soundindex ("soldier/solatck2.wav");
+	sound_pain_light = SV_SoundIndex ("soldier/solpain2.wav");
+	sound_death_light =	SV_SoundIndex ("soldier/soldeth2.wav");
+	SV_ModelIndex ("models/objects/laser/tris.md2");
+	SV_SoundIndex ("misc/lasfly.wav");
+	SV_SoundIndex ("soldier/solatck2.wav");
 
 	self->s.skinnum = 0;
 	self->health = 20;
@@ -71996,9 +71842,9 @@ void SP_monster_soldier (edict_t* self)
 
 	SP_monster_soldier_x (self);
 
-	sound_pain = gi.soundindex ("soldier/solpain1.wav");
-	sound_death = gi.soundindex ("soldier/soldeth1.wav");
-	gi.soundindex ("soldier/solatck1.wav");
+	sound_pain = SV_SoundIndex ("soldier/solpain1.wav");
+	sound_death = SV_SoundIndex ("soldier/soldeth1.wav");
+	SV_SoundIndex ("soldier/solatck1.wav");
 
 	self->s.skinnum = 2;
 	self->health = 30;
@@ -72017,9 +71863,9 @@ void SP_monster_soldier_ss (edict_t* self)
 
 	SP_monster_soldier_x (self);
 
-	sound_pain_ss = gi.soundindex ("soldier/solpain3.wav");
-	sound_death_ss = gi.soundindex ("soldier/soldeth3.wav");
-	gi.soundindex ("soldier/solatck3.wav");
+	sound_pain_ss = SV_SoundIndex ("soldier/solpain3.wav");
+	sound_death_ss = SV_SoundIndex ("soldier/soldeth3.wav");
+	SV_SoundIndex ("soldier/solatck3.wav");
 
 	self->s.skinnum = 4;
 	self->health = 40;
@@ -72317,15 +72163,15 @@ void BossExplode (edict_t* self);
 
 void TreadSound (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, tread_sound, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, tread_sound, 1, ATTN_NORM, 0);
 }
 
 void supertank_search (edict_t* self)
 {
 	if (random() < 0.5)
-		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
 	else
-		gi.sound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 }
 
 
@@ -72750,17 +72596,17 @@ static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage
 
 	if (damage <= 10)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain1;
 	}
 	else if (damage <= 25)
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain2;
 	}
 	else
 	{
-		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain3;
 	}
 };
@@ -72862,7 +72708,7 @@ void supertank_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 
@@ -72920,10 +72766,10 @@ void BossExplode (edict_t* self)
 		return;
 	}
 
-	gi.WriteByte (svc_temp_entity);
-	gi.WriteByte (TE_EXPLOSION1);
-	gi.WritePosition (org);
-	gi.multicast (self->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_temp_entity);
+	PF_WriteByte (TE_EXPLOSION1);
+	PF_WritePos (org);
+	SV_Multicast (self->s.origin, MULTICAST_PVS);
 
 	self->nextthink = level.time + 0.1;
 }
@@ -72934,7 +72780,7 @@ static void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 	UNUSED(damage);
 	UNUSED(point);
 
-	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->count = 0;
@@ -72955,19 +72801,19 @@ void SP_monster_supertank (edict_t* self)
 		return;
 	}
 
-	sound_pain1 = gi.soundindex ("bosstank/btkpain1.wav");
-	sound_pain2 = gi.soundindex ("bosstank/btkpain2.wav");
-	sound_pain3 = gi.soundindex ("bosstank/btkpain3.wav");
-	sound_death = gi.soundindex ("bosstank/btkdeth1.wav");
-	sound_search1 = gi.soundindex ("bosstank/btkunqv1.wav");
-	sound_search2 = gi.soundindex ("bosstank/btkunqv2.wav");
+	sound_pain1 = SV_SoundIndex ("bosstank/btkpain1.wav");
+	sound_pain2 = SV_SoundIndex ("bosstank/btkpain2.wav");
+	sound_pain3 = SV_SoundIndex ("bosstank/btkpain3.wav");
+	sound_death = SV_SoundIndex ("bosstank/btkdeth1.wav");
+	sound_search1 = SV_SoundIndex ("bosstank/btkunqv1.wav");
+	sound_search2 = SV_SoundIndex ("bosstank/btkunqv2.wav");
 
-//	self->s.sound = gi.soundindex ("bosstank/btkengn1.wav");
-	tread_sound = gi.soundindex ("bosstank/btkengn1.wav");
+//	self->s.sound = SV_SoundIndex ("bosstank/btkengn1.wav");
+	tread_sound = SV_SoundIndex ("bosstank/btkengn1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/boss1/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/boss1/tris.md2");
 	VectorSet (self->mins, -64, -64, 0);
 	VectorSet (self->maxs, 64, 64, 112);
 
@@ -72986,7 +72832,7 @@ void SP_monster_supertank (edict_t* self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = NULL;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &supertank_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -73594,28 +73440,28 @@ static int	sound_strike;
 static void tank_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 
 void tank_footstep (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
 }
 
 void tank_thud (edict_t* self)
 {
-	gi.sound (self, CHAN_BODY, sound_thud, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, sound_thud, 1, ATTN_NORM, 0);
 }
 
 void tank_windup (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
 }
 
 void tank_idle (edict_t* self)
 {
-	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 
@@ -73857,7 +73703,7 @@ static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	}
 
 	self->pain_debounce_time = level.time + 3;
-	gi.sound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
 	if (skill->value == 3)
 		return;		// no pain anims in nightmare
@@ -73902,7 +73748,7 @@ void TankBlaster (edict_t* self)
 
 void TankStrike (edict_t* self)
 {
-	gi.sound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
 }
 
 void TankRocket (edict_t* self)
@@ -74257,7 +74103,7 @@ void tank_dead (edict_t* self)
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 mframe_t tank_frames_death1 [] =
@@ -74307,7 +74153,7 @@ static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 // check for gib
 	if (self->health <= self->gib_health)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 1 /*4*/; n++)
 			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 		for (n= 0; n < 4; n++)
@@ -74322,7 +74168,7 @@ static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 		return;
 
 // regular death
-	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -74347,28 +74193,28 @@ void SP_monster_tank (edict_t* self)
 		return;
 	}
 
-	self->s.modelindex = gi.modelindex ("models/monsters/tank/tris.md2");
+	self->s.modelindex = SV_ModelIndex ("models/monsters/tank/tris.md2");
 	VectorSet (self->mins, -32, -32, -16);
 	VectorSet (self->maxs, 32, 32, 72);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	sound_pain = gi.soundindex ("tank/tnkpain2.wav");
-	sound_thud = gi.soundindex ("tank/tnkdeth2.wav");
-	sound_idle = gi.soundindex ("tank/tnkidle1.wav");
-	sound_die = gi.soundindex ("tank/death.wav");
-	sound_step = gi.soundindex ("tank/step.wav");
-	sound_windup = gi.soundindex ("tank/tnkatck4.wav");
-	sound_strike = gi.soundindex ("tank/tnkatck5.wav");
-	sound_sight = gi.soundindex ("tank/sight1.wav");
+	sound_pain = SV_SoundIndex ("tank/tnkpain2.wav");
+	sound_thud = SV_SoundIndex ("tank/tnkdeth2.wav");
+	sound_idle = SV_SoundIndex ("tank/tnkidle1.wav");
+	sound_die = SV_SoundIndex ("tank/death.wav");
+	sound_step = SV_SoundIndex ("tank/step.wav");
+	sound_windup = SV_SoundIndex ("tank/tnkatck4.wav");
+	sound_strike = SV_SoundIndex ("tank/tnkatck5.wav");
+	sound_sight = SV_SoundIndex ("tank/sight1.wav");
 
-	gi.soundindex ("tank/tnkatck1.wav");
-	gi.soundindex ("tank/tnkatk2a.wav");
-	gi.soundindex ("tank/tnkatk2b.wav");
-	gi.soundindex ("tank/tnkatk2c.wav");
-	gi.soundindex ("tank/tnkatk2d.wav");
-	gi.soundindex ("tank/tnkatk2e.wav");
-	gi.soundindex ("tank/tnkatck3.wav");
+	SV_SoundIndex ("tank/tnkatck1.wav");
+	SV_SoundIndex ("tank/tnkatk2a.wav");
+	SV_SoundIndex ("tank/tnkatk2b.wav");
+	SV_SoundIndex ("tank/tnkatk2c.wav");
+	SV_SoundIndex ("tank/tnkatk2d.wav");
+	SV_SoundIndex ("tank/tnkatk2e.wav");
+	SV_SoundIndex ("tank/tnkatck3.wav");
 
 	if (strcmp(self->classname, "monster_tank_commander") == 0)
 	{
@@ -74394,7 +74240,7 @@ void SP_monster_tank (edict_t* self)
 	self->monsterinfo.sight = tank_sight;
 	self->monsterinfo.idle = tank_idle;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &tank_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
@@ -74445,7 +74291,7 @@ static void SP_FixCoopSpots (edict_t* self)
 		{
 			if ((!self->targetname) || Q_stricmp(self->targetname, spot->targetname) != 0)
 			{
-//				gi.dprintf("FixCoopSpots changed %s at %s targetname from %s to %s\n", self->classname, vtos(self->s.origin), self->targetname, spot->targetname);
+//				PF_dprintf("FixCoopSpots changed %s at %s targetname from %s to %s\n", self->classname, vtos(self->s.origin), self->targetname, spot->targetname);
 				self->targetname = spot->targetname;
 			}
 			return;
@@ -74699,7 +74545,7 @@ static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker)
 		}
 		if (message)
 		{
-			gi.bprintf (PRINT_MEDIUM, "%s %s.\n", self->client->pers.netname, message);
+			SV_BroadcastPrintf (PRINT_MEDIUM, "%s %s.\n", self->client->pers.netname, message);
 			if (deathmatch->value)
 				self->client->resp.score--;
 			self->enemy = NULL;
@@ -74782,7 +74628,7 @@ static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker)
 			}
 			if (message)
 			{
-				gi.bprintf (PRINT_MEDIUM,"%s %s %s%s\n", self->client->pers.netname, message, attacker->client->pers.netname, message2);
+				SV_BroadcastPrintf (PRINT_MEDIUM,"%s %s %s%s\n", self->client->pers.netname, message, attacker->client->pers.netname, message2);
 				if (deathmatch->value)
 				{
 					if (ff)
@@ -74795,7 +74641,7 @@ static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker)
 		}
 	}
 
-	gi.bprintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
+	SV_BroadcastPrintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
 	if (deathmatch->value)
 		self->client->resp.score--;
 }
@@ -74941,7 +74787,7 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 
 	if (self->health < -40)
 	{	// gib
-		gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 4; n++)
 			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 		ThrowClientHead (self, damage);
@@ -74977,13 +74823,13 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 				self->client->anim_end = FRAME_death308;
 				break;
 			}
-			gi.sound (self, CHAN_VOICE, gi.soundindex(va("*death%i.wav", (rand()%4)+1)), 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_VOICE, SV_SoundIndex(va("*death%i.wav", (rand()%4)+1)), 1, ATTN_NORM, 0);
 		}
 	}
 
 	self->deadflag = DEAD_DEAD;
 
-	gi.linkentity (self);
+	SV_LinkEdict (self);
 }
 
 //=======================================================================
@@ -75321,7 +75167,7 @@ static void body_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 
 	if (self->health < -40)
 	{
-		gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		for (n= 0; n < 4; n++)
 			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
 		self->s.origin[2] -= 48;
@@ -75340,9 +75186,9 @@ void CopyToBodyQue (edict_t *ent)
 
 	// FIXME: send an effect on the removed body
 
-	gi.unlinkentity (ent);
+	SV_UnlinkEdict (ent);
 
-	gi.unlinkentity (body);
+	SV_UnlinkEdict (body);
 	body->s = ent->s;
 	body->s.number = body - g_edicts;
 
@@ -75360,7 +75206,7 @@ void CopyToBodyQue (edict_t *ent)
 	body->die = body_die;
 	body->takedamage = DAMAGE_YES;
 
-	gi.linkentity (body);
+	SV_LinkEdict (body);
 }
 
 
@@ -75387,7 +75233,7 @@ void respawn (edict_t* self)
 	}
 
 	// restart the entire server
-	gi.AddCommandString ("menu_loadgame\n");
+	Cbuf_AddText ("menu_loadgame\n");
 }
 
 /*
@@ -75406,11 +75252,11 @@ void spectator_respawn (edict_t *ent)
 		if (*spectator_password->string &&
 			strcmp(spectator_password->string, "none") &&
 			strcmp(spectator_password->string, value)) {
-			gi.cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
+			PF_cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
 			ent->client->pers.spectator = false;
-			gi.WriteByte (svc_stufftext);
-			gi.WriteString ("spectator 0\n");
-			gi.unicast(ent, true);
+			PF_WriteByte (svc_stufftext);
+			PF_WriteString ("spectator 0\n");
+			PF_Unicast(ent, true);
 			return;
 		}
 
@@ -75420,12 +75266,12 @@ void spectator_respawn (edict_t *ent)
 				numspec++;
 
 		if (numspec >= maxspectators->value) {
-			gi.cprintf(ent, PRINT_HIGH, "Server spectator limit is full.");
+			PF_cprintf(ent, PRINT_HIGH, "Server spectator limit is full.");
 			ent->client->pers.spectator = false;
 			// reset his spectator var
-			gi.WriteByte (svc_stufftext);
-			gi.WriteString ("spectator 0\n");
-			gi.unicast(ent, true);
+			PF_WriteByte (svc_stufftext);
+			PF_WriteString ("spectator 0\n");
+			PF_Unicast(ent, true);
 			return;
 		}
 	} else {
@@ -75434,11 +75280,11 @@ void spectator_respawn (edict_t *ent)
 		char *value = Info_ValueForKey (ent->client->pers.userinfo, "password");
 		if (*password->string && strcmp(password->string, "none") &&
 			strcmp(password->string, value)) {
-			gi.cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
+			PF_cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
 			ent->client->pers.spectator = true;
-			gi.WriteByte (svc_stufftext);
-			gi.WriteString ("spectator 1\n");
-			gi.unicast(ent, true);
+			PF_WriteByte (svc_stufftext);
+			PF_WriteString ("spectator 1\n");
+			PF_Unicast(ent, true);
 			return;
 		}
 	}
@@ -75452,10 +75298,10 @@ void spectator_respawn (edict_t *ent)
 	// add a teleportation effect
 	if (!ent->client->pers.spectator)  {
 		// send effect
-		gi.WriteByte (svc_muzzleflash);
-		gi.WriteShort (ent-g_edicts);
-		gi.WriteByte (MZ_LOGIN);
-		gi.multicast (ent->s.origin, MULTICAST_PVS);
+		PF_WriteByte (svc_muzzleflash);
+		PF_WriteShort (ent-g_edicts);
+		PF_WriteByte (MZ_LOGIN);
+		SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 		// hold in place briefly
 		ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
@@ -75465,9 +75311,9 @@ void spectator_respawn (edict_t *ent)
 	ent->client->respawn_time = level.time;
 
 	if (ent->client->pers.spectator)
-		gi.bprintf (PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
+		SV_BroadcastPrintf (PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
 	else
-		gi.bprintf (PRINT_HIGH, "%s joined the game\n", ent->client->pers.netname);
+		SV_BroadcastPrintf (PRINT_HIGH, "%s joined the game\n", ent->client->pers.netname);
 }
 
 //==============================================================
@@ -75591,7 +75437,7 @@ void PutClientInServer (edict_t *ent)
 			client->ps.fov = 160;
 	}
 
-	client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
+	client->ps.gunindex = SV_ModelIndex(client->pers.weapon->view_model);
 
 	// clear entity state values
 	ent->s.effects = 0;
@@ -75626,7 +75472,7 @@ void PutClientInServer (edict_t *ent)
 		ent->solid = SOLID_NOT;
 		ent->svflags |= SVF_NOCLIENT;
 		ent->client->ps.gunindex = 0;
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 		return;
 	} else
 		client->resp.spectator = false;
@@ -75635,7 +75481,7 @@ void PutClientInServer (edict_t *ent)
 	{	// could't spawn in?
 	}
 
-	gi.linkentity (ent);
+	SV_LinkEdict (ent);
 
 	// force the current weapon up
 	client->newweapon = client->pers.weapon;
@@ -75660,12 +75506,12 @@ void ClientBeginDeathmatch (edict_t *ent)
 	PutClientInServer (ent);
 
 	// send effect
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_LOGIN);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_LOGIN);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
-	gi.bprintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+	SV_BroadcastPrintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
 
 	// make sure all view stuff is valid
 	ClientEndServerFrame (ent);
@@ -75723,12 +75569,12 @@ void ClientBegin (edict_t *ent)
 		// send effect if in a multiplayer game
 		if (game.maxclients > 1)
 		{
-			gi.WriteByte (svc_muzzleflash);
-			gi.WriteShort (ent-g_edicts);
-			gi.WriteByte (MZ_LOGIN);
-			gi.multicast (ent->s.origin, MULTICAST_PVS);
+			PF_WriteByte (svc_muzzleflash);
+			PF_WriteShort (ent-g_edicts);
+			PF_WriteByte (MZ_LOGIN);
+			SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
-			gi.bprintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+			SV_BroadcastPrintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
 		}
 	}
 
@@ -75775,7 +75621,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	playernum = ent-g_edicts-1;
 
 	// combine name and skin into a configstring
-	gi.configstring (CS_PLAYERSKINS+playernum, va("%s\\%s", ent->client->pers.netname, s) );
+	PF_Configstring (CS_PLAYERSKINS+playernum, va("%s\\%s", ent->client->pers.netname, s) );
 
 	// fov
 	if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV))
@@ -75874,7 +75720,7 @@ bool ClientConnect (edict_t *ent, char *userinfo)
 	ClientUserinfoChanged (ent, userinfo);
 
 	if (game.maxclients > 1)
-		gi.dprintf ("%s connected\n", ent->client->pers.netname);
+		PF_dprintf ("%s connected\n", ent->client->pers.netname);
 
 	ent->client->pers.connected = true;
 	return true;
@@ -75895,15 +75741,15 @@ void ClientDisconnect (edict_t *ent)
 	if (!ent->client)
 		return;
 
-	gi.bprintf (PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
+	SV_BroadcastPrintf (PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 
 	// send effect
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_LOGOUT);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_LOGOUT);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
-	gi.unlinkentity (ent);
+	SV_UnlinkEdict (ent);
 	ent->s.modelindex = 0;
 	ent->solid = SOLID_NOT;
 	ent->inuse = false;
@@ -75911,7 +75757,7 @@ void ClientDisconnect (edict_t *ent)
 	ent->client->pers.connected = false;
 
 	playernum = ent-g_edicts-1;
-	gi.configstring (CS_PLAYERSKINS+playernum, "");
+	PF_Configstring (CS_PLAYERSKINS+playernum, "");
 }
 
 
@@ -75924,9 +75770,9 @@ edict_t	*pm_passent;
 trace_t	PM_trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
 	if (pm_passent->health > 0)
-		return gi.trace (start, mins, maxs, end, pm_passent, MASK_PLAYERSOLID);
+		return SV_Trace (start, mins, maxs, end, pm_passent, MASK_PLAYERSOLID);
 	else
-		return gi.trace (start, mins, maxs, end, pm_passent, MASK_DEADSOLID);
+		return SV_Trace (start, mins, maxs, end, pm_passent, MASK_DEADSOLID);
 }
 
 unsigned CheckBlock (void *b, int c)
@@ -76008,16 +75854,16 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		if (memcmp(&client->old_pmove, &pm.s, sizeof(pm.s)))
 		{
 			pm.snapinitial = true;
-	//		gi.dprintf ("pmove changed!\n");
+	//		PF_dprintf ("pmove changed!\n");
 		}
 
 		pm.cmd = *ucmd;
 
 		pm.trace = PM_trace;	// adds default parms
-		pm.pointcontents = gi.pointcontents;
+		pm.pointcontents = SV_PointContents;
 
 		// perform a pmove
-		gi.Pmove (&pm);
+		Pmove (&pm);
 
 		// save results of pmove
 		client->ps.pmove = pm.s;
@@ -76038,7 +75884,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 		if (ent->groundentity && !pm.groundentity && (pm.cmd.upmove >= 10) && (pm.waterlevel == 0))
 		{
-			gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("*jump1.wav"), 1, ATTN_NORM, 0);
 			PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
 		}
 
@@ -76061,7 +75907,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			VectorCopy (pm.viewangles, client->ps.viewangles);
 		}
 
-		gi.linkentity (ent);
+		SV_LinkEdict (ent);
 
 		if (ent->movetype != MOVETYPE_NOCLIP)
 			G_TouchTriggers (ent);
@@ -76241,7 +76087,7 @@ void MoveClientToIntermission (edict_t *ent)
 	if (deathmatch->value || coop->value)
 	{
 		DeathmatchScoreboardMessage (ent, NULL);
-		gi.unicast (ent, true);
+		PF_Unicast (ent, true);
 	}
 
 }
@@ -76388,7 +76234,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 		cl = &game.clients[sorted[i]];
 		cl_ent = g_edicts + 1 + sorted[i];
 
-		gi.imageindex ("i_fixme");
+		SV_ImageIndex ("i_fixme");
 		x = (i>=6) ? 160 : 0;
 		y = 32 + 32 * (i%6);
 
@@ -76421,8 +76267,8 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 		stringlength += j;
 	}
 
-	gi.WriteByte (svc_layout);
-	gi.WriteString (string);
+	PF_WriteByte (svc_layout);
+	PF_WriteString (string);
 }
 
 
@@ -76437,7 +76283,7 @@ Note that it isn't that hard to overflow the 1400 u8 message limit!
 void DeathmatchScoreboard (edict_t *ent)
 {
 	DeathmatchScoreboardMessage (ent, ent->enemy);
-	gi.unicast (ent, true);
+	PF_Unicast (ent, true);
 }
 
 
@@ -76505,9 +76351,9 @@ void HelpComputer (edict_t *ent)
 		level.found_goals, level.total_goals,
 		level.found_secrets, level.total_secrets);
 
-	gi.WriteByte (svc_layout);
-	gi.WriteString (string);
-	gi.unicast (ent, true);
+	PF_WriteByte (svc_layout);
+	PF_WriteString (string);
+	PF_Unicast (ent, true);
 }
 
 
@@ -76572,7 +76418,7 @@ void G_SetStats (edict_t *ent)
 	else
 	{
 		item = &itemlist[ent->client->ammo_index];
-		ent->client->ps.stats[STAT_AMMO_ICON] = gi.imageindex (item->icon);
+		ent->client->ps.stats[STAT_AMMO_ICON] = SV_ImageIndex (item->icon);
 		ent->client->ps.stats[STAT_AMMO] = ent->client->pers.inventory[ent->client->ammo_index];
 	}
 
@@ -76586,7 +76432,7 @@ void G_SetStats (edict_t *ent)
 		if (cells == 0)
 		{	// ran out of cells for power armor
 			ent->flags &= ~FL_POWER_ARMOR;
-			gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/power2.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("misc/power2.wav"), 1, ATTN_NORM, 0);
 			power_armor_type = 0;;
 		}
 	}
@@ -76594,13 +76440,13 @@ void G_SetStats (edict_t *ent)
 	index = ArmorIndex (ent);
 	if (power_armor_type && (!index || (level.framenum & 8) ) )
 	{	// flash between power armor and other armor icon
-		ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex ("i_powershield");
+		ent->client->ps.stats[STAT_ARMOR_ICON] = SV_ImageIndex ("i_powershield");
 		ent->client->ps.stats[STAT_ARMOR] = cells;
 	}
 	else if (index)
 	{
 		item = GetItemByIndex (index);
-		ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex (item->icon);
+		ent->client->ps.stats[STAT_ARMOR_ICON] = SV_ImageIndex (item->icon);
 		ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.inventory[index];
 	}
 	else
@@ -76623,22 +76469,22 @@ void G_SetStats (edict_t *ent)
 	//
 	if (ent->client->quad_framenum > level.framenum)
 	{
-		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_quad");
+		ent->client->ps.stats[STAT_TIMER_ICON] = SV_ImageIndex ("p_quad");
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum)/10;
 	}
 	else if (ent->client->invincible_framenum > level.framenum)
 	{
-		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_invulnerability");
+		ent->client->ps.stats[STAT_TIMER_ICON] = SV_ImageIndex ("p_invulnerability");
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum)/10;
 	}
 	else if (ent->client->enviro_framenum > level.framenum)
 	{
-		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_envirosuit");
+		ent->client->ps.stats[STAT_TIMER_ICON] = SV_ImageIndex ("p_envirosuit");
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->enviro_framenum - level.framenum)/10;
 	}
 	else if (ent->client->breather_framenum > level.framenum)
 	{
-		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_rebreather");
+		ent->client->ps.stats[STAT_TIMER_ICON] = SV_ImageIndex ("p_rebreather");
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->breather_framenum - level.framenum)/10;
 	}
 	else
@@ -76653,7 +76499,7 @@ void G_SetStats (edict_t *ent)
 	if (ent->client->pers.selected_item == -1)
 		ent->client->ps.stats[STAT_SELECTED_ICON] = 0;
 	else
-		ent->client->ps.stats[STAT_SELECTED_ICON] = gi.imageindex (itemlist[ent->client->pers.selected_item].icon);
+		ent->client->ps.stats[STAT_SELECTED_ICON] = SV_ImageIndex (itemlist[ent->client->pers.selected_item].icon);
 
 	ent->client->ps.stats[STAT_SELECTED_ITEM] = ent->client->pers.selected_item;
 
@@ -76687,10 +76533,10 @@ void G_SetStats (edict_t *ent)
 	// help icon / current weapon if not shown
 	//
 	if (ent->client->pers.helpchanged && (level.framenum&8) )
-		ent->client->ps.stats[STAT_HELPICON] = gi.imageindex ("i_help");
+		ent->client->ps.stats[STAT_HELPICON] = SV_ImageIndex ("i_help");
 	else if ( (ent->client->pers.hand == CENTER_HANDED || ent->client->ps.fov > 91)
 		&& ent->client->pers.weapon)
-		ent->client->ps.stats[STAT_HELPICON] = gi.imageindex (ent->client->pers.weapon->icon);
+		ent->client->ps.stats[STAT_HELPICON] = SV_ImageIndex (ent->client->pers.weapon->icon);
 	else
 		ent->client->ps.stats[STAT_HELPICON] = 0;
 
@@ -76995,7 +76841,7 @@ void P_DamageFeedback (edict_t *player)
 			l = 75;
 		else
 			l = 100;
-		gi.sound (player, CHAN_VOICE, gi.soundindex(va("*pain%i_%i.wav", l, r)), 1, ATTN_NORM, 0);
+		PF_StartSound (player, CHAN_VOICE, SV_SoundIndex(va("*pain%i_%i.wav", l, r)), 1, ATTN_NORM, 0);
 	}
 
 	// the total alpha of the blend is always proportional to count
@@ -77279,7 +77125,7 @@ void SV_CalcBlend (edict_t *ent)
 
 	// add for contents
 	VectorAdd (ent->s.origin, ent->client->ps.viewoffset, vieworg);
-	contents = gi.pointcontents (vieworg);
+	contents = SV_PointContents (vieworg);
 	if (contents & (CONTENTS_LAVA|CONTENTS_SLIME|CONTENTS_WATER) )
 		ent->client->ps.rdflags |= RDF_UNDERWATER;
 	else
@@ -77297,7 +77143,7 @@ void SV_CalcBlend (edict_t *ent)
 	{
 		remaining = ent->client->quad_framenum - level.framenum;
 		if (remaining == 30)	// beginning to fade
-			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage2.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage2.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (0, 0, 1, 0.08, ent->client->ps.blend);
 	}
@@ -77305,7 +77151,7 @@ void SV_CalcBlend (edict_t *ent)
 	{
 		remaining = ent->client->invincible_framenum - level.framenum;
 		if (remaining == 30)	// beginning to fade
-			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect2.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/protect2.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (1, 1, 0, 0.08, ent->client->ps.blend);
 	}
@@ -77313,7 +77159,7 @@ void SV_CalcBlend (edict_t *ent)
 	{
 		remaining = ent->client->enviro_framenum - level.framenum;
 		if (remaining == 30)	// beginning to fade
-			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/airout.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (0, 1, 0, 0.08, ent->client->ps.blend);
 	}
@@ -77321,7 +77167,7 @@ void SV_CalcBlend (edict_t *ent)
 	{
 		remaining = ent->client->breather_framenum - level.framenum;
 		if (remaining == 30)	// beginning to fade
-			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/airout.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (0.4, 1, 0.4, 0.04, ent->client->ps.blend);
 	}
@@ -77455,11 +77301,11 @@ void P_WorldEffects (void)
 	{
 		PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
 		if (current_player->watertype & CONTENTS_LAVA)
-			gi.sound (current_player, CHAN_BODY, gi.soundindex("player/lava_in.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (current_player, CHAN_BODY, SV_SoundIndex("player/lava_in.wav"), 1, ATTN_NORM, 0);
 		else if (current_player->watertype & CONTENTS_SLIME)
-			gi.sound (current_player, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (current_player, CHAN_BODY, SV_SoundIndex("player/watr_in.wav"), 1, ATTN_NORM, 0);
 		else if (current_player->watertype & CONTENTS_WATER)
-			gi.sound (current_player, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (current_player, CHAN_BODY, SV_SoundIndex("player/watr_in.wav"), 1, ATTN_NORM, 0);
 		current_player->flags |= FL_INWATER;
 
 		// clear damage_debounce, so the pain sound will play immediately
@@ -77472,7 +77318,7 @@ void P_WorldEffects (void)
 	if (old_waterlevel && ! waterlevel)
 	{
 		PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
-		gi.sound (current_player, CHAN_BODY, gi.soundindex("player/watr_out.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (current_player, CHAN_BODY, SV_SoundIndex("player/watr_out.wav"), 1, ATTN_NORM, 0);
 		current_player->flags &= ~FL_INWATER;
 	}
 
@@ -77481,7 +77327,7 @@ void P_WorldEffects (void)
 	//
 	if (old_waterlevel != 3 && waterlevel == 3)
 	{
-		gi.sound (current_player, CHAN_BODY, gi.soundindex("player/watr_un.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound (current_player, CHAN_BODY, SV_SoundIndex("player/watr_un.wav"), 1, ATTN_NORM, 0);
 	}
 
 	//
@@ -77491,12 +77337,12 @@ void P_WorldEffects (void)
 	{
 		if (current_player->air_finished < level.time)
 		{	// gasp for air
-			gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/gasp1.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("player/gasp1.wav"), 1, ATTN_NORM, 0);
 			PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
 		}
 		else  if (current_player->air_finished < level.time + 11)
 		{	// just break surface
-			gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/gasp2.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("player/gasp2.wav"), 1, ATTN_NORM, 0);
 		}
 	}
 
@@ -77513,9 +77359,9 @@ void P_WorldEffects (void)
 			if (((int)(current_client->breather_framenum - level.framenum) % 25) == 0)
 			{
 				if (!current_client->breather_sound)
-					gi.sound (current_player, CHAN_AUTO, gi.soundindex("player/u_breath1.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_AUTO, SV_SoundIndex("player/u_breath1.wav"), 1, ATTN_NORM, 0);
 				else
-					gi.sound (current_player, CHAN_AUTO, gi.soundindex("player/u_breath2.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_AUTO, SV_SoundIndex("player/u_breath2.wav"), 1, ATTN_NORM, 0);
 				current_client->breather_sound ^= 1;
 				PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
 				//FIXME: release a bubble?
@@ -77537,11 +77383,11 @@ void P_WorldEffects (void)
 
 				// play a gurp sound instead of a normal pain sound
 				if (current_player->health <= current_player->dmg)
-					gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/drown1.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("player/drown1.wav"), 1, ATTN_NORM, 0);
 				else if (rand()&1)
-					gi.sound (current_player, CHAN_VOICE, gi.soundindex("*gurp1.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("*gurp1.wav"), 1, ATTN_NORM, 0);
 				else
-					gi.sound (current_player, CHAN_VOICE, gi.soundindex("*gurp2.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("*gurp2.wav"), 1, ATTN_NORM, 0);
 
 				current_player->pain_debounce_time = level.time;
 
@@ -77567,9 +77413,9 @@ void P_WorldEffects (void)
 				&& current_client->invincible_framenum < level.framenum)
 			{
 				if (rand()&1)
-					gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/burn1.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("player/burn1.wav"), 1, ATTN_NORM, 0);
 				else
-					gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/burn2.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound (current_player, CHAN_VOICE, SV_SoundIndex("player/burn2.wav"), 1, ATTN_NORM, 0);
 				current_player->pain_debounce_time = level.time + 1;
 			}
 
@@ -77679,7 +77525,7 @@ void G_SetClientSound (edict_t *ent)
 	if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 3 && !(level.framenum&63) )
 	{
 		ent->client->pers.helpchanged++;
-		gi.sound (ent, CHAN_VOICE, gi.soundindex ("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
+		PF_StartSound (ent, CHAN_VOICE, SV_SoundIndex ("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
 	}
 
 
@@ -77691,9 +77537,9 @@ void G_SetClientSound (edict_t *ent)
 	if (ent->waterlevel && (ent->watertype&(CONTENTS_LAVA|CONTENTS_SLIME)) )
 		ent->s.sound = snd_fry;
 	else if (strcmp(weap, "weapon_railgun") == 0)
-		ent->s.sound = gi.soundindex("weapons/rg_hum.wav");
+		ent->s.sound = SV_SoundIndex("weapons/rg_hum.wav");
 	else if (strcmp(weap, "weapon_bfg") == 0)
-		ent->s.sound = gi.soundindex("weapons/bfg_hum.wav");
+		ent->s.sound = SV_SoundIndex("weapons/bfg_hum.wav");
 	else if (ent->client->weapon_sound)
 		ent->s.sound = ent->client->weapon_sound;
 	else
@@ -77934,7 +77780,7 @@ void ClientEndServerFrame (edict_t *ent)
 	if (ent->client->showscores && !(level.framenum & 31) )
 	{
 		DeathmatchScoreboardMessage (ent, ent->enemy);
-		gi.unicast (ent, false);
+		PF_Unicast (ent, false);
 	}
 }
 
@@ -78035,7 +77881,7 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 	VectorSubtract (where, noise->maxs, noise->absmin);
 	VectorAdd (where, noise->maxs, noise->absmax);
 	noise->teleport_time = level.time;
-	gi.linkentity (noise);
+	SV_LinkEdict (noise);
 }
 
 
@@ -78134,7 +77980,7 @@ void ChangeWeapon (edict_t *ent)
 
 	ent->client->weaponstate = WEAPON_ACTIVATING;
 	ent->client->ps.gunframe = 0;
-	ent->client->ps.gunindex = gi.modelindex(ent->client->pers.weapon->view_model);
+	ent->client->ps.gunindex = SV_ModelIndex(ent->client->pers.weapon->view_model);
 
 	ent->client->anim_priority = ANIM_PAIN;
 	if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -78248,13 +78094,13 @@ void Use_Weapon (edict_t *ent, gitem_t *item)
 
 		if (!ent->client->pers.inventory[ammo_index])
 		{
-			gi.cprintf (ent, PRINT_HIGH, "No %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
+			PF_cprintf (ent, PRINT_HIGH, "No %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
 			return;
 		}
 
 		if (ent->client->pers.inventory[ammo_index] < item->quantity)
 		{
-			gi.cprintf (ent, PRINT_HIGH, "Not enough %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
+			PF_cprintf (ent, PRINT_HIGH, "Not enough %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
 			return;
 		}
 	}
@@ -78281,7 +78127,7 @@ void Drop_Weapon (edict_t *ent, gitem_t *item)
 	// see if we're already using it
 	if ( ((item == ent->client->pers.weapon) || (item == ent->client->newweapon))&& (ent->client->pers.inventory[index] == 1) )
 	{
-		gi.cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
+		PF_cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
 		return;
 	}
 
@@ -78401,7 +78247,7 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			{
 				if (level.time >= ent->pain_debounce_time)
 				{
-					gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 					ent->pain_debounce_time = level.time + 1;
 				}
 				NoAmmoWeaponChange (ent);
@@ -78439,7 +78285,7 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			if (ent->client->ps.gunframe == fire_frames[n])
 			{
 				if (ent->client->quad_framenum > level.framenum)
-					gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage3.wav"), 1, ATTN_NORM, 0);
 
 				fire (ent);
 				break;
@@ -78546,7 +78392,7 @@ void Weapon_Grenade (edict_t *ent)
 			{
 				if (level.time >= ent->pain_debounce_time)
 				{
-					gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+					PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 					ent->pain_debounce_time = level.time + 1;
 				}
 				NoAmmoWeaponChange (ent);
@@ -78568,14 +78414,14 @@ void Weapon_Grenade (edict_t *ent)
 	if (ent->client->weaponstate == WEAPON_FIRING)
 	{
 		if (ent->client->ps.gunframe == 5)
-			gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/hgrena1b.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_WEAPON, SV_SoundIndex("weapons/hgrena1b.wav"), 1, ATTN_NORM, 0);
 
 		if (ent->client->ps.gunframe == 11)
 		{
 			if (!ent->client->grenade_time)
 			{
 				ent->client->grenade_time = level.time + GRENADE_TIMER + 0.2;
-				ent->client->weapon_sound = gi.soundindex("weapons/hgrenc1b.wav");
+				ent->client->weapon_sound = SV_SoundIndex("weapons/hgrenc1b.wav");
 			}
 
 			// they waited too long, detonate it in their hand
@@ -78651,10 +78497,10 @@ void weapon_grenadelauncher_fire (edict_t *ent)
 
 	fire_grenade (ent, start, forward, damage, 600, 2.5, radius);
 
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_GRENADE | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_GRENADE | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	ent->client->ps.gunframe++;
 
@@ -78707,10 +78553,10 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 	fire_rocket (ent, start, forward, damage, 650, damage_radius, radius_damage);
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_ROCKET | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_ROCKET | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	ent->client->ps.gunframe++;
 
@@ -78756,13 +78602,13 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, bool hyper, int ef
 	fire_blaster (ent, start, forward, damage, 1000, effect, hyper);
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
 	if (hyper)
-		gi.WriteByte (MZ_HYPERBLASTER | is_silenced);
+		PF_WriteByte (MZ_HYPERBLASTER | is_silenced);
 	else
-		gi.WriteByte (MZ_BLASTER | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+		PF_WriteByte (MZ_BLASTER | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 }
@@ -78796,7 +78642,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 	int		effect;
 	int		damage;
 
-	ent->client->weapon_sound = gi.soundindex("weapons/hyprbl1a.wav");
+	ent->client->weapon_sound = SV_SoundIndex("weapons/hyprbl1a.wav");
 
 	if (!(ent->client->buttons & BUTTON_ATTACK))
 	{
@@ -78808,7 +78654,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 		{
 			if (level.time >= ent->pain_debounce_time)
 			{
-				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+				PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 				ent->pain_debounce_time = level.time + 1;
 			}
 			NoAmmoWeaponChange (ent);
@@ -78852,7 +78698,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 
 	if (ent->client->ps.gunframe == 12)
 	{
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/hyprbd1a.wav"), 1, ATTN_NORM, 0);
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("weapons/hyprbd1a.wav"), 1, ATTN_NORM, 0);
 		ent->client->weapon_sound = 0;
 	}
 
@@ -78901,7 +78747,7 @@ void Machinegun_Fire (edict_t *ent)
 		ent->client->ps.gunframe = 6;
 		if (level.time >= ent->pain_debounce_time)
 		{
-			gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 			ent->pain_debounce_time = level.time + 1;
 		}
 		NoAmmoWeaponChange (ent);
@@ -78937,10 +78783,10 @@ void Machinegun_Fire (edict_t *ent)
 	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
 	fire_bullet (ent, start, forward, damage, kick, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MOD_MACHINEGUN);
 
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_MACHINEGUN | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_MACHINEGUN | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
@@ -78985,7 +78831,7 @@ void Chaingun_Fire (edict_t *ent)
 		damage = 8;
 
 	if (ent->client->ps.gunframe == 5)
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/chngnu1a.wav"), 1, ATTN_IDLE, 0);
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("weapons/chngnu1a.wav"), 1, ATTN_IDLE, 0);
 
 	if ((ent->client->ps.gunframe == 14) && !(ent->client->buttons & BUTTON_ATTACK))
 	{
@@ -79006,11 +78852,11 @@ void Chaingun_Fire (edict_t *ent)
 	if (ent->client->ps.gunframe == 22)
 	{
 		ent->client->weapon_sound = 0;
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/chngnd1a.wav"), 1, ATTN_IDLE, 0);
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("weapons/chngnd1a.wav"), 1, ATTN_IDLE, 0);
 	}
 	else
 	{
-		ent->client->weapon_sound = gi.soundindex("weapons/chngnl1a.wav");
+		ent->client->weapon_sound = SV_SoundIndex("weapons/chngnl1a.wav");
 	}
 
 	ent->client->anim_priority = ANIM_ATTACK;
@@ -79044,7 +78890,7 @@ void Chaingun_Fire (edict_t *ent)
 	{
 		if (level.time >= ent->pain_debounce_time)
 		{
-			gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+			PF_StartSound(ent, CHAN_VOICE, SV_SoundIndex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 			ent->pain_debounce_time = level.time + 1;
 		}
 		NoAmmoWeaponChange (ent);
@@ -79076,10 +78922,10 @@ void Chaingun_Fire (edict_t *ent)
 	}
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte ((MZ_CHAINGUN1 + shots - 1) | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte ((MZ_CHAINGUN1 + shots - 1) | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
@@ -79139,10 +78985,10 @@ void weapon_shotgun_fire (edict_t *ent)
 		fire_shotgun (ent, start, forward, damage, kick, 500, 500, DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_SHOTGUN | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_SHOTGUN | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -79193,10 +79039,10 @@ void weapon_supershotgun_fire (edict_t *ent)
 	fire_shotgun (ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT/2, MOD_SSHOTGUN);
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_SSHOTGUN | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_SSHOTGUN | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -79258,10 +79104,10 @@ void weapon_railgun_fire (edict_t *ent)
 	fire_rail (ent, start, forward, damage, kick);
 
 	// send muzzle flash
-	gi.WriteByte (svc_muzzleflash);
-	gi.WriteShort (ent-g_edicts);
-	gi.WriteByte (MZ_RAILGUN | is_silenced);
-	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte (svc_muzzleflash);
+	PF_WriteShort (ent-g_edicts);
+	PF_WriteByte (MZ_RAILGUN | is_silenced);
+	SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -79303,10 +79149,10 @@ void weapon_bfg_fire (edict_t *ent)
 	if (ent->client->ps.gunframe == 9)
 	{
 		// send muzzle flash
-		gi.WriteByte (svc_muzzleflash);
-		gi.WriteShort (ent-g_edicts);
-		gi.WriteByte (MZ_BFG | is_silenced);
-		gi.multicast (ent->s.origin, MULTICAST_PVS);
+		PF_WriteByte (svc_muzzleflash);
+		PF_WriteShort (ent-g_edicts);
+		PF_WriteByte (MZ_BFG | is_silenced);
+		SV_Multicast (ent->s.origin, MULTICAST_PVS);
 
 		ent->client->ps.gunframe++;
 
