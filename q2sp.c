@@ -23952,8 +23952,6 @@ void CL_PredictMovement (void)
 float		scr_con_current;	// aproaches scr_conlines at scr_conspeed
 float		scr_conlines;		// 0.0 to 1.0 lines of console to display
 
-bool	scr_initialized;		// ready to draw
-
 int			scr_draw_loading;
 
 vrect_t		scr_vrect;		// position of render window on screen
@@ -25073,7 +25071,7 @@ static void SCR_UpdateScreen() {
 		return;
 	}
 
-	if (!scr_initialized || !con.initialized) {
+	if (!con.initialized) {
 		return;
 	}
 
@@ -78955,7 +78953,6 @@ void	R_SwapBuffers( int );
 
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
 
-void LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height);
 image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits);
 image_t	*GL_FindImage (char *name, imagetype_t type);
 void	GL_ImageList_f (void);
@@ -79561,7 +79558,7 @@ void Scrap_Upload (void)
 	scrap_dirty = false;
 }
 
-void LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height) {
+void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
 	u8	*raw;
 	pcx_t	*pcx;
 	int		x, y;
@@ -87875,10 +87872,6 @@ void Sys_AppActivate (void)
 	SetForegroundWindow ( cl_hwnd );
 }
 
-// Console variables that we need to access from this module
-cvar_t		*vid_xpos;			// X coordinate of window position
-cvar_t		*vid_ypos;			// Y coordinate of window position
-
 // Global variables used internally by this module
 
 HINSTANCE	reflib_library;		// Handle to refresh DLL
@@ -88014,17 +88007,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 		} break;
 
 		case WM_MOVE: {
-			int xPos = (short)LOWORD(lParam);
-			int yPos = (short)HIWORD(lParam);
-
-			RECT r = {.left = 0, .top = 0, .right = 1, .bottom = 1};
-			int style = GetWindowLong(hWnd, GWL_STYLE);
-			AdjustWindowRect(&r, style, FALSE);
-
-			COM_SetValueCvar("vid_xpos", xPos + r.left);
-			COM_SetValueCvar("vid_ypos", yPos + r.top);
-			vid_xpos->modified = false;
-			vid_ypos->modified = false;
 			if (ActiveApp) {
 				IN_Activate(true);
 			}
@@ -88079,25 +88061,6 @@ void VID_Front_f( void )
 {
 	SetWindowLong( cl_hwnd, GWL_EXSTYLE, WS_EX_TOPMOST );
 	SetForegroundWindow( cl_hwnd );
-}
-
-static void VID_UpdateWindowPosAndSize() {
-	RECT r;
-	int		style;
-	int		w, h;
-
-	r.left   = 0;
-	r.top    = 0;
-	r.right  = viddef.width;
-	r.bottom = viddef.height;
-
-	style = GetWindowLong( cl_hwnd, GWL_STYLE );
-	AdjustWindowRect( &r, style, FALSE );
-
-	w = r.right - r.left;
-	h = r.bottom - r.top;
-
-	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );
 }
 
 extern cvar_t *scr_viewsize;
@@ -88707,39 +88670,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("modellist", Mod_Modellist_f);
 		Cmd_AddCommand("path", FS_Path_f);
 		Cmd_AddCommand("link", FS_Link_f);
-		Cmd_AddCommand("dir", FS_Dir_f );
+		Cmd_AddCommand("dir", FS_Dir_f);
+		Cmd_AddCommand("gun_next", V_Gun_Next_f);
+		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
+		Cmd_AddCommand("gun_model", V_Gun_Model_f);
+		Cmd_AddCommand ("viewpos", V_Viewpos_f);
+		Cmd_AddCommand("menu_main", M_Menu_Main_f);
+		Cmd_AddCommand("menu_game", M_Menu_Game_f);
+		Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
+		Cmd_AddCommand("menu_savegame", M_Menu_SaveGame_f);
+		Cmd_AddCommand("menu_joinserver", M_Menu_JoinServer_f);
+		Cmd_AddCommand("menu_addressbook", M_Menu_AddressBook_f);
+		Cmd_AddCommand("menu_startserver", M_Menu_StartServer_f);
+		Cmd_AddCommand("menu_dmoptions", M_Menu_DMOptions_f);
+		Cmd_AddCommand("menu_playerconfig", M_Menu_PlayerConfig_f);
+		Cmd_AddCommand("menu_downloadoptions", M_Menu_DownloadOptions_f);
+		Cmd_AddCommand("menu_credits", M_Menu_Credits_f );
+		Cmd_AddCommand("menu_multiplayer", M_Menu_Multiplayer_f);
+		Cmd_AddCommand("menu_video", M_Menu_Video_f);
+		Cmd_AddCommand("menu_options", M_Menu_Options_f);
+		Cmd_AddCommand("menu_keys", M_Menu_Keys_f);
+		Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
+		Cmd_AddCommand("timerefresh",SCR_TimeRefresh_f);
+		Cmd_AddCommand("loading",SCR_Loading_f);
+		Cmd_AddCommand("sizeup",SCR_SizeUp_f);
+		Cmd_AddCommand("sizedown",SCR_SizeDown_f);
+		Cmd_AddCommand("sky",SCR_Sky_f);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
-	}
-
-	// NOTE: Init Filesystem
-	// TODO: Remove
-	{
-		// basedir <path>
-		// allows the game to run from outside the data tree
-		fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
-
-		// start up with baseq2 by default
-		FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
-
-		// any set gamedirs will be freed up to here
-		fs_base_searchpaths = fs_searchpaths;
-
-		// check for game override
-		fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
-		if (fs_gamedirvar->string[0]) {
-			FS_SetGamedir(fs_gamedirvar->string);
-		}
-	}
-
-	// NOTE: Startup command execution
-	// TODO: Simplify
-	{
-		Cbuf_AddText("exec default.cfg\n");
-		Cbuf_AddText("exec config.cfg\n");
-
-		Cmd_ExecuteCbuf();
 	}
 
 	// NOTE: Cvars
@@ -88771,8 +88730,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		public_server = COM_GetCvar("public", "0", 0);
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
-		vid_xpos = COM_GetCvar("vid_xpos", "3", CVAR_ARCHIVE);
-		vid_ypos = COM_GetCvar("vid_ypos", "22", CVAR_ARCHIVE);
 		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
 		r_norefresh = COM_GetCvar("r_norefresh", "0", 0);
 		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
@@ -88821,6 +88778,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
 		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 		gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
+		intensity = COM_GetCvar("intensity", "2", 0);
+		crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
+		cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
+		cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
+		cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
+		cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
+		cl_stats = COM_GetCvar ("cl_stats", "0", 0);
+		scr_viewsize = COM_GetCvar("viewsize", "100", CVAR_ARCHIVE);
+		scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
+		scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
+		scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
+		scr_centertime = COM_GetCvar("scr_centertime", "2.5", 0);
+		scr_printspeed = COM_GetCvar("scr_printspeed", "8", 0);
+		scr_netgraph = COM_GetCvar("netgraph", "0", 0);
+		scr_timegraph = COM_GetCvar("timegraph", "0", 0);
+		scr_debuggraph = COM_GetCvar("debuggraph", "0", 0);
+		scr_graphheight = COM_GetCvar("graphheight", "32", 0);
+		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
+		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
+		scr_drawall = COM_GetCvar("scr_drawall", "0", 0);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
@@ -88846,7 +88823,37 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		con.initialized = true;
 	}
 
+	// NOTE: Init Filesystem
+	// TODO: Remove
+	{
+		// basedir <path>
+		// allows the game to run from outside the data tree
+		fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
+
+		// start up with baseq2 by default
+		FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
+
+		// any set gamedirs will be freed up to here
+		fs_base_searchpaths = fs_searchpaths;
+
+		// check for game override
+		fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
+		if (fs_gamedirvar->string[0]) {
+			FS_SetGamedir(fs_gamedirvar->string);
+		}
+	}
+
+	// NOTE: Startup command execution
+	// TODO: Simplify
+	{
+		Cbuf_AddText("exec default.cfg\n");
+		Cbuf_AddText("exec config.cfg\n");
+
+		Cmd_ExecuteCbuf();
+	}
+
 	// NOTE: Colormap init
+	// TODO: unglobal
 	{
 		u8* pic = 0;
 		u8* pal = 0;
@@ -88896,8 +88903,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		DWORD window_style = WS_OVERLAPPED|WS_BORDER|WS_CAPTION|WS_VISIBLE;
 		AdjustWindowRect(&r, window_style, FALSE);
 
-		int x = vid_xpos->value;
-		int y = vid_ypos->value;
+		int x = 10;
+		int y = 10;
 		int w = r.right - r.left;
 		int h = r.bottom - r.top;
 
@@ -88997,166 +89004,90 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		GL_UpdateSwapInterval();
 
-		{
-			registration_sequence = 1;
+		registration_sequence = 1;
+		gl_state.inverse_intensity = 1 / intensity->value;
 
-			// init intensity conversions
-			intensity = COM_GetCvar("intensity", "2", 0);
+		for (i64 ind = 0; ind < 256; ind++) {
+			gammatable[ind] = ind;
+		}
 
-			if (intensity->value <= 1) {
-				COM_SetCvar("intensity", "1");
-			}
-
-			gl_state.inverse_intensity = 1 / intensity->value;
-
-			for (i64 ind = 0; ind < 256; ind++) {
-				gammatable[ind] = ind;
-			}
-
-			for (i64 ind=0 ; ind<256 ; ind++) {
-				i64 j = min(ind * intensity->value, 255);
-				intensitytable[ind] = j;
-			}
+		for (i64 ind=0 ; ind<256 ; ind++) {
+			i64 j = min(ind * intensity->value, 255);
+			intensitytable[ind] = j;
 		}
 
 		memset(mod_novis, 0xff, sizeof(mod_novis));
+	}
 
-		{
-			u8 dottexture[8][8] = {
-				{0,0,0,0,0,0,0,0},
-				{0,0,1,1,0,0,0,0},
-				{0,1,1,1,1,0,0,0},
-				{0,1,1,1,1,0,0,0},
-				{0,0,1,1,0,0,0,0},
-				{0,0,0,0,0,0,0,0},
-				{0,0,0,0,0,0,0,0},
-				{0,0,0,0,0,0,0,0},
-			};
+	// NOTE: Init textures
+	// TODO: Unglobal
+	{
+		u8 dottexture[8][8] = {
+			{0,0,0,0,0,0,0,0},
+			{0,0,1,1,0,0,0,0},
+			{0,1,1,1,1,0,0,0},
+			{0,1,1,1,1,0,0,0},
+			{0,0,1,1,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0},
+		};
 
-			u8 data[8][8][4] = {};
+		u8 data[8][8][4] = {};
 
-			// particle texture
-			for (i64 x = 0; x < 8; x++) {
-				for (i64 y=0 ; y<8 ; y++) {
-					data[y][x][0] = 255;
-					data[y][x][1] = 255;
-					data[y][x][2] = 255;
-					data[y][x][3] = dottexture[x][y]*255;
-				}
+		// particle texture
+		for (i64 x = 0; x < 8; x++) {
+			for (i64 y=0 ; y<8 ; y++) {
+				data[y][x][0] = 255;
+				data[y][x][1] = 255;
+				data[y][x][2] = 255;
+				data[y][x][3] = dottexture[x][y]*255;
 			}
-			r_particletexture = GL_LoadPic("***particle***", (u8*)data, 8, 8, it_sprite, 32);
-
-			// also use this for bad textures, but without alpha
-			for (i64 x = 0; x < 8; x++) {
-				for (i64 y = 0; y < 8; y++) {
-					data[y][x][0] = dottexture[x&3][y&3]*255;
-					data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
-					data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
-					data[y][x][3] = 255;
-				}
-			}
-			r_notexture = GL_LoadPic("***r_notexture***", (u8*)data, 8, 8, it_wall, 32);
 		}
+		r_particletexture = GL_LoadPic("***particle***", (u8*)data, 8, 8, it_sprite, 32);
 
-		// load console characters (don't bilerp characters)
+		// also use this for bad textures, but without alpha
+		for (i64 x = 0; x < 8; x++) {
+			for (i64 y = 0; y < 8; y++) {
+				data[y][x][0] = dottexture[x&3][y&3]*255;
+				data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
+				data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
+				data[y][x][3] = 255;
+			}
+		}
+		r_notexture = GL_LoadPic("***r_notexture***", (u8*)data, 8, 8, it_wall, 32);
+	}
+
+	// NOTE: load console characters (don't bilerp characters)
+	{
 		draw_chars = GL_FindImage("pics/conchars.pcx", it_pic);
 		GL_Bind(draw_chars->texnum);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		{
-			int err = glGetError();
-			if (err != GL_NO_ERROR) {
-				Com_Printf("glGetError() = 0x%x\n", err);
-			}
-		}
-
-		// update our window position
-		if (vid_xpos->modified || vid_ypos->modified) {
-			VID_UpdateWindowPosAndSize();
-			vid_xpos->modified = false;
-			vid_ypos->modified = false;
-		}
 	}
 
+	// NOTE: Check GL initialised with no errors
 	{
-		// NOTE: client init
-		{
-			// sound must be initialized after window is created
-			S_Init();
+		int err = glGetError();
+		assert(err == GL_NO_ERROR);
+	}
 
-			// NOTE: View init
-			{
-				Cmd_AddCommand("gun_next", V_Gun_Next_f);
-				Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
-				Cmd_AddCommand("gun_model", V_Gun_Model_f);
-				Cmd_AddCommand ("viewpos", V_Viewpos_f);
+	// NOTE: sound must be initialized after window is created
+	S_Init();
 
-				crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
-				cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
-				cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
-				cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
-				cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
-				cl_stats = COM_GetCvar ("cl_stats", "0", 0);
-			}
+	// NOTE: client init
+	{
+		net_message.data = net_message_buffer;
+		net_message.maxsize = sizeof(net_message_buffer);
 
-			net_message.data = net_message_buffer;
-			net_message.maxsize = sizeof(net_message_buffer);
+		CL_InitLocal();
+		IN_Init();
 
-			// NOTE: Menu init
-			{
-				Cmd_AddCommand("menu_main", M_Menu_Main_f);
-				Cmd_AddCommand("menu_game", M_Menu_Game_f);
-				Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
-				Cmd_AddCommand("menu_savegame", M_Menu_SaveGame_f);
-				Cmd_AddCommand("menu_joinserver", M_Menu_JoinServer_f);
-				Cmd_AddCommand("menu_addressbook", M_Menu_AddressBook_f);
-				Cmd_AddCommand("menu_startserver", M_Menu_StartServer_f);
-				Cmd_AddCommand("menu_dmoptions", M_Menu_DMOptions_f);
-				Cmd_AddCommand("menu_playerconfig", M_Menu_PlayerConfig_f);
-				Cmd_AddCommand("menu_downloadoptions", M_Menu_DownloadOptions_f);
-				Cmd_AddCommand("menu_credits", M_Menu_Credits_f );
-				Cmd_AddCommand("menu_multiplayer", M_Menu_Multiplayer_f);
-				Cmd_AddCommand("menu_video", M_Menu_Video_f);
-				Cmd_AddCommand("menu_options", M_Menu_Options_f);
-				Cmd_AddCommand("menu_keys", M_Menu_Keys_f);
-				Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
-			}
+		FS_ExecAutoexec();
+		Cmd_ExecuteCbuf();
 
-			// NOTE: Screen init
-			{
-				scr_viewsize = COM_GetCvar("viewsize", "100", CVAR_ARCHIVE);
-				scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
-				scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
-				scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
-				scr_centertime = COM_GetCvar("scr_centertime", "2.5", 0);
-				scr_printspeed = COM_GetCvar("scr_printspeed", "8", 0);
-				scr_netgraph = COM_GetCvar("netgraph", "0", 0);
-				scr_timegraph = COM_GetCvar("timegraph", "0", 0);
-				scr_debuggraph = COM_GetCvar("debuggraph", "0", 0);
-				scr_graphheight = COM_GetCvar("graphheight", "32", 0);
-				scr_graphscale = COM_GetCvar("graphscale", "1", 0);
-				scr_graphshift = COM_GetCvar("graphshift", "0", 0);
-				scr_drawall = COM_GetCvar("scr_drawall", "0", 0);
-
-				Cmd_AddCommand("timerefresh",SCR_TimeRefresh_f);
-				Cmd_AddCommand("loading",SCR_Loading_f);
-				Cmd_AddCommand("sizeup",SCR_SizeUp_f);
-				Cmd_AddCommand("sizedown",SCR_SizeDown_f);
-				Cmd_AddCommand("sky",SCR_Sky_f);
-
-				scr_initialized = true;
-			}
-
-			CL_InitLocal();
-			IN_Init();
-
-			FS_ExecAutoexec();
-			Cmd_ExecuteCbuf();
-
-			Cbuf_AddText("menu_main\n");
-			Cmd_ExecuteCbuf();
-		}
+		Cbuf_AddText("menu_main\n");
+		Cmd_ExecuteCbuf();
 	}
 
 	// NOTE: Mainloop
