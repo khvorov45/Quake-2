@@ -88774,269 +88774,6 @@ static void VID_UpdateWindowPosAndSize() {
 
 static HINSTANCE global_hInstance;
 
-// This function gets called once just before drawing each frame, and it's sole purpose in life
-// is to check to see if any of the video mode parameters have changed, and if they have to
-// update the rendering DLL and/or video mode to match.
-static void VID_Restart() {
-	S_StopAllSounds();
-
-	// refresh has changed
-	cl.refresh_prepped = false;
-	cls.disable_screen = true;
-
-	// NOTE: Free nods
-	for (int i = 0; i < mod_numknown; i++) {
-		if (mod_known[i].extradatasize) {
-			Mod_Free(&mod_known[i]);
-		}
-	}
-
-	// NOTE: Free images
-	{
-		image_t* image = gltextures;
-		for (int i = 0; i < numgltextures; i++, image++) {
-			if (image->registration_sequence) {
-				glDeleteTextures(1, (GLuint*)&image->texnum);
-				memset(image, 0, sizeof(*image));
-			}
-		}
-	}
-
-	wglMakeCurrent(NULL, NULL);
-	wglDeleteContext(glw_state.hGLRC);
-	glw_state.hGLRC = NULL;
-
-	ReleaseDC(glw_state.hWnd, glw_state.hDC);
-	glw_state.hDC = NULL;
-
-	DestroyWindow(glw_state.hWnd);
-	glw_state.hWnd = NULL;
-
-	UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
-
-	Draw_GetPalette();
-
-	glw_state.allowdisplaydepthchange = false;
-	glw_state.hInstance = global_hInstance;
-	glw_state.wndproc = MainWndProc;
-
-	vid.width  = 1600;
-	vid.height = 1200;
-
-	{
-		WNDCLASS wc = {
-			.style         = 0,
-			.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
-			.cbClsExtra    = 0,
-			.cbWndExtra    = 0,
-			.hInstance     = glw_state.hInstance,
-			.hIcon         = 0,
-			.hCursor       = LoadCursor (NULL,IDC_ARROW),
-			.hbrBackground = (void*)COLOR_GRAYTEXT,
-			.lpszMenuName  = 0,
-			.lpszClassName = WINDOW_CLASS_NAME,
-		};
-
-		ATOM register_class_result = RegisterClass(&wc);
-		assert(register_class_result);
-
-		RECT r = {.left = 0, .top = 0, .right = vid.width, .bottom = vid.height};
-		AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
-
-		cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
-		cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
-		int x = vid_xpos->value;
-		int y = vid_ypos->value;
-		int w = r.right - r.left;
-		int h = r.bottom - r.top;
-
-		glw_state.hWnd = CreateWindowEx(
-			0,
-			WINDOW_CLASS_NAME,
-			"Quake 2",
-			WINDOW_STYLE,
-			x, y, w, h,
-			NULL,
-			NULL,
-			glw_state.hInstance,
-			NULL
-		);
-		assert(glw_state.hWnd);
-
-		ShowWindow(glw_state.hWnd, SW_SHOW);
-		UpdateWindow(glw_state.hWnd);
-
-		// NOTE: GL context
-		{
-			PIXELFORMATDESCRIPTOR pfd = {
-				.nSize = sizeof(PIXELFORMATDESCRIPTOR),
-				.nVersion = 1,
-				.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-				.iPixelType = PFD_TYPE_RGBA,
-				.cColorBits = 24,
-				.cDepthBits = 32,
-				.iLayerType = PFD_MAIN_PLANE,
-			};
-
-			// Get a DC for the specified window
-			assert(glw_state.hDC == NULL);
-			glw_state.hDC = GetDC(glw_state.hWnd);
-			assert(glw_state.hDC != NULL);
-
-			int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
-			assert(pixelformat);
-			BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
-			assert(set_pixel_format_result);
-			int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
-			assert(describe_pixel_format_result);
-
-			glw_state.hGLRC = wglCreateContext(glw_state.hDC);
-			assert(glw_state.hGLRC);
-
-			{
-				BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-				assert(make_current_result);
-			}
-		}
-
-		SetForegroundWindow(glw_state.hWnd);
-		SetFocus(glw_state.hWnd);
-
-		viddef.width  = vid.width;
-		viddef.height = vid.height;
-	}
-
-	// NOTE: Must happen after GL context is created
-	wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
-	assert(wglSwapIntervalEXT);
-
-	VID_MenuInit();
-
-	// get our various GL strings
-	gl_config.vendor_string = (char*)glGetString(GL_VENDOR);
-	gl_config.renderer_string = (char*)glGetString(GL_RENDERER);
-	gl_config.version_string = (char*)glGetString(GL_VERSION);
-	gl_config.extensions_string = (char*)glGetString(GL_EXTENSIONS);
-
-	COM_SetCvar("scr_drawall", "0");
-
-	glClearColor(1,0, 0.5 , 0.5);
-	glCullFace(GL_FRONT);
-	glEnable(GL_TEXTURE_2D);
-
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.666);
-
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-
-	glColor4f(1,1,1,1);
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glShadeModel(GL_FLAT);
-
-	GL_TextureMode(gl_texturemode->string);
-	GL_TextureAlphaMode(gl_texturealphamode->string);
-	GL_TextureSolidMode(gl_texturesolidmode->string);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	GL_TexEnv(GL_REPLACE);
-
-	GL_UpdateSwapInterval();
-
-	{
-		registration_sequence = 1;
-
-		// init intensity conversions
-		intensity = COM_GetCvar("intensity", "2", 0);
-
-		if (intensity->value <= 1)
-			COM_SetCvar("intensity", "1");
-
-		gl_state.inverse_intensity = 1 / intensity->value;
-
-		Draw_GetPalette();
-
-		for (i64 ind = 0; ind < 256; ind++) {
-			gammatable[ind] = ind;
-		}
-
-		for (i64 ind=0 ; ind<256 ; ind++) {
-			i64 j = min(ind * intensity->value, 255);
-			intensitytable[ind] = j;
-		}
-	}
-
-	memset(mod_novis, 0xff, sizeof(mod_novis));
-
-	{
-		u8 dottexture[8][8] = {
-			{0,0,0,0,0,0,0,0},
-			{0,0,1,1,0,0,0,0},
-			{0,1,1,1,1,0,0,0},
-			{0,1,1,1,1,0,0,0},
-			{0,0,1,1,0,0,0,0},
-			{0,0,0,0,0,0,0,0},
-			{0,0,0,0,0,0,0,0},
-			{0,0,0,0,0,0,0,0},
-		};
-
-		u8 data[8][8][4] = {};
-
-		// particle texture
-		for (i64 x = 0; x < 8; x++) {
-			for (i64 y=0 ; y<8 ; y++) {
-				data[y][x][0] = 255;
-				data[y][x][1] = 255;
-				data[y][x][2] = 255;
-				data[y][x][3] = dottexture[x][y]*255;
-			}
-		}
-		r_particletexture = GL_LoadPic("***particle***", (u8*)data, 8, 8, it_sprite, 32);
-
-		// also use this for bad textures, but without alpha
-		for (i64 x = 0; x < 8; x++) {
-			for (i64 y = 0; y < 8; y++) {
-				data[y][x][0] = dottexture[x&3][y&3]*255;
-				data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
-				data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
-				data[y][x][3] = 255;
-			}
-		}
-		r_notexture = GL_LoadPic("***r_notexture***", (u8*)data, 8, 8, it_wall, 32);
-	}
-
-	// load console characters (don't bilerp characters)
-	draw_chars = GL_FindImage("pics/conchars.pcx", it_pic);
-	GL_Bind(draw_chars->texnum);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	{
-		int err = glGetError();
-		if (err != GL_NO_ERROR) {
-			Com_Printf("glGetError() = 0x%x\n", err);
-		}
-	}
-
-	cls.disable_screen = false;
-
-	// update our window position
-	if (vid_xpos->modified || vid_ypos->modified) {
-		VID_UpdateWindowPosAndSize();
-		vid_xpos->modified = false;
-		vid_ypos->modified = false;
-	}
-}
-
 extern cvar_t *scr_viewsize;
 
 static cvar_t *gl_picmip;
@@ -89833,12 +89570,269 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Video init
-	VID_Restart();
+	{
+		S_StopAllSounds();
+
+		// refresh has changed
+		cl.refresh_prepped = false;
+		cls.disable_screen = true;
+
+		// NOTE: Free nods
+		for (int i = 0; i < mod_numknown; i++) {
+			if (mod_known[i].extradatasize) {
+				Mod_Free(&mod_known[i]);
+			}
+		}
+
+		// NOTE: Free images
+		{
+			image_t* image = gltextures;
+			for (int i = 0; i < numgltextures; i++, image++) {
+				if (image->registration_sequence) {
+					glDeleteTextures(1, (GLuint*)&image->texnum);
+					memset(image, 0, sizeof(*image));
+				}
+			}
+		}
+
+		wglMakeCurrent(NULL, NULL);
+		wglDeleteContext(glw_state.hGLRC);
+		glw_state.hGLRC = NULL;
+
+		ReleaseDC(glw_state.hWnd, glw_state.hDC);
+		glw_state.hDC = NULL;
+
+		DestroyWindow(glw_state.hWnd);
+		glw_state.hWnd = NULL;
+
+		UnregisterClass(WINDOW_CLASS_NAME, glw_state.hInstance);
+
+		Draw_GetPalette();
+
+		glw_state.allowdisplaydepthchange = false;
+		glw_state.hInstance = global_hInstance;
+		glw_state.wndproc = MainWndProc;
+
+		vid.width  = 1600;
+		vid.height = 1200;
+
+		{
+			WNDCLASS wc = {
+				.style         = 0,
+				.lpfnWndProc   = (WNDPROC)glw_state.wndproc,
+				.cbClsExtra    = 0,
+				.cbWndExtra    = 0,
+				.hInstance     = glw_state.hInstance,
+				.hIcon         = 0,
+				.hCursor       = LoadCursor (NULL,IDC_ARROW),
+				.hbrBackground = (void*)COLOR_GRAYTEXT,
+				.lpszMenuName  = 0,
+				.lpszClassName = WINDOW_CLASS_NAME,
+			};
+
+			ATOM register_class_result = RegisterClass(&wc);
+			assert(register_class_result);
+
+			RECT r = {.left = 0, .top = 0, .right = vid.width, .bottom = vid.height};
+			AdjustWindowRect(&r, WINDOW_STYLE, FALSE);
+
+			cvar_t* vid_xpos = COM_GetCvar("vid_xpos", "0", 0);
+			cvar_t* vid_ypos = COM_GetCvar("vid_ypos", "0", 0);
+			int x = vid_xpos->value;
+			int y = vid_ypos->value;
+			int w = r.right - r.left;
+			int h = r.bottom - r.top;
+
+			glw_state.hWnd = CreateWindowEx(
+				0,
+				WINDOW_CLASS_NAME,
+				"Quake 2",
+				WINDOW_STYLE,
+				x, y, w, h,
+				NULL,
+				NULL,
+				glw_state.hInstance,
+				NULL
+			);
+			assert(glw_state.hWnd);
+
+			ShowWindow(glw_state.hWnd, SW_SHOW);
+			UpdateWindow(glw_state.hWnd);
+
+			// NOTE: GL context
+			{
+				PIXELFORMATDESCRIPTOR pfd = {
+					.nSize = sizeof(PIXELFORMATDESCRIPTOR),
+					.nVersion = 1,
+					.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+					.iPixelType = PFD_TYPE_RGBA,
+					.cColorBits = 24,
+					.cDepthBits = 32,
+					.iLayerType = PFD_MAIN_PLANE,
+				};
+
+				// Get a DC for the specified window
+				assert(glw_state.hDC == NULL);
+				glw_state.hDC = GetDC(glw_state.hWnd);
+				assert(glw_state.hDC != NULL);
+
+				int pixelformat = ChoosePixelFormat(glw_state.hDC, &pfd);
+				assert(pixelformat);
+				BOOL set_pixel_format_result = SetPixelFormat(glw_state.hDC, pixelformat, &pfd);
+				assert(set_pixel_format_result);
+				int describe_pixel_format_result = DescribePixelFormat(glw_state.hDC, pixelformat, sizeof(pfd), &pfd);
+				assert(describe_pixel_format_result);
+
+				glw_state.hGLRC = wglCreateContext(glw_state.hDC);
+				assert(glw_state.hGLRC);
+
+				{
+					BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+					assert(make_current_result);
+				}
+			}
+
+			SetForegroundWindow(glw_state.hWnd);
+			SetFocus(glw_state.hWnd);
+
+			viddef.width  = vid.width;
+			viddef.height = vid.height;
+		}
+
+		// NOTE: Must happen after GL context is created
+		wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
+		assert(wglSwapIntervalEXT);
+
+		VID_MenuInit();
+
+		// get our various GL strings
+		gl_config.vendor_string = (char*)glGetString(GL_VENDOR);
+		gl_config.renderer_string = (char*)glGetString(GL_RENDERER);
+		gl_config.version_string = (char*)glGetString(GL_VERSION);
+		gl_config.extensions_string = (char*)glGetString(GL_EXTENSIONS);
+
+		COM_SetCvar("scr_drawall", "0");
+
+		glClearColor(1,0, 0.5 , 0.5);
+		glCullFace(GL_FRONT);
+		glEnable(GL_TEXTURE_2D);
+
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.666);
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_BLEND);
+
+		glColor4f(1,1,1,1);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glShadeModel(GL_FLAT);
+
+		GL_TextureMode(gl_texturemode->string);
+		GL_TextureAlphaMode(gl_texturealphamode->string);
+		GL_TextureSolidMode(gl_texturesolidmode->string);
+
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		GL_TexEnv(GL_REPLACE);
+
+		GL_UpdateSwapInterval();
+
+		{
+			registration_sequence = 1;
+
+			// init intensity conversions
+			intensity = COM_GetCvar("intensity", "2", 0);
+
+			if (intensity->value <= 1)
+				COM_SetCvar("intensity", "1");
+
+			gl_state.inverse_intensity = 1 / intensity->value;
+
+			Draw_GetPalette();
+
+			for (i64 ind = 0; ind < 256; ind++) {
+				gammatable[ind] = ind;
+			}
+
+			for (i64 ind=0 ; ind<256 ; ind++) {
+				i64 j = min(ind * intensity->value, 255);
+				intensitytable[ind] = j;
+			}
+		}
+
+		memset(mod_novis, 0xff, sizeof(mod_novis));
+
+		{
+			u8 dottexture[8][8] = {
+				{0,0,0,0,0,0,0,0},
+				{0,0,1,1,0,0,0,0},
+				{0,1,1,1,1,0,0,0},
+				{0,1,1,1,1,0,0,0},
+				{0,0,1,1,0,0,0,0},
+				{0,0,0,0,0,0,0,0},
+				{0,0,0,0,0,0,0,0},
+				{0,0,0,0,0,0,0,0},
+			};
+
+			u8 data[8][8][4] = {};
+
+			// particle texture
+			for (i64 x = 0; x < 8; x++) {
+				for (i64 y=0 ; y<8 ; y++) {
+					data[y][x][0] = 255;
+					data[y][x][1] = 255;
+					data[y][x][2] = 255;
+					data[y][x][3] = dottexture[x][y]*255;
+				}
+			}
+			r_particletexture = GL_LoadPic("***particle***", (u8*)data, 8, 8, it_sprite, 32);
+
+			// also use this for bad textures, but without alpha
+			for (i64 x = 0; x < 8; x++) {
+				for (i64 y = 0; y < 8; y++) {
+					data[y][x][0] = dottexture[x&3][y&3]*255;
+					data[y][x][1] = 0; // dottexture[x&3][y&3]*255;
+					data[y][x][2] = 0; //dottexture[x&3][y&3]*255;
+					data[y][x][3] = 255;
+				}
+			}
+			r_notexture = GL_LoadPic("***r_notexture***", (u8*)data, 8, 8, it_wall, 32);
+		}
+
+		// load console characters (don't bilerp characters)
+		draw_chars = GL_FindImage("pics/conchars.pcx", it_pic);
+		GL_Bind(draw_chars->texnum);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		{
+			int err = glGetError();
+			if (err != GL_NO_ERROR) {
+				Com_Printf("glGetError() = 0x%x\n", err);
+			}
+		}
+
+		cls.disable_screen = false;
+
+		// update our window position
+		if (vid_xpos->modified || vid_ypos->modified) {
+			VID_UpdateWindowPosAndSize();
+			vid_xpos->modified = false;
+			vid_ypos->modified = false;
+		}
+	}
 
 	{
 		// NOTE: client init
 		{
-
 			// sound must be initialized after window is created
 			S_Init();
 
