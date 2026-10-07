@@ -1495,7 +1495,7 @@ typedef struct cvar_s {
 
 static cvar_t*	cvar_vars;
 static bool	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
-static int		server_state;
+static int server_state;
 
 static bool Cvar_InfoValidate(char* s) {
 	if (strstr(s, "\\")) {
@@ -2075,9 +2075,6 @@ static void COM_SetValueCvar(char *var_name, float value) {
 }
 
 void 		Com_DPrintf (char *fmt, ...);
-
-int			Com_ServerState (void);		// this should have just been a cvar...
-void		Com_SetServerState (int state);
 
 unsigned	Com_BlockChecksum (void *buffer, int length);
 u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
@@ -7215,84 +7212,6 @@ void Com_DPrintf (char *fmt, ...)
 	Com_Printf ("%s", msg);
 }
 
-#define	ERR_DISCONNECT		2		// don't kill server
-
-
-/*
-==================
-Com_ServerState
-==================
-*/
-int Com_ServerState (void)
-{
-	return server_state;
-}
-
-/*
-==================
-Com_SetServerState
-==================
-*/
-void Com_SetServerState (int state)
-{
-	server_state = state;
-}
-
-
-/*
-==============================================================================
-
-			MESSAGE IO FUNCTIONS
-
-Handles u8 ordering and avoids alignment errors
-==============================================================================
-*/
-
-//
-// writing functions
-//
-
-//============================================================
-
-//
-// reading functions
-//
-
-
-//===========================================================================
-
-//============================================================================
-
-
-
-
-/// just for debugging
-int	memsearch (u8 *start, int count, int search)
-{
-	int		i;
-
-	for (i=0 ; i<count ; i++)
-		if (start[i] == search)
-			return i;
-	return -1;
-}
-
-
-
-
-/*
-==============================================================================
-
-						ZONE MEMORY ALLOCATION
-
-just cleared malloc with counters now...
-
-==============================================================================
-*/
-
-
-//============================================================================
-
 static u8 chktbl[1024] = {
 0x84, 0x47, 0x51, 0xc1, 0x93, 0x22, 0x21, 0x24, 0x2f, 0x66, 0x60, 0x4d, 0xb0, 0x7c, 0xda,
 0x88, 0x54, 0x15, 0x2b, 0xc6, 0x6c, 0x89, 0xc5, 0x9d, 0x48, 0xee, 0xe6, 0x8a, 0xb5, 0xf4,
@@ -11887,14 +11806,10 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 	SV_StartSound (NULL, entity, channel, sound_num, volume, attenuation, timeofs);
 }
 
-static void ShutdownGame() {
-	Z_FreeTags(TAG_LEVEL);
-	Z_FreeTags(TAG_GAME);
-}
-
 // Called when either the entire server is being killed, or it is changing to a different game directory.
 static void SV_ShutdownGameProgs() {
-	ShutdownGame();
+	Z_FreeTags(TAG_LEVEL);
+	Z_FreeTags(TAG_GAME);
 }
 
 // Init the game subsystem for a new map
@@ -12046,7 +11961,7 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	svs.spawncount++;		// any partially connected client will be
 							// restarted
 	sv.state = ss_dead;
-	Com_SetServerState (sv.state);
+	server_state = sv.state;
 
 	// wipe the entire per-level structure
 	memset (&sv, 0, sizeof(sv));
@@ -12116,19 +12031,19 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	// precache and static commands can be issued during
 	// map initialization
 	sv.state = ss_loading;
-	Com_SetServerState (sv.state);
+	server_state = sv.state;
 
 	// load and spawn all other entities
 	void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
-	SpawnEntities ( sv.name, map_entitystring, spawnpoint );
+	SpawnEntities(sv.name, map_entitystring, spawnpoint);
 
 	// run two frames to allow everything to settle
-	G_RunFrame ();
-	G_RunFrame ();
+	G_RunFrame();
+	G_RunFrame();
 
 	// all precaches are complete
 	sv.state = serverstate;
-	Com_SetServerState (sv.state);
+	server_state = sv.state;
 
 	// create a baseline for more efficient communications
 	SV_CreateBaseline ();
@@ -13085,7 +13000,7 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 	if (sv.demofile)
 		fclose (sv.demofile);
 	memset (&sv, 0, sizeof(sv));
-	Com_SetServerState (sv.state);
+	server_state = sv.state;
 
 	// free server static data
 	if (svs.clients)
@@ -20854,7 +20769,7 @@ void CL_ForwardToServer_f (void)
 void CL_Pause_f (void)
 {
 	// never pause in multiplayer
-	if (Cvar_VariableValue ("maxclients") > 1 || !Com_ServerState ())
+	if (Cvar_VariableValue ("maxclients") > 1 || !server_state)
 	{
 		COM_SetValueCvar ("paused", 0);
 		return;
@@ -20895,7 +20810,7 @@ void CL_CheckForResend (void)
 
 	// if the local server is running and we aren't
 	// then connect
-	if (cls.state == ca_disconnected && Com_ServerState() )
+	if (cls.state == ca_disconnected && server_state )
 	{
 		cls.state = ca_connecting;
 		strncpy (cls.servername, "localhost", sizeof(cls.servername)-1);
@@ -20938,8 +20853,8 @@ void CL_Connect_f (void)
 		return;
 	}
 
-	if (Com_ServerState ())
-	{	// if running a local server, kill it and reissue
+	if (server_state) {
+		// if running a local server, kill it and reissue
 		SV_Shutdown (va("Server quit\n", msg), false);
 	}
 	else
@@ -23035,8 +22950,7 @@ void CL_ParseDownload (void)
 	}
 }
 
-void CL_ParseServerData (void)
-{
+void CL_ParseServerData() {
 	extern cvar_t	*fs_gamedirvar;
 	char	*str;
 	int		i;
@@ -23052,7 +22966,7 @@ void CL_ParseServerData (void)
 	cls.serverProtocol = i;
 
 	// BIG HACK to let demos from release work with the 3.0x patch!!!
-	assert((Com_ServerState() && PROTOCOL_VERSION == 34) || i == PROTOCOL_VERSION);
+	assert((server_state && PROTOCOL_VERSION == 34) || i == PROTOCOL_VERSION);
 
 	cl.servercount = MSG_ReadLong (&net_message);
 
@@ -27285,7 +27199,7 @@ static void Con_ToggleConsole_f() {
 	} else {
 		M_ForceMenuOff();
 		cls.key_dest = key_console;
-		if (Cvar_VariableValue("maxclients") == 1 && Com_ServerState()) {
+		if (Cvar_VariableValue("maxclients") == 1 && server_state) {
 			COM_SetCvar("paused", "1");
 		}
 	}
@@ -28671,7 +28585,7 @@ static void M_Banner(char* name) {
 }
 
 static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
-	if (Cvar_VariableValue ("maxclients") == 1 && Com_ServerState ()) {
+	if (Cvar_VariableValue ("maxclients") == 1 && server_state) {
 		COM_SetCvar ("paused", "1");
 	}
 
@@ -30730,7 +30644,7 @@ const char *SaveGame_MenuKey( int key )
 
 void M_Menu_SaveGame_f (void)
 {
-	if (!Com_ServerState())
+	if (!server_state)
 		return;		// not playing a game
 
 	SaveGame_MenuInit();
@@ -31014,7 +30928,7 @@ static void StartServerActionFunc(void* self) {
 
 	if (spot)
 	{
-		if (Com_ServerState())
+		if (server_state)
 			Cbuf_AddText ("disconnect\n");
 		Cbuf_AddText (va("gamemap \"*%s$%s\"\n", startmap, spot));
 	}
