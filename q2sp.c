@@ -5413,9 +5413,6 @@ void SCR_DebugGraph (float value, int color);
 
 void Sys_AppActivate (void);
 
-// loads the game dll and calls the api init function
-void	*Sys_GetGameAPI (void *parms);
-
 char* Sys_GetClipboardData( void );
 
 void SCR_BeginLoadingPlaque (void);
@@ -5709,8 +5706,6 @@ typedef struct
 	int			num_edicts;		// current number, <= max_edicts
 	int			max_edicts;
 } game_export_t;
-
-game_export_t *GetGameApi (game_import_t *import);
 
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
@@ -12292,88 +12287,74 @@ static void SV_ShutdownGameProgs() {
 void SCR_DebugGraph (float value, int color);
 
 void SV_InitGameProgs() {
-	game_import_t	import;
-
 	// unload anything we have now
 	SV_ShutdownGameProgs();
 
-
 	// load a new game dll
-	import.multicast = SV_Multicast;
-	import.unicast = PF_Unicast;
-	import.bprintf = SV_BroadcastPrintf;
-	import.dprintf = PF_dprintf;
-	import.cprintf = PF_cprintf;
-	import.centerprintf = PF_centerprintf;
+	gi.multicast = SV_Multicast;
+	gi.unicast = PF_Unicast;
+	gi.bprintf = SV_BroadcastPrintf;
+	gi.dprintf = PF_dprintf;
+	gi.cprintf = PF_cprintf;
+	gi.centerprintf = PF_centerprintf;
 
-	import.linkentity = SV_LinkEdict;
-	import.unlinkentity = SV_UnlinkEdict;
-	import.BoxEdicts = SV_AreaEdicts;
-	import.trace = SV_Trace;
-	import.pointcontents = SV_PointContents;
-	import.setmodel = PF_setmodel;
-	import.inPVS = PF_inPVS;
-	import.inPHS = PF_inPHS;
-	import.Pmove = Pmove;
+	gi.linkentity = SV_LinkEdict;
+	gi.unlinkentity = SV_UnlinkEdict;
+	gi.BoxEdicts = SV_AreaEdicts;
+	gi.trace = SV_Trace;
+	gi.pointcontents = SV_PointContents;
+	gi.setmodel = PF_setmodel;
+	gi.inPVS = PF_inPVS;
+	gi.inPHS = PF_inPHS;
+	gi.Pmove = Pmove;
 
-	import.modelindex = SV_ModelIndex;
-	import.soundindex = SV_SoundIndex;
-	import.imageindex = SV_ImageIndex;
+	gi.modelindex = SV_ModelIndex;
+	gi.soundindex = SV_SoundIndex;
+	gi.imageindex = SV_ImageIndex;
 
-	import.configstring = PF_Configstring;
-	import.sound = PF_StartSound;
-	import.positioned_sound = SV_StartSound;
+	gi.configstring = PF_Configstring;
+	gi.sound = PF_StartSound;
+	gi.positioned_sound = SV_StartSound;
 
-	import.WriteChar = PF_WriteChar;
-	import.WriteByte = PF_WriteByte;
-	import.WriteShort = PF_WriteShort;
-	import.WriteLong = PF_WriteLong;
-	import.WriteFloat = PF_WriteFloat;
-	import.WriteString = PF_WriteString;
-	import.WritePosition = PF_WritePos;
-	import.WriteDir = PF_WriteDir;
-	import.WriteAngle = PF_WriteAngle;
+	gi.WriteChar = PF_WriteChar;
+	gi.WriteByte = PF_WriteByte;
+	gi.WriteShort = PF_WriteShort;
+	gi.WriteLong = PF_WriteLong;
+	gi.WriteFloat = PF_WriteFloat;
+	gi.WriteString = PF_WriteString;
+	gi.WritePosition = PF_WritePos;
+	gi.WriteDir = PF_WriteDir;
+	gi.WriteAngle = PF_WriteAngle;
 
-	import.TagMalloc = Z_TagMalloc;
-	import.TagFree = Z_Free;
-	import.FreeTags = Z_FreeTags;
+	gi.TagMalloc = Z_TagMalloc;
+	gi.TagFree = Z_Free;
+	gi.FreeTags = Z_FreeTags;
 
-	import.cvar = COM_GetCvar;
-	import.cvar_set = COM_SetCvar;
-	import.cvar_forceset = Com_ForceSetCvar;
+	gi.cvar = COM_GetCvar;
+	gi.cvar_set = COM_SetCvar;
+	gi.cvar_forceset = Com_ForceSetCvar;
 
-	import.argc = Cmd_Argc;
-	import.argv = Cmd_Argv;
-	import.args = Cmd_Args;
-	import.AddCommandString = Cbuf_AddText;
+	gi.argc = Cmd_Argc;
+	gi.argv = Cmd_Argv;
+	gi.args = Cmd_Args;
+	gi.AddCommandString = Cbuf_AddText;
 
-	import.DebugGraph = SCR_DebugGraph;
-	import.SetAreaPortalState = CM_SetAreaPortalState;
-	import.AreasConnected = CM_AreasConnected;
+	gi.DebugGraph = SCR_DebugGraph;
+	gi.SetAreaPortalState = CM_SetAreaPortalState;
+	gi.AreasConnected = CM_AreasConnected;
 
-	ge = (game_export_t *)Sys_GetGameAPI (&import);
+	void GetGameAPI();
+	GetGameAPI();
 
 	assert(ge);
 	assert(ge->apiversion == GAME_API_VERSION);
 
-	ge->Init ();
+	ge->Init();
 }
-
-/* ============ end source: server/sv_game.c ============ */
-/* ============ begin source: server/sv_init.c ============ */
-
-
-/* already inlined above: server/server.h */
 
 server_static_t	svs;				// persistant server info
 server_t		sv;					// local server
 
-/*
-================
-SV_FindIndex
-
-================
-*/
 int SV_FindIndex (char *name, int start, int max, bool create)
 {
 	int		i;
@@ -43171,10 +43152,7 @@ void ShutdownGame (void)
 	gi.FreeTags (TAG_GAME);
 }
 
-// Returns a pointer to the structure with all entry points and global variables
-game_export_t *GetGameAPI(game_import_t *import) {
-	gi = *import;
-
+void GetGameAPI() {
 	globals.apiversion = GAME_API_VERSION;
 	globals.Init = InitGame;
 	globals.Shutdown = ShutdownGame;
@@ -43198,7 +43176,7 @@ game_export_t *GetGameAPI(game_import_t *import) {
 
 	globals.edict_size = sizeof(edict_t);
 
-	return &globals;
+	ge = &globals;
 }
 
 //======================================================================
@@ -89776,24 +89754,6 @@ void Sys_AppActivate (void)
 {
 	ShowWindow ( cl_hwnd, SW_RESTORE);
 	SetForegroundWindow ( cl_hwnd );
-}
-
-/*
-========================================================================
-
-GAME INTERFACE
-
-The game logic is statically linked into the exe by the unity build
-(q2sp.c) — there is no gamex86.dll on disk any more, so these
-engine-side entry points are thin shims over the game's GetGameAPI.
-
-========================================================================
-*/
-
-extern game_export_t *GetGameAPI (game_import_t *import);
-
-void* Sys_GetGameAPI(void* parms) {
-	return GetGameAPI((game_import_t *)parms);
 }
 
 // Console variables that we need to access from this module
