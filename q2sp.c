@@ -85675,19 +85675,6 @@ static JOYINFOEX	ji;
 
 bool	in_appactive;
 
-// forward-referenced functions
-void IN_StartupJoystick (void);
-void Joy_AdvancedUpdate_f (void);
-void IN_JoyMove (usercmd_t *cmd);
-
-/*
-============================================================
-
-  MOUSE CONTROL
-
-============================================================
-*/
-
 // mouse variables
 cvar_t	*m_filter;
 
@@ -85932,111 +85919,16 @@ void IN_Frame (void)
 	IN_ActivateMouse();
 }
 
-/*
-===========
-IN_Move
-===========
-*/
-void IN_Move (usercmd_t *cmd)
-{
-	IN_MouseMove (cmd);
-
-	if (ActiveApp)
-		IN_JoyMove (cmd);
+void IN_Move(usercmd_t* cmd) {
+	IN_MouseMove(cmd);
 }
 
-
-/*
-===================
-IN_ClearStates
-===================
-*/
 void IN_ClearStates (void)
 {
 	mx_accum = 0;
 	my_accum = 0;
 	mouse_oldbuttonstate = 0;
 }
-
-
-/*
-=========================================================================
-
-JOYSTICK
-
-=========================================================================
-*/
-
-/*
-===============
-IN_StartupJoystick
-===============
-*/
-void IN_StartupJoystick (void)
-{
-	int			numdevs;
-	JOYCAPS		jc;
-	MMRESULT	mmr;
-	cvar_t		*cv;
-
- 	// assume no joystick
-	joy_avail = false;
-
-	// abort startup if user requests no joystick
-	cv = COM_GetCvar ("in_initjoy", "1", CVAR_NOSET);
-	if ( !cv->value )
-		return;
-
-	// verify joystick driver is present
-	if ((numdevs = joyGetNumDevs ()) == 0)
-	{
-//		Com_Printf ("\njoystick not found -- driver not present\n\n");
-		return;
-	}
-
-	// cycle through the joystick ids for the first valid one
-	for (joy_id=0 ; joy_id<numdevs ; joy_id++)
-	{
-		memset (&ji, 0, sizeof(ji));
-		ji.dwSize = sizeof(ji);
-		ji.dwFlags = JOY_RETURNCENTERED;
-
-		if ((mmr = joyGetPosEx (joy_id, &ji)) == JOYERR_NOERROR)
-			break;
-	}
-
-	// abort startup if we didn't find a valid joystick
-	if (mmr != JOYERR_NOERROR)
-	{
-		Com_Printf ("\njoystick not found -- no valid joysticks (%x)\n\n", mmr);
-		return;
-	}
-
-	// get the capabilities of the selected joystick
-	// abort startup if command fails
-	memset (&jc, 0, sizeof(jc));
-	if ((mmr = joyGetDevCaps (joy_id, &jc, sizeof(jc))) != JOYERR_NOERROR)
-	{
-		Com_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr);
-		return;
-	}
-
-	// save the joystick's number of buttons and POV status
-	joy_numbuttons = jc.wNumButtons;
-	joy_haspov = jc.wCaps & JOYCAPS_HASPOV;
-
-	// old button and POV states default to no buttons pressed
-	joy_oldbuttonstate = joy_oldpovstate = 0;
-
-	// mark the joystick as available and advanced initialization not completed
-	// this is needed as cvars are not available during initialization
-
-	joy_avail = true;
-	joy_advancedinit = false;
-
-	Com_Printf ("\njoystick detected\n\n");
-}
-
 
 /*
 ===========
@@ -86062,78 +85954,6 @@ PDWORD RawValuePointer (int axis)
 	}
 
 	return NULL;
-}
-
-
-/*
-===========
-Joy_AdvancedUpdate_f
-===========
-*/
-void Joy_AdvancedUpdate_f (void)
-{
-
-	// called once by IN_ReadJoystick and by user whenever an update is needed
-	// cvars are now available
-	int	i;
-	DWORD dwTemp;
-
-	// initialize all the maps
-	for (i = 0; i < JOY_MAX_AXES; i++)
-	{
-		dwAxisMap[i] = AxisNada;
-		dwControlMap[i] = JOY_ABSOLUTE_AXIS;
-		pdwRawValue[i] = RawValuePointer(i);
-	}
-
-	if( joy_advanced->value == 0.0)
-	{
-		// default joystick initialization
-		// 2 axes only with joystick control
-		dwAxisMap[JOY_AXIS_X] = AxisTurn;
-		// dwControlMap[JOY_AXIS_X] = JOY_ABSOLUTE_AXIS;
-		dwAxisMap[JOY_AXIS_Y] = AxisForward;
-		// dwControlMap[JOY_AXIS_Y] = JOY_ABSOLUTE_AXIS;
-	}
-	else
-	{
-		if (strcmp (joy_name->string, "joystick") != 0)
-		{
-			// notify user of advanced controller
-			Com_Printf ("\n%s configured\n\n", joy_name->string);
-		}
-
-		// advanced initialization here
-		// data supplied by user via joy_axisn cvars
-		dwTemp = (DWORD) joy_advaxisx->value;
-		dwAxisMap[JOY_AXIS_X] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_X] = dwTemp & JOY_RELATIVE_AXIS;
-		dwTemp = (DWORD) joy_advaxisy->value;
-		dwAxisMap[JOY_AXIS_Y] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_Y] = dwTemp & JOY_RELATIVE_AXIS;
-		dwTemp = (DWORD) joy_advaxisz->value;
-		dwAxisMap[JOY_AXIS_Z] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_Z] = dwTemp & JOY_RELATIVE_AXIS;
-		dwTemp = (DWORD) joy_advaxisr->value;
-		dwAxisMap[JOY_AXIS_R] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_R] = dwTemp & JOY_RELATIVE_AXIS;
-		dwTemp = (DWORD) joy_advaxisu->value;
-		dwAxisMap[JOY_AXIS_U] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_U] = dwTemp & JOY_RELATIVE_AXIS;
-		dwTemp = (DWORD) joy_advaxisv->value;
-		dwAxisMap[JOY_AXIS_V] = dwTemp & 0x0000000f;
-		dwControlMap[JOY_AXIS_V] = dwTemp & JOY_RELATIVE_AXIS;
-	}
-
-	// compute the axes to collect from DirectInput
-	joy_flags = JOY_RETURNCENTERED | JOY_RETURNBUTTONS | JOY_RETURNPOV;
-	for (i = 0; i < JOY_MAX_AXES; i++)
-	{
-		if (dwAxisMap[i] != AxisNada)
-		{
-			joy_flags |= dwAxisFlags[i];
-		}
-	}
 }
 
 
@@ -86206,186 +86026,6 @@ void IN_Commands (void)
 	}
 }
 
-
-/*
-===============
-IN_ReadJoystick
-===============
-*/
-bool IN_ReadJoystick (void)
-{
-
-	memset (&ji, 0, sizeof(ji));
-	ji.dwSize = sizeof(ji);
-	ji.dwFlags = joy_flags;
-
-	if (joyGetPosEx (joy_id, &ji) == JOYERR_NOERROR)
-	{
-		return true;
-	}
-	else
-	{
-		// read error occurred
-		// turning off the joystick seems too harsh for 1 read error,\
-		// but what should be done?
-		// Com_Printf ("IN_ReadJoystick: no response\n");
-		// joy_avail = false;
-		return false;
-	}
-}
-
-
-/*
-===========
-IN_JoyMove
-===========
-*/
-void IN_JoyMove (usercmd_t *cmd)
-{
-	float	speed, aspeed;
-	float	fAxisValue;
-	int		i;
-
-	// complete initialization if first time in
-	// this is needed as cvars are not available at initialization time
-	if( joy_advancedinit != true )
-	{
-		Joy_AdvancedUpdate_f();
-		joy_advancedinit = true;
-	}
-
-	// verify joystick is available and that the user wants to use it
-	if (!joy_avail || !in_joystick->value)
-	{
-		return;
-	}
-
-	// collect the joystick data, if possible
-	if (IN_ReadJoystick () != true)
-	{
-		return;
-	}
-
-	if ( (in_speed.state & 1) ^ (int)cl_run->value)
-		speed = 2;
-	else
-		speed = 1;
-	aspeed = speed * cls.frametime;
-
-	// loop through the axes
-	for (i = 0; i < JOY_MAX_AXES; i++)
-	{
-		// get the floating point zero-centered, potentially-inverted data for the current axis
-		fAxisValue = (float) *pdwRawValue[i];
-		// move centerpoint to zero
-		fAxisValue -= 32768.0;
-
-		// convert range from -32768..32767 to -1..1
-		fAxisValue /= 32768.0;
-
-		switch (dwAxisMap[i])
-		{
-		case AxisForward:
-			if ((joy_advanced->value == 0.0) && mlooking)
-			{
-				// user wants forward control to become look control
-				if (fabs(fAxisValue) > joy_pitchthreshold->value)
-				{
-					// if mouse invert is on, invert the joystick pitch value
-					// only absolute control support here (joy_advanced is false)
-					if (m_pitch->value < 0.0)
-					{
-						cl.viewangles[PITCH] -= (fAxisValue * joy_pitchsensitivity->value) * aspeed * cl_pitchspeed->value;
-					}
-					else
-					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity->value) * aspeed * cl_pitchspeed->value;
-					}
-				}
-			}
-			else
-			{
-				// user wants forward control to be forward control
-				if (fabs(fAxisValue) > joy_forwardthreshold->value)
-				{
-					cmd->forwardmove += (fAxisValue * joy_forwardsensitivity->value) * speed * cl_forwardspeed->value;
-				}
-			}
-			break;
-
-		case AxisSide:
-			if (fabs(fAxisValue) > joy_sidethreshold->value)
-			{
-				cmd->sidemove += (fAxisValue * joy_sidesensitivity->value) * speed * cl_sidespeed->value;
-			}
-			break;
-
-		case AxisUp:
-			if (fabs(fAxisValue) > joy_upthreshold->value)
-			{
-				cmd->upmove += (fAxisValue * joy_upsensitivity->value) * speed * cl_upspeed->value;
-			}
-			break;
-
-		case AxisTurn:
-			if ((in_strafe.state & 1) || (lookstrafe->value && mlooking))
-			{
-				// user wants turn control to become side control
-				if (fabs(fAxisValue) > joy_sidethreshold->value)
-				{
-					cmd->sidemove -= (fAxisValue * joy_sidesensitivity->value) * speed * cl_sidespeed->value;
-				}
-			}
-			else
-			{
-				// user wants turn control to be turn control
-				if (fabs(fAxisValue) > joy_yawthreshold->value)
-				{
-					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
-					{
-						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity->value) * aspeed * cl_yawspeed->value;
-					}
-					else
-					{
-						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity->value) * speed * 180.0;
-					}
-
-				}
-			}
-			break;
-
-		case AxisLook:
-			if (mlooking)
-			{
-				if (fabs(fAxisValue) > joy_pitchthreshold->value)
-				{
-					// pitch movement detected and pitch movement desired by user
-					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
-					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity->value) * aspeed * cl_pitchspeed->value;
-					}
-					else
-					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity->value) * speed * 180.0;
-					}
-				}
-			}
-			break;
-
-		default:
-			break;
-		}
-	}
-}
-
-/* ============ end source: win32/in_win.c ============ */
-/* ============ begin source: win32/net_wins.c ============ */
-
-// net_wins.c
-
-#include "winsock.h"
-#include "wsipx.h"
-
 #define	MAX_LOOPBACK	4
 
 typedef struct
@@ -86401,24 +86041,6 @@ typedef struct
 } loopback_t;
 
 loopback_t	loopbacks[2];
-
-void SockadrToNetadr (struct sockaddr *s, netadr_t *a)
-{
-	if (s->sa_family == AF_INET)
-	{
-		a->type = NA_IP;
-		*(int *)&a->ip = ((struct sockaddr_in *)s)->sin_addr.s_addr;
-		a->port = ((struct sockaddr_in *)s)->sin_port;
-	}
-	else if (s->sa_family == AF_IPX)
-	{
-		a->type = NA_IPX;
-		memcpy(&a->ipx[0], ((struct sockaddr_ipx *)s)->sa_netnum, 4);
-		memcpy(&a->ipx[4], ((struct sockaddr_ipx *)s)->sa_nodenum, 6);
-		a->port = ((struct sockaddr_ipx *)s)->sa_socket;
-	}
-}
-
 
 bool	NET_CompareAdr (netadr_t a, netadr_t b)
 {
@@ -88460,7 +88082,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand ("-klook", IN_KLookUp);
 		Cmd_AddCommand ("+mlook", IN_MLookDown);
 		Cmd_AddCommand ("-mlook", IN_MLookUp);
-		Cmd_AddCommand ("joy_advancedupdate", Joy_AdvancedUpdate_f);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -88942,8 +88563,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouseparmsvalid = SystemParametersInfo(SPI_GETMOUSE, 0, originalmouseparms, 0);
 		mouse_buttons = 3;
 	}
-
-	IN_StartupJoystick();
 
 	// TODO: inline
 	FS_ExecAutoexec();
