@@ -49,6 +49,7 @@ typedef struct {
 
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
+typedef void (*Debug_Log_Proc)(String text);
 
 // Platform is responsible for initialising this
 static struct {
@@ -56,6 +57,7 @@ static struct {
 
 	Exit_Process_Proc exit_process;
 	Write_Config_String_Proc write_config_string;
+	Debug_Log_Proc debug_log;
 } context = {};
 
 //
@@ -88264,6 +88266,14 @@ static void windows_exit_process() {
 	ExitProcess(0);
 }
 
+static void windows_write_to_file_handle(HANDLE file_handle, String text) {
+	assert(file_handle);
+	DWORD written = 0;
+	assert(text.len >= 0 && text.len <= 0xFFFFFFFF);
+	BOOL write_result = WriteFile(file_handle, text.ptr, (DWORD)text.len, &written, 0);
+	assert(write_result && (i64)written == text.len);
+}
+
 static void windows_write_config_string(String text) {temp_memory_block(&context.memory.temp) {
 	String file_path = {};
 	{
@@ -88277,11 +88287,7 @@ static void windows_write_config_string(String text) {temp_memory_block(&context
 	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
 
-	DWORD written = 0;
-	assert(text.len <= 0xFFFFFFFF);
-	BOOL write_result = WriteFile(file_handle, text.ptr, (DWORD)text.len, &written, 0);
-	assert(write_result && (i64)written == text.len);
-
+	windows_write_to_file_handle(file_handle, text);
 	CloseHandle(file_handle);
 }}
 
@@ -88291,6 +88297,25 @@ static void windows_print_gl_strings() {
 	Com_Printf("GL_VERSION: %s\n", (char*)glGetString(GL_VERSION));
 	Com_Printf("GL_EXTENSIONS: %s\n", (char*)glGetString(GL_EXTENSIONS));
 }
+
+static void windows_debug_log(String text) { temp_memory_block(&context.memory.temp) {
+	// NOTE: must ensure null termination
+	String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
+	string_builder_write_string(&builder, text);
+	string_builder_write_string(&builder, STR("\n"));
+	String text_null_terminated = string_builder_end(&builder);
+
+	OutputDebugStringA(text_null_terminated.ptr);
+
+	char* debug_log_filepath = "debug_log.txt";
+	static HANDLE file_handle = 0;
+	if (file_handle == 0) {
+		file_handle = CreateFileA(debug_log_filepath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	}
+	assert(file_handle != INVALID_HANDLE_VALUE);
+
+	windows_write_to_file_handle(file_handle, text_null_terminated);
+}}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
@@ -88314,6 +88339,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Platform procs
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
+	context.debug_log = windows_debug_log;
 
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
