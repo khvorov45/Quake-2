@@ -20233,45 +20233,6 @@ void IN_CenterView (void)
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
-void CL_InitInput (void)
-{
-	Cmd_AddCommand ("centerview",IN_CenterView);
-
-	Cmd_AddCommand ("+moveup",IN_UpDown);
-	Cmd_AddCommand ("-moveup",IN_UpUp);
-	Cmd_AddCommand ("+movedown",IN_DownDown);
-	Cmd_AddCommand ("-movedown",IN_DownUp);
-	Cmd_AddCommand ("+left",IN_LeftDown);
-	Cmd_AddCommand ("-left",IN_LeftUp);
-	Cmd_AddCommand ("+right",IN_RightDown);
-	Cmd_AddCommand ("-right",IN_RightUp);
-	Cmd_AddCommand ("+forward",IN_ForwardDown);
-	Cmd_AddCommand ("-forward",IN_ForwardUp);
-	Cmd_AddCommand ("+back",IN_BackDown);
-	Cmd_AddCommand ("-back",IN_BackUp);
-	Cmd_AddCommand ("+lookup", IN_LookupDown);
-	Cmd_AddCommand ("-lookup", IN_LookupUp);
-	Cmd_AddCommand ("+lookdown", IN_LookdownDown);
-	Cmd_AddCommand ("-lookdown", IN_LookdownUp);
-	Cmd_AddCommand ("+strafe", IN_StrafeDown);
-	Cmd_AddCommand ("-strafe", IN_StrafeUp);
-	Cmd_AddCommand ("+moveleft", IN_MoveleftDown);
-	Cmd_AddCommand ("-moveleft", IN_MoveleftUp);
-	Cmd_AddCommand ("+moveright", IN_MoverightDown);
-	Cmd_AddCommand ("-moveright", IN_MoverightUp);
-	Cmd_AddCommand ("+speed", IN_SpeedDown);
-	Cmd_AddCommand ("-speed", IN_SpeedUp);
-	Cmd_AddCommand ("+attack", IN_AttackDown);
-	Cmd_AddCommand ("-attack", IN_AttackUp);
-	Cmd_AddCommand ("+use", IN_UseDown);
-	Cmd_AddCommand ("-use", IN_UseUp);
-	Cmd_AddCommand ("impulse", IN_Impulse);
-	Cmd_AddCommand ("+klook", IN_KLookDown);
-	Cmd_AddCommand ("-klook", IN_KLookUp);
-
-	cl_nodelta = COM_GetCvar ("cl_nodelta", "0", 0);
-}
-
 
 
 /*
@@ -88524,6 +88485,38 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("invdrop", NULL);
 		Cmd_AddCommand("weapnext", NULL);
 		Cmd_AddCommand("weapprev", NULL);
+		Cmd_AddCommand ("centerview",IN_CenterView);
+		Cmd_AddCommand ("+moveup",IN_UpDown);
+		Cmd_AddCommand ("-moveup",IN_UpUp);
+		Cmd_AddCommand ("+movedown",IN_DownDown);
+		Cmd_AddCommand ("-movedown",IN_DownUp);
+		Cmd_AddCommand ("+left",IN_LeftDown);
+		Cmd_AddCommand ("-left",IN_LeftUp);
+		Cmd_AddCommand ("+right",IN_RightDown);
+		Cmd_AddCommand ("-right",IN_RightUp);
+		Cmd_AddCommand ("+forward",IN_ForwardDown);
+		Cmd_AddCommand ("-forward",IN_ForwardUp);
+		Cmd_AddCommand ("+back",IN_BackDown);
+		Cmd_AddCommand ("-back",IN_BackUp);
+		Cmd_AddCommand ("+lookup", IN_LookupDown);
+		Cmd_AddCommand ("-lookup", IN_LookupUp);
+		Cmd_AddCommand ("+lookdown", IN_LookdownDown);
+		Cmd_AddCommand ("-lookdown", IN_LookdownUp);
+		Cmd_AddCommand ("+strafe", IN_StrafeDown);
+		Cmd_AddCommand ("-strafe", IN_StrafeUp);
+		Cmd_AddCommand ("+moveleft", IN_MoveleftDown);
+		Cmd_AddCommand ("-moveleft", IN_MoveleftUp);
+		Cmd_AddCommand ("+moveright", IN_MoverightDown);
+		Cmd_AddCommand ("-moveright", IN_MoverightUp);
+		Cmd_AddCommand ("+speed", IN_SpeedDown);
+		Cmd_AddCommand ("-speed", IN_SpeedUp);
+		Cmd_AddCommand ("+attack", IN_AttackDown);
+		Cmd_AddCommand ("-attack", IN_AttackUp);
+		Cmd_AddCommand ("+use", IN_UseDown);
+		Cmd_AddCommand ("-use", IN_UseUp);
+		Cmd_AddCommand ("impulse", IN_Impulse);
+		Cmd_AddCommand ("+klook", IN_KLookDown);
+		Cmd_AddCommand ("-klook", IN_KLookUp);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -88680,6 +88673,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
 		gender->modified = false; // clear this so we know when user sets it manually
 		cl_vwep = COM_GetCvar ("cl_vwep", "1", CVAR_ARCHIVE);
+		cl_nodelta = COM_GetCvar ("cl_nodelta", "0", 0);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
@@ -88972,9 +88966,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cls.state = ca_disconnected;
 		cls.realtime = Sys_Milliseconds();
 	}
-
-	// TODO: inline
-	CL_InitInput();
 
 	// TODO: inline
 	IN_Init();
