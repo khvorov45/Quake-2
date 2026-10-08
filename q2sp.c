@@ -1452,8 +1452,6 @@ static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
 static char	*Sys_FindNext(unsigned musthave, unsigned canthave);
 static void	Sys_FindClose();
 
-static void FS_SetGamedir(char* dir);
-
 static char* FS_NextPath(char* prevpath);
 static void	FS_ExecAutoexec();
 
@@ -2002,11 +2000,6 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 			} else {
 				var->string = CopyString(value);
 				var->value = atof (var->string);
-				if (!strcmp(var->name, "game"))
-				{
-					FS_SetGamedir (var->string);
-					FS_ExecAutoexec ();
-				}
 			}
 			return var;
 		}
@@ -7378,7 +7371,6 @@ typedef struct pack_s
 
 
 cvar_t	*fs_basedir;
-cvar_t	*fs_gamedirvar;
 
 typedef struct filelink_s
 {
@@ -7702,68 +7694,7 @@ void FS_ExecAutoexec (void)
 	Sys_FindClose();
 }
 
-
-/*
-================
-FS_SetGamedir
-
-Sets the gamedir and path to a different directory.
-================
-*/
-void FS_SetGamedir (char *dir)
-{
-	searchpath_t	*next;
-
-	if (strstr(dir, "..") || strstr(dir, "/")
-		|| strstr(dir, "\\") || strstr(dir, ":") )
-	{
-		Com_Printf ("Gamedir should be a single filename, not a path\n");
-		return;
-	}
-
-	//
-	// free up any current game dir info
-	//
-	while (fs_searchpaths != fs_base_searchpaths)
-	{
-		if (fs_searchpaths->pack)
-		{
-			fclose (fs_searchpaths->pack->handle);
-			Z_Free (fs_searchpaths->pack->files);
-			Z_Free (fs_searchpaths->pack);
-		}
-		next = fs_searchpaths->next;
-		Z_Free (fs_searchpaths);
-		fs_searchpaths = next;
-	}
-
-	//
-	// flush all data, so it will be forced to reload
-	//
-	Cbuf_AddText("snd_restart\n");
-
-	Com_sprintf (fs_gamedir, sizeof(fs_gamedir), "%s/%s", fs_basedir->string, dir);
-
-	if (!strcmp(dir,BASEDIRNAME) || (*dir == 0))
-	{
-		COM_FullSetCvar ("gamedir", "", CVAR_SERVERINFO|CVAR_NOSET);
-		COM_FullSetCvar ("game", "", CVAR_LATCH|CVAR_SERVERINFO);
-	}
-	else
-	{
-		COM_FullSetCvar ("gamedir", dir, CVAR_SERVERINFO|CVAR_NOSET);
-		FS_AddGameDirectory (va("%s/%s", fs_basedir->string, dir) );
-	}
-}
-
-
-/*
-================
-FS_Link_f
-
-Creates a filelink_t
-================
-*/
+// Creates a filelink_t
 void FS_Link_f (void)
 {
 	filelink_t	*l, **prev;
@@ -12103,10 +12034,6 @@ void SV_InitGame(void) {
 		var->string = var->latched_string;
 		var->latched_string = NULL;
 		var->value = atof(var->string);
-		if (!strcmp(var->name, "game")) {
-			FS_SetGamedir(var->string);
-			FS_ExecAutoexec();
-		}
 	}
 
 	svs.initialized = true;
@@ -22914,7 +22841,6 @@ void CL_ParseDownload (void)
 }
 
 void CL_ParseServerData() {
-	extern cvar_t	*fs_gamedirvar;
 	char	*str;
 	int		i;
 
@@ -22935,11 +22861,7 @@ void CL_ParseServerData() {
 
 	// game directory
 	str = MSG_ReadString (&net_message);
-	strncpy (cl.gamedir, str, sizeof(cl.gamedir)-1);
-
-	// set gamedir
-	if ((*str && (!fs_gamedirvar->string || !*fs_gamedirvar->string || strcmp(fs_gamedirvar->string, str))) || (!*str && (fs_gamedirvar->string || *fs_gamedirvar->string)))
-		COM_SetCvar("game", str);
+	strncpy(cl.gamedir, str, sizeof(cl.gamedir) - 1);
 
 	// parse player entity number
 	cl.playernum = MSG_ReadShort (&net_message);
@@ -47747,25 +47669,14 @@ void SVCmd_ListIP_f (void)
 	}
 }
 
-/*
-=================
-SV_WriteIP_f
-=================
-*/
 void SVCmd_WriteIP_f (void)
 {
 	FILE	*f;
 	char	name[MAX_OSPATH];
 	u8	b[4];
 	int		i;
-	cvar_t	*game;
 
-	game = COM_GetCvar("game", "", 0);
-
-	if (!*game->string)
-		sprintf (name, "%s/listip.cfg", GAMEVERSION);
-	else
-		sprintf (name, "%s/listip.cfg", game->string);
+	sprintf(name, "%s/listip.cfg", GAMEVERSION);
 
 	PF_cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
 
@@ -88048,40 +87959,40 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("invdrop", NULL);
 		Cmd_AddCommand("weapnext", NULL);
 		Cmd_AddCommand("weapprev", NULL);
-		Cmd_AddCommand ("centerview",IN_CenterView);
-		Cmd_AddCommand ("+moveup",IN_UpDown);
-		Cmd_AddCommand ("-moveup",IN_UpUp);
-		Cmd_AddCommand ("+movedown",IN_DownDown);
-		Cmd_AddCommand ("-movedown",IN_DownUp);
-		Cmd_AddCommand ("+left",IN_LeftDown);
-		Cmd_AddCommand ("-left",IN_LeftUp);
-		Cmd_AddCommand ("+right",IN_RightDown);
-		Cmd_AddCommand ("-right",IN_RightUp);
-		Cmd_AddCommand ("+forward",IN_ForwardDown);
-		Cmd_AddCommand ("-forward",IN_ForwardUp);
-		Cmd_AddCommand ("+back",IN_BackDown);
-		Cmd_AddCommand ("-back",IN_BackUp);
-		Cmd_AddCommand ("+lookup", IN_LookupDown);
-		Cmd_AddCommand ("-lookup", IN_LookupUp);
-		Cmd_AddCommand ("+lookdown", IN_LookdownDown);
-		Cmd_AddCommand ("-lookdown", IN_LookdownUp);
-		Cmd_AddCommand ("+strafe", IN_StrafeDown);
-		Cmd_AddCommand ("-strafe", IN_StrafeUp);
-		Cmd_AddCommand ("+moveleft", IN_MoveleftDown);
-		Cmd_AddCommand ("-moveleft", IN_MoveleftUp);
-		Cmd_AddCommand ("+moveright", IN_MoverightDown);
-		Cmd_AddCommand ("-moveright", IN_MoverightUp);
-		Cmd_AddCommand ("+speed", IN_SpeedDown);
-		Cmd_AddCommand ("-speed", IN_SpeedUp);
-		Cmd_AddCommand ("+attack", IN_AttackDown);
-		Cmd_AddCommand ("-attack", IN_AttackUp);
-		Cmd_AddCommand ("+use", IN_UseDown);
-		Cmd_AddCommand ("-use", IN_UseUp);
-		Cmd_AddCommand ("impulse", IN_Impulse);
-		Cmd_AddCommand ("+klook", IN_KLookDown);
-		Cmd_AddCommand ("-klook", IN_KLookUp);
-		Cmd_AddCommand ("+mlook", IN_MLookDown);
-		Cmd_AddCommand ("-mlook", IN_MLookUp);
+		Cmd_AddCommand("centerview",IN_CenterView);
+		Cmd_AddCommand("+moveup",IN_UpDown);
+		Cmd_AddCommand("-moveup",IN_UpUp);
+		Cmd_AddCommand("+movedown",IN_DownDown);
+		Cmd_AddCommand("-movedown",IN_DownUp);
+		Cmd_AddCommand("+left",IN_LeftDown);
+		Cmd_AddCommand("-left",IN_LeftUp);
+		Cmd_AddCommand("+right",IN_RightDown);
+		Cmd_AddCommand("-right",IN_RightUp);
+		Cmd_AddCommand("+forward",IN_ForwardDown);
+		Cmd_AddCommand("-forward",IN_ForwardUp);
+		Cmd_AddCommand("+back",IN_BackDown);
+		Cmd_AddCommand("-back",IN_BackUp);
+		Cmd_AddCommand("+lookup", IN_LookupDown);
+		Cmd_AddCommand("-lookup", IN_LookupUp);
+		Cmd_AddCommand("+lookdown", IN_LookdownDown);
+		Cmd_AddCommand("-lookdown", IN_LookdownUp);
+		Cmd_AddCommand("+strafe", IN_StrafeDown);
+		Cmd_AddCommand("-strafe", IN_StrafeUp);
+		Cmd_AddCommand("+moveleft", IN_MoveleftDown);
+		Cmd_AddCommand("-moveleft", IN_MoveleftUp);
+		Cmd_AddCommand("+moveright", IN_MoverightDown);
+		Cmd_AddCommand("-moveright", IN_MoverightUp);
+		Cmd_AddCommand("+speed", IN_SpeedDown);
+		Cmd_AddCommand("-speed", IN_SpeedUp);
+		Cmd_AddCommand("+attack", IN_AttackDown);
+		Cmd_AddCommand("-attack", IN_AttackUp);
+		Cmd_AddCommand("+use", IN_UseDown);
+		Cmd_AddCommand("-use", IN_UseUp);
+		Cmd_AddCommand("impulse", IN_Impulse);
+		Cmd_AddCommand("+klook", IN_KLookDown);
+		Cmd_AddCommand("-klook", IN_KLookUp);
+		Cmd_AddCommand("+mlook", IN_MLookDown);
+		Cmd_AddCommand("-mlook", IN_MLookUp);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -88300,12 +88211,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// any set gamedirs will be freed up to here
 		fs_base_searchpaths = fs_searchpaths;
-
-		// check for game override
-		fs_gamedirvar = COM_GetCvar("game", "", CVAR_LATCH|CVAR_SERVERINFO);
-		if (fs_gamedirvar->string[0]) {
-			FS_SetGamedir(fs_gamedirvar->string);
-		}
 	}
 
 	// NOTE: Startup command execution
