@@ -85914,46 +85914,6 @@ cvar_t	*v_centermove;
 cvar_t	*v_centerspeed;
 
 
-void IN_Init (void)
-{
-	// mouse variables
-	m_filter				= COM_GetCvar ("m_filter",					"0",		0);
-	in_mouse				= COM_GetCvar ("in_mouse",					"1",		CVAR_ARCHIVE);
-
-	// joystick variables
-	in_joystick				= COM_GetCvar ("in_joystick",				"0",		CVAR_ARCHIVE);
-	joy_name				= COM_GetCvar ("joy_name",					"joystick",	0);
-	joy_advanced			= COM_GetCvar ("joy_advanced",				"0",		0);
-	joy_advaxisx			= COM_GetCvar ("joy_advaxisx",				"0",		0);
-	joy_advaxisy			= COM_GetCvar ("joy_advaxisy",				"0",		0);
-	joy_advaxisz			= COM_GetCvar ("joy_advaxisz",				"0",		0);
-	joy_advaxisr			= COM_GetCvar ("joy_advaxisr",				"0",		0);
-	joy_advaxisu			= COM_GetCvar ("joy_advaxisu",				"0",		0);
-	joy_advaxisv			= COM_GetCvar ("joy_advaxisv",				"0",		0);
-	joy_forwardthreshold	= COM_GetCvar ("joy_forwardthreshold",		"0.15",		0);
-	joy_sidethreshold		= COM_GetCvar ("joy_sidethreshold",		"0.15",		0);
-	joy_upthreshold  		= COM_GetCvar ("joy_upthreshold",			"0.15",		0);
-	joy_pitchthreshold		= COM_GetCvar ("joy_pitchthreshold",		"0.15",		0);
-	joy_yawthreshold		= COM_GetCvar ("joy_yawthreshold",			"0.15",		0);
-	joy_forwardsensitivity	= COM_GetCvar ("joy_forwardsensitivity",	"-1",		0);
-	joy_sidesensitivity		= COM_GetCvar ("joy_sidesensitivity",		"-1",		0);
-	joy_upsensitivity		= COM_GetCvar ("joy_upsensitivity",		"-1",		0);
-	joy_pitchsensitivity	= COM_GetCvar ("joy_pitchsensitivity",		"1",		0);
-	joy_yawsensitivity		= COM_GetCvar ("joy_yawsensitivity",		"-1",		0);
-
-	// centering
-	v_centermove			= COM_GetCvar ("v_centermove",				"0.15",		0);
-	v_centerspeed			= COM_GetCvar ("v_centerspeed",			"500",		0);
-
-	Cmd_AddCommand ("+mlook", IN_MLookDown);
-	Cmd_AddCommand ("-mlook", IN_MLookUp);
-
-	Cmd_AddCommand ("joy_advancedupdate", Joy_AdvancedUpdate_f);
-
-	IN_StartupMouse ();
-	IN_StartupJoystick ();
-}
-
 void IN_Shutdown (void)
 {
 	IN_DeactivateMouse ();
@@ -88517,6 +88477,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand ("impulse", IN_Impulse);
 		Cmd_AddCommand ("+klook", IN_KLookDown);
 		Cmd_AddCommand ("-klook", IN_KLookUp);
+		Cmd_AddCommand ("+mlook", IN_MLookDown);
+		Cmd_AddCommand ("-mlook", IN_MLookUp);
+		Cmd_AddCommand ("joy_advancedupdate", Joy_AdvancedUpdate_f);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -88672,8 +88635,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gender = COM_GetCvar ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
 		gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
 		gender->modified = false; // clear this so we know when user sets it manually
-		cl_vwep = COM_GetCvar ("cl_vwep", "1", CVAR_ARCHIVE);
-		cl_nodelta = COM_GetCvar ("cl_nodelta", "0", 0);
+		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
+		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
+		m_filter = COM_GetCvar("m_filter", "0", 0);
+		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
+		in_joystick = COM_GetCvar("in_joystick", "0", CVAR_ARCHIVE);
+		joy_name = COM_GetCvar("joy_name", "joystick", 0);
+		joy_advanced = COM_GetCvar("joy_advanced", "0", 0);
+		joy_advaxisx = COM_GetCvar("joy_advaxisx", "0", 0);
+		joy_advaxisy = COM_GetCvar("joy_advaxisy", "0", 0);
+		joy_advaxisz = COM_GetCvar("joy_advaxisz", "0", 0);
+		joy_advaxisr = COM_GetCvar("joy_advaxisr", "0", 0);
+		joy_advaxisu = COM_GetCvar("joy_advaxisu", "0", 0);
+		joy_advaxisv = COM_GetCvar("joy_advaxisv", "0", 0);
+		joy_forwardthreshold = COM_GetCvar("joy_forwardthreshold", "0.15", 0);
+		joy_sidethreshold = COM_GetCvar("joy_sidethreshold", "0.15", 0);
+		joy_upthreshold = COM_GetCvar("joy_upthreshold", "0.15", 0);
+		joy_pitchthreshold = COM_GetCvar("joy_pitchthreshold", "0.15", 0);
+		joy_yawthreshold = COM_GetCvar("joy_yawthreshold", "0.15", 0);
+		joy_forwardsensitivity = COM_GetCvar("joy_forwardsensitivity", "-1", 0);
+		joy_sidesensitivity = COM_GetCvar("joy_sidesensitivity", "-1", 0);
+		joy_upsensitivity = COM_GetCvar("joy_upsensitivity", "-1", 0);
+		joy_pitchsensitivity = COM_GetCvar("joy_pitchsensitivity", "1", 0);
+		joy_yawsensitivity = COM_GetCvar("joy_yawsensitivity", "-1", 0);
+		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
+		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
@@ -88967,8 +88953,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cls.realtime = Sys_Milliseconds();
 	}
 
-	// TODO: inline
-	IN_Init();
+	IN_StartupMouse();
+	IN_StartupJoystick();
 
 	// TODO: inline
 	FS_ExecAutoexec();
