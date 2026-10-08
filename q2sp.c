@@ -85791,25 +85791,6 @@ void IN_DeactivateMouse (void)
 }
 
 
-
-/*
-===========
-IN_StartupMouse
-===========
-*/
-void IN_StartupMouse (void)
-{
-	cvar_t		*cv;
-
-	cv = COM_GetCvar ("in_initmouse", "1", CVAR_NOSET);
-	if ( !cv->value )
-		return;
-
-	mouseinitialized = true;
-	mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
-	mouse_buttons = 3;
-}
-
 static unsigned sys_msg_time;
 
 
@@ -88669,6 +88650,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
 		COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
 		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
+		COM_GetCvar("in_initmouse", "1", CVAR_NOSET);
 	}
 
 	// NOTE: Server init
@@ -88953,7 +88935,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cls.realtime = Sys_Milliseconds();
 	}
 
-	IN_StartupMouse();
+	// NOTE: mouse
+	// TODO: remove mouse acceleration stuff, use raw mouse
+	{
+		mouseinitialized = true;
+		mouseparmsvalid = SystemParametersInfo(SPI_GETMOUSE, 0, originalmouseparms, 0);
+		mouse_buttons = 3;
+	}
+
 	IN_StartupJoystick();
 
 	// TODO: inline
