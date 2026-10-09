@@ -78465,51 +78465,6 @@ extern	cvar_t	*r_lerpmodels;
 
 extern	cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
-extern cvar_t	*gl_vertex_arrays;
-
-extern cvar_t	*gl_ext_swapinterval;
-extern cvar_t	*gl_ext_palettedtexture;
-extern cvar_t	*gl_ext_multitexture;
-extern cvar_t	*gl_ext_pointparameters;
-extern cvar_t	*gl_ext_compiled_vertex_array;
-
-extern cvar_t	*gl_particle_min_size;
-extern cvar_t	*gl_particle_max_size;
-extern cvar_t	*gl_particle_size;
-extern cvar_t	*gl_particle_att_a;
-extern cvar_t	*gl_particle_att_b;
-extern cvar_t	*gl_particle_att_c;
-
-extern	cvar_t	*gl_nosubimage;
-extern	cvar_t	*gl_bitdepth;
-extern	cvar_t	*gl_lightmap;
-extern	cvar_t	*gl_shadows;
-extern	cvar_t	*gl_dynamic;
-extern	cvar_t	*gl_nobind;
-extern	cvar_t	*gl_round_down;
-extern	cvar_t	*gl_picmip;
-extern	cvar_t	*gl_skymip;
-extern	cvar_t	*gl_showtris;
-
-extern	cvar_t	*gl_ztrick;
-extern	cvar_t	*gl_clear;
-extern	cvar_t	*gl_cull;
-extern	cvar_t	*gl_poly;
-extern	cvar_t	*gl_texsort;
-extern	cvar_t	*gl_polyblend;
-extern	cvar_t	*gl_flashblend;
-extern	cvar_t	*gl_lightmaptype;
-extern	cvar_t	*gl_modulate;
-extern	cvar_t	*gl_playermip;
-extern	cvar_t	*gl_drawbuffer;
-extern	cvar_t	*gl_3dlabs_broken;
-extern	cvar_t	*gl_swapinterval;
-extern	cvar_t	*gl_texturemode;
-extern	cvar_t	*gl_texturealphamode;
-extern	cvar_t	*gl_texturesolidmode;
-extern  cvar_t  *gl_saturatelighting;
-extern  cvar_t  *gl_lockpvs;
-
 extern	cvar_t		*intensity;
 
 extern	int		gl_solid_format;
@@ -78521,6 +78476,42 @@ extern	int		c_visible_lightmaps;
 extern	int		c_visible_textures;
 
 extern	float	r_world_matrix[16];
+
+static cvar_t* gl_nosubimage;
+static cvar_t* gl_vertex_arrays;
+static cvar_t* gl_particle_min_size;
+static cvar_t* gl_particle_max_size;
+static cvar_t* gl_particle_size;
+static cvar_t* gl_particle_att_a;
+static cvar_t* gl_particle_att_b;
+static cvar_t* gl_particle_att_c;
+static cvar_t* gl_ext_swapinterval;
+static cvar_t* gl_ext_palettedtexture;
+static cvar_t* gl_ext_multitexture;
+static cvar_t* gl_ext_pointparameters;
+static cvar_t* gl_ext_compiled_vertex_array;
+static cvar_t* gl_bitdepth;
+static cvar_t* gl_drawbuffer;
+static cvar_t* gl_lightmap;
+static cvar_t* gl_shadows;
+static cvar_t* gl_dynamic;
+static cvar_t* gl_modulate;
+static cvar_t* gl_nobind;
+static cvar_t* gl_round_down;
+static cvar_t* gl_picmip;
+static cvar_t* gl_skymip;
+static cvar_t* gl_showtris;
+static cvar_t* gl_ztrick;
+static cvar_t* gl_clear;
+static cvar_t* gl_cull;
+static cvar_t* gl_polyblend;
+static cvar_t* gl_playermip;
+static cvar_t* gl_saturatelighting;
+static cvar_t* gl_swapinterval;
+static cvar_t* gl_texturemode;
+static cvar_t* gl_texturealphamode;
+static cvar_t* gl_texturesolidmode;
+static cvar_t* gl_lockpvs;
 
 void R_TranslatePlayerSkin (int playernum);
 void GL_Bind (int texnum);
@@ -78544,7 +78535,6 @@ void R_DrawBrushModel (Entity *e);
 void R_DrawSpriteModel (Entity *e);
 void R_DrawBeam( Entity *e );
 void R_DrawWorld (void);
-void R_RenderDlights (void);
 void R_DrawAlphaSurfaces (void);
 void R_RenderBrushPoly (msurface_t *fa);
 void GL_SubdivideSurface (msurface_t *fa);
@@ -80098,47 +80088,6 @@ void R_RenderDlight (dlight_t *light)
 	glEnd ();
 }
 
-void R_RenderDlights (void)
-{
-	int		i;
-	dlight_t	*l;
-
-	if (!gl_flashblend->value)
-		return;
-
-	r_dlightframecount = r_framecount + 1;	// because the count hasn't
-											//  advanced yet for this frame
-	glDepthMask (0);
-	glDisable (GL_TEXTURE_2D);
-	glShadeModel (GL_SMOOTH);
-	glEnable (GL_BLEND);
-	glBlendFunc (GL_ONE, GL_ONE);
-
-	l = r_newrefdef.dlights;
-	for (i=0 ; i<r_newrefdef.num_dlights ; i++, l++)
-		R_RenderDlight (l);
-
-	glColor3f (1,1,1);
-	glDisable (GL_BLEND);
-	glEnable (GL_TEXTURE_2D);
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDepthMask (1);
-}
-
-
-/*
-=============================================================================
-
-DYNAMIC LIGHTS
-
-=============================================================================
-*/
-
-/*
-=============
-R_MarkLights
-=============
-*/
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 {
 	cplane_t	*splitplane;
@@ -80178,22 +80127,6 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 	R_MarkLights (light, bit, node->children[0]);
 	R_MarkLights (light, bit, node->children[1]);
 }
-
-void R_PushDlights (void)
-{
-	int		i;
-	dlight_t	*l;
-
-	if (gl_flashblend->value)
-		return;
-
-	r_dlightframecount = r_framecount + 1;	// because the count hasn't
-											//  advanced yet for this frame
-	l = r_newrefdef.dlights;
-	for (i=0 ; i<r_newrefdef.num_dlights ; i++, l++)
-		R_MarkLights ( l, 1<<i, r_worldmodel->nodes );
-}
-
 
 /*
 =============================================================================
@@ -82630,48 +82563,6 @@ cvar_t	*r_lefthand;
 
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
-cvar_t	*gl_nosubimage;
-
-cvar_t	*gl_vertex_arrays;
-
-cvar_t	*gl_particle_min_size;
-cvar_t	*gl_particle_max_size;
-cvar_t	*gl_particle_size;
-cvar_t	*gl_particle_att_a;
-cvar_t	*gl_particle_att_b;
-cvar_t	*gl_particle_att_c;
-
-cvar_t	*gl_ext_swapinterval;
-cvar_t	*gl_ext_palettedtexture;
-cvar_t	*gl_ext_multitexture;
-cvar_t	*gl_ext_pointparameters;
-cvar_t	*gl_ext_compiled_vertex_array;
-
-cvar_t	*gl_bitdepth;
-cvar_t	*gl_drawbuffer;
-cvar_t	*gl_lightmap;
-cvar_t	*gl_shadows;
-
-cvar_t	*gl_dynamic;
-cvar_t	*gl_modulate;
-cvar_t	*gl_nobind;
-cvar_t	*gl_round_down;
-cvar_t	*gl_picmip;
-cvar_t	*gl_skymip;
-cvar_t	*gl_showtris;
-cvar_t	*gl_ztrick;
-cvar_t	*gl_clear;
-cvar_t	*gl_cull;
-cvar_t	*gl_polyblend;
-cvar_t	*gl_flashblend;
-cvar_t	*gl_playermip;
-cvar_t  *gl_saturatelighting;
-cvar_t	*gl_swapinterval;
-cvar_t	*gl_texturemode;
-cvar_t	*gl_texturealphamode;
-cvar_t	*gl_texturesolidmode;
-cvar_t	*gl_lockpvs;
-
 cvar_t	*gl_3dlabs_broken;
 
 /*
@@ -84140,7 +84031,6 @@ void R_DrawInlineBModel (void)
 	dlight_t	*lt;
 
 	// calculate dynamic lighting for bmodel
-	if ( !gl_flashblend->value )
 	{
 		lt = r_newrefdef.dlights;
 		for (k=0 ; k<r_newrefdef.num_dlights ; k++, lt++)
@@ -85387,9 +85277,14 @@ void R_RenderFrame(refdef_t *fd) {
 		c_alias_polys = 0;
 	}
 
-	// TODO: inline
-	void R_PushDlights(void);
-	R_PushDlights();
+	// NOTE: dynamic lights
+	{
+		r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
+		dlight_t* l = r_newrefdef.dlights;
+		for (int i=0 ; i<r_newrefdef.num_dlights ; i++, l++) {
+			R_MarkLights ( l, 1<<i, r_worldmodel->nodes );
+		}
+	}
 
 	if (gl_finish->value) {
 		glFinish();
@@ -85401,7 +85296,6 @@ void R_RenderFrame(refdef_t *fd) {
 	R_MarkLeaves(); // done here so we know if we're in water
 	R_DrawWorld();
 	R_DrawEntitiesOnList();
-	R_RenderDlights();
 	R_DrawParticles();
 	R_DrawAlphaSurfaces();
 	R_Flash();
@@ -87967,7 +87861,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_clear = COM_GetCvar ("gl_clear", "0", 0);
 		gl_cull = COM_GetCvar ("gl_cull", "1", 0);
 		gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
-		gl_flashblend = COM_GetCvar ("gl_flashblend", "0", 0);
 		gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
 		gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
 		gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
