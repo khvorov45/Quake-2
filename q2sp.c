@@ -14820,8 +14820,6 @@ const char *VID_MenuKey( int );
 
 void	SCR_UpdateScreen (void);
 
-void	SCR_SizeUp (void);
-void	SCR_SizeDown (void);
 void	SCR_CenterPrint (char *str);
 void	SCR_BeginLoadingPlaque (void);
 
@@ -14837,15 +14835,12 @@ extern	float		scr_conlines;		// lines of console to display
 
 extern	int			sb_lines;
 
-extern	cvar_t		*scr_viewsize;
 extern	cvar_t		*crosshair;
 
 extern	vrect_t		scr_vrect;		// position of render window
 
 extern	char		crosshair_pic[MAX_QPATH];
 extern	int			crosshair_width, crosshair_height;
-
-void SCR_AddDirtyPoint (int x, int y);
 
 //
 // scr_cin.c
@@ -20252,11 +20247,6 @@ void SetStringHighBit (char *s)
 
 void Draw_Pic(int x, int y, char *pic);
 
-static void SCR_DirtyScreen() {
-	SCR_AddDirtyPoint(0, 0);
-	SCR_AddDirtyPoint(viddef.width - 1, viddef.height - 1);
-}
-
 void CL_DrawInventory (void)
 {
 	int		i, j;
@@ -20294,9 +20284,6 @@ void CL_DrawInventory (void)
 
 	x = (viddef.width-256)/2;
 	y = (viddef.height-240)/2;
-
-	// repaint everything next frame
-	SCR_DirtyScreen();
 
 	Draw_Pic (x, y+8, "inventory");
 
@@ -23572,7 +23559,6 @@ int			scr_draw_loading;
 vrect_t		scr_vrect;		// position of render window on screen
 
 
-cvar_t		*scr_viewsize;
 cvar_t		*scr_conspeed;
 cvar_t		*scr_centertime;
 cvar_t		*scr_showturtle;
@@ -23585,13 +23571,6 @@ cvar_t		*scr_debuggraph;
 cvar_t		*scr_graphheight;
 cvar_t		*scr_graphscale;
 cvar_t		*scr_graphshift;
-
-typedef struct
-{
-	int		x1, y1, x2, y2;
-} dirty_t;
-
-dirty_t		scr_dirty, scr_old_dirty[2];
 
 char		crosshair_pic[MAX_QPATH];
 int			crosshair_width, crosshair_height;
@@ -23777,14 +23756,12 @@ void SCR_DrawCenterString (void)
 			if (start[l] == '\n' || !start[l])
 				break;
 		x = (viddef.width - l*8)/2;
-		SCR_AddDirtyPoint (x, y);
 		for (j=0 ; j<l ; j++, x+=8)
 		{
 			Draw_Char (x, y, start[j]);
 			if (!remaining--)
 				return;
 		}
-		SCR_AddDirtyPoint (x, y+8);
 
 		y += 8;
 
@@ -23807,57 +23784,19 @@ void SCR_CheckDrawCenterString (void)
 	SCR_DrawCenterString ();
 }
 
-//=============================================================================
-
-/*
-=================
-SCR_CalcVrect
-
-Sets scr_vrect, the coordinates of the rendered window
-=================
-*/
-static void SCR_CalcVrect (void)
-{
-	int		size;
-
-	// bound viewsize
-	if (scr_viewsize->value < 40)
-		COM_SetCvar ("viewsize","40");
-	if (scr_viewsize->value > 100)
-		COM_SetCvar ("viewsize","100");
-
-	size = scr_viewsize->value;
-
-	scr_vrect.width = viddef.width*size/100;
+// Sets scr_vrect, the coordinates of the rendered window
+static void SCR_CalcVrect() {
+	scr_vrect.width = viddef.width;
 	scr_vrect.width &= ~7;
 
-	scr_vrect.height = viddef.height*size/100;
+	scr_vrect.height = viddef.height;
 	scr_vrect.height &= ~1;
 
 	scr_vrect.x = (viddef.width - scr_vrect.width)/2;
 	scr_vrect.y = (viddef.height - scr_vrect.height)/2;
 }
 
-
-/*
-=================
-SCR_SizeUp_f
-
-Keybinding command
-=================
-*/
-void SCR_SizeUp_f (void)
-{
-	COM_SetValueCvar ("viewsize",scr_viewsize->value+10);
-}
-
-// Keybinding command
-void SCR_SizeDown_f (void)
-{
-	COM_SetValueCvar ("viewsize",scr_viewsize->value-10);
-}
-
-void R_SetSky (char *name, float rotate, vec3_t axis);
+void R_SetSky(char *name, float rotate, vec3_t axis);
 
 // Set a specific sky and rotation speed
 void SCR_Sky_f (void)
@@ -24304,116 +24243,6 @@ void SCR_TimeRefresh_f (void)
 	Com_Printf ("%f seconds (%f fps)\n", time, 128/time);
 }
 
-/*
-=================
-SCR_AddDirtyPoint
-=================
-*/
-void SCR_AddDirtyPoint (int x, int y)
-{
-	if (x < scr_dirty.x1)
-		scr_dirty.x1 = x;
-	if (x > scr_dirty.x2)
-		scr_dirty.x2 = x;
-	if (y < scr_dirty.y1)
-		scr_dirty.y1 = y;
-	if (y > scr_dirty.y2)
-		scr_dirty.y2 = y;
-}
-
-/*
-==============
-SCR_TileClear
-
-Clear any parts of the tiled background that were drawn on last frame
-==============
-*/
-void SCR_TileClear (void)
-{
-	int		i;
-	int		top, bottom, left, right;
-	dirty_t	clear;
-
-	if (scr_con_current == 1.0)
-		return;		// full screen console
-	if (scr_viewsize->value == 100)
-		return;		// full screen rendering
-	if (cl.cinematictime > 0)
-		return;		// full screen cinematic
-
-	// erase rect will be the union of the past three frames
-	// so tripple buffering works properly
-	clear = scr_dirty;
-	for (i=0 ; i<2 ; i++)
-	{
-		if (scr_old_dirty[i].x1 < clear.x1)
-			clear.x1 = scr_old_dirty[i].x1;
-		if (scr_old_dirty[i].x2 > clear.x2)
-			clear.x2 = scr_old_dirty[i].x2;
-		if (scr_old_dirty[i].y1 < clear.y1)
-			clear.y1 = scr_old_dirty[i].y1;
-		if (scr_old_dirty[i].y2 > clear.y2)
-			clear.y2 = scr_old_dirty[i].y2;
-	}
-
-	scr_old_dirty[1] = scr_old_dirty[0];
-	scr_old_dirty[0] = scr_dirty;
-
-	scr_dirty.x1 = 9999;
-	scr_dirty.x2 = -9999;
-	scr_dirty.y1 = 9999;
-	scr_dirty.y2 = -9999;
-
-	// don't bother with anything convered by the console)
-	top = scr_con_current*viddef.height;
-	if (top >= clear.y1)
-		clear.y1 = top;
-
-	if (clear.y2 <= clear.y1)
-		return;		// nothing disturbed
-
-	top = scr_vrect.y;
-	bottom = top + scr_vrect.height-1;
-	left = scr_vrect.x;
-	right = left + scr_vrect.width-1;
-
-	void	Draw_TileClear (int x, int y, int w, int h, char *name);
-
-	if (clear.y1 < top)
-	{	// clear above view screen
-		i = clear.y2 < top-1 ? clear.y2 : top-1;
-		Draw_TileClear (clear.x1 , clear.y1,
-			clear.x2 - clear.x1 + 1, i - clear.y1+1, "backtile");
-		clear.y1 = top;
-	}
-	if (clear.y2 > bottom)
-	{	// clear below view screen
-		i = clear.y1 > bottom+1 ? clear.y1 : bottom+1;
-		Draw_TileClear (clear.x1, i,
-			clear.x2-clear.x1+1, clear.y2-i+1, "backtile");
-		clear.y2 = bottom;
-	}
-	if (clear.x1 < left)
-	{	// clear left of view screen
-		i = clear.x2 < left-1 ? clear.x2 : left-1;
-		Draw_TileClear (clear.x1, clear.y1,
-			i-clear.x1+1, clear.y2 - clear.y1 + 1, "backtile");
-		clear.x1 = left;
-	}
-	if (clear.x2 > right)
-	{	// clear left of view screen
-		i = clear.x1 > right+1 ? clear.x1 : right+1;
-		Draw_TileClear (i, clear.y1,
-			clear.x2-i+1, clear.y2 - clear.y1 + 1, "backtile");
-		clear.x2 = right;
-	}
-
-}
-
-
-//===============================================================
-
-
 #define STAT_MINUS		10	// num frame for '-' stats digit
 char		*sb_nums[2][11] =
 {
@@ -24500,12 +24329,6 @@ void DrawHUDString (char *string, int x, int y, int centerwidth, int xor)
 	}
 }
 
-
-/*
-==============
-SCR_DrawField
-==============
-*/
 void SCR_DrawField (int x, int y, int color, int width, int value)
 {
 	char	num[16], *ptr;
@@ -24518,9 +24341,6 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 	// draw number string
 	if (width > 5)
 		width = 5;
-
-	SCR_AddDirtyPoint (x, y);
-	SCR_AddDirtyPoint (x+width*Q_CHAR_WIDTH+2, y+23);
 
 	Com_sprintf (num, sizeof(num), "%i", value);
 	l = strlen(num);
@@ -24645,8 +24465,6 @@ void SCR_ExecuteLayoutString (char *s)
 
 			if (cl.configstrings[CS_IMAGES+value])
 			{
-				SCR_AddDirtyPoint (x, y);
-				SCR_AddDirtyPoint (x+23, y+23);
 				Draw_Pic (x, y, cl.configstrings[CS_IMAGES+value]);
 			}
 			continue;
@@ -24660,8 +24478,6 @@ void SCR_ExecuteLayoutString (char *s)
 			x = viddef.width/2 - 160 + atoi(token);
 			token = COM_Parse (&s);
 			y = viddef.height/2 - 120 + atoi(token);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+159, y+31);
 
 			token = COM_Parse (&s);
 			value = atoi(token);
@@ -24698,8 +24514,6 @@ void SCR_ExecuteLayoutString (char *s)
 			x = viddef.width/2 - 160 + atoi(token);
 			token = COM_Parse (&s);
 			y = viddef.height/2 - 120 + atoi(token);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+159, y+31);
 
 			token = COM_Parse (&s);
 			value = atoi(token);
@@ -24726,8 +24540,6 @@ void SCR_ExecuteLayoutString (char *s)
 		if (!strcmp(token, "picn"))
 		{	// draw a pic from a name
 			token = COM_Parse (&s);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+23, y+23);
 			Draw_Pic (x, y, token);
 			continue;
 		}
@@ -24920,9 +24732,6 @@ static void SCR_UpdateScreen() {
 
 			// do 3D refresh drawing, and then update the screen
 			SCR_CalcVrect();
-
-			// clear any dirty part of the background
-			SCR_TileClear();
 
 			V_RenderView();
 
@@ -26891,9 +26700,6 @@ static void CL_PrepRefresh() {
 	if (!cl.configstrings[CS_MODELS+1][0])
 		return;		// no map loaded
 
-	SCR_AddDirtyPoint (0, 0);
-	SCR_AddDirtyPoint (viddef.width-1, viddef.height-1);
-
 	// let the render dll load the map
 	strcpy (mapname, cl.configstrings[CS_MODELS+1] + 5);	// skip "maps/"
 	mapname[strlen(mapname)-4] = 0;		// cut off ".bsp"
@@ -27152,10 +26958,6 @@ void V_RenderView()
 	if ( log_stats->value && ( log_stats_file != 0 ) )
 		fprintf( log_stats_file, "%i,%i,%i,",r_numentities, r_numdlights, r_numparticles);
 
-
-	SCR_AddDirtyPoint (scr_vrect.x, scr_vrect.y);
-	SCR_AddDirtyPoint (scr_vrect.x+scr_vrect.width-1,
-		scr_vrect.y+scr_vrect.height-1);
 
 	SCR_DrawCrosshair ();
 }
@@ -27472,21 +27274,9 @@ void Con_DrawNotify (void)
 		Draw_Char ( (x+skip)<<3, v, 10+((cls.realtime>>8)&1));
 		v += 8;
 	}
-
-	if (v)
-	{
-		SCR_AddDirtyPoint (0,0);
-		SCR_AddDirtyPoint (viddef.width-1, v);
-	}
 }
 
-/*
-================
-Con_DrawConsole
-
-Draws the console with the solid background
-================
-*/
+// Draws the console with the solid background
 void Con_DrawConsole (float frac)
 {
 	int				i, j, x, y, n;
@@ -27507,8 +27297,6 @@ void Con_DrawConsole (float frac)
 	// draw the background
 	void Draw_StretchPic(int x, int y, int w, int h, char *name);
 	Draw_StretchPic (0, -viddef.height+lines, viddef.width, viddef.height, "conback");
-	SCR_AddDirtyPoint (0,0);
-	SCR_AddDirtyPoint (viddef.width-1,lines-1);
 
 	Com_sprintf (version, sizeof(version), "v%4.2f", VERSION);
 	for (x=0 ; x<5 ; x++)
@@ -32384,14 +32172,11 @@ static void M_Draw() {
 		return;
 	}
 
-	// repaint everything next frame
-	SCR_DirtyScreen();
-
 	// dim everything behind it down
 	if (cl.cinematictime > 0) {
 		Draw_Fill(0, 0, viddef.width, viddef.height, 0);
 	} else {
-		void Draw_FadeScreen (void);
+		void Draw_FadeScreen();
 		Draw_FadeScreen();
 	}
 
@@ -78695,46 +78480,7 @@ void Draw_Pic (int x, int y, char *pic)
 	glEnd ();
 }
 
-/*
-=============
-Draw_TileClear
-
-This repeats a 64*64 tile graphic to fill the screen around a sized down
-refresh window.
-=============
-*/
-void Draw_TileClear (int x, int y, int w, int h, char *pic)
-{
-	image_t	*image;
-
-	image = Draw_FindPic (pic);
-	if (!image)
-	{
-		Com_Printf("Can't find pic: %s\n", pic);
-		return;
-	}
-
-	GL_Bind (image->texnum);
-	glBegin (GL_QUADS);
-	glTexCoord2f (x/64.0, y/64.0);
-	glVertex2f (x, y);
-	glTexCoord2f ( (x+w)/64.0, y/64.0);
-	glVertex2f (x+w, y);
-	glTexCoord2f ( (x+w)/64.0, (y+h)/64.0);
-	glVertex2f (x+w, y+h);
-	glTexCoord2f ( x/64.0, (y+h)/64.0 );
-	glVertex2f (x, y+h);
-	glEnd ();
-}
-
-
-/*
-=============
-Draw_Fill
-
-Fills a box of pixels with a single color
-=============
-*/
+// Fills a box of pixels with a single color
 void Draw_Fill (int x, int y, int w, int h, int c)
 {
 	union
@@ -78764,14 +78510,6 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	glEnable (GL_TEXTURE_2D);
 }
 
-//=============================================================================
-
-/*
-================
-Draw_FadeScreen
-
-================
-*/
 void Draw_FadeScreen (void)
 {
 	glEnable (GL_BLEND);
@@ -83376,7 +83114,6 @@ struct image_s	*Draw_FindPic (char *name);
 
 void	Draw_Pic (int x, int y, char *name);
 void	Draw_Char (int x, int y, int c);
-void	Draw_TileClear (int x, int y, int w, int h, char *name);
 void	Draw_Fill (int x, int y, int w, int h, int c);
 void	Draw_FadeScreen (void);
 
@@ -86952,14 +86689,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			cl_hwnd = hWnd;
 		} break;
 
-		case WM_PAINT: {
-			SCR_DirtyScreen();
-		} break;
-
-		case WM_DESTROY: {
-			cl_hwnd = NULL;
-		} break;
-
 		case WM_ACTIVATE: {
 			int fActive = LOWORD(wParam) != WA_INACTIVE;
 			Minimized = (bool)HIWORD(wParam);
@@ -87015,7 +86744,8 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			Key_Event(MapKey(lParam), false, sys_msg_time);
 		} break;
 
-		// NOTE: Can't get WM_QUIT here
+		// NOTE: Can't get WM_QUIT here.
+		// WM_DESTROY would happen after, not handling.
 		case WM_CLOSE: ExitProcess(0);
 	}
 
@@ -87031,8 +86761,6 @@ void VID_Front_f( void )
 	SetWindowLong( cl_hwnd, GWL_EXSTYLE, WS_EX_TOPMOST );
 	SetForegroundWindow( cl_hwnd );
 }
-
-extern cvar_t *scr_viewsize;
 
 static cvar_t *gl_picmip;
 static cvar_t *gl_ext_palettedtexture;
@@ -87053,17 +86781,11 @@ MENU INTERACTION
 static menuframework_s	s_opengl_menu;
 
 static menuslider_s		s_tq_slider;
-static menuslider_s		s_screensize_slider;
 static menulist_s  		s_stipple_box;
 static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
-
-static void ScreenSizeCallback(void *s) {
-	menuslider_s* slider = (menuslider_s*)s;
-	COM_SetValueCvar("viewsize", slider->curvalue * 10);
-}
 
 static void ResetDefaults(void* unused) {
 	UNUSED(unused);
@@ -87111,22 +86833,8 @@ static void VID_MenuInit() {
 		sw_stipplealpha = COM_GetCvar( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 	}
 
-	if (!scr_viewsize) {
-		scr_viewsize = COM_GetCvar ("viewsize", "100", CVAR_ARCHIVE);
-	}
-
-	s_screensize_slider.curvalue = scr_viewsize->value/10;
-
 	s_opengl_menu.x = viddef.width * 0.50;
 	s_opengl_menu.nitems = 0;
-
-	s_screensize_slider.generic.type	= MTYPE_SLIDER;
-	s_screensize_slider.generic.x		= 0;
-	s_screensize_slider.generic.y		= 20;
-	s_screensize_slider.generic.name	= "screen size";
-	s_screensize_slider.minvalue = 3;
-	s_screensize_slider.maxvalue = 12;
-	s_screensize_slider.generic.callback = ScreenSizeCallback;
 
 	s_defaults_action.generic.type = MTYPE_ACTION;
 	s_defaults_action.generic.name = "reset to defaults";
@@ -87169,7 +86877,6 @@ static void VID_MenuInit() {
 	s_finish_box.curvalue = gl_finish->value;
 	s_finish_box.itemnames = yesno_names;
 
-	Menu_AddItem(&s_opengl_menu, (void*)&s_screensize_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_paletted_texture_box);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_finish_box);
@@ -87675,8 +87382,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
 		Cmd_AddCommand("timerefresh",SCR_TimeRefresh_f);
 		Cmd_AddCommand("loading",SCR_Loading_f);
-		Cmd_AddCommand("sizeup",SCR_SizeUp_f);
-		Cmd_AddCommand("sizedown",SCR_SizeDown_f);
 		Cmd_AddCommand("sky",SCR_Sky_f);
 		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
 		Cmd_AddCommand("pause", CL_Pause_f);
@@ -87834,7 +87539,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
 		cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
 		cl_stats = COM_GetCvar ("cl_stats", "0", 0);
-		scr_viewsize = COM_GetCvar("viewsize", "100", CVAR_ARCHIVE);
 		scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
 		scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
 		scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
