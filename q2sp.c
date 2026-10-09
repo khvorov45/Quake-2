@@ -21,8 +21,6 @@
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
 #define UNUSED(x) ((x)=(x))
 #define clamp(x, min, max) ((x) > (max) ? max : (x) < (min) ? (min) : (x))
-#define COUNT_ARGS(...) COUNT_ARGS_(__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1)
-#define COUNT_ARGS_(_1, _2, _3, _4, _5, _6, _7, N, ...) N
 #define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0) // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
 
 typedef uint8_t u8;
@@ -116,7 +114,18 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 // SECTION Strings
 //
 
+// NOTE: STR("text") is the string literal for our String type
 #define STR(text) ((String){.ptr = (char*)(text), .len = sizeof(text) - 1})
+
+// NOTE: The below macros create string array literals that can be passed to a function without decaying to a pointer
+
+// NOTE: STRS(STR("1"), STR("2")) Is the String_Slice literal
+typedef struct {String* ptr; i64 len;} String_Slice;
+#define STRS(...) (String_Slice){(String[]){__VA_ARGS__}, carray_count(((String[]){__VA_ARGS__}))}
+
+// NOTE: CSTRS("1", "2") is the Cstring_Slice literal
+typedef struct {char** ptr; i64 len;} Cstring_Slice;
+#define CSTRS(...) (Cstring_Slice){(char*[]){__VA_ARGS__}, carray_count(((char*[]){__VA_ARGS__}))}
 
 typedef struct {String str; i64 max_len;} String_Builder;
 
@@ -140,16 +149,12 @@ static void string_builder_write_string(String_Builder* builder, String text) {
 	builder->str.len += text.len;
 }
 
-#define string_builder_write_cstrings(builder, ...) string_builder_write_cstrings_(builder, COUNT_ARGS(__VA_ARGS__), __VA_ARGS__)
-static void string_builder_write_cstrings_(String_Builder* builder, i64 count, ...) {
-	va_list arg_ptr = 0;
-	va_start(arg_ptr, count);
-	for (i64 ind = 0; ind < count; ind++) {
-		char* cstr = va_arg(arg_ptr, char*);
+static void string_builder_write_cstrings(String_Builder* builder, Cstring_Slice cstrings) {
+	for (i64 ind = 0; ind < cstrings.len; ind++) {
+		char* cstr = cstrings.ptr[ind];
 		String str = string_from_cstring(cstr);
 		string_builder_write_string(builder, str);
 	}
-	va_end(arg_ptr);
 }
 
 static String string_builder_end(String_Builder* builder) {
@@ -159,18 +164,14 @@ static String string_builder_end(String_Builder* builder) {
 	return result;
 }
 
-#define concatenate_strings(arena, ...) concatenate_strings_(arena, COUNT_ARGS(__VA_ARGS__), __VA_ARGS__)
-static String concatenate_strings_(Arena* arena, i64 count, ...) {
+static String concatenate_strings(Arena* arena, String_Slice strings) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
 	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
-	va_list arg_ptr = 0;
-	va_start(arg_ptr, count);
-	for (i64 ind = 0; ind < count; ind++) {
-		String str = va_arg(arg_ptr, String);
+	for (i64 ind = 0; ind < strings.len; ind++) {
+		String str = strings.ptr[ind];
 		string_builder_write_string(&builder, str);
 	}
-	va_end(arg_ptr);
 	String result = string_builder_end(&builder);
 
 	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
@@ -21439,14 +21440,14 @@ static void write_config() {
 			char* value_cstring = keybindings[ind];
 			if (value_cstring && value_cstring[0]) {
 				char* key_cstring = Key_KeynumToString(ind);
-				string_builder_write_cstrings(&builder, "bind ", key_cstring, " \"", value_cstring, "\"\n");
+				string_builder_write_cstrings(&builder, CSTRS("bind ", key_cstring, " \"", value_cstring, "\"\n"));
 			}
 		}
 
 		// NOTE: Variables with "archive" flag
 		for (cvar_t* var = cvar_vars; var; var = var->next) {
 			if (var->flags & CVAR_ARCHIVE) {
-				string_builder_write_cstrings(&builder, "set ", var->name, " \"", var->string, "\"\n");
+				string_builder_write_cstrings(&builder, CSTRS("set ", var->name, " \"", var->string, "\"\n"));
 			}
 		}
 
@@ -87477,7 +87478,7 @@ static void windows_write_to_file_handle(HANDLE file_handle, String text) {
 }
 
 static void windows_write_config_string(String text) {temp_memory_block(&context.memory.temp) {
-	String file_path = concatenate_strings(&context.memory.temp, string_from_cstring(fs_gamedir), STR("/config.cfg"));
+	String file_path = concatenate_strings(&context.memory.temp, STRS(string_from_cstring(fs_gamedir), STR("/config.cfg")));
 
 	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
@@ -87495,7 +87496,7 @@ static void windows_print_gl_strings() {
 
 static void windows_debug_log(String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
-	String text_null_terminated = concatenate_strings(&context.memory.temp, text, STR("\n"));
+	String text_null_terminated = concatenate_strings(&context.memory.temp, STRS(text, STR("\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
