@@ -14846,7 +14846,6 @@ extern	char		crosshair_pic[MAX_QPATH];
 extern	int			crosshair_width, crosshair_height;
 
 void SCR_AddDirtyPoint (int x, int y);
-void SCR_DirtyScreen (void);
 
 //
 // scr_cin.c
@@ -20249,9 +20248,14 @@ void SetStringHighBit (char *s)
 		*s++ |= 128;
 }
 
-#define	DISPLAY_ITEMS	17
 
-void Draw_Pic (int x, int y, char *pic);
+
+void Draw_Pic(int x, int y, char *pic);
+
+static void SCR_DirtyScreen() {
+	SCR_AddDirtyPoint(0, 0);
+	SCR_AddDirtyPoint(viddef.width - 1, viddef.height - 1);
+}
 
 void CL_DrawInventory (void)
 {
@@ -20281,6 +20285,7 @@ void CL_DrawInventory (void)
 	}
 
 	// determine scroll point
+	#define	DISPLAY_ITEMS 17
 	top = selected_num - DISPLAY_ITEMS/2;
 	if (num - top < DISPLAY_ITEMS)
 		top = num - DISPLAY_ITEMS;
@@ -20291,7 +20296,7 @@ void CL_DrawInventory (void)
 	y = (viddef.height-240)/2;
 
 	// repaint everything next frame
-	SCR_DirtyScreen ();
+	SCR_DirtyScreen();
 
 	Draw_Pic (x, y+8, "inventory");
 
@@ -23580,7 +23585,6 @@ cvar_t		*scr_debuggraph;
 cvar_t		*scr_graphheight;
 cvar_t		*scr_graphscale;
 cvar_t		*scr_graphshift;
-cvar_t		*scr_drawall;
 
 typedef struct
 {
@@ -24317,12 +24321,6 @@ void SCR_AddDirtyPoint (int x, int y)
 		scr_dirty.y2 = y;
 }
 
-void SCR_DirtyScreen (void)
-{
-	SCR_AddDirtyPoint (0, 0);
-	SCR_AddDirtyPoint (viddef.width-1, viddef.height-1);
-}
-
 /*
 ==============
 SCR_TileClear
@@ -24335,9 +24333,6 @@ void SCR_TileClear (void)
 	int		i;
 	int		top, bottom, left, right;
 	dirty_t	clear;
-
-	if (scr_drawall->value)
-		SCR_DirtyScreen ();	// for power vr or broken page flippers...
 
 	if (scr_con_current == 1.0)
 		return;		// full screen console
@@ -87851,7 +87846,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		scr_graphheight = COM_GetCvar("graphheight", "32", 0);
 		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
 		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
-		scr_drawall = COM_GetCvar("scr_drawall", "0", 0);
 		adr0 = COM_GetCvar("adr0", "", CVAR_ARCHIVE);
 		adr1 = COM_GetCvar("adr1", "", CVAR_ARCHIVE);
 		adr2 = COM_GetCvar("adr2", "", CVAR_ARCHIVE);
@@ -88097,7 +88091,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-	// NOTE: Init GL procs that need context create beforehand
+	// NOTE: Init GL procs that need context created beforehand
 	wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
 	assert(wglSwapIntervalEXT);
 
@@ -88105,8 +88099,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// TODO: unglobal
 	{
 		VID_MenuInit();
-
-		COM_SetCvar("scr_drawall", "0");
 
 		glClearColor(1,0, 0.5 , 0.5);
 		glCullFace(GL_FRONT);
