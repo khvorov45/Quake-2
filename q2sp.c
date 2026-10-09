@@ -78475,7 +78475,6 @@ extern	vec3_t	r_origin;
 //
 // screen size info
 //
-extern	refdef_t	r_newrefdef;
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 extern	cvar_t	*r_norefresh;
@@ -78565,7 +78564,6 @@ extern	int		registration_sequence;
 
 void V_AddBlend (float r, float g, float b, float a, float *v_blend);
 
-void R_RenderView (refdef_t *fd);
 void GL_ScreenShot_f (void);
 void R_DrawAliasModel (Entity *e);
 void R_DrawBrushModel (Entity *e);
@@ -80125,6 +80123,8 @@ void R_RenderDlight (dlight_t *light)
 	}
 	glEnd ();
 }
+
+static refdef_t r_newrefdef;
 
 void R_RenderDlights (void)
 {
@@ -82656,11 +82656,6 @@ vec3_t	r_origin;
 float	r_world_matrix[16];
 float	r_base_world_matrix[16];
 
-//
-// screen size info
-//
-refdef_t	r_newrefdef;
-
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 cvar_t	*r_norefresh;
@@ -83319,64 +83314,6 @@ void R_Flash( void )
 	R_PolyBlend ();
 }
 
-/*
-================
-R_RenderView
-
-r_newrefdef must be set before the first call
-================
-*/
-void R_RenderView (refdef_t *fd)
-{
-	if (r_norefresh->value)
-		return;
-
-	r_newrefdef = *fd;
-
-	assert(r_worldmodel || (r_newrefdef.rdflags & RDF_NOWORLDMODEL));
-
-	if (r_speeds->value)
-	{
-		c_brush_polys = 0;
-		c_alias_polys = 0;
-	}
-
-	R_PushDlights ();
-
-	if (gl_finish->value)
-		glFinish ();
-
-	R_SetupFrame ();
-
-	R_SetFrustum ();
-
-	R_SetupGL ();
-
-	R_MarkLeaves ();	// done here so we know if we're in water
-
-	R_DrawWorld ();
-
-	R_DrawEntitiesOnList ();
-
-	R_RenderDlights ();
-
-	R_DrawParticles ();
-
-	R_DrawAlphaSurfaces ();
-
-	R_Flash();
-
-	if (r_speeds->value)
-	{
-		Com_Printf("%4i wpoly %4i epoly %i tex %i lmaps\n",
-			c_brush_polys,
-			c_alias_polys,
-			c_visible_textures,
-			c_visible_lightmaps);
-	}
-}
-
-
 void	R_SetGL2D (void)
 {
 	// set 2D virtual screen size
@@ -83429,11 +83366,44 @@ void R_SetLightLevel (void)
 
 }
 
-void R_RenderFrame (refdef_t *fd)
-{
-	R_RenderView( fd );
-	R_SetLightLevel ();
-	R_SetGL2D ();
+// r_newrefdef must be set before the first call
+void R_RenderFrame (refdef_t *fd) {
+	if (r_norefresh->value) {
+		return;
+	}
+
+	r_newrefdef = *fd;
+
+	assert(r_worldmodel || (r_newrefdef.rdflags & RDF_NOWORLDMODEL));
+
+	if (r_speeds->value) {
+		c_brush_polys = 0;
+		c_alias_polys = 0;
+	}
+
+	R_PushDlights();
+
+	if (gl_finish->value) {
+		glFinish();
+	}
+
+	R_SetupFrame();
+	R_SetFrustum();
+	R_SetupGL();
+	R_MarkLeaves(); // done here so we know if we're in water
+	R_DrawWorld();
+	R_DrawEntitiesOnList();
+	R_RenderDlights();
+	R_DrawParticles();
+	R_DrawAlphaSurfaces();
+	R_Flash();
+
+	if (r_speeds->value) {
+		Com_Printf("%4i wpoly %4i epoly %i tex %i lmaps\n", c_brush_polys, c_alias_polys, c_visible_textures, c_visible_lightmaps);
+	}
+
+	R_SetLightLevel();
+	R_SetGL2D();
 }
 
 static struct {
