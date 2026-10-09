@@ -21,9 +21,9 @@
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
 #define UNUSED(x) ((x)=(x))
 #define clamp(x, min, max) ((x) > (max) ? max : (x) < (min) ? (min) : (x))
-
-// NOTE: the do/while is here because it's the only thing I found that generates correct debug info
-#define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0)
+#define COUNT_ARGS(...) COUNT_ARGS_(__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1)
+#define COUNT_ARGS_(_1, _2, _3, _4, _5, _6, _7, N, ...) N
+#define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0) // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
 
 typedef uint8_t u8;
 typedef uint32_t u32;
@@ -95,7 +95,7 @@ static Arena_Temp_Memory arena_temp_memory_begin(Arena* arena) {
 }
 
 static void arena_temp_memory_end(Arena_Temp_Memory* temp) {
-	assert(temp->arena->base && temp->arena->size >= 0 && temp->arena->used >= 0);
+	assert(temp->arena && temp->arena->base && temp->arena->size >= 0 && temp->arena->used >= 0);
 	assert(temp->arena->temp_memory_count == temp->temp_memory_count_when_started + 1);
 	assert(temp->arena->used >= temp->used_when_started);
 	temp->arena->used = temp->used_when_started;
@@ -104,6 +104,13 @@ static void arena_temp_memory_end(Arena_Temp_Memory* temp) {
 }
 
 #define temp_memory_block(__arena__) for (Arena_Temp_Memory __tempororary_memory__ = arena_temp_memory_begin(__arena__); __tempororary_memory__.arena; arena_temp_memory_end(&__tempororary_memory__))
+
+static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
+	assert(bytes_to_keep >= 0 && bytes_to_keep <= temp->arena->used - temp->used_when_started);
+	Arena* arena = temp->arena;
+	arena_temp_memory_end(temp);
+	arena->used += bytes_to_keep;
+}
 
 //
 // SECTION Strings
@@ -133,10 +140,40 @@ static void string_builder_write_string(String_Builder* builder, String text) {
 	builder->str.len += text.len;
 }
 
+#define string_builder_write_cstrings(builder, ...) string_builder_write_cstrings_(builder, COUNT_ARGS(__VA_ARGS__), __VA_ARGS__)
+static void string_builder_write_cstrings_(String_Builder* builder, i64 count, ...) {
+	va_list arg_ptr = 0;
+	va_start(arg_ptr, count);
+	for (i64 ind = 0; ind < count; ind++) {
+		char* cstr = va_arg(arg_ptr, char*);
+		String str = string_from_cstring(cstr);
+		string_builder_write_string(builder, str);
+	}
+	va_end(arg_ptr);
+}
+
 static String string_builder_end(String_Builder* builder) {
 	String result = builder->str;
 	string_builder_write_string(builder, STR("\0"));
 	*builder = (String_Builder){};
+	return result;
+}
+
+#define concatenate_strings(arena, ...) concatenate_strings_(arena, COUNT_ARGS(__VA_ARGS__), __VA_ARGS__)
+static String concatenate_strings_(Arena* arena, i64 count, ...) {
+	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
+
+	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
+	va_list arg_ptr = 0;
+	va_start(arg_ptr, count);
+	for (i64 ind = 0; ind < count; ind++) {
+		String str = va_arg(arg_ptr, String);
+		string_builder_write_string(&builder, str);
+	}
+	va_end(arg_ptr);
+	String result = string_builder_end(&builder);
+
+	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
 	return result;
 }
 
@@ -21402,28 +21439,14 @@ static void write_config() {
 			char* value_cstring = keybindings[ind];
 			if (value_cstring && value_cstring[0]) {
 				char* key_cstring = Key_KeynumToString(ind);
-				String key_string = string_from_cstring(key_cstring);
-				String value_string = string_from_cstring(value_cstring);
-
-				string_builder_write_string(&builder, STR("bind "));
-				string_builder_write_string(&builder, key_string);
-				string_builder_write_string(&builder, STR(" \""));
-				string_builder_write_string(&builder, value_string);
-				string_builder_write_string(&builder, STR("\"\n"));
+				string_builder_write_cstrings(&builder, "bind ", key_cstring, " \"", value_cstring, "\"\n");
 			}
 		}
 
 		// NOTE: Variables with "archive" flag
 		for (cvar_t* var = cvar_vars; var; var = var->next) {
 			if (var->flags & CVAR_ARCHIVE) {
-				String name = string_from_cstring(var->name);
-				String value = string_from_cstring(var->string);
-
-				string_builder_write_string(&builder, STR("set "));
-				string_builder_write_string(&builder, name);
-				string_builder_write_string(&builder, STR(" \""));
-				string_builder_write_string(&builder, value);
-				string_builder_write_string(&builder, STR("\"\n"));
+				string_builder_write_cstrings(&builder, "set ", var->name, " \"", var->string, "\"\n");
 			}
 		}
 
@@ -87454,13 +87477,7 @@ static void windows_write_to_file_handle(HANDLE file_handle, String text) {
 }
 
 static void windows_write_config_string(String text) {temp_memory_block(&context.memory.temp) {
-	String file_path = {};
-	{
-		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
-		string_builder_write_string(&builder, string_from_cstring(fs_gamedir));
-		string_builder_write_string(&builder, STR("/config.cfg"));
-		file_path = string_builder_end(&builder);
-	}
+	String file_path = concatenate_strings(&context.memory.temp, string_from_cstring(fs_gamedir), STR("/config.cfg"));
 
 	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
@@ -87478,10 +87495,7 @@ static void windows_print_gl_strings() {
 
 static void windows_debug_log(String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
-	String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
-	string_builder_write_string(&builder, text);
-	string_builder_write_string(&builder, STR("\n"));
-	String text_null_terminated = string_builder_end(&builder);
+	String text_null_terminated = concatenate_strings(&context.memory.temp, text, STR("\n"));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
