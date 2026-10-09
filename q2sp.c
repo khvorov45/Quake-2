@@ -1807,7 +1807,8 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	strncpy(dest, bigbuffer, size - 1);
 }
 
-char fs_gamedir[MAX_OSPATH];
+// TODO: remove
+char* fs_gamedir = "baseq2";
 
 // Both client and server can use this, and it will output to the apropriate place.
 static void Com_Printf(char *fmt, ...) {
@@ -5094,7 +5095,7 @@ void Pmove (pmove_t *pmove);
 #define	MAX_CONFIGSTRINGS	(CS_GENERAL+MAX_GENERAL)
 
 
-#define	BASEDIRNAME	"baseq2"
+
 #define BUILDSTRING "Win32 DEBUG"
 #define	CPUSTRING	"x86"
 
@@ -7370,9 +7371,6 @@ typedef struct pack_s
 	packfile_t	*files;
 } pack_t;
 
-
-cvar_t	*fs_basedir;
-
 typedef struct filelink_s
 {
 	struct filelink_s	*next;
@@ -7391,8 +7389,6 @@ typedef struct searchpath_s
 } searchpath_t;
 
 searchpath_t	*fs_searchpaths;
-searchpath_t	*fs_base_searchpaths;	// without gamedirs
-
 
 // All of Quake's data access is through a hierchal file system, but the contents of the file system can be transparently merged from several sources.
 // The "base directory" is the path to the directory holding the quake.exe and all game directories.
@@ -7636,50 +7632,6 @@ pack_t *FS_LoadPackFile (char *packfile)
 	return pack;
 }
 
-
-/*
-================
-FS_AddGameDirectory
-
-Sets fs_gamedir, adds the directory to the head of the path,
-then loads and adds pak1.pak pak2.pak ...
-================
-*/
-void FS_AddGameDirectory (char *dir)
-{
-	int				i;
-	searchpath_t	*search;
-	pack_t			*pak;
-	char			pakfile[MAX_OSPATH];
-
-	strcpy (fs_gamedir, dir);
-
-	//
-	// add the directory to the search path
-	//
-	search = Z_Malloc (sizeof(searchpath_t));
-	strcpy (search->filename, dir);
-	search->next = fs_searchpaths;
-	fs_searchpaths = search;
-
-	//
-	// add any pak files in the format pak0.pak pak1.pak, ...
-	//
-	for (i=0; i<10; i++)
-	{
-		Com_sprintf (pakfile, sizeof(pakfile), "%s/pak%i.pak", dir, i);
-		pak = FS_LoadPackFile (pakfile);
-		if (!pak)
-			continue;
-		search = Z_Malloc (sizeof(searchpath_t));
-		search->pack = pak;
-		search->next = fs_searchpaths;
-		fs_searchpaths = search;
-	}
-
-
-}
-
 // Creates a filelink_t
 void FS_Link_f (void)
 {
@@ -7816,31 +7768,24 @@ void FS_Dir_f( void )
 	};
 }
 
-/*
-============
-FS_Path_f
-
-============
-*/
-void FS_Path_f (void)
-{
-	searchpath_t	*s;
-	filelink_t		*l;
-
+static void FS_Path_f() {
 	Com_Printf ("Current search path:\n");
-	for (s=fs_searchpaths ; s ; s=s->next)
-	{
-		if (s == fs_base_searchpaths)
+	for (searchpath_t* s = fs_searchpaths; s; s = s->next) {
+		if (s == fs_searchpaths) {
 			Com_Printf ("----------\n");
-		if (s->pack)
+		}
+
+		if (s->pack) {
 			Com_Printf ("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
-		else
+		} else {
 			Com_Printf ("%s\n", s->filename);
+		}
 	}
 
 	Com_Printf ("\nLinks:\n");
-	for (l=fs_links ; l ; l=l->next)
-		Com_Printf ("%s : %s\n", l->from, l->to);
+	for (filelink_t* l = fs_links; l; l = l->next) {
+		Com_Printf("%s : %s\n", l->from, l->to);
+	}
 }
 
 /*
@@ -22598,10 +22543,7 @@ char *svc_strings[256] =
 
 void CL_DownloadFileName(char *dest, int destlen, char *fn)
 {
-	if (strncmp(fn, "players", 7) == 0)
-		Com_sprintf (dest, destlen, "%s/%s", BASEDIRNAME, fn);
-	else
-		Com_sprintf (dest, destlen, "%s/%s", fs_gamedir, fn);
+	Com_sprintf(dest, destlen, "%s/%s", fs_gamedir, fn);
 }
 
 /*
@@ -87515,8 +87457,7 @@ static void windows_write_config_string(String text) {temp_memory_block(&context
 	String file_path = {};
 	{
 		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
-		String gamedir_path = string_from_cstring(fs_gamedir);
-		string_builder_write_string(&builder, gamedir_path);
+		string_builder_write_string(&builder, string_from_cstring(fs_gamedir));
 		string_builder_write_string(&builder, STR("/config.cfg"));
 		file_path = string_builder_end(&builder);
 	}
@@ -88000,18 +87941,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		con.initialized = true;
 	}
 
-	// NOTE: Init Filesystem
-	// TODO: Remove
+	// NOTE: Init searchpaths
+	// TODO: remove
 	{
-		// basedir <path>
-		// allows the game to run from outside the data tree
-		fs_basedir = COM_GetCvar("basedir", ".", CVAR_NOSET);
+		// add the directory to the search path
+		searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
+		strcpy(search->filename, fs_gamedir);
+		search->next = fs_searchpaths;
+		fs_searchpaths = search;
 
-		// start up with baseq2 by default
-		FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string) );
-
-		// any set gamedirs will be freed up to here
-		fs_base_searchpaths = fs_searchpaths;
+		// add any pak files in the format pak0.pak pak1.pak, ...
+		for (int i = 0; i < 10; i++) {
+			char pakfile[MAX_OSPATH] = {};
+			Com_sprintf(pakfile, sizeof(pakfile), "%s/pak%i.pak", fs_gamedir, i);
+			pack_t* pak = FS_LoadPackFile(pakfile);
+			if (pak) {
+				search = Z_Malloc(sizeof(searchpath_t));
+				search->pack = pak;
+				search->next = fs_searchpaths;
+				fs_searchpaths = search;
+			}
+		}
 	}
 
 	// NOTE: Startup command execution
