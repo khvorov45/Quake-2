@@ -25,7 +25,10 @@
 
 typedef uint8_t u8;
 typedef uint32_t u32;
+typedef int32_t i32;
 typedef int64_t i64;
+
+typedef struct {u8* ptr; i64 len;} u8_Slice;
 
 #define Byte ((i64)1)
 #define Kilobyte ((i64)(1024 * Byte))
@@ -48,14 +51,17 @@ typedef struct {
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String text);
+typedef u8_Slice (*Load_Asset_By_Name_Proc)(String name);
 
 // Platform is responsible for initialising this
 static struct {
 	struct {Arena perm; Arena temp;} memory;
 
+	void* platform_data;
 	Exit_Process_Proc exit_process;
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
+	Load_Asset_By_Name_Proc load_asset_by_name;
 } context = {};
 
 //
@@ -110,6 +116,8 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 	arena->used += bytes_to_keep;
 }
 
+#define arena_alloc_slice(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), (count)}
+
 //
 // SECTION Strings
 //
@@ -127,14 +135,28 @@ typedef struct {String* ptr; i64 len;} String_Slice;
 typedef struct {char** ptr; i64 len;} Cstring_Slice;
 #define CSTRS(...) (Cstring_Slice){(char*[]){__VA_ARGS__}, carray_count(((char*[]){__VA_ARGS__}))}
 
-typedef struct {String str; i64 max_len;} String_Builder;
-
 static String string_from_cstring(char* cstring) {
 	i64 len = 0;
 	while (cstring[len]) {len++;}
 	String result = {cstring, len};
 	return result;
 }
+
+static bool streq(String str1, String str2) {
+	bool result = false;
+	if (str1.len == str2.len) {
+		result = true;
+		for (i64 ind = 0; ind < str1.len; ind++) {
+			if (str1.ptr[ind] != str2.ptr[ind]) {
+				result = false;
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+typedef struct {String str; i64 max_len;} String_Builder;
 
 static String_Builder string_builder_begin(Arena* arena, i64 max_len) {
 	void* base = arena_alloc_bytes(arena, max_len);
@@ -177,6 +199,29 @@ static String concatenate_strings(Arena* arena, String_Slice strings) {
 	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
 	return result;
 }
+
+//
+// SECTION Asset files (pak0.pak, pak1.pak etc)
+//
+
+// Structure:
+// Header
+// File Contents (find corresponding file info to locate the file contents here)
+// File infos (see header to get offset to this)
+
+const u32 id_pack_header_magic = (('K'<<24)+('C'<<16)+('A'<<8)+'P');
+typedef struct {
+	u32 magic;
+	i32 info_section_offset;
+	i32 info_section_len_bytes;
+} Pak_File_Header;
+
+typedef struct {
+	char name[56];
+	i32	filepos;
+	i32 filelen;
+} Pak_File_Info;
+typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 
 //
 // SECTION Byte order
@@ -2855,26 +2900,6 @@ static char* Info_Cvar_Bit(int bit) {
 
 static char* Info_Cvar_User()	{return Info_Cvar_Bit(CVAR_USERINFO);}		// returns an info string containing all the CVAR_USERINFO cvars
 static char* Info_Cvar_Server()	{return Info_Cvar_Bit(CVAR_SERVERINFO);}	// returns an info string containing all the CVAR_SERVERINFO cvars
-
-//
-// SECTION pak files
-//
-
-// The .pak files are just a linear collapse of a directory tree
-
-
-
-
-typedef struct {
-	char	name[56];
-	int		filepos, filelen;
-} dpackfile_t;
-
-typedef struct {
-	int		ident;
-	int		dirofs;
-	int		dirlen;
-} dpackheader_t;
 
 //
 // SECTION pcx files
@@ -7535,37 +7560,26 @@ int FS_FOpenFile (char *filename, FILE **file)
 }
 
 // Filename are reletive to the quake search path a null buffer will just return the file length without loading
-int FS_LoadFile (char *path, void **buffer)
-{
-	FILE	*h;
-	u8	*buf;
-	int		len;
-
-	buf = NULL;	// quiet compiler warning
-
+int FS_LoadFile(char *path, void **buffer) {
 	// look for it in the filesystem or pack files
-	len = FS_FOpenFile (path, &h);
-	if (!h)
-	{
-		if (buffer)
+	FILE* h = 0;
+	int len = FS_FOpenFile(path, &h);
+	int result = len;
+	if (h) {
+		if (buffer) {
+			u8* buf = Z_Malloc(len);
+			*buffer = buf;
+			FS_Read(buf, len, h);
+		}
+		fclose(h);
+	} else {
+		if (buffer) {
 			*buffer = NULL;
-		return -1;
+		}
+		result = -1;
 	}
 
-	if (!buffer)
-	{
-		fclose (h);
-		return len;
-	}
-
-	buf = Z_Malloc(len);
-	*buffer = buf;
-
-	FS_Read (buf, len, h);
-
-	fclose (h);
-
-	return len;
+	return result;
 }
 
 
@@ -13351,41 +13365,17 @@ void SV_SendClientMessages (void)
 	}
 }
 
-/* ============ end source: server/sv_send.c ============ */
-/* ============ begin source: server/sv_user.c ============ */
-
-// sv_user.c -- server code for moving users
-
-/* already inlined above: server/server.h */
-
 edict_t	*sv_player;
 
-/*
-============================================================
-
-USER STRINGCMD EXECUTION
-
-sv_client and sv_player will be valid.
-============================================================
-*/
-
-void SV_BeginDemoserver (void)
-{
-	char		name[MAX_OSPATH];
-
-	Com_sprintf (name, sizeof(name), "demos/%s", sv.name);
-	FS_FOpenFile (name, &sv.demofile);
+static void SV_BeginDemoserver() {
+	char name[MAX_OSPATH] = {};
+	Com_sprintf(name, sizeof(name), "demos/%s", sv.name);
+	FS_FOpenFile(name, &sv.demofile);
 	assert(sv.demofile);
 }
 
-/*
-================
-SV_New_f
-
-Sends the first message from the server to a connected client.
-This will be sent on the initial connection and upon each server load.
-================
-*/
+// Sends the first message from the server to a connected client.
+// This will be sent on the initial connection and upon each server load.
 void SV_New_f (void)
 {
 	char		*gamedir;
@@ -78776,39 +78766,23 @@ void Scrap_Upload (void)
 }
 
 void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
-	u8	*raw;
 	pcx_t	*pcx;
 	int		x, y;
-	int		len;
 	int		dataByte, runLength;
 	u8	*out, *pix;
 
 	*pic = NULL;
 	*palette = NULL;
 
-	//
-	// load the file
-	//
-	len = FS_LoadFile (filename, (void **)&raw);
+	u8_Slice file_content = context.load_asset_by_name(string_from_cstring(filename));
+	u8* raw = file_content.ptr;
+	i64 len = file_content.len;
 	if (!raw) {
 		Com_Printf("Bad pcx file %s\n", filename);
 		return;
 	}
 
-	//
-	// parse the PCX file
-	//
 	pcx = (pcx_t *)raw;
-
-	pcx->xmin = LittleShort(pcx->xmin);
-	pcx->ymin = LittleShort(pcx->ymin);
-	pcx->xmax = LittleShort(pcx->xmax);
-	pcx->ymax = LittleShort(pcx->ymax);
-	pcx->hres = LittleShort(pcx->hres);
-	pcx->vres = LittleShort(pcx->vres);
-	pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
-	pcx->palette_type = LittleShort(pcx->palette_type);
-
 	raw = &pcx->data;
 
 	if (pcx->manufacturer != 0x0a
@@ -78865,8 +78839,6 @@ void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
 		free (*pic);
 		*pic = NULL;
 	}
-
-	FS_FreeFile (pcx);
 }
 
 /*
@@ -87076,6 +87048,20 @@ static void Qcommon_Frame(int delta_time_msec) {
 	}
 }
 
+//
+// SECTION Platform (windows)
+//
+
+typedef struct {
+	u8_Slice whole_file;
+	Pak_File_Infos infos;
+} Windows_Pak_File_Entry;
+typedef struct {Windows_Pak_File_Entry* ptr; i64 len;} Windows_Pak_File_Entries;
+
+typedef struct {
+	Windows_Pak_File_Entries paks;
+} Windows_Platform_Data;
+
 static void windows_exit_process() {
 	ExitProcess(0);
 }
@@ -87121,6 +87107,40 @@ static void windows_debug_log(String text) { temp_memory_block(&context.memory.t
 	windows_write_to_file_handle(file_handle, text_null_terminated);
 }}
 
+static u8_Slice windows_load_asset_by_name(String name) {
+	Windows_Pak_File_Entries paks = ((Windows_Platform_Data*)context.platform_data)->paks;
+
+	Pak_File_Info* target_file_info = 0;
+	Windows_Pak_File_Entry* target_file_pak = 0;
+	for (i64 pak_index = paks.len - 1; !target_file_info && pak_index >= 0; pak_index--) {
+		Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
+
+		for (i64 file_index = 0; !target_file_info && file_index < pak->infos.len; file_index++) {
+			Pak_File_Info* info = pak->infos.ptr + file_index;
+			String info_name = string_from_cstring(info->name);
+			assert(info_name.len > 0 && info_name.len < (i64)carray_count(info->name));
+
+			if (streq(info_name, name)) {
+				target_file_info = info;
+				target_file_pak = pak;
+			}
+		}
+	}
+
+	u8_Slice result = {};
+	if (target_file_info) {
+		assert(target_file_pak);
+		assert(target_file_info->filepos >= (i64)sizeof(Pak_File_Header));
+		result.ptr = target_file_pak->whole_file.ptr + target_file_info->filepos;
+		assert(result.ptr < (u8*)target_file_pak->infos.ptr);
+		assert(target_file_info->filelen > 0);
+		result.len = target_file_info->filelen;
+		assert((result.ptr + result.len) <= (u8*)target_file_pak->infos.ptr);
+	}
+
+	return result;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	UNUSED(nCmdShow); // NOTE: flag that indicates whether the main application window is minimized, maximized, or shown normally.
 	UNUSED(hPrevInstance); // NOTE: always zero
@@ -87128,6 +87148,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Timer resolution
 	timeBeginPeriod(1);
+
+	Windows_Platform_Data windows_platform_data = {};
+	context.platform_data = &windows_platform_data;
 
 	// NOTE: Memory
 	{
@@ -87144,6 +87167,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 	context.debug_log = windows_debug_log;
+	context.load_asset_by_name = windows_load_asset_by_name;
 
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
@@ -87566,6 +87590,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Load assets
 	// TODO: simplify
 	{
+		String_Slice files_to_load = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
+		windows_platform_data.paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, files_to_load.len);
+		for (i64 ind = 0; ind < files_to_load.len; ind++) {
+			String file_path = files_to_load.ptr[ind];
+			Windows_Pak_File_Entry* dest_entry = windows_platform_data.paks.ptr + ind;
+
+			{
+				HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+				assert(file_handle != INVALID_HANDLE_VALUE);
+
+				LARGE_INTEGER file_size = {};
+				BOOL get_file_size_result = GetFileSizeEx(file_handle, &file_size);
+				assert(get_file_size_result);
+				assert(file_size.QuadPart <= 0xFFFFFFFF); // NOTE: limit to 4 GB for simplicity for now
+
+				u8* dest = arena_alloc_bytes(&context.memory.perm, file_size.QuadPart);
+				DWORD bytes_read = 0;
+				BOOL read_file_result = ReadFile(file_handle, dest, (DWORD)file_size.QuadPart, &bytes_read, 0);
+				assert(read_file_result);
+				assert(bytes_read == (DWORD)file_size.QuadPart);
+				CloseHandle(file_handle);
+
+				dest_entry->whole_file = (u8_Slice){dest, file_size.QuadPart};
+			}
+
+			Pak_File_Header* header = (Pak_File_Header*)dest_entry->whole_file.ptr;
+
+			assert(header->magic == id_pack_header_magic);
+
+			assert(header->info_section_offset >= 0 && header->info_section_offset < dest_entry->whole_file.len);
+			assert(header->info_section_len_bytes >= 0 && header->info_section_len_bytes < dest_entry->whole_file.len);
+			assert(header->info_section_len_bytes % sizeof(Pak_File_Info) == 0);
+			i64 end_of_info_section = (i64)header->info_section_offset + (i64)header->info_section_len_bytes;
+			assert(end_of_info_section >= 0 && end_of_info_section <= dest_entry->whole_file.len);
+			dest_entry->infos = (Pak_File_Infos){(Pak_File_Info*)(dest_entry->whole_file.ptr + header->info_section_offset), header->info_section_len_bytes / sizeof(Pak_File_Info)};
+		}
+	}
+
+	#if 1
+	{
 		// add the directory to the search path
 		searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
 		strcpy(search->filename, fs_gamedir);
@@ -87579,25 +87643,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			FILE* packhandle = fopen(pakfile, "rb");
 			assert(packhandle);
 
-			dpackheader_t header = {};
+			Pak_File_Header header = {};
 			fread(&header, 1, sizeof(header), packhandle);
 
-			u32 id_pack_header_magic = (('K'<<24)+('C'<<16)+('A'<<8)+'P');
-			assert((u32)header.ident == id_pack_header_magic);
+			assert(header.magic == id_pack_header_magic);
 
 			i64 max_files_in_pack = 4096;
-			i64 numpackfiles = header.dirlen / sizeof(dpackfile_t);
+			i64 numpackfiles = header.info_section_len_bytes / sizeof(Pak_File_Info);
 			assert(numpackfiles <= max_files_in_pack);
 
 			packfile_t* newfiles = Z_Malloc(numpackfiles * sizeof(packfile_t));
-			fseek(packhandle, header.dirofs, SEEK_SET);
+			fseek(packhandle, header.info_section_offset, SEEK_SET);
 
-			dpackfile_t info[max_files_in_pack] = {};
-			fread(info, 1, header.dirlen, packhandle);
+			Pak_File_Info info[max_files_in_pack] = {};
+			fread(info, 1, header.info_section_len_bytes, packhandle);
 
 			for (i64 ind = 0; ind < numpackfiles; ind++) {
 				packfile_t* new_file = newfiles + ind;
-				dpackfile_t* file_info = info + ind;
+				Pak_File_Info* file_info = info + ind;
 
 				strcpy(new_file->name, file_info->name);
 				new_file->filepos = file_info->filepos;
@@ -87616,6 +87679,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			fs_searchpaths = search;
 		}
 	}
+	#endif
 
 	// NOTE: Startup command execution
 	// TODO: Simplify
