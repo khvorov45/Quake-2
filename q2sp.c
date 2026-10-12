@@ -78765,80 +78765,49 @@ void Scrap_Upload (void)
 	scrap_dirty = false;
 }
 
-void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
-	pcx_t	*pcx;
-	int		x, y;
-	int		dataByte, runLength;
-	u8	*out, *pix;
-
-	*pic = NULL;
-	*palette = NULL;
-
-	u8_Slice file_content = context.load_asset_by_name(string_from_cstring(filename));
+static void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
+	String file_name_str = string_from_cstring(filename);
+	u8_Slice file_content = context.load_asset_by_name(file_name_str);
 	u8* raw = file_content.ptr;
 	i64 len = file_content.len;
+	// TODO: Don't load what we don't have
 	if (!raw) {
-		Com_Printf("Bad pcx file %s\n", filename);
+		context.debug_log(concatenate_strings(&context.memory.temp, STRS(file_name_str, STR(" not found"))));
 		return;
 	}
 
-	pcx = (pcx_t *)raw;
+	pcx_t* pcx = (pcx_t*)raw;
 	raw = &pcx->data;
 
-	if (pcx->manufacturer != 0x0a
-		|| pcx->version != 5
-		|| pcx->encoding != 1
-		|| pcx->bits_per_pixel != 8
-		|| pcx->xmax >= 640
-		|| pcx->ymax >= 480)
-	{
-		Com_Printf("Bad pcx file %s\n", filename);
-		return;
-	}
+	assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
 
-	out = malloc ( (pcx->ymax+1) * (pcx->xmax+1) );
-
+	*width = pcx->xmax + 1;
+	*height = pcx->ymax + 1;
+	u8* out = malloc((*height) * (*width));
 	*pic = out;
+	u8* pix = out;
 
-	pix = out;
+	*palette = malloc(768);
+	memcpy(*palette, (u8*)pcx + len - 768, 768);
 
-	if (palette)
-	{
-		*palette = malloc(768);
-		memcpy (*palette, (u8 *)pcx + len - 768, 768);
-	}
+	for (i64 y = 0; y <= pcx->ymax; y++, pix += pcx->xmax+1) {
+		for (i64 x = 0; x <= pcx->xmax;) {
+			i64 dataByte = *raw++;
 
-	if (width)
-		*width = pcx->xmax+1;
-	if (height)
-		*height = pcx->ymax+1;
-
-	for (y=0 ; y<=pcx->ymax ; y++, pix += pcx->xmax+1)
-	{
-		for (x=0 ; x<=pcx->xmax ; )
-		{
-			dataByte = *raw++;
-
-			if((dataByte & 0xC0) == 0xC0)
-			{
+			i64 runLength = 1;
+			if ((dataByte & 0xC0) == 0xC0) {
 				runLength = dataByte & 0x3F;
 				dataByte = *raw++;
 			}
-			else
-				runLength = 1;
 
-			while(runLength-- > 0)
+			while(runLength-- > 0) {
 				pix[x++] = dataByte;
+			}
 		}
 
 	}
 
-	if ( raw - (u8 *)pcx > len)
-	{
-		Com_Printf("PCX file %s was malformed", filename);
-		free (*pic);
-		*pic = NULL;
-	}
+	assert(raw - (u8*)pcx <= len);
 }
 
 /*
@@ -87939,7 +87908,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Cmd_ExecuteCbuf();
 
 	// NOTE: Mainloop
-	for (int oldtime = Sys_Milliseconds();;) {
+	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
 
 		// if at a full screen console, don't update unless needed
 		if (Minimized) {
@@ -87964,7 +87933,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		Qcommon_Frame(delta_time_msec);
-	}
+	}}
 
 	// NOTE: never gets here
 	return 0;
