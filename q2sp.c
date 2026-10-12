@@ -87590,16 +87590,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			assert(numpackfiles <= max_files_in_pack);
 
 			packfile_t* newfiles = Z_Malloc(numpackfiles * sizeof(packfile_t));
-
 			fseek(packhandle, header.dirofs, SEEK_SET);
 
 			dpackfile_t info[max_files_in_pack] = {};
 			fread(info, 1, header.dirlen, packhandle);
 
-			for (i64 i = 0; i < numpackfiles; i++) {
-				strcpy (newfiles[i].name, info[i].name);
-				newfiles[i].filepos = LittleLong(info[i].filepos);
-				newfiles[i].filelen = LittleLong(info[i].filelen);
+			for (i64 ind = 0; ind < numpackfiles; ind++) {
+				packfile_t* new_file = newfiles + ind;
+				dpackfile_t* file_info = info + ind;
+
+				strcpy(new_file->name, file_info->name);
+				new_file->filepos = file_info->filepos;
+				new_file->filelen = file_info->filelen;
 			}
 
 			pack_t* pak = Z_Malloc(sizeof(pack_t));
