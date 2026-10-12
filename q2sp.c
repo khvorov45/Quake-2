@@ -2862,8 +2862,8 @@ static char* Info_Cvar_Server()	{return Info_Cvar_Bit(CVAR_SERVERINFO);}	// retu
 
 // The .pak files are just a linear collapse of a directory tree
 
-#define	MAX_FILES_IN_PACK	4096
-#define IDPAKHEADER			(('K'<<24)+('C'<<16)+('A'<<8)+'P')
+
+
 
 typedef struct {
 	char	name[56];
@@ -2871,7 +2871,7 @@ typedef struct {
 } dpackfile_t;
 
 typedef struct {
-	int		ident;		// == IDPAKHEADER
+	int		ident;
 	int		dirofs;
 	int		dirlen;
 } dpackheader_t;
@@ -7348,32 +7348,6 @@ u8 COM_BlockSequenceCRCByte(u8 *base, int length, int sequence)
 	return crc;
 }
 
-/* crc.c */
-
-/* already inlined above: qcommon/qcommon.h */
-
-// this is a 16 bit, non-reflected CRC using the polynomial 0x1021
-// and the initial and final xor values shown below...  in other words, the
-// CCITT standard CRC used by XMODEM
-
-/* ============ end source: qcommon/crc.c ============ */
-/* ============ begin source: qcommon/cvar.c ============ */
-
-// cvar.c -- dynamic variable tracking
-
-/* already inlined above: qcommon/qcommon.h */
-
-
-
-/* ============ end source: qcommon/cvar.c ============ */
-/* ============ begin source: qcommon/files.c ============ */
-
-
-/* already inlined above: qcommon/qcommon.h */
-
-// define this to dissalow any data but the demo pak file
-//#define	NO_ADDONS
-
 // if a packfile directory differs from this, it is assumed to be hacked
 // Full version
 #define	PAK0_CHECKSUM	0x40e614e0
@@ -7603,71 +7577,6 @@ FS_FreeFile
 void FS_FreeFile (void *buffer)
 {
 	Z_Free (buffer);
-}
-
-/*
-=================
-FS_LoadPackFile
-
-Takes an explicit (not game tree related) path to a pak file.
-
-Loads the header and directory, adding the files at the beginning
-of the list so they override previous pack files.
-=================
-*/
-pack_t *FS_LoadPackFile (char *packfile)
-{
-	dpackheader_t	header;
-	int				i;
-	packfile_t		*newfiles;
-	int				numpackfiles;
-	pack_t			*pack;
-	FILE			*packhandle;
-	dpackfile_t		info[MAX_FILES_IN_PACK];
-#ifdef NO_ADDONS
-	unsigned		checksum;
-#endif
-
-	packhandle = fopen(packfile, "rb");
-	if (!packhandle)
-		return NULL;
-
-	fread (&header, 1, sizeof(header), packhandle);
-	assert(LittleLong(header.ident) == IDPAKHEADER);
-	header.dirofs = LittleLong (header.dirofs);
-	header.dirlen = LittleLong (header.dirlen);
-
-	numpackfiles = header.dirlen / sizeof(dpackfile_t);
-
-	assert(numpackfiles <= MAX_FILES_IN_PACK);
-
-	newfiles = Z_Malloc (numpackfiles * sizeof(packfile_t));
-
-	fseek (packhandle, header.dirofs, SEEK_SET);
-	fread (info, 1, header.dirlen, packhandle);
-
-// crc the directory to check for modifications
-#ifdef NO_ADDONS
-	checksum = Com_BlockChecksum ((void *)info, header.dirlen);
-	if (checksum != PAK0_CHECKSUM)
-		return NULL;
-#endif
-// parse the directory
-	for (i=0 ; i<numpackfiles ; i++)
-	{
-		strcpy (newfiles[i].name, info[i].name);
-		newfiles[i].filepos = LittleLong(info[i].filepos);
-		newfiles[i].filelen = LittleLong(info[i].filelen);
-	}
-
-	pack = Z_Malloc (sizeof (pack_t));
-	strcpy (pack->filename, packfile);
-	pack->handle = packhandle;
-	pack->numfiles = numpackfiles;
-	pack->files = newfiles;
-
-	Com_Printf ("Added packfile %s (%i files)\n", packfile, numpackfiles);
-	return pack;
 }
 
 // Creates a filelink_t
@@ -87654,8 +87563,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		con.initialized = true;
 	}
 
-	// NOTE: Init searchpaths
-	// TODO: remove
+	// NOTE: Load assets
+	// TODO: simplify
 	{
 		// add the directory to the search path
 		searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
@@ -87664,16 +87573,45 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		fs_searchpaths = search;
 
 		// add any pak files in the format pak0.pak pak1.pak, ...
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 3; i++) {
 			char pakfile[MAX_OSPATH] = {};
 			Com_sprintf(pakfile, sizeof(pakfile), "%s/pak%i.pak", fs_gamedir, i);
-			pack_t* pak = FS_LoadPackFile(pakfile);
-			if (pak) {
-				search = Z_Malloc(sizeof(searchpath_t));
-				search->pack = pak;
-				search->next = fs_searchpaths;
-				fs_searchpaths = search;
+			FILE* packhandle = fopen(pakfile, "rb");
+			assert(packhandle);
+
+			dpackheader_t header = {};
+			fread(&header, 1, sizeof(header), packhandle);
+
+			u32 id_pack_header_magic = (('K'<<24)+('C'<<16)+('A'<<8)+'P');
+			assert((u32)header.ident == id_pack_header_magic);
+
+			i64 max_files_in_pack = 4096;
+			i64 numpackfiles = header.dirlen / sizeof(dpackfile_t);
+			assert(numpackfiles <= max_files_in_pack);
+
+			packfile_t* newfiles = Z_Malloc(numpackfiles * sizeof(packfile_t));
+
+			fseek(packhandle, header.dirofs, SEEK_SET);
+
+			dpackfile_t info[max_files_in_pack] = {};
+			fread(info, 1, header.dirlen, packhandle);
+
+			for (i64 i = 0; i < numpackfiles; i++) {
+				strcpy (newfiles[i].name, info[i].name);
+				newfiles[i].filepos = LittleLong(info[i].filepos);
+				newfiles[i].filelen = LittleLong(info[i].filelen);
 			}
+
+			pack_t* pak = Z_Malloc(sizeof(pack_t));
+			strcpy(pak->filename, pakfile);
+			pak->handle = packhandle;
+			pak->numfiles = numpackfiles;
+			pak->files = newfiles;
+
+			search = Z_Malloc(sizeof(searchpath_t));
+			search->pack = pak;
+			search->next = fs_searchpaths;
+			fs_searchpaths = search;
 		}
 	}
 
