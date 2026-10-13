@@ -87076,6 +87076,28 @@ static void windows_debug_log(String text) { temp_memory_block(&context.memory.t
 	windows_write_to_file_handle(file_handle, text_null_terminated);
 }}
 
+// Assumes file_path is null-terminated
+static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
+	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	assert(file_handle != INVALID_HANDLE_VALUE);
+
+	LARGE_INTEGER file_size = {};
+	BOOL get_file_size_result = GetFileSizeEx(file_handle, &file_size);
+	assert(get_file_size_result);
+	assert(file_size.QuadPart <= 0xFFFFFFFF); // NOTE: limit to 4 GB for simplicity for now
+
+	u8* dest = arena_alloc_bytes(arena, file_size.QuadPart);
+	DWORD bytes_read = 0;
+	BOOL read_file_result = ReadFile(file_handle, dest, (DWORD)file_size.QuadPart, &bytes_read, 0);
+	assert(read_file_result);
+	assert(bytes_read == (DWORD)file_size.QuadPart);
+	CloseHandle(file_handle);
+
+	u8_Slice result = {dest, file_size.QuadPart};
+	return result;
+}
+
+
 static u8_Slice windows_load_asset_by_name(String name) {
 	Windows_Pak_File_Entries paks = ((Windows_Platform_Data*)context.platform_data)->paks;
 
@@ -87556,36 +87578,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		con.initialized = true;
 	}
 
-	// NOTE: Load assets
-	// TODO: simplify
-	{
-		String_Slice files_to_load = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
-		windows_platform_data.paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, files_to_load.len);
-		for (i64 ind = 0; ind < files_to_load.len; ind++) {
-			String file_path = files_to_load.ptr[ind];
+	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
+	// TODO: complete
+	temp_memory_block(&context.memory.temp) {
+		// NOTE: Load pre-existing
+		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
+		windows_platform_data.paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
+		for (i64 ind = 0; ind < preexisting_pak_paths.len; ind++) {
+			String file_path = preexisting_pak_paths.ptr[ind];
 			Windows_Pak_File_Entry* dest_entry = windows_platform_data.paks.ptr + ind;
 
-			{
-				HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-				assert(file_handle != INVALID_HANDLE_VALUE);
-
-				LARGE_INTEGER file_size = {};
-				BOOL get_file_size_result = GetFileSizeEx(file_handle, &file_size);
-				assert(get_file_size_result);
-				assert(file_size.QuadPart <= 0xFFFFFFFF); // NOTE: limit to 4 GB for simplicity for now
-
-				u8* dest = arena_alloc_bytes(&context.memory.perm, file_size.QuadPart);
-				DWORD bytes_read = 0;
-				BOOL read_file_result = ReadFile(file_handle, dest, (DWORD)file_size.QuadPart, &bytes_read, 0);
-				assert(read_file_result);
-				assert(bytes_read == (DWORD)file_size.QuadPart);
-				CloseHandle(file_handle);
-
-				dest_entry->whole_file = (u8_Slice){dest, file_size.QuadPart};
-			}
-
+			dest_entry->whole_file = windows_read_entire_file(&context.memory.perm, file_path);
 			Pak_File_Header* header = (Pak_File_Header*)dest_entry->whole_file.ptr;
-
 			assert(header->magic == id_pack_header_magic);
 
 			assert(header->info_section_offset >= 0 && header->info_section_offset < dest_entry->whole_file.len);
@@ -87595,8 +87599,57 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			assert(end_of_info_section >= 0 && end_of_info_section <= dest_entry->whole_file.len);
 			dest_entry->infos = (Pak_File_Infos){(Pak_File_Info*)(dest_entry->whole_file.ptr + header->info_section_offset), header->info_section_len_bytes / sizeof(Pak_File_Info)};
 		}
+
+		// NOTE: Create a fake pak in-memory from the loose files
+		String_Slice loose_files_dir_paths = STRS(
+			STR("baseq2/maps/*"),
+			STR("baseq2/music/*"),
+			STR("baseq2/players/crakhor/*"),
+			STR("baseq2/players/cyborg/*"),
+			STR("baseq2/players/female/*"),
+			STR("baseq2/players/homer/*"),
+			STR("baseq2/players/male/*"),
+			STR("baseq2/players/zumlin/*"),
+		);
+		Windows_Pak_File_Entry* loose_files_pak = windows_platform_data.paks.ptr + windows_platform_data.paks.len - 1;
+		loose_files_pak->whole_file = (u8_Slice)arena_alloc_slice(&context.memory.perm, u8, 500 * Megabyte);
+		Pak_File_Header* loose_files_header = (Pak_File_Header*)loose_files_pak->whole_file.ptr;
+		*loose_files_header = (Pak_File_Header){id_pack_header_magic, 490 * Megabyte, 0};
+		assert(loose_files_header->info_section_offset < loose_files_pak->whole_file.len);
+		loose_files_pak->infos = (Pak_File_Infos){(Pak_File_Info*)(loose_files_pak->whole_file.ptr + loose_files_header->info_section_offset), 0};
+		Arena file_contents_arena = {.base = loose_files_pak->whole_file.ptr + sizeof(Pak_File_Header), .size = loose_files_header->info_section_offset - sizeof(Pak_File_Header)};
+		for (i64 ind = 0; ind < loose_files_dir_paths.len; ind++) {
+			String dir_path = loose_files_dir_paths.ptr[ind];
+			String dir_path_no_baseq2 = (String){dir_path.ptr + sizeof("baseq2/") - 1, dir_path.len - sizeof("baseq2/") + 1 - sizeof("*") + 1};
+			WIN32_FIND_DATA find_data = {};
+			HANDLE find_handle = FindFirstFileA(dir_path.ptr, &find_data);
+			assert(find_handle != INVALID_HANDLE_VALUE);
+			for (;;) {
+				if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+					Pak_File_Info* file_info = loose_files_pak->infos.ptr + loose_files_pak->infos.len;
+					loose_files_pak->infos.len += 1;
+					loose_files_header->info_section_len_bytes += sizeof(Pak_File_Info);
+					String file_name = string_from_cstring(find_data.cFileName);
+					String file_path_no_baseq2 = concatenate_strings(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
+					assert(file_path_no_baseq2.len < (i64)carray_count(file_info->name));
+					copy_bytes(file_info->name, file_path_no_baseq2.ptr, file_path_no_baseq2.len + 1); // NOTE: write the null terminator
+
+					String file_path = concatenate_strings(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
+					file_info->filepos = sizeof(Pak_File_Header) + file_contents_arena.used;
+					u8_Slice file_content = windows_read_entire_file(&file_contents_arena, file_path);
+					file_info->filelen = file_content.len;
+				}
+
+				BOOL find_next_result = FindNextFileA(find_handle, &find_data);
+				if (!find_next_result) {
+					FindClose(find_handle);
+					break;
+				}
+			}
+		}
 	}
 
+	// TODO: Remove
 	#if 1
 	{
 		// add the directory to the search path
@@ -87661,7 +87714,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Colormap init
 	// TODO: unglobal
-	{
+	temp_memory_block(&context.memory.temp) {
 		u8* pic = 0;
 		u8* pal = 0;
 		int width = 0;
@@ -87675,9 +87728,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			u32 b = pal[ind * 3 + 2];
 
 			u32 v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
-			d_8to24table[ind] = LittleLong(v);
+			d_8to24table[ind] = v;
 		}
-		d_8to24table[255] &= LittleLong(0xffffff);
+		d_8to24table[255] &= 0xffffff;
 
 		free(pic);
 		free(pal);
@@ -87908,6 +87961,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Cmd_ExecuteCbuf();
 
 	// NOTE: Mainloop
+	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
 	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
 
 		// if at a full screen console, don't update unless needed
