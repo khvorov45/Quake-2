@@ -136,9 +136,12 @@ typedef struct {char** ptr; i64 len;} Cstring_Slice;
 #define CSTRS(...) (Cstring_Slice){(char*[]){__VA_ARGS__}, carray_count(((char*[]){__VA_ARGS__}))}
 
 static String string_from_cstring(char* cstring) {
-	i64 len = 0;
-	while (cstring[len]) {len++;}
-	String result = {cstring, len};
+	String result = {};
+	if (cstring) {
+		i64 len = 0;
+		while (cstring[len]) {len++;}
+		result = (String){cstring, len};
+	}
 	return result;
 }
 
@@ -152,6 +155,15 @@ static bool streq(String str1, String str2) {
 				break;
 			}
 		}
+	}
+	return result;
+}
+
+static bool string_ends_with(String text, String ending) {
+	bool result = false;
+	if (text.len >= ending.len) {
+		String text_ending = (String){text.ptr + text.len - ending.len, ending.len};
+		result = streq(text_ending, ending);
 	}
 	return result;
 }
@@ -78207,7 +78219,6 @@ void	R_SwapBuffers( int );
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
 
 image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits);
-image_t	*GL_FindImage (char *name, imagetype_t type);
 void	GL_ImageList_f (void);
 
 void	GL_FreeUnusedImages (void);
@@ -78288,6 +78299,310 @@ void Draw_Char (int x, int y, int num)
 	glTexCoord2f (fcol, frow + size);
 	glVertex2f (x, y+8);
 	glEnd ();
+}
+
+static void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
+	String file_name_str = string_from_cstring(filename);
+	u8_Slice file_content = context.load_asset_by_name(file_name_str);
+	u8* raw = file_content.ptr;
+	i64 len = file_content.len;
+	// TODO: Don't load what we don't have
+	if (!raw) {
+		context.debug_log(concatenate_strings(&context.memory.temp, STRS(file_name_str, STR(" not found"))));
+		return;
+	}
+
+	pcx_t* pcx = (pcx_t*)raw;
+	raw = &pcx->data;
+
+	assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
+
+	*width = pcx->xmax + 1;
+	*height = pcx->ymax + 1;
+	u8* out = malloc((*height) * (*width));
+	*pic = out;
+	u8* pix = out;
+
+	*palette = malloc(768);
+	memcpy(*palette, (u8*)pcx + len - 768, 768);
+
+	for (i64 y = 0; y <= pcx->ymax; y++, pix += pcx->xmax+1) {
+		for (i64 x = 0; x <= pcx->xmax;) {
+			i64 dataByte = *raw++;
+
+			i64 runLength = 1;
+			if ((dataByte & 0xC0) == 0xC0) {
+				runLength = dataByte & 0x3F;
+				dataByte = *raw++;
+			}
+
+			while(runLength-- > 0) {
+				pix[x++] = dataByte;
+			}
+		}
+
+	}
+
+	assert(raw - (u8*)pcx <= len);
+}
+
+image_t *GL_LoadWal (char *name)
+{
+	miptex_t	*mt;
+	int			width, height, ofs;
+	image_t		*image;
+
+	FS_LoadFile (name, (void **)&mt);
+	if (!mt)
+	{
+		return r_notexture;
+	}
+
+	width = LittleLong (mt->width);
+	height = LittleLong (mt->height);
+	ofs = LittleLong (mt->offsets[0]);
+
+	image = GL_LoadPic (name, (u8 *)mt + ofs, width, height, it_wall, 8);
+
+	FS_FreeFile ((void *)mt);
+
+	return image;
+}
+
+typedef struct _TargaHeader {
+	unsigned char 	id_length, colormap_type, image_type;
+	unsigned short	colormap_index, colormap_length;
+	unsigned char	colormap_size;
+	unsigned short	x_origin, y_origin, width, height;
+	unsigned char	pixel_size, attributes;
+} TargaHeader;
+
+void LoadTGA (char *name, u8 **pic, int *width, int *height)
+{
+	int		columns, rows, numPixels;
+	u8	*pixbuf;
+	int		row, column;
+	u8	*buf_p;
+	u8	*buffer;
+	TargaHeader		targa_header;
+	u8			*targa_rgba;
+	u8 tmp[2];
+
+	*pic = NULL;
+
+	//
+	// load the file
+	//
+	FS_LoadFile (name, (void **)&buffer);
+	if (!buffer)
+	{
+		Com_Printf("Bad tga file %s\n", name);
+		return;
+	}
+
+	buf_p = buffer;
+
+	targa_header.id_length = *buf_p++;
+	targa_header.colormap_type = *buf_p++;
+	targa_header.image_type = *buf_p++;
+
+	tmp[0] = buf_p[0];
+	tmp[1] = buf_p[1];
+	targa_header.colormap_index = LittleShort ( *((short *)tmp) );
+	buf_p+=2;
+	tmp[0] = buf_p[0];
+	tmp[1] = buf_p[1];
+	targa_header.colormap_length = LittleShort ( *((short *)tmp) );
+	buf_p+=2;
+	targa_header.colormap_size = *buf_p++;
+	targa_header.x_origin = LittleShort ( *((short *)buf_p) );
+	buf_p+=2;
+	targa_header.y_origin = LittleShort ( *((short *)buf_p) );
+	buf_p+=2;
+	targa_header.width = LittleShort ( *((short *)buf_p) );
+	buf_p+=2;
+	targa_header.height = LittleShort ( *((short *)buf_p) );
+	buf_p+=2;
+	targa_header.pixel_size = *buf_p++;
+	targa_header.attributes = *buf_p++;
+
+	assert(targa_header.image_type == 2 || targa_header.image_type == 10);
+	assert(targa_header.colormap_type == 0 || (targa_header.pixel_size == 32 || targa_header.pixel_size == 24));
+
+	columns = targa_header.width;
+	rows = targa_header.height;
+	numPixels = columns * rows;
+
+	if (width)
+		*width = columns;
+	if (height)
+		*height = rows;
+
+	targa_rgba = malloc (numPixels*4);
+	*pic = targa_rgba;
+
+	if (targa_header.id_length != 0)
+		buf_p += targa_header.id_length;  // skip TARGA image comment
+
+	if (targa_header.image_type==2) {  // Uncompressed, RGB images
+		for(row=rows-1; row>=0; row--) {
+			pixbuf = targa_rgba + row*columns*4;
+			for(column=0; column<columns; column++) {
+				unsigned char red,green,blue,alphabyte;
+				switch (targa_header.pixel_size) {
+					case 24:
+
+							blue = *buf_p++;
+							green = *buf_p++;
+							red = *buf_p++;
+							*pixbuf++ = red;
+							*pixbuf++ = green;
+							*pixbuf++ = blue;
+							*pixbuf++ = 255;
+							break;
+					case 32:
+							blue = *buf_p++;
+							green = *buf_p++;
+							red = *buf_p++;
+							alphabyte = *buf_p++;
+							*pixbuf++ = red;
+							*pixbuf++ = green;
+							*pixbuf++ = blue;
+							*pixbuf++ = alphabyte;
+							break;
+				}
+			}
+		}
+	}
+	else if (targa_header.image_type==10) {   // Runlength encoded RGB images
+		unsigned char red,green,blue,alphabyte,packetHeader,packetSize,j;
+		for(row=rows-1; row>=0; row--) {
+			pixbuf = targa_rgba + row*columns*4;
+			for(column=0; column<columns; ) {
+				packetHeader= *buf_p++;
+				packetSize = 1 + (packetHeader & 0x7f);
+				if (packetHeader & 0x80) {        // run-length packet
+					switch (targa_header.pixel_size) {
+						case 24:
+								blue = *buf_p++;
+								green = *buf_p++;
+								red = *buf_p++;
+								alphabyte = 255;
+								break;
+						case 32:
+								blue = *buf_p++;
+								green = *buf_p++;
+								red = *buf_p++;
+								alphabyte = *buf_p++;
+								break;
+					}
+
+					for(j=0;j<packetSize;j++) {
+						*pixbuf++=red;
+						*pixbuf++=green;
+						*pixbuf++=blue;
+						*pixbuf++=alphabyte;
+						column++;
+						if (column==columns) { // run spans across rows
+							column=0;
+							if (row>0)
+								row--;
+							else
+								goto breakOut;
+							pixbuf = targa_rgba + row*columns*4;
+						}
+					}
+				}
+				else {                            // non run-length packet
+					for(j=0;j<packetSize;j++) {
+						switch (targa_header.pixel_size) {
+							case 24:
+									blue = *buf_p++;
+									green = *buf_p++;
+									red = *buf_p++;
+									*pixbuf++ = red;
+									*pixbuf++ = green;
+									*pixbuf++ = blue;
+									*pixbuf++ = 255;
+									break;
+							case 32:
+									blue = *buf_p++;
+									green = *buf_p++;
+									red = *buf_p++;
+									alphabyte = *buf_p++;
+									*pixbuf++ = red;
+									*pixbuf++ = green;
+									*pixbuf++ = blue;
+									*pixbuf++ = alphabyte;
+									break;
+						}
+						column++;
+						if (column==columns) { // pixel packet run spans across rows
+							column=0;
+							if (row>0)
+								row--;
+							else
+								goto breakOut;
+							pixbuf = targa_rgba + row*columns*4;
+						}
+					}
+				}
+			}
+			breakOut:;
+		}
+	}
+
+	FS_FreeFile (buffer);
+}
+
+// Finds or loads the given image
+static image_t* GL_FindImage(char* name, imagetype_t type) {
+	image_t* target_image = 0;
+
+	String name_str = string_from_cstring(name);
+	if (name_str.ptr && name_str.len >= 5) {
+
+		// look for it first
+		for (i64 ind = 0; !target_image && ind < numgltextures; ind++) {
+			image_t* image = gltextures + ind;
+			if (!strcmp(name, image->name)) {
+				image->registration_sequence = registration_sequence;
+				target_image = image;
+			}
+		}
+
+		// Then load
+		if (!target_image) {
+			u8* pic = NULL;
+			u8* palette = NULL;
+			int width = 0;
+			int height = 0;
+
+			if (string_ends_with(name_str, STR(".pcx"))) {
+				LoadPCX(name, &pic, &palette, &width, &height);
+				if (pic) {
+					target_image = GL_LoadPic(name, pic, width, height, type, 8);
+				}
+			} else if (string_ends_with(name_str, STR(".wal"))) {
+				target_image = GL_LoadWal(name);
+			} else if (string_ends_with(name_str, STR(".tga"))) {
+				LoadTGA(name, &pic, &width, &height);
+				if (pic) {
+					target_image = GL_LoadPic(name, pic, width, height, type, 32);
+				}
+			}
+
+			if (pic) {
+				free(pic);
+			}
+
+			if (palette) {
+				free(palette);
+			}
+		}
+	}
+
+	return target_image;
 }
 
 image_t	*Draw_FindPic (char *name)
@@ -78764,268 +79079,7 @@ void Scrap_Upload (void)
 	scrap_dirty = false;
 }
 
-static void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
-	String file_name_str = string_from_cstring(filename);
-	u8_Slice file_content = context.load_asset_by_name(file_name_str);
-	u8* raw = file_content.ptr;
-	i64 len = file_content.len;
-	// TODO: Don't load what we don't have
-	if (!raw) {
-		context.debug_log(concatenate_strings(&context.memory.temp, STRS(file_name_str, STR(" not found"))));
-		return;
-	}
-
-	pcx_t* pcx = (pcx_t*)raw;
-	raw = &pcx->data;
-
-	assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
-
-	*width = pcx->xmax + 1;
-	*height = pcx->ymax + 1;
-	u8* out = malloc((*height) * (*width));
-	*pic = out;
-	u8* pix = out;
-
-	*palette = malloc(768);
-	memcpy(*palette, (u8*)pcx + len - 768, 768);
-
-	for (i64 y = 0; y <= pcx->ymax; y++, pix += pcx->xmax+1) {
-		for (i64 x = 0; x <= pcx->xmax;) {
-			i64 dataByte = *raw++;
-
-			i64 runLength = 1;
-			if ((dataByte & 0xC0) == 0xC0) {
-				runLength = dataByte & 0x3F;
-				dataByte = *raw++;
-			}
-
-			while(runLength-- > 0) {
-				pix[x++] = dataByte;
-			}
-		}
-
-	}
-
-	assert(raw - (u8*)pcx <= len);
-}
-
-/*
-=========================================================
-
-TARGA LOADING
-
-=========================================================
-*/
-
-typedef struct _TargaHeader {
-	unsigned char 	id_length, colormap_type, image_type;
-	unsigned short	colormap_index, colormap_length;
-	unsigned char	colormap_size;
-	unsigned short	x_origin, y_origin, width, height;
-	unsigned char	pixel_size, attributes;
-} TargaHeader;
-
-
-/*
-=============
-LoadTGA
-=============
-*/
-void LoadTGA (char *name, u8 **pic, int *width, int *height)
-{
-	int		columns, rows, numPixels;
-	u8	*pixbuf;
-	int		row, column;
-	u8	*buf_p;
-	u8	*buffer;
-	TargaHeader		targa_header;
-	u8			*targa_rgba;
-	u8 tmp[2];
-
-	*pic = NULL;
-
-	//
-	// load the file
-	//
-	FS_LoadFile (name, (void **)&buffer);
-	if (!buffer)
-	{
-		Com_Printf("Bad tga file %s\n", name);
-		return;
-	}
-
-	buf_p = buffer;
-
-	targa_header.id_length = *buf_p++;
-	targa_header.colormap_type = *buf_p++;
-	targa_header.image_type = *buf_p++;
-
-	tmp[0] = buf_p[0];
-	tmp[1] = buf_p[1];
-	targa_header.colormap_index = LittleShort ( *((short *)tmp) );
-	buf_p+=2;
-	tmp[0] = buf_p[0];
-	tmp[1] = buf_p[1];
-	targa_header.colormap_length = LittleShort ( *((short *)tmp) );
-	buf_p+=2;
-	targa_header.colormap_size = *buf_p++;
-	targa_header.x_origin = LittleShort ( *((short *)buf_p) );
-	buf_p+=2;
-	targa_header.y_origin = LittleShort ( *((short *)buf_p) );
-	buf_p+=2;
-	targa_header.width = LittleShort ( *((short *)buf_p) );
-	buf_p+=2;
-	targa_header.height = LittleShort ( *((short *)buf_p) );
-	buf_p+=2;
-	targa_header.pixel_size = *buf_p++;
-	targa_header.attributes = *buf_p++;
-
-	assert(targa_header.image_type == 2 || targa_header.image_type == 10);
-	assert(targa_header.colormap_type == 0 || (targa_header.pixel_size == 32 || targa_header.pixel_size == 24));
-
-	columns = targa_header.width;
-	rows = targa_header.height;
-	numPixels = columns * rows;
-
-	if (width)
-		*width = columns;
-	if (height)
-		*height = rows;
-
-	targa_rgba = malloc (numPixels*4);
-	*pic = targa_rgba;
-
-	if (targa_header.id_length != 0)
-		buf_p += targa_header.id_length;  // skip TARGA image comment
-
-	if (targa_header.image_type==2) {  // Uncompressed, RGB images
-		for(row=rows-1; row>=0; row--) {
-			pixbuf = targa_rgba + row*columns*4;
-			for(column=0; column<columns; column++) {
-				unsigned char red,green,blue,alphabyte;
-				switch (targa_header.pixel_size) {
-					case 24:
-
-							blue = *buf_p++;
-							green = *buf_p++;
-							red = *buf_p++;
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = 255;
-							break;
-					case 32:
-							blue = *buf_p++;
-							green = *buf_p++;
-							red = *buf_p++;
-							alphabyte = *buf_p++;
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alphabyte;
-							break;
-				}
-			}
-		}
-	}
-	else if (targa_header.image_type==10) {   // Runlength encoded RGB images
-		unsigned char red,green,blue,alphabyte,packetHeader,packetSize,j;
-		for(row=rows-1; row>=0; row--) {
-			pixbuf = targa_rgba + row*columns*4;
-			for(column=0; column<columns; ) {
-				packetHeader= *buf_p++;
-				packetSize = 1 + (packetHeader & 0x7f);
-				if (packetHeader & 0x80) {        // run-length packet
-					switch (targa_header.pixel_size) {
-						case 24:
-								blue = *buf_p++;
-								green = *buf_p++;
-								red = *buf_p++;
-								alphabyte = 255;
-								break;
-						case 32:
-								blue = *buf_p++;
-								green = *buf_p++;
-								red = *buf_p++;
-								alphabyte = *buf_p++;
-								break;
-					}
-
-					for(j=0;j<packetSize;j++) {
-						*pixbuf++=red;
-						*pixbuf++=green;
-						*pixbuf++=blue;
-						*pixbuf++=alphabyte;
-						column++;
-						if (column==columns) { // run spans across rows
-							column=0;
-							if (row>0)
-								row--;
-							else
-								goto breakOut;
-							pixbuf = targa_rgba + row*columns*4;
-						}
-					}
-				}
-				else {                            // non run-length packet
-					for(j=0;j<packetSize;j++) {
-						switch (targa_header.pixel_size) {
-							case 24:
-									blue = *buf_p++;
-									green = *buf_p++;
-									red = *buf_p++;
-									*pixbuf++ = red;
-									*pixbuf++ = green;
-									*pixbuf++ = blue;
-									*pixbuf++ = 255;
-									break;
-							case 32:
-									blue = *buf_p++;
-									green = *buf_p++;
-									red = *buf_p++;
-									alphabyte = *buf_p++;
-									*pixbuf++ = red;
-									*pixbuf++ = green;
-									*pixbuf++ = blue;
-									*pixbuf++ = alphabyte;
-									break;
-						}
-						column++;
-						if (column==columns) { // pixel packet run spans across rows
-							column=0;
-							if (row>0)
-								row--;
-							else
-								goto breakOut;
-							pixbuf = targa_rgba + row*columns*4;
-						}
-					}
-				}
-			}
-			breakOut:;
-		}
-	}
-
-	FS_FreeFile (buffer);
-}
-
-
-/*
-====================================================================
-
-IMAGE FLOOD FILLING
-
-====================================================================
-*/
-
-
-/*
-=================
-Mod_FloodFillSkin
-
-Fill background pixels so mipmapping doesn't have haloes
-=================
-*/
+// Fill background pixels so mipmapping doesn't have haloes
 
 typedef struct
 {
@@ -79465,100 +79519,6 @@ nonscrap:
 	return image;
 }
 
-
-/*
-================
-GL_LoadWal
-================
-*/
-image_t *GL_LoadWal (char *name)
-{
-	miptex_t	*mt;
-	int			width, height, ofs;
-	image_t		*image;
-
-	FS_LoadFile (name, (void **)&mt);
-	if (!mt)
-	{
-		Com_Printf("GL_FindImage: can't load %s\n", name);
-		return r_notexture;
-	}
-
-	width = LittleLong (mt->width);
-	height = LittleLong (mt->height);
-	ofs = LittleLong (mt->offsets[0]);
-
-	image = GL_LoadPic (name, (u8 *)mt + ofs, width, height, it_wall, 8);
-
-	FS_FreeFile ((void *)mt);
-
-	return image;
-}
-
-/*
-===============
-GL_FindImage
-
-Finds or loads the given image
-===============
-*/
-image_t	*GL_FindImage (char *name, imagetype_t type)
-{
-	image_t	*image;
-	int		i, len;
-	u8	*pic, *palette;
-	int		width, height;
-
-	if (!name)
-		return NULL;
-	len = strlen(name);
-	if (len<5)
-		return NULL;
-
-	// look for it
-	for (i=0, image=gltextures ; i<numgltextures ; i++,image++)
-	{
-		if (!strcmp(name, image->name))
-		{
-			image->registration_sequence = registration_sequence;
-			return image;
-		}
-	}
-
-	//
-	// load the pic from disk
-	//
-	pic = NULL;
-	palette = NULL;
-	if (!strcmp(name+len-4, ".pcx"))
-	{
-		LoadPCX (name, &pic, &palette, &width, &height);
-		if (!pic)
-			return NULL;
-		image = GL_LoadPic (name, pic, width, height, type, 8);
-	}
-	else if (!strcmp(name+len-4, ".wal"))
-	{
-		image = GL_LoadWal (name);
-	}
-	else if (!strcmp(name+len-4, ".tga"))
-	{
-		LoadTGA (name, &pic, &width, &height);
-		if (!pic)
-			return NULL;
-		image = GL_LoadPic (name, pic, width, height, type, 32);
-	}
-	else
-		return NULL;
-
-
-	if (pic)
-		free(pic);
-	if (palette)
-		free(palette);
-
-	return image;
-}
 
 
 
