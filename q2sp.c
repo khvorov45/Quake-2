@@ -78131,7 +78131,6 @@ static cvar_t* gl_particle_att_a;
 static cvar_t* gl_particle_att_b;
 static cvar_t* gl_particle_att_c;
 static cvar_t* gl_ext_swapinterval;
-static cvar_t* gl_ext_palettedtexture;
 static cvar_t* gl_ext_multitexture;
 static cvar_t* gl_ext_pointparameters;
 static cvar_t* gl_ext_compiled_vertex_array;
@@ -86613,7 +86612,6 @@ void VID_Front_f( void )
 }
 
 static cvar_t *gl_picmip;
-static cvar_t *gl_ext_palettedtexture;
 
 static cvar_t *sw_mode;
 static cvar_t *sw_stipplealpha;
@@ -86632,7 +86630,6 @@ static menuframework_s	s_opengl_menu;
 
 static menuslider_s		s_tq_slider;
 static menulist_s  		s_stipple_box;
-static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
@@ -86648,7 +86645,6 @@ static void ApplyChanges(void* unused) {
 	COM_SetValueCvar("sw_stipplealpha", s_stipple_box.curvalue);
 	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
 
-	COM_SetValueCvar("gl_ext_palettedtexture", s_paletted_texture_box.curvalue);
 	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
 
 	M_ForceMenuOff();
@@ -86669,10 +86665,6 @@ static void VID_MenuInit() {
 
 	if (!sw_mode) {
 		sw_mode = COM_GetCvar("sw_mode", "0", 0);
-	}
-
-	if (!gl_ext_palettedtexture) {
-		gl_ext_palettedtexture = COM_GetCvar("gl_ext_palettedtexture", "1", CVAR_ARCHIVE);
 	}
 
 	if (!gl_finish) {
@@ -86713,13 +86705,6 @@ static void VID_MenuInit() {
 	s_tq_slider.maxvalue = 3;
 	s_tq_slider.curvalue = 3-gl_picmip->value;
 
-	s_paletted_texture_box.generic.type = MTYPE_SPINCONTROL;
-	s_paletted_texture_box.generic.x	= 0;
-	s_paletted_texture_box.generic.y	= 70;
-	s_paletted_texture_box.generic.name	= "8-bit textures";
-	s_paletted_texture_box.itemnames = yesno_names;
-	s_paletted_texture_box.curvalue = gl_ext_palettedtexture->value;
-
 	s_finish_box.generic.type = MTYPE_SPINCONTROL;
 	s_finish_box.generic.x	= 0;
 	s_finish_box.generic.y	= 80;
@@ -86728,7 +86713,6 @@ static void VID_MenuInit() {
 	s_finish_box.itemnames = yesno_names;
 
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
-	Menu_AddItem(&s_opengl_menu, (void*)&s_paletted_texture_box);
 	Menu_AddItem(&s_opengl_menu, (void*)&s_finish_box);
 
 	Menu_AddItem(&s_opengl_menu, (void*) &s_defaults_action);
@@ -87448,7 +87432,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
 		gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
 		gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-		gl_ext_palettedtexture = COM_GetCvar( "gl_ext_palettedtexture", "1", CVAR_ARCHIVE );
 		gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
 		gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
 		gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
@@ -87715,25 +87698,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Colormap init
 	// TODO: unglobal
 	temp_memory_block(&context.memory.temp) {
-		u8* pic = 0;
-		u8* pal = 0;
-		int width = 0;
-		int height = 0;
-		LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
-		assert(pal);
 
-		for (u32 ind = 0; ind < 256; ind++) {
-			u32 r = pal[ind * 3 + 0];
-			u32 g = pal[ind * 3 + 1];
-			u32 b = pal[ind * 3 + 2];
+		// NOTE: Palette is just at the end of the file
+		u8_Slice palette = {};
+		i64 palette_value_count = 256;
+		{
+			u8_Slice file_content = context.load_asset_by_name(STR("pics/colormap.pcx"));
+			assert(file_content.ptr);
+			palette.len = palette_value_count * 3; // NOTE: Each entry is RBG triplet
+			assert(file_content.len >= palette.len);
+			palette.ptr = file_content.ptr + file_content.len - palette.len;
+		}
 
-			u32 v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
-			d_8to24table[ind] = v;
+		for (i64 ind = 0; ind < palette_value_count; ind++) {
+			u32 red = palette.ptr[ind * 3 + 0];
+			u32 grn = palette.ptr[ind * 3 + 1];
+			u32 blu = palette.ptr[ind * 3 + 2];
+
+			u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
+			d_8to24table[ind] = val;
 		}
 		d_8to24table[255] &= 0xffffff;
-
-		free(pic);
-		free(pal);
 	}
 
 	// NOTE: Game window resolution
