@@ -87630,6 +87630,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				}
 			}
 		}
+
+		// NOTE: Process the files to get the data we actually want
+		// TODO: Once all the files are processed, the raw paks/loose files can move to temp memory
+
+		// NOTE: Colormap init
+		// TODO: unglobal
+		{
+			// NOTE: Palette is just at the end of the file
+			u8_Slice palette = {};
+			i64 palette_value_count = 256;
+			{
+				u8_Slice file_content = context.load_asset_by_name(STR("pics/colormap.pcx"));
+				assert(file_content.ptr);
+				palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
+				assert(file_content.len >= palette.len);
+				palette.ptr = file_content.ptr + file_content.len - palette.len;
+			}
+
+			for (i64 ind = 0; ind < palette_value_count; ind++) {
+				u32 red = palette.ptr[ind * 3 + 0];
+				u32 grn = palette.ptr[ind * 3 + 1];
+				u32 blu = palette.ptr[ind * 3 + 2];
+
+				u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
+				d_8to24table[ind] = val;
+			}
+			d_8to24table[255] &= 0xffffff;
+		}
 	}
 
 	// TODO: Remove
@@ -87693,32 +87721,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cbuf_AddText("exec config.cfg\n");
 
 		Cmd_ExecuteCbuf();
-	}
-
-	// NOTE: Colormap init
-	// TODO: unglobal
-	temp_memory_block(&context.memory.temp) {
-
-		// NOTE: Palette is just at the end of the file
-		u8_Slice palette = {};
-		i64 palette_value_count = 256;
-		{
-			u8_Slice file_content = context.load_asset_by_name(STR("pics/colormap.pcx"));
-			assert(file_content.ptr);
-			palette.len = palette_value_count * 3; // NOTE: Each entry is RBG triplet
-			assert(file_content.len >= palette.len);
-			palette.ptr = file_content.ptr + file_content.len - palette.len;
-		}
-
-		for (i64 ind = 0; ind < palette_value_count; ind++) {
-			u32 red = palette.ptr[ind * 3 + 0];
-			u32 grn = palette.ptr[ind * 3 + 1];
-			u32 blu = palette.ptr[ind * 3 + 2];
-
-			u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
-			d_8to24table[ind] = val;
-		}
-		d_8to24table[255] &= 0xffffff;
 	}
 
 	// NOTE: Game window resolution
