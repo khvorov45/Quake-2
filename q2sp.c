@@ -5350,20 +5350,10 @@ enum svc_ops_e {
 	svc_frame
 };
 
-static FILE* log_stats_file;
-
-static cvar_t* host_speeds;
-static cvar_t* log_stats;
 static cvar_t* developer;
 static cvar_t* timescale;
 static cvar_t* fixedtime;
 static cvar_t* showtrace;
-
-// host_speeds times
-static int time_before_game;
-static int time_after_game;
-static int time_before_ref;
-static int time_after_ref;
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
@@ -12693,17 +12683,7 @@ void SV_PrepWorldFrame (void)
 
 }
 
-
-/*
-=================
-SV_RunGameFrame
-=================
-*/
-void SV_RunGameFrame (void)
-{
-	if (host_speeds->value)
-		time_before_game = Sys_Milliseconds ();
-
+void SV_RunGameFrame() {
 	// we always need to bump framenum, even if we
 	// don't run the world, otherwise the delta
 	// compression can get confused when a client
@@ -12724,10 +12704,6 @@ void SV_RunGameFrame (void)
 			svs.realtime = sv.time;
 		}
 	}
-
-	if (host_speeds->value)
-		time_after_game = Sys_Milliseconds ();
-
 }
 
 //============================================================================
@@ -23486,7 +23462,6 @@ cvar_t		*scr_graphshift;
 char		crosshair_pic[MAX_QPATH];
 int			crosshair_width, crosshair_height;
 
-void SCR_TimeRefresh_f (void);
 void SCR_Loading_f (void);
 
 
@@ -24104,54 +24079,10 @@ typedef struct model_s {
 	void		*extradata;
 } model_t;
 
-static cvar_t* r_speeds;
-static cvar_t* gl_finish;
-
 static refdef_t r_newrefdef;
 static model_t* r_worldmodel;
 
-static int c_brush_polys;
-static int c_alias_polys;
-
 void R_RenderFrame(refdef_t *fd);
-
-void SCR_TimeRefresh_f (void)
-{
-	int		i;
-	int		start, stop;
-	float	time;
-
-	if ( cls.state != ca_active )
-		return;
-
-	start = Sys_Milliseconds ();
-
-	if (cmd_argc == 2)
-	{	// run without page flipping
-		R_BeginFrame();
-		for (i=0 ; i<128 ; i++)
-		{
-			cl.refdef.viewangles[1] = i/128.0*360.0;
-			R_RenderFrame(&cl.refdef);
-		}
-		GLimp_EndFrame();
-	}
-	else
-	{
-		for (i=0 ; i<128 ; i++)
-		{
-			cl.refdef.viewangles[1] = i/128.0*360.0;
-
-			R_BeginFrame();
-			R_RenderFrame(&cl.refdef);
-			GLimp_EndFrame();
-		}
-	}
-
-	stop = Sys_Milliseconds ();
-	time = (stop-start)/1000.0;
-	Com_Printf ("%f seconds (%f fps)\n", time, 128/time);
-}
 
 #define STAT_MINUS		10	// num frame for '-' stats digit
 char		*sb_nums[2][11] =
@@ -26865,9 +26796,6 @@ void V_RenderView()
 	R_RenderFrame(&cl.refdef);
 	if (cl_stats->value)
 		Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
-	if ( log_stats->value && ( log_stats_file != 0 ) )
-		fprintf( log_stats_file, "%i,%i,%i,",r_numentities, r_numdlights, r_numparticles);
-
 
 	SCR_DrawCrosshair ();
 }
@@ -78128,9 +78056,6 @@ extern	int		gl_alpha_format;
 extern	int		gl_tex_solid_format;
 extern	int		gl_tex_alpha_format;
 
-extern	int		c_visible_lightmaps;
-extern	int		c_visible_textures;
-
 extern	float	r_world_matrix[16];
 
 static cvar_t* gl_nosubimage;
@@ -80827,12 +80752,6 @@ void R_DrawAliasModel (Entity *e)
 	VectorNormalize (shadevector);
 
 	//
-	// locate the proper data
-	//
-
-	c_alias_polys += paliashdr->num_tris;
-
-	//
 	// draw all the triangles
 	//
 	if (currententity->flags & RF_DEPTHHACK) // hack the depth range to prevent view model from poking into walls
@@ -82812,9 +82731,6 @@ msurface_t	*r_alpha_surfaces;
 
 #define	MAX_LIGHTMAPS	128
 
-int		c_visible_lightmaps;
-int		c_visible_textures;
-
 #define GL_LIGHTMAP_FORMAT GL_RGBA
 
 typedef struct
@@ -83045,9 +82961,6 @@ void R_BlendLightmaps (void)
 		}
 	}
 
-	if ( currentmodel == r_worldmodel )
-		c_visible_lightmaps = 0;
-
 	/*
 	** render static lightmaps first
 	*/
@@ -83055,8 +82968,6 @@ void R_BlendLightmaps (void)
 	{
 		if ( gl_lms.lightmap_surfaces[i] )
 		{
-			if (currentmodel == r_worldmodel)
-				c_visible_lightmaps++;
 			GL_Bind( gl_state.lightmap_textures + i);
 
 			for ( surf = gl_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain )
@@ -83075,9 +82986,6 @@ void R_BlendLightmaps (void)
 		LM_InitBlock();
 
 		GL_Bind( gl_state.lightmap_textures+0 );
-
-		if (currentmodel == r_worldmodel)
-			c_visible_lightmaps++;
 
 		newdrawsurf = gl_lms.lightmap_surfaces[0];
 
@@ -83159,8 +83067,6 @@ void R_RenderBrushPoly (msurface_t *fa)
 	int			maps;
 	image_t		*image;
 	bool is_dynamic = false;
-
-	c_brush_polys++;
 
 	image = R_TextureAnimation (fa->texinfo);
 
@@ -83284,7 +83190,6 @@ void R_DrawAlphaSurfaces (void)
 	for (s=r_alpha_surfaces ; s ; s=s->texturechain)
 	{
 		GL_Bind(s->texinfo->image->texnum);
-		c_brush_polys++;
 		if (s->texinfo->flags & SURF_TRANS33)
 			glColor4f (intens,intens,intens,0.33);
 		else if (s->texinfo->flags & SURF_TRANS66)
@@ -83310,8 +83215,6 @@ void DrawTextureChains (void)
 	msurface_t	*s;
 	image_t		*image;
 
-	c_visible_textures = 0;
-
 	{
 		for ( i = 0, image=gltextures ; i<numgltextures ; i++,image++)
 		{
@@ -83320,7 +83223,6 @@ void DrawTextureChains (void)
 			s = image->texturechain;
 			if (!s)
 				continue;
-			c_visible_textures++;
 
 			for ( ; s ; s=s->texturechain)
 				R_RenderBrushPoly (s);
@@ -84578,11 +84480,6 @@ void R_RenderFrame(refdef_t *fd) {
 
 	assert(r_worldmodel || (r_newrefdef.rdflags & RDF_NOWORLDMODEL));
 
-	if (r_speeds->value) {
-		c_brush_polys = 0;
-		c_alias_polys = 0;
-	}
-
 	// NOTE: dynamic lights
 	{
 		r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
@@ -84590,10 +84487,6 @@ void R_RenderFrame(refdef_t *fd) {
 		for (int i = 0 ; i < r_newrefdef.num_dlights; i++, l++) {
 			R_MarkLights(l, 1 << i, r_worldmodel->nodes);
 		}
-	}
-
-	if (gl_finish->value) {
-		glFinish();
 	}
 
 	{
@@ -84636,9 +84529,6 @@ void R_RenderFrame(refdef_t *fd) {
 		for (i64 i = 0; i < 4; i++) {
 			v_blend[i] = r_newrefdef.blend[i];
 		}
-
-		c_brush_polys = 0;
-		c_alias_polys = 0;
 
 		// clear out the portion of the screen that the NOWORLDMODEL defines
 		if (r_newrefdef.rdflags & RDF_NOWORLDMODEL) {
@@ -84735,10 +84625,6 @@ void R_RenderFrame(refdef_t *fd) {
 
 	R_DrawAlphaSurfaces();
 	R_Flash();
-
-	if (r_speeds->value) {
-		Com_Printf("%4i wpoly %4i epoly %i tex %i lmaps\n", c_brush_polys, c_alias_polys, c_visible_textures, c_visible_lightmaps);
-	}
 
 	R_SetLightLevel();
 	R_SetGL2D();
@@ -86503,7 +86389,6 @@ void VID_Front_f( void )
 static cvar_t *gl_picmip;
 
 static cvar_t *sw_mode;
-static cvar_t *sw_stipplealpha;
 
 extern void M_ForceMenuOff( void );
 
@@ -86518,8 +86403,6 @@ MENU INTERACTION
 static menuframework_s	s_opengl_menu;
 
 static menuslider_s		s_tq_slider;
-static menulist_s  		s_stipple_box;
-static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
 
@@ -86531,10 +86414,7 @@ static void ResetDefaults(void* unused) {
 static void ApplyChanges(void* unused) {
 	UNUSED(unused);
 
-	COM_SetValueCvar("sw_stipplealpha", s_stipple_box.curvalue);
 	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
-
-	COM_SetValueCvar("gl_finish", s_finish_box.curvalue);
 
 	M_ForceMenuOff();
 }
@@ -86546,22 +86426,12 @@ static void CancelChanges(void* unused) {
 }
 
 static void VID_MenuInit() {
-	static const char *yesno_names[] = {"no", "yes", 0};
-
 	if (!gl_picmip) {
 		gl_picmip = COM_GetCvar("gl_picmip", "0", 0);
 	}
 
 	if (!sw_mode) {
 		sw_mode = COM_GetCvar("sw_mode", "0", 0);
-	}
-
-	if (!gl_finish) {
-		gl_finish = COM_GetCvar("gl_finish", "0", CVAR_ARCHIVE);
-	}
-
-	if (!sw_stipplealpha) {
-		sw_stipplealpha = COM_GetCvar( "sw_stipplealpha", "0", CVAR_ARCHIVE );
 	}
 
 	s_opengl_menu.x = viddef.width * 0.50;
@@ -86579,31 +86449,15 @@ static void VID_MenuInit() {
 	s_cancel_action.generic.y    = 100;
 	s_cancel_action.generic.callback = CancelChanges;
 
-	s_stipple_box.generic.type = MTYPE_SPINCONTROL;
-	s_stipple_box.generic.x	= 0;
-	s_stipple_box.generic.y	= 60;
-	s_stipple_box.generic.name	= "stipple alpha";
-	s_stipple_box.curvalue = sw_stipplealpha->value;
-	s_stipple_box.itemnames = yesno_names;
-
-	s_tq_slider.generic.type	= MTYPE_SLIDER;
-	s_tq_slider.generic.x		= 0;
-	s_tq_slider.generic.y		= 60;
-	s_tq_slider.generic.name	= "texture quality";
+	s_tq_slider.generic.type = MTYPE_SLIDER;
+	s_tq_slider.generic.x = 0;
+	s_tq_slider.generic.y = 60;
+	s_tq_slider.generic.name = "texture quality";
 	s_tq_slider.minvalue = 0;
 	s_tq_slider.maxvalue = 3;
-	s_tq_slider.curvalue = 3-gl_picmip->value;
-
-	s_finish_box.generic.type = MTYPE_SPINCONTROL;
-	s_finish_box.generic.x	= 0;
-	s_finish_box.generic.y	= 80;
-	s_finish_box.generic.name	= "sync every frame";
-	s_finish_box.curvalue = gl_finish->value;
-	s_finish_box.itemnames = yesno_names;
+	s_tq_slider.curvalue = 3 - gl_picmip->value;
 
 	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
-	Menu_AddItem(&s_opengl_menu, (void*)&s_finish_box);
-
 	Menu_AddItem(&s_opengl_menu, (void*) &s_defaults_action);
 	Menu_AddItem(&s_opengl_menu, (void*) &s_cancel_action);
 
@@ -86693,8 +86547,6 @@ static void GLimp_EndFrame() {
 }
 
 static void SV_Frame(int msec) {
-	time_before_game = time_after_game = 0;
-
 	// if server is not active, do nothing
 	if (!svs.initialized)
 		return;
@@ -86702,7 +86554,7 @@ static void SV_Frame(int msec) {
 	svs.realtime += msec;
 
 	// keep the random time dependent
-	rand ();
+	rand();
 
 	// check timeouts
 	SV_CheckTimeouts ();
@@ -86745,7 +86597,6 @@ static void SV_Frame(int msec) {
 
 void CL_Frame (int msec) {
 	static int	extratime;
-	static int  lasttimecalled;
 
 	extratime += msec;
 
@@ -86786,11 +86637,7 @@ void CL_Frame (int msec) {
 		CL_PrepRefresh ();
 
 	// update the screen
-	if (host_speeds->value)
-		time_before_ref = Sys_Milliseconds ();
 	SCR_UpdateScreen ();
-	if (host_speeds->value)
-		time_after_ref = Sys_Milliseconds ();
 
 	// update audio
 	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
@@ -86802,49 +86649,9 @@ void CL_Frame (int msec) {
 	SCR_RunConsole ();
 
 	cls.framecount++;
-
-	if ( log_stats->value )
-	{
-		if ( cls.state == ca_active )
-		{
-			if ( !lasttimecalled )
-			{
-				lasttimecalled = Sys_Milliseconds();
-				if ( log_stats_file )
-					fprintf( log_stats_file, "0\n" );
-			}
-			else
-			{
-				int now = Sys_Milliseconds();
-
-				if ( log_stats_file )
-					fprintf( log_stats_file, "%d\n", now - lasttimecalled );
-				lasttimecalled = now;
-			}
-		}
-	}
 }
 
 static void Qcommon_Frame(int delta_time_msec) {
-	if (log_stats->modified) {
-		log_stats->modified = false;
-		if (log_stats->value) {
-			if (log_stats_file) {
-				fclose( log_stats_file );
-				log_stats_file = 0;
-			}
-			log_stats_file = fopen("stats.log", "w");
-			if (log_stats_file) {
-				fprintf( log_stats_file, "entities,dlights,parts,frame time\n" );
-			}
-		} else {
-			if (log_stats_file){
-				fclose( log_stats_file );
-				log_stats_file = 0;
-			}
-		}
-	}
-
 	if (fixedtime->value) {
 		delta_time_msec = fixedtime->value;
 	} else if (timescale->value) {
@@ -86862,32 +86669,8 @@ static void Qcommon_Frame(int delta_time_msec) {
 	}
 
 	Cmd_ExecuteCbuf();
-
-	int time_before = 0;
-	if (host_speeds->value) {
-		time_before = Sys_Milliseconds();
-	}
-
 	SV_Frame(delta_time_msec);
-
-	int time_between = 0;
-	if (host_speeds->value) {
-		time_between = Sys_Milliseconds();
-	}
-
 	CL_Frame(delta_time_msec);
-
-	if (host_speeds->value) {
-		int time_after = Sys_Milliseconds();
-		int all = time_after - time_before;
-		int sv = time_between - time_before;
-		int cl = time_after - time_between;
-		int gm = time_after_game - time_before_game;
-		int rf = time_after_ref - time_before_ref;
-		sv -= gm;
-		cl -= rf;
-		Com_Printf ("all:%3i sv:%3i gm:%3i cl:%3i rf:%3i\n", all, sv, gm, cl, rf);
-	}
 }
 
 //
@@ -87177,7 +86960,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("menu_options", M_Menu_Options_f);
 		Cmd_AddCommand("menu_keys", M_Menu_Keys_f);
 		Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
-		Cmd_AddCommand("timerefresh",SCR_TimeRefresh_f);
 		Cmd_AddCommand("loading",SCR_Loading_f);
 		Cmd_AddCommand("sky",SCR_Sky_f);
 		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
@@ -87256,8 +87038,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		host_speeds = COM_GetCvar("host_speeds", "0", 0);
-		log_stats = COM_GetCvar("log_stats", "0", 0);
 		developer = COM_GetCvar("developer", "0", 0);
 		timescale = COM_GetCvar("timescale", "1", 0);
 		fixedtime = COM_GetCvar("fixedtime", "0", 0);
@@ -87289,7 +87069,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		r_novis = COM_GetCvar("r_novis", "0", 0);
 		r_nocull = COM_GetCvar("r_nocull", "0", 0);
 		r_lerpmodels = COM_GetCvar("r_lerpmodels", "1", 0);
-		r_speeds = COM_GetCvar("r_speeds", "0", 0);
 		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
 		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
@@ -87309,7 +87088,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
 		gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
 		gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
-		gl_finish = COM_GetCvar ("gl_finish", "0", CVAR_ARCHIVE);
 		gl_clear = COM_GetCvar ("gl_clear", "0", 0);
 		gl_cull = COM_GetCvar ("gl_cull", "1", 0);
 		gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
