@@ -24104,7 +24104,6 @@ typedef struct model_s {
 	void		*extradata;
 } model_t;
 
-static cvar_t* r_norefresh;
 static cvar_t* r_speeds;
 static cvar_t* gl_finish;
 
@@ -84575,10 +84574,6 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 
 // r_newrefdef must be set before the first call
 void R_RenderFrame(refdef_t *fd) {
-	if (r_norefresh->value) {
-		return;
-	}
-
 	r_newrefdef = *fd;
 
 	assert(r_worldmodel || (r_newrefdef.rdflags & RDF_NOWORLDMODEL));
@@ -87288,7 +87283,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
 		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-		r_norefresh = COM_GetCvar("r_norefresh", "0", 0);
 		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
 		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
 		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
