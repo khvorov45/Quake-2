@@ -78176,9 +78176,7 @@ void GL_TexEnv( GLenum value );
 void R_LightPoint (vec3_t p, vec3_t color);
 
 
-//====================================================================
-
-extern	unsigned	d_8to24table[256];
+static unsigned d_8to24table[256];
 
 extern	int		registration_sequence;
 
@@ -78222,11 +78220,6 @@ image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t typ
 void	GL_ImageList_f (void);
 
 void	GL_FreeUnusedImages (void);
-
-/*
-** GL extension emulation functions
-*/
-void GL_DrawParticles( int n, const particle_t particles[], const unsigned colortable[768] );
 
 typedef struct
 {
@@ -78815,8 +78808,6 @@ static u8			 intensitytable[256];
 static unsigned char gammatable[256];
 
 cvar_t		*intensity;
-
-unsigned	d_8to24table[256];
 
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
@@ -82319,69 +82310,6 @@ void R_DrawEntitiesOnList (void)
 }
 
 /*
-** GL_DrawParticles
-**
-*/
-void GL_DrawParticles( int num_particles, const particle_t particles[], const unsigned colortable[768] )
-{
-	const particle_t *p;
-	int				i;
-	vec3_t			up, right;
-	float			scale;
-	u8			color[4];
-
-	GL_Bind(r_particletexture->texnum);
-	glDepthMask( GL_FALSE );		// no z buffering
-	glEnable( GL_BLEND );
-	GL_TexEnv( GL_MODULATE );
-	glBegin( GL_TRIANGLES );
-
-	VectorScale (vup, 1.5, up);
-	VectorScale (vright, 1.5, right);
-
-	for ( p = particles, i=0 ; i < num_particles ; i++,p++)
-	{
-		// hack a scale up to keep particles from disapearing
-		scale = ( p->origin[0] - r_origin[0] ) * vpn[0] +
-				( p->origin[1] - r_origin[1] ) * vpn[1] +
-				( p->origin[2] - r_origin[2] ) * vpn[2];
-
-		if (scale < 20)
-			scale = 1;
-		else
-			scale = 1 + scale * 0.004;
-
-		*(int *)color = colortable[p->color];
-		color[3] = p->alpha*255;
-
-		glColor4ubv( color );
-
-		glTexCoord2f( 0.0625, 0.0625 );
-		glVertex3fv( p->origin );
-
-		glTexCoord2f( 1.0625, 0.0625 );
-		glVertex3f( p->origin[0] + up[0]*scale,
-					 p->origin[1] + up[1]*scale,
-					 p->origin[2] + up[2]*scale);
-
-		glTexCoord2f( 0.0625, 1.0625 );
-		glVertex3f( p->origin[0] + right[0]*scale,
-					 p->origin[1] + right[1]*scale,
-					 p->origin[2] + right[2]*scale);
-	}
-
-	glEnd ();
-	glDisable( GL_BLEND );
-	glColor4f( 1,1,1,1 );
-	glDepthMask( 1 );		// back to normal Z buffering
-	GL_TexEnv( GL_REPLACE );
-}
-
-static void R_DrawParticles() {
-	GL_DrawParticles(r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table);
-}
-
-/*
 ============
 R_PolyBlend
 ============
@@ -82423,131 +82351,7 @@ void R_PolyBlend (void)
 
 //=======================================================================
 
-int SignbitsForPlane (cplane_t *out)
-{
-	int	bits, j;
-
-	// for fast box on planeside test
-
-	bits = 0;
-	for (j=0 ; j<3 ; j++)
-	{
-		if (out->normal[j] < 0)
-			bits |= 1<<j;
-	}
-	return bits;
-}
-
-
-void R_SetFrustum (void)
-{
-	int		i;
-
-#if 0
-	/*
-	** this code is wrong, since it presume a 90 degree FOV both in the
-	** horizontal and vertical plane
-	*/
-	// front side is visible
-	VectorAdd (vpn, vright, frustum[0].normal);
-	VectorSubtract (vpn, vright, frustum[1].normal);
-	VectorAdd (vpn, vup, frustum[2].normal);
-	VectorSubtract (vpn, vup, frustum[3].normal);
-
-	// we theoretically don't need to normalize these vectors, but I do it
-	// anyway so that debugging is a little easier
-	VectorNormalize( frustum[0].normal );
-	VectorNormalize( frustum[1].normal );
-	VectorNormalize( frustum[2].normal );
-	VectorNormalize( frustum[3].normal );
-#else
-	// rotate VPN right by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[0].normal, vup, vpn, -(90-r_newrefdef.fov_x / 2 ) );
-	// rotate VPN left by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[1].normal, vup, vpn, 90-r_newrefdef.fov_x / 2 );
-	// rotate VPN up by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[2].normal, vright, vpn, 90-r_newrefdef.fov_y / 2 );
-	// rotate VPN down by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[3].normal, vright, vpn, -( 90 - r_newrefdef.fov_y / 2 ) );
-#endif
-
-	for (i=0 ; i<4 ; i++)
-	{
-		frustum[i].type = PLANE_ANYZ;
-		frustum[i].dist = DotProduct (r_origin, frustum[i].normal);
-		frustum[i].signbits = SignbitsForPlane (&frustum[i]);
-	}
-}
-
 //=======================================================================
-
-/*
-===============
-R_SetupFrame
-===============
-*/
-void R_SetupFrame (void)
-{
-	int i;
-	mleaf_t	*leaf;
-
-	r_framecount++;
-
-// build the transformation matrix for the given view angles
-	VectorCopy (r_newrefdef.vieworg, r_origin);
-
-	AngleVectors (r_newrefdef.viewangles, vpn, vright, vup);
-
-// current viewcluster
-	if ( !( r_newrefdef.rdflags & RDF_NOWORLDMODEL ) )
-	{
-		r_oldviewcluster = r_viewcluster;
-		r_oldviewcluster2 = r_viewcluster2;
-		leaf = Mod_PointInLeaf (r_origin, r_worldmodel);
-		r_viewcluster = r_viewcluster2 = leaf->cluster;
-
-		// check above and below so crossing solid water doesn't draw wrong
-		if (!leaf->contents)
-		{	// look down a bit
-			vec3_t	temp;
-
-			VectorCopy (r_origin, temp);
-			temp[2] -= 16;
-			leaf = Mod_PointInLeaf (temp, r_worldmodel);
-			if ( !(leaf->contents & CONTENTS_SOLID) &&
-				(leaf->cluster != r_viewcluster2) )
-				r_viewcluster2 = leaf->cluster;
-		}
-		else
-		{	// look up a bit
-			vec3_t	temp;
-
-			VectorCopy (r_origin, temp);
-			temp[2] += 16;
-			leaf = Mod_PointInLeaf (temp, r_worldmodel);
-			if ( !(leaf->contents & CONTENTS_SOLID) &&
-				(leaf->cluster != r_viewcluster2) )
-				r_viewcluster2 = leaf->cluster;
-		}
-	}
-
-	for (i=0 ; i<4 ; i++)
-		v_blend[i] = r_newrefdef.blend[i];
-
-	c_brush_polys = 0;
-	c_alias_polys = 0;
-
-	// clear out the portion of the screen that the NOWORLDMODEL defines
-	if ( r_newrefdef.rdflags & RDF_NOWORLDMODEL )
-	{
-		glEnable( GL_SCISSOR_TEST );
-		glClearColor( 0.3, 0.3, 0.3, 1 );
-		glScissor( r_newrefdef.x, viddef.height - r_newrefdef.height - r_newrefdef.y, r_newrefdef.width, r_newrefdef.height );
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-		glClearColor( 1, 0, 0.5, 0.5 );
-		glDisable( GL_SCISSOR_TEST );
-	}
-}
 
 
 void MYgluPerspective( GLdouble fovy, GLdouble aspect,
@@ -84788,8 +84592,8 @@ void R_RenderFrame(refdef_t *fd) {
 	{
 		r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
 		dlight_t* l = r_newrefdef.dlights;
-		for (int i=0 ; i<r_newrefdef.num_dlights ; i++, l++) {
-			R_MarkLights ( l, 1<<i, r_worldmodel->nodes );
+		for (int i = 0 ; i < r_newrefdef.num_dlights; i++, l++) {
+			R_MarkLights(l, 1 << i, r_worldmodel->nodes);
 		}
 	}
 
@@ -84797,13 +84601,143 @@ void R_RenderFrame(refdef_t *fd) {
 		glFinish();
 	}
 
-	R_SetupFrame();
-	R_SetFrustum();
+	{
+		r_framecount++;
+
+		// build the transformation matrix for the given view angles
+		VectorCopy(r_newrefdef.vieworg, r_origin);
+
+		AngleVectors(r_newrefdef.viewangles, vpn, vright, vup);
+
+		// current viewcluster
+		if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL)) {
+			r_oldviewcluster = r_viewcluster;
+			r_oldviewcluster2 = r_viewcluster2;
+			mleaf_t* leaf = Mod_PointInLeaf(r_origin, r_worldmodel);
+			r_viewcluster = r_viewcluster2 = leaf->cluster;
+
+			// check above and below so crossing solid water doesn't draw wrong
+			if (!leaf->contents) {
+				// look down a bit
+				vec3_t	temp = {};
+				VectorCopy (r_origin, temp);
+				temp[2] -= 16;
+				leaf = Mod_PointInLeaf(temp, r_worldmodel);
+				if (!(leaf->contents & CONTENTS_SOLID) && (leaf->cluster != r_viewcluster2)) {
+					r_viewcluster2 = leaf->cluster;
+				}
+			} else {
+				// look up a bit
+				vec3_t temp = {};
+				VectorCopy(r_origin, temp);
+				temp[2] += 16;
+				leaf = Mod_PointInLeaf(temp, r_worldmodel);
+				if (!(leaf->contents & CONTENTS_SOLID) && (leaf->cluster != r_viewcluster2)) {
+					r_viewcluster2 = leaf->cluster;
+				}
+			}
+		}
+
+		for (i64 i = 0; i < 4; i++) {
+			v_blend[i] = r_newrefdef.blend[i];
+		}
+
+		c_brush_polys = 0;
+		c_alias_polys = 0;
+
+		// clear out the portion of the screen that the NOWORLDMODEL defines
+		if (r_newrefdef.rdflags & RDF_NOWORLDMODEL) {
+			glEnable(GL_SCISSOR_TEST);
+			glClearColor(0.3, 0.3, 0.3, 1);
+			glScissor(r_newrefdef.x, viddef.height - r_newrefdef.height - r_newrefdef.y, r_newrefdef.width, r_newrefdef.height);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClearColor(1, 0, 0.5, 0.5);
+			glDisable(GL_SCISSOR_TEST);
+		}
+	}
+
+	// NOTE: Set frustrum
+	{
+		// rotate VPN right by FOV_X/2 degrees
+		RotatePointAroundVector(frustum[0].normal, vup, vpn, -(90 - r_newrefdef.fov_x / 2));
+		// rotate VPN left by FOV_X/2 degrees
+		RotatePointAroundVector(frustum[1].normal, vup, vpn, 90 - r_newrefdef.fov_x / 2);
+		// rotate VPN up by FOV_X/2 degrees
+		RotatePointAroundVector(frustum[2].normal, vright, vpn, 90 - r_newrefdef.fov_y / 2);
+		// rotate VPN down by FOV_X/2 degrees
+		RotatePointAroundVector(frustum[3].normal, vright, vpn, -( 90 - r_newrefdef.fov_y / 2));
+
+		for (i64 i=0 ; i<4 ; i++) {
+			frustum[i].type = PLANE_ANYZ;
+			frustum[i].dist = DotProduct (r_origin, frustum[i].normal);
+
+			i64 signbits = 0;
+			// for fast box on planeside test
+			for (i64 j = 0; j < 3; j++) {
+				if (frustum[i].normal[j] < 0) {
+					signbits |= 1<<j;
+				}
+			}
+
+			frustum[i].signbits = signbits;
+		}
+	}
+
 	R_SetupGL();
 	R_MarkLeaves(); // done here so we know if we're in water
 	R_DrawWorld();
 	R_DrawEntitiesOnList();
-	R_DrawParticles();
+
+	// NOTE: Draw particles
+	{
+		GL_Bind(r_particletexture->texnum);
+		glDepthMask(GL_FALSE); // no z buffering
+		glEnable(GL_BLEND);
+		GL_TexEnv(GL_MODULATE);
+		glBegin(GL_TRIANGLES);
+
+		vec3_t up = {};
+		VectorScale(vup, 1.5, up);
+
+		vec3_t right = {};
+		VectorScale(vright, 1.5, right);
+
+		{
+			particle_t* p = r_newrefdef.particles;
+			for (i64 i = 0; i < r_newrefdef.num_particles; i++, p++) {
+
+				// hack a scale up to keep particles from disapearing
+				float scale = (p->origin[0] - r_origin[0] ) * vpn[0] + (p->origin[1] - r_origin[1] ) * vpn[1] + (p->origin[2] - r_origin[2] ) * vpn[2];
+				if (scale < 20) {
+					scale = 1;
+				} else {
+					scale = 1 + scale * 0.004;
+				}
+
+				u8 color[4] = {};
+				*(int*)color = d_8to24table[p->color];
+				color[3] = p->alpha * 255;
+
+				glColor4ubv(color);
+
+				glTexCoord2f(0.0625, 0.0625);
+				glVertex3fv(p->origin);
+
+				glTexCoord2f(1.0625, 0.0625);
+				glVertex3f(p->origin[0] + up[0]*scale, p->origin[1] + up[1]*scale, p->origin[2] + up[2]*scale);
+
+				glTexCoord2f(0.0625, 1.0625);
+				glVertex3f(p->origin[0] + right[0]*scale, p->origin[1] + right[1]*scale, p->origin[2] + right[2]*scale);
+			}
+		}
+
+		glEnd();
+		glDisable(GL_BLEND);
+		glColor4f(1,1,1,1);
+		glDepthMask(1); // back to normal Z buffering
+		GL_TexEnv(GL_REPLACE);
+	}
+
 	R_DrawAlphaSurfaces();
 	R_Flash();
 
@@ -87686,8 +87620,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Game window resolution
 	// TODO: unglobal
 	{
-		viddef.width = 1600;
-		viddef.height = 1200;
+		viddef.width = 1024;
+		viddef.height = 768;
 	}
 
 	// NOTE: Window
