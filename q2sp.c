@@ -85779,13 +85779,6 @@ void CL_Frame (int msec) {
 	cls.framecount++;
 }
 
-static void Qcommon_Frame(int delta_time_msec) {
-	assert(delta_time_msec >= 1);
-	Cmd_ExecuteCbuf();
-	SV_Frame(delta_time_msec);
-	CL_Frame(delta_time_msec);
-}
-
 //
 // SECTION Platform (windows)
 //
@@ -86744,7 +86737,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			oldtime = newtime;
 		}
 
-		Qcommon_Frame(delta_time_msec);
+		assert(delta_time_msec >= 1);
+		Cmd_ExecuteCbuf();
+		SV_Frame(delta_time_msec);
+		CL_Frame(delta_time_msec);
 	}}
 
 	// NOTE: never gets here
