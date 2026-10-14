@@ -84141,38 +84141,6 @@ void IN_ClearStates (void)
 	mouse_oldbuttonstate = 0;
 }
 
-/*
-===========
-RawValuePointer
-===========
-*/
-PDWORD RawValuePointer (int axis)
-{
-	switch (axis)
-	{
-	case JOY_AXIS_X:
-		return &ji.dwXpos;
-	case JOY_AXIS_Y:
-		return &ji.dwYpos;
-	case JOY_AXIS_Z:
-		return &ji.dwZpos;
-	case JOY_AXIS_R:
-		return &ji.dwRpos;
-	case JOY_AXIS_U:
-		return &ji.dwUpos;
-	case JOY_AXIS_V:
-		return &ji.dwVpos;
-	}
-
-	return NULL;
-}
-
-
-/*
-===========
-IN_Commands
-===========
-*/
 void IN_Commands (void)
 {
 	int		i, key_index;
