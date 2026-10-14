@@ -1869,9 +1869,6 @@ static char*	rd_buffer;
 static int		rd_buffersize;
 static void		(*rd_flush)(int target, char *buffer);
 
-static cvar_t*	logfile_active; // 1 = buffer log, 2 = flush after each print
-static FILE*	logfile;
-
 static char com_token[MAX_TOKEN_CHARS];
 
 static void COM_StripExtension(char* in, char* out) {
@@ -1923,24 +1920,6 @@ static void Com_Printf(char *fmt, ...) {
 	}
 
 	Con_Print(msg);
-
-	// logfile
-	if (logfile_active && logfile_active->value) {
-		char name[MAX_QPATH];
-
-		if (!logfile) {
-			Com_sprintf(name, sizeof(name), "%s/qconsole.log", fs_gamedir);
-			logfile = fopen (name, "w");
-		}
-
-		if (logfile) {
-			fprintf (logfile, "%s", msg);
-		}
-
-		if (logfile_active->value > 1) {
-			fflush (logfile); // force it to save every time
-		}
-	}
 }
 
 // Parse a token out of a string
@@ -2163,8 +2142,6 @@ static void COM_SetValueCvar(char *var_name, float value) {
 	}
 	COM_SetCvar (var_name, val);
 }
-
-void 		Com_DPrintf (char *fmt, ...);
 
 unsigned	Com_BlockChecksum (void *buffer, int length);
 u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
@@ -4348,8 +4325,6 @@ static int				numclusters = 1;
 static mapsurface_t		nullsurface;
 static int				floodvalid;
 static u8*			cmod_base;
-static int				c_pointcontents;
-static int				c_traces, c_brush_traces;
 
 // Returns 1, 2, or 1 + 2
 static int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
@@ -5208,16 +5183,6 @@ void Pmove (pmove_t *pmove);
 #define DEFAULT_SOUND_PACKET_VOLUME	1.0
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
 
-#define	PORT_ANY	-1
-
-#define	PACKET_HEADER	10			// two ints and a short
-
-#define	ERR_FATAL	0		// exit the entire game with a popup window
-#define	ERR_DROP	1		// print to console and disconnect from game
-
-#define	PRINT_ALL		0
-#define PRINT_DEVELOPER	1	// only print when "developer 1"
-
 // temp entity events
 //
 // Temp entity events are for things that happen
@@ -5349,11 +5314,6 @@ enum svc_ops_e {
 	svc_deltapacketentities,	// [...]
 	svc_frame
 };
-
-static cvar_t* developer;
-static cvar_t* timescale;
-static cvar_t* fixedtime;
-static cvar_t* showtrace;
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
@@ -6180,15 +6140,9 @@ void GetChaseTarget(edict_t *ent);
 
 float Q_fabs (float f)
 {
-#if 0
-	if (f >= 0)
-		return f;
-	return -f;
-#else
 	int tmp = * ( int * ) &f;
 	tmp &= 0x7FFFFFFF;
 	return * ( float * ) &tmp;
-#endif
 }
 
 /*
@@ -6363,8 +6317,6 @@ int CM_PointLeafnum_r (vec3_t p, int num)
 		else
 			num = node->children[0];
 	}
-
-	c_pointcontents++;		// optimize counter
 
 	return -1 - num;
 }
@@ -6550,8 +6502,6 @@ void CM_ClipBoxToBrush (vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
 
 	if (!brush->numsides)
 		return;
-
-	c_brush_traces++;
 
 	getout = false;
 	startout = false;
@@ -6817,12 +6767,6 @@ void CM_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
 	}
 
 
-#if 0
-CM_RecursiveHullCheck (node->children[0], p1f, p2f, p1, p2);
-CM_RecursiveHullCheck (node->children[1], p1f, p2f, p1, p2);
-return;
-#endif
-
 	// see which sides we need to consider
 	if (t1 >= offset && t2 >= offset)
 	{
@@ -6899,8 +6843,6 @@ trace_t		CM_BoxTrace (vec3_t start, vec3_t end,
 	int		i;
 
 	checkcount++;		// for multi-check avoidance
-
-	c_traces++;			// for statistics, may be zeroed
 
 	// fill in a default trace
 	memset (&trace_trace, 0, sizeof(trace_trace));
@@ -7087,7 +7029,6 @@ void CM_DecompressVis (u8 *in, u8 *out)
 		if ((out_p - out) + c > row)
 		{
 			c = row - (out_p - out);
-			Com_DPrintf ("warning: Vis decompression overrun\n");
 		}
 		while (c)
 		{
@@ -7256,22 +7197,6 @@ bool CM_HeadnodeVisible (int nodenum, u8 *visbits)
 	if (CM_HeadnodeVisible(node->children[0], visbits))
 		return true;
 	return CM_HeadnodeVisible(node->children[1], visbits);
-}
-
-// A Com_Printf that only shows up if the "developer" cvar is set
-void Com_DPrintf (char *fmt, ...)
-{
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
-
-	if (!developer || !developer->value)
-		return;			// don't confuse non-developers with techie stuff...
-
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
-	va_end (argptr);
-
-	Com_Printf ("%s", msg);
 }
 
 static u8 chktbl[1024] = {
@@ -7511,7 +7436,6 @@ int FS_FOpenFile (char *filename, FILE **file)
 			*file = fopen (netpath, "rb");
 			if (*file)
 			{
-				Com_DPrintf ("link file: %s\n",netpath);
 				return FS_filelength (*file);
 			}
 			return -1;
@@ -7530,7 +7454,6 @@ int FS_FOpenFile (char *filename, FILE **file)
 				if (!Q_strcasecmp (pak->files[i].name, filename))
 				{	// found it!
 					file_from_pak = 1;
-					Com_DPrintf ("PackFile: %s : %s\n",pak->filename, filename);
 					// open a new file on the pakfile
 					*file = fopen (pak->filename, "rb");
 					assert(*file);
@@ -7548,14 +7471,10 @@ int FS_FOpenFile (char *filename, FILE **file)
 			if (!*file)
 				continue;
 
-			Com_DPrintf ("FindFile: %s\n",netpath);
-
 			return FS_filelength (*file);
 		}
 
 	}
-
-	Com_DPrintf ("FindFile: can't find %s\n", filename);
 
 	*file = NULL;
 	return -1;
@@ -8459,48 +8378,7 @@ void PM_StepSlideMove_ (void)
 		VectorCopy (trace.plane.normal, planes[numplanes]);
 		numplanes++;
 
-#if 0
-	float		rub;
 
-		//
-		// modify velocity so it parallels all of the clip planes
-		//
-		if (numplanes == 1)
-		{	// go along this plane
-			VectorCopy (pml.velocity, dir);
-			VectorNormalize (dir);
-			rub = 1.0 + 0.5 * DotProduct (dir, planes[0]);
-
-			// slide along the plane
-			PM_ClipVelocity (pml.velocity, planes[0], pml.velocity, 1.01);
-			// rub some extra speed off on xy axis
-			// not on Z, or you can scrub down walls
-			pml.velocity[0] *= rub;
-			pml.velocity[1] *= rub;
-			pml.velocity[2] *= rub;
-		}
-		else if (numplanes == 2)
-		{	// go along the crease
-			VectorCopy (pml.velocity, dir);
-			VectorNormalize (dir);
-			rub = 1.0 + 0.5 * DotProduct (dir, planes[0]);
-
-			// slide along the plane
-			CrossProduct (planes[0], planes[1], dir);
-			d = DotProduct (dir, pml.velocity);
-			VectorScale (dir, d, pml.velocity);
-
-			// rub some extra speed off
-			VectorScale (pml.velocity, rub, pml.velocity);
-		}
-		else
-		{
-//			Con_Printf ("clip velocity, numplanes == %i\n",numplanes);
-			VectorCopy (vec3_origin, pml.velocity);
-			break;
-		}
-
-#else
 //
 // modify original_velocity so it parallels all of the clip planes
 //
@@ -8532,7 +8410,6 @@ void PM_StepSlideMove_ (void)
 			d = DotProduct (dir, pml.velocity);
 			VectorScale (dir, d, pml.velocity);
 		}
-#endif
 		//
 		// if velocity is against the original velocity, stop dead
 		// to avoid tiny occilations in sloping corners
@@ -8595,13 +8472,6 @@ void PM_StepSlideMove (void)
 		VectorCopy (trace.endpos, pml.origin);
 	}
 
-#if 0
-	VectorSubtract (pml.origin, up, delta);
-	up_dist = DotProduct (delta, start_v);
-
-	VectorSubtract (down_o, start_o, delta);
-	down_dist = DotProduct (delta, start_v);
-#else
 	VectorCopy(pml.origin, up);
 
 	// decide which one went farther
@@ -8609,7 +8479,6 @@ void PM_StepSlideMove (void)
 		+ (down_o[1] - start_o[1])*(down_o[1] - start_o[1]);
 	up_dist = (up[0] - start_o[0])*(up[0] - start_o[0])
 		+ (up[1] - start_o[1])*(up[1] - start_o[1]);
-#endif
 
 	if (down_dist > up_dist || trace.plane.normal[2] < MIN_STEP_NORMAL)
 	{
@@ -8872,14 +8741,6 @@ void PM_AirMove (void)
 	fmove = pm->cmd.forwardmove;
 	smove = pm->cmd.sidemove;
 
-//!!!!! pitch should be 1/3 so this isn't needed??!
-#if 0
-	pml.forward[2] = 0;
-	pml.right[2] = 0;
-	VectorNormalize (pml.forward);
-	VectorNormalize (pml.right);
-#endif
-
 	for (i=0 ; i<2 ; i++)
 		wishvel[i] = pml.forward[i]*fmove + pml.right[i]*smove;
 	wishvel[2] = 0;
@@ -9014,11 +8875,6 @@ void PM_CatagorizePosition (void)
 				}
 			}
 		}
-
-#if 0
-		if (trace.fraction < 1.0 && trace.ent && pml.velocity[2] < 0)
-			pml.velocity[2] = 0;
-#endif
 
 		if (pm->numtouch < MAXTOUCH && trace.ent)
 		{
@@ -9405,48 +9261,8 @@ void PM_SnapPosition (void)
 
 	// go back to the last position
 	VectorCopy (pml.previous_origin, pm->s.origin);
-//	Com_DPrintf ("using previous_origin\n");
 }
 
-#if 0
-//NO LONGER USED
-/*
-================
-PM_InitialSnapPosition
-
-================
-*/
-void PM_InitialSnapPosition (void)
-{
-	int		x, y, z;
-	short	base[3];
-
-	VectorCopy (pm->s.origin, base);
-
-	for (z=1 ; z>=-1 ; z--)
-	{
-		pm->s.origin[2] = base[2] + z;
-		for (y=1 ; y>=-1 ; y--)
-		{
-			pm->s.origin[1] = base[1] + y;
-			for (x=1 ; x>=-1 ; x--)
-			{
-				pm->s.origin[0] = base[0] + x;
-				if (PM_GoodPosition ())
-				{
-					pml.origin[0] = pm->s.origin[0]*0.125;
-					pml.origin[1] = pm->s.origin[1]*0.125;
-					pml.origin[2] = pm->s.origin[2]*0.125;
-					VectorCopy (pm->s.origin, pml.previous_origin);
-					return;
-				}
-			}
-		}
-	}
-
-	Com_DPrintf ("Bad InitialSnapPosition\n");
-}
-#else
 /*
 ================
 PM_InitialSnapPosition
@@ -9477,11 +9293,7 @@ void PM_InitialSnapPosition(void)
 			}
 		}
 	}
-
-	Com_DPrintf ("Bad InitialSnapPosition\n");
 }
-
-#endif
 
 /*
 ================
@@ -10015,7 +9827,6 @@ void SV_WipeSavegame (char *savename)
 	char	name[MAX_OSPATH];
 	char	*s;
 
-	Com_DPrintf("SV_WipeSaveGame(%s)\n", savename);
 
 	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, savename);
 	remove (name);
@@ -10051,8 +9862,6 @@ void CopyFile (char *src, char *dst)
 	FILE	*f1, *f2;
 	int		l;
 	u8	buffer[65536];
-
-	Com_DPrintf ("CopyFile (%s, %s)\n", src, dst);
 
 	f1 = fopen (src, "rb");
 	if (!f1)
@@ -10121,8 +9930,6 @@ void SV_WriteLevelFile (void)
 	char	name[MAX_OSPATH];
 	FILE	*f;
 
-	Com_DPrintf("SV_WriteLevelFile()\n");
-
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
 	f = fopen(name, "wb");
 	if (!f)
@@ -10150,8 +9957,6 @@ void SV_ReadLevelFile (void)
 {
 	char	name[MAX_OSPATH];
 	FILE	*f;
-
-	Com_DPrintf("SV_ReadLevelFile()\n");
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
 	f = fopen(name, "rb");
@@ -10185,8 +9990,6 @@ void SV_WriteServerFile (bool autosave)
 	char	comment[32];
 	time_t	aclock;
 	struct tm	*newtime;
-
-	Com_DPrintf("SV_WriteServerFile(%s)\n", autosave ? "true" : "false");
 
 	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", fs_gamedir);
 	f = fopen (name, "wb");
@@ -10272,7 +10075,6 @@ void SV_ReadServerFile (void)
 		if (!fread (name, 1, sizeof(name), f))
 			break;
 		FS_Read (string, sizeof(string), f);
-		Com_DPrintf ("Set %s = %s\n", name, string);
 		Com_ForceSetCvar (name, string);
 	}
 
@@ -10305,8 +10107,6 @@ static void SV_GameMap_f() {
 		Com_Printf ("USAGE: gamemap <map>\n");
 		return;
 	}
-
-	Com_DPrintf("SV_GameMap(%s)\n", Cmd_Argv(1));
 
 	FS_CreatePath(va("%s/save/current/", fs_gamedir));
 
@@ -10671,7 +10471,6 @@ void SV_ServerRecord_f (void)
 		}
 
 	// write it to the demo file
-	Com_DPrintf ("signon message length: %i\n", buf.cursize);
 	len = LittleLong (buf.cursize);
 	fwrite (&len, 4, 1, svs.demofile);
 	fwrite (buf.data, buf.cursize, 1, svs.demofile);
@@ -10729,93 +10528,6 @@ Encode a client frame onto the network channel
 =============================================================================
 */
 
-#if 0
-
-// because there can be a lot of projectiles, there is a special
-// network protocol for them
-#define	MAX_PROJECTILES		64
-edict_t	*projectiles[MAX_PROJECTILES];
-int		numprojs;
-cvar_t  *sv_projectiles;
-
-bool SV_AddProjectileUpdate (edict_t *ent)
-{
-	if (!sv_projectiles)
-		sv_projectiles = Cvar_Get("sv_projectiles", "1", 0);
-
-	if (!sv_projectiles->value)
-		return false;
-
-	if (!(ent->svflags & SVF_PROJECTILE))
-		return false;
-	if (numprojs == MAX_PROJECTILES)
-		return true;
-
-	projectiles[numprojs++] = ent;
-	return true;
-}
-
-void SV_EmitProjectileUpdate (sizebuf_t *msg)
-{
-	u8	bits[16];	// [modelindex] [48 bits] xyz p y 12 12 12 8 8 [entitynum] [e2]
-	int		n, i;
-	edict_t	*ent;
-	int		x, y, z, p, yaw;
-	int len;
-
-	if (!numprojs)
-		return;
-
-	MSG_WriteByte (msg, numprojs);
-
-	for (n=0 ; n<numprojs ; n++)
-	{
-		ent = projectiles[n];
-		x = (int)(ent->s.origin[0]+4096)>>1;
-		y = (int)(ent->s.origin[1]+4096)>>1;
-		z = (int)(ent->s.origin[2]+4096)>>1;
-		p = (int)(256*ent->s.angles[0]/360)&255;
-		yaw = (int)(256*ent->s.angles[1]/360)&255;
-
-		len = 0;
-		bits[len++] = x;
-		bits[len++] = (x>>8) | (y<<4);
-		bits[len++] = (y>>4);
-		bits[len++] = z;
-		bits[len++] = (z>>8);
-		if (ent->s.effects & EF_BLASTER)
-			bits[len-1] |= 64;
-
-		if (ent->s.old_origin[0] != ent->s.origin[0] ||
-			ent->s.old_origin[1] != ent->s.origin[1] ||
-			ent->s.old_origin[2] != ent->s.origin[2]) {
-			bits[len-1] |= 128;
-			x = (int)(ent->s.old_origin[0]+4096)>>1;
-			y = (int)(ent->s.old_origin[1]+4096)>>1;
-			z = (int)(ent->s.old_origin[2]+4096)>>1;
-			bits[len++] = x;
-			bits[len++] = (x>>8) | (y<<4);
-			bits[len++] = (y>>4);
-			bits[len++] = z;
-			bits[len++] = (z>>8);
-		}
-
-		bits[len++] = p;
-		bits[len++] = yaw;
-		bits[len++] = ent->s.modelindex;
-
-		bits[len++] = (ent->s.number & 0x7f);
-		if (ent->s.number > 255) {
-			bits[len-1] |= 128;
-			bits[len++] = (ent->s.number >> 7);
-		}
-
-		for (i=0 ; i<len ; i++)
-			MSG_WriteByte (msg, bits[i]);
-	}
-}
-#endif
-
 /*
 =============
 SV_EmitPacketEntities
@@ -10831,11 +10543,6 @@ void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t 
 	int		from_num_entities;
 	int		bits;
 
-#if 0
-	if (numprojs)
-		MSG_WriteByte (msg, svc_packetentities2);
-	else
-#endif
 		MSG_WriteByte (msg, svc_packetentities);
 
 	if (!from)
@@ -10904,10 +10611,6 @@ void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t 
 
 	MSG_WriteShort (msg, 0);	// end of packetentities
 
-#if 0
-	if (numprojs)
-		SV_EmitProjectileUpdate(msg);
-#endif
 }
 
 
@@ -11237,10 +10940,6 @@ void SV_BuildClientFrame (client_t *client)
 	if (!clent->client)
 		return;		// not in game yet
 
-#if 0
-	numprojs = 0; // no projectiles yet
-#endif
-
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
 
@@ -11341,16 +11040,11 @@ void SV_BuildClientFrame (client_t *client)
 			}
 		}
 
-#if 0
-		if (SV_AddProjectileUpdate(ent))
-			continue; // added as a special projectile
-#endif
 
 		// add it to the circular client_entities array
 		state = &svs.client_entities[svs.next_client_entities%svs.num_client_entities];
 		if (ent->s.number != e)
 		{
-			Com_DPrintf ("FIXING ENT->S.NUMBER!!!\n");
 			ent->s.number = e;
 		}
 		*state = ent->s;
@@ -11781,7 +11475,6 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 
 	Com_Printf ("------- Server Initialization -------\n");
 
-	Com_DPrintf ("SpawnServer: %s\n",server);
 	if (sv.demofile)
 		fclose (sv.demofile);
 
@@ -12295,13 +11988,11 @@ void SVC_DirectConnect (void)
 
 	adr = net_from;
 
-	Com_DPrintf ("SVC_DirectConnect ()\n");
 
 	version = atoi(Cmd_Argv(1));
 	if (version != PROTOCOL_VERSION)
 	{
 		Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nServer is version %4.2f.\n", VERSION);
-		Com_DPrintf ("    rejected connect from version %i\n", version);
 		return;
 	}
 
@@ -12345,7 +12036,6 @@ void SVC_DirectConnect (void)
 		{
 			if (!NET_IsLocalAddress (adr) && (svs.realtime - cl->lastconnect) < ((int)sv_reconnect_limit->value * 1000))
 			{
-				Com_DPrintf ("%s:reconnect rejected : too soon\n", NET_AdrToString (adr));
 				return;
 			}
 			Com_Printf ("%s:reconnect\n", NET_AdrToString (adr));
@@ -12367,7 +12057,6 @@ void SVC_DirectConnect (void)
 	if (!newcl)
 	{
 		Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nServer is full.\n");
-		Com_DPrintf ("Rejected a connection.\n");
 		return;
 	}
 
@@ -12390,7 +12079,6 @@ gotnewcl:
 				Info_ValueForKey (userinfo, "rejmsg"));
 		else
 			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nConnection refused.\n" );
-		Com_DPrintf ("Game rejected a connection.\n");
 		return;
 	}
 
@@ -12493,7 +12181,6 @@ void SV_ConnectionlessPacket() {
 	Cmd_TokenizeString (s, false);
 
 	c = Cmd_Argv(0);
-	Com_DPrintf ("Packet %s : %s\n", NET_AdrToString(net_from), c);
 
 	if (!strcmp(c, "ping"))
 		SVC_Ping ();
@@ -13370,7 +13057,6 @@ void SV_New_f (void)
 	int			playernum;
 	edict_t		*ent;
 
-	Com_DPrintf ("New() from %s\n", sv_client->name);
 
 	if (sv_client->state != cs_connected)
 	{
@@ -13433,7 +13119,6 @@ void SV_Configstrings_f (void)
 {
 	int			start;
 
-	Com_DPrintf ("Configstrings() from %s\n", sv_client->name);
 
 	if (sv_client->state != cs_connected)
 	{
@@ -13490,7 +13175,6 @@ void SV_Baselines_f (void)
 	entity_state_t	nullstate;
 	entity_state_t	*base;
 
-	Com_DPrintf ("Baselines() from %s\n", sv_client->name);
 
 	if (sv_client->state != cs_connected)
 	{
@@ -13545,7 +13229,6 @@ SV_Begin_f
 */
 void SV_Begin_f (void)
 {
-	Com_DPrintf ("Begin() from %s\n", sv_client->name);
 
 	// handle the case of a level changing while a client was connecting
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
@@ -13663,7 +13346,6 @@ void SV_BeginDownload_f(void)
 		// download  ZOID
 		|| (strncmp(name, "maps/", 5) == 0 && file_from_pak))
 	{
-		Com_DPrintf ("Couldn't download %s to %s\n", name, sv_client->name);
 		if (sv_client->download) {
 			FS_FreeFile (sv_client->download);
 			sv_client->download = NULL;
@@ -13676,7 +13358,6 @@ void SV_BeginDownload_f(void)
 	}
 
 	SV_NextDownload_f ();
-	Com_DPrintf ("Downloading %s to %s\n", name, sv_client->name);
 }
 
 
@@ -13742,11 +13423,9 @@ to the next server,
 void SV_Nextserver_f (void)
 {
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount ) {
-		Com_DPrintf ("Nextserver() from wrong level, from %s\n", sv_client->name);
 		return;		// leftover from last server
 	}
 
-	Com_DPrintf ("Nextserver() from %s\n", sv_client->name);
 
 	SV_Nextserver ();
 }
@@ -13822,7 +13501,6 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd)
 
 	if (cl->commandMsec < 0 && sv_enforcetime->value )
 	{
-		Com_DPrintf ("commandMsec underflow from %s\n", cl->name);
 		return;
 	}
 
@@ -13923,9 +13601,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 
 			if (calculatedChecksum != checksum)
 			{
-				Com_DPrintf ("Failed command checksum for %s (%d != %d)/%d\n",
-					cl->name, calculatedChecksum, checksum,
-					cl->netchan.incoming_sequence);
 				return;
 			}
 
@@ -14230,9 +13905,6 @@ void SV_LinkEdict (edict_t *ent)
 			// but nothing should evern need more than that
 			if (ent->areanum && ent->areanum != area)
 			{
-				if (ent->areanum2 && ent->areanum2 != area && sv.state == ss_loading)
-					Com_DPrintf ("Object touching 3 areas at %f %f %f\n",
-					ent->absmin[0], ent->absmin[1], ent->absmin[2]);
 				ent->areanum2 = area;
 			}
 			else
@@ -14525,11 +14197,6 @@ SV_TraceBounds
 */
 void SV_TraceBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t boxmins, vec3_t boxmaxs)
 {
-#if 0
-// debug to test against everything
-boxmins[0] = boxmins[1] = boxmins[2] = -9999;
-boxmaxs[0] = boxmaxs[1] = boxmaxs[2] = 9999;
-#else
 	int		i;
 
 	for (i=0 ; i<3 ; i++)
@@ -14545,7 +14212,6 @@ boxmaxs[0] = boxmaxs[1] = boxmaxs[2] = 9999;
 			boxmaxs[i] = start[i] + maxs[i] + 1;
 		}
 	}
-#endif
 }
 
 /*
@@ -15992,161 +15658,6 @@ FRAME PARSING
 =========================================================================
 */
 
-#if 0
-
-typedef struct
-{
-	int		modelindex;
-	int		num; // entity number
-	int		effects;
-	vec3_t	origin;
-	vec3_t	oldorigin;
-	vec3_t	angles;
-	bool present;
-} projectile_t;
-
-#define	MAX_PROJECTILES	64
-projectile_t	cl_projectiles[MAX_PROJECTILES];
-
-void CL_ClearProjectiles (void)
-{
-	int i;
-
-	for (i = 0; i < MAX_PROJECTILES; i++) {
-//		if (cl_projectiles[i].present)
-//			Com_DPrintf("PROJ: %d CLEARED\n", cl_projectiles[i].num);
-		cl_projectiles[i].present = false;
-	}
-}
-
-/*
-=====================
-CL_ParseProjectiles
-
-Flechettes are passed as efficient temporary entities
-=====================
-*/
-void CL_ParseProjectiles (void)
-{
-	int		i, c, j;
-	u8	bits[8];
-	u8	b;
-	projectile_t	pr;
-	int lastempty = -1;
-	bool old = false;
-
-	c = MSG_ReadByte (&net_message);
-	for (i=0 ; i<c ; i++)
-	{
-		bits[0] = MSG_ReadByte (&net_message);
-		bits[1] = MSG_ReadByte (&net_message);
-		bits[2] = MSG_ReadByte (&net_message);
-		bits[3] = MSG_ReadByte (&net_message);
-		bits[4] = MSG_ReadByte (&net_message);
-		pr.origin[0] = ( ( bits[0] + ((bits[1]&15)<<8) ) <<1) - 4096;
-		pr.origin[1] = ( ( (bits[1]>>4) + (bits[2]<<4) ) <<1) - 4096;
-		pr.origin[2] = ( ( bits[3] + ((bits[4]&15)<<8) ) <<1) - 4096;
-		VectorCopy(pr.origin, pr.oldorigin);
-
-		if (bits[4] & 64)
-			pr.effects = EF_BLASTER;
-		else
-			pr.effects = 0;
-
-		if (bits[4] & 128) {
-			old = true;
-			bits[0] = MSG_ReadByte (&net_message);
-			bits[1] = MSG_ReadByte (&net_message);
-			bits[2] = MSG_ReadByte (&net_message);
-			bits[3] = MSG_ReadByte (&net_message);
-			bits[4] = MSG_ReadByte (&net_message);
-			pr.oldorigin[0] = ( ( bits[0] + ((bits[1]&15)<<8) ) <<1) - 4096;
-			pr.oldorigin[1] = ( ( (bits[1]>>4) + (bits[2]<<4) ) <<1) - 4096;
-			pr.oldorigin[2] = ( ( bits[3] + ((bits[4]&15)<<8) ) <<1) - 4096;
-		}
-
-		bits[0] = MSG_ReadByte (&net_message);
-		bits[1] = MSG_ReadByte (&net_message);
-		bits[2] = MSG_ReadByte (&net_message);
-
-		pr.angles[0] = 360*bits[0]/256;
-		pr.angles[1] = 360*bits[1]/256;
-		pr.modelindex = bits[2];
-
-		b = MSG_ReadByte (&net_message);
-		pr.num = (b & 0x7f);
-		if (b & 128) // extra entity number u8
-			pr.num |= (MSG_ReadByte (&net_message) << 7);
-
-		pr.present = true;
-
-		// find if this projectile already exists from previous frame
-		for (j = 0; j < MAX_PROJECTILES; j++) {
-			if (cl_projectiles[j].modelindex) {
-				if (cl_projectiles[j].num == pr.num) {
-					// already present, set up oldorigin for interpolation
-					if (!old)
-						VectorCopy(cl_projectiles[j].origin, pr.oldorigin);
-					cl_projectiles[j] = pr;
-					break;
-				}
-			} else
-				lastempty = j;
-		}
-
-		// not present previous frame, add it
-		if (j == MAX_PROJECTILES) {
-			if (lastempty != -1) {
-				cl_projectiles[lastempty] = pr;
-			}
-		}
-	}
-}
-
-/*
-=============
-CL_LinkProjectiles
-
-=============
-*/
-void CL_AddProjectiles (void)
-{
-	int		i, j;
-	projectile_t	*pr;
-	entity_t		ent;
-
-	memset (&ent, 0, sizeof(ent));
-
-	for (i=0, pr=cl_projectiles ; i < MAX_PROJECTILES ; i++, pr++)
-	{
-		// grab an entity to fill in
-		if (pr->modelindex < 1)
-			continue;
-		if (!pr->present) {
-			pr->modelindex = 0;
-			continue; // not present this frame (it was in the previous frame)
-		}
-
-		ent.model = cl.model_draw[pr->modelindex];
-
-		// interpolate origin
-		for (j=0 ; j<3 ; j++)
-		{
-			ent.origin[j] = ent.oldorigin[j] = pr->oldorigin[j] + cl.lerpfrac *
-				(pr->origin[j] - pr->oldorigin[j]);
-
-		}
-
-		if (pr->effects & EF_BLASTER)
-			CL_BlasterTrail (pr->oldorigin, ent.origin);
-		V_AddLight (pr->origin, 200, 1, 1, 0);
-
-		VectorCopy (pr->angles, ent.angles);
-		V_AddEntity (&ent);
-	}
-}
-#endif
-
 /*
 =================
 CL_ParseEntityBits
@@ -16618,9 +16129,6 @@ void CL_ParseFrame (void)
 
 	memset (&cl.frame, 0, sizeof(cl.frame));
 
-#if 0
-	CL_ClearProjectiles(); // clear projectiles for new frame
-#endif
 
 	cl.frame.serverframe = MSG_ReadLong (&net_message);
 	cl.frame.deltaframe = MSG_ReadLong (&net_message);
@@ -16687,11 +16195,6 @@ void CL_ParseFrame (void)
 	SHOWNET(svc_strings[cmd]);
 	assert(cmd == svc_packetentities);
 	CL_ParsePacketEntities (old, &cl.frame);
-
-#if 0
-	if (cmd == svc_packetentities2)
-		CL_ParseProjectiles();
-#endif
 
 	// save the frame off in the backup array for later delta comparisons
 	cl.frames[cl.frame.serverframe & UPDATE_MASK] = cl.frame;
@@ -17411,9 +16914,6 @@ void CL_AddEntities (void)
 	CL_CalcViewValues ();
 	// PMM - moved this here so the heat beam has the right values for the vieworg, and can lock the beam to the gun
 	CL_AddPacketEntities (&cl.frame);
-#if 0
-	CL_AddProjectiles ();
-#endif
 	CL_AddTEnts ();
 	CL_AddParticles ();
 	CL_AddDLights ();
@@ -19811,13 +19311,6 @@ float CL_KeyState (kbutton_t *key)
 		key->downtime = sys_frame_time;
 	}
 
-#if 0
-	if (msec)
-	{
-		Com_Printf ("%i ", msec);
-	}
-#endif
-
 	val = (float)msec / frame_msec;
 	if (val < 0)
 		val = 0;
@@ -20935,8 +20428,6 @@ void CL_ReadPackets (void)
 		//
 		if (!NET_CompareAdr (net_from, cls.netchan.remote_address))
 		{
-			Com_DPrintf ("%s:sequenced packet without connection\n"
-				,NET_AdrToString(net_from));
 			continue;
 		}
 		if (!Netchan_Process(&cls.netchan, &net_message))
@@ -20965,11 +20456,6 @@ void CL_ReadPackets (void)
 
 //=============================================================================
 
-/*
-==============
-CL_FixUpGender_f
-==============
-*/
 void CL_FixUpGender(void)
 {
 	char *p;
@@ -21342,14 +20828,12 @@ typedef struct {
 } cheatvar_t;
 
 static cheatvar_t cheatvars[] = {
-	{"timescale", "1", 0},
 	{"timedemo", "0", 0},
 	{"r_drawworld", "1", 0},
 	{"cl_testlights", "0", 0},
 	{"r_fullbright", "0", 0},
 	{"r_drawflat", "0", 0},
 	{"paused", "0", 0},
-	{"fixedtime", "0", 0},
 	{"sw_draworder", "0", 0},
 	{"gl_lightmap", "0", 0},
 	{"gl_saturatelighting", "0", 0},
@@ -22632,15 +22116,7 @@ void CL_ParseDownload (void)
 	if (percent != 100)
 	{
 		// request next block
-// change display routines by zoid
-#if 0
-		Com_Printf (".");
-		if (10*(percent/10) != cls.downloadpercent)
-		{
-			cls.downloadpercent = 10*(percent/10);
-			Com_Printf ("%i%%", cls.downloadpercent);
-		}
-#endif
+		// change display routines by zoid
 		cls.downloadpercent = percent;
 
 		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
@@ -22674,8 +22150,6 @@ void CL_ParseDownload (void)
 void CL_ParseServerData() {
 	char	*str;
 	int		i;
-
-	Com_DPrintf ("Serverdata packet received.\n");
 
 	// wipe the client_state_t struct
 	CL_ClearState ();
@@ -23086,7 +22560,6 @@ void CL_ParseServerMessage (void)
 
 		case svc_stufftext:
 			s = MSG_ReadString (&net_message);
-			Com_DPrintf ("stufftext: %s\n", s);
 			Cbuf_AddText (s);
 			break;
 
@@ -23854,8 +23327,6 @@ void SCR_BeginLoadingPlaque (void)
 	S_StopAllSounds ();
 	cl.sound_prepped = false;		// don't play ambients
 	if (cls.disable_screen)
-		return;
-	if (developer->value)
 		return;
 	if (cls.state == ca_disconnected)
 		return;	// if at console, don't bring up the plaque
@@ -27143,15 +26614,9 @@ void Con_DrawConsole (float frac)
 // draw the text
 	con.vislines = lines;
 
-#if 0
-	rows = (lines-8)>>3;		// rows of text to draw
-
-	y = lines - 24;
-#else
 	rows = (lines-22)>>3;		// rows of text to draw
 
 	y = lines - 30;
-#endif
 
 // draw from the bottom up
 	if (con.display != con.current)
@@ -31958,24 +31423,6 @@ void M_Menu_PlayerConfig_f (void)
 	M_PushMenu( PlayerConfig_MenuDraw, PlayerConfig_MenuKey );
 }
 
-
-/*
-=======================================================================
-
-GALLERY MENU
-
-=======================================================================
-*/
-#if 0
-void M_Menu_Gallery_f( void )
-{
-	extern void Gallery_MenuDraw( void );
-	extern const char *Gallery_MenuKey( int key );
-
-	M_PushMenu( Gallery_MenuDraw, Gallery_MenuKey );
-}
-#endif
-
 const char* M_Quit_Key(int key) {
 	switch (key){
 		case K_ESCAPE:
@@ -33910,7 +33357,6 @@ void S_Update_(void)
 // check to make sure that we haven't overshot
 	if (paintedtime < soundtime)
 	{
-		Com_DPrintf ("S_Update_ : overflow\n");
 		paintedtime = soundtime;
 	}
 
@@ -34112,7 +33558,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	if (!data)
 	{
-		Com_DPrintf ("Couldn't load %s\n", namebuffer);
 		return NULL;
 	}
 
@@ -45262,11 +44707,6 @@ void SV_Physics_Pusher (edict_t *ent)
 		// otherwise, just stay in place until the obstacle is gone
 		if (part->blocked)
 			part->blocked (part, obstacle);
-#if 0
-		// if the pushed entity went away and the pusher is still there
-		if (!obstacle->inuse && part->inuse)
-			goto retry;
-#endif
 	}
 	else
 	{
@@ -46856,32 +46296,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 	PlayerTrail_Init ();
 }
-
-
-//===================================================================
-
-#if 0
-	// cursor positioning
-	xl <value>
-	xr <value>
-	yb <value>
-	yt <value>
-	xv <value>
-	yv <value>
-
-	// drawing
-	statpic <name>
-	pic <stat>
-	num <fieldwidth> <stat>
-	string <stat>
-
-	// control
-	if <stat>
-	ifeq <stat> <value>
-	ifbit <stat> <value>
-	endif
-
-#endif
 
 char *single_statusbar =
 "yb	-24 "
@@ -56504,72 +55918,10 @@ mframe_t brain_frames_walk1 [] =
 };
 mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NULL};
 
-// walk2 is FUBAR, do not use
-#if 0
-void brain_walk2_cycle (edict_t* self)
-{
-	if (random() > 0.1)
-		self->monsterinfo.nextframe = FRAME_walk220;
-}
-
-mframe_t brain_frames_walk2 [] =
-{
-	{ai_walk,	3,	NULL},
-	{ai_walk,	-2,	NULL},
-	{ai_walk,	-4,	NULL},
-	{ai_walk,	-3,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	1,	NULL},
-	{ai_walk,	12,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	-3,	NULL},
-	{ai_walk,	0,	NULL},
-
-	{ai_walk,	-2,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	1,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	10,	NULL,		// Cycle Start},
-
-	{ai_walk,	-1,	NULL},
-	{ai_walk,	7,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	3,	NULL},
-	{ai_walk,	-3,	NULL},
-	{ai_walk,	2,	NULL},
-	{ai_walk,	4,	NULL},
-	{ai_walk,	-3,	NULL},
-	{ai_walk,	2,	NULL},
-	{ai_walk,	0,	NULL},
-
-	{ai_walk,	4,	brain_walk2_cycle},
-	{ai_walk,	-1,	NULL},
-	{ai_walk,	-1,	NULL},
-	{ai_walk,	-8,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	1,	NULL},
-	{ai_walk,	5,	NULL},
-	{ai_walk,	2,	NULL},
-	{ai_walk,	-1,	NULL},
-	{ai_walk,	-5,	NULL},
-};
-mmove_t brain_move_walk2 = {FRAME_walk201, FRAME_walk240, brain_frames_walk2, NULL};
-#endif
-
 void brain_walk (edict_t* self)
 {
-//	if (random() <= 0.5)
-		self->monsterinfo.currentmove = &brain_move_walk1;
-//	else
-//		self->monsterinfo.currentmove = &brain_move_walk2;
+	self->monsterinfo.currentmove = &brain_move_walk1;
 }
-
-
 
 mframe_t brain_frames_defense [] =
 {
@@ -69467,69 +68819,6 @@ mframe_t soldier_frames_stand3 [] =
 };
 mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
 
-#if 0
-mframe_t soldier_frames_stand4 [] =
-{
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 4, NULL},
-	{ai_stand, 1, NULL},
-	{ai_stand, -1, NULL},
-	{ai_stand, -2, NULL},
-
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-};
-mmove_t soldier_move_stand4 = {FRAME_stand401, FRAME_stand452, soldier_frames_stand4, NULL};
-#endif
 
 void soldier_stand (edict_t* self)
 {
@@ -70024,37 +69313,6 @@ mframe_t soldier_frames_attack4 [] =
 	{ai_charge, 0, NULL},
 };
 mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_attack4, soldier_run};
-
-#if 0
-// ATTACK5 (prone)
-
-void soldier_fire5 (edict_t* self)
-{
-	soldier_fire (self, 4);
-}
-
-void soldier_attack5_refire (edict_t* self)
-{
-	if (self->enemy->health <= 0)
-		return;
-
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attak505;
-}
-
-mframe_t soldier_frames_attack5 [] =
-{
-	{ai_charge, 8, NULL},
-	{ai_charge, 8, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, soldier_fire5},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, soldier_attack5_refire},
-};
-mmove_t soldier_move_attack5 = {FRAME_attak501, FRAME_attak508, soldier_frames_attack5, soldier_run};
-#endif
 
 // ATTACK6 (run & shoot)
 
@@ -78066,10 +77324,6 @@ static cvar_t* gl_particle_size;
 static cvar_t* gl_particle_att_a;
 static cvar_t* gl_particle_att_b;
 static cvar_t* gl_particle_att_c;
-static cvar_t* gl_ext_swapinterval;
-static cvar_t* gl_ext_multitexture;
-static cvar_t* gl_ext_pointparameters;
-static cvar_t* gl_ext_compiled_vertex_array;
 static cvar_t* gl_bitdepth;
 static cvar_t* gl_drawbuffer;
 static cvar_t* gl_lightmap;
@@ -78087,7 +77341,6 @@ static cvar_t* gl_cull;
 static cvar_t* gl_polyblend;
 static cvar_t* gl_playermip;
 static cvar_t* gl_saturatelighting;
-static cvar_t* gl_swapinterval;
 static cvar_t* gl_texturemode;
 static cvar_t* gl_texturealphamode;
 static cvar_t* gl_texturesolidmode;
@@ -79247,19 +78500,6 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 		comp = samples;
 	}
 
-#if 0
-	if (mipmap)
-		gluBuild2DMipmaps (GL_TEXTURE_2D, samples, width, height, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-	else if (scaled_width == width && scaled_height == height)
-		glTexImage2D (GL_TEXTURE_2D, 0, comp, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-	else
-	{
-		gluScaleImage (GL_RGBA, width, height, GL_UNSIGNED_BYTE, trans,
-			scaled_width, scaled_height, GL_UNSIGNED_BYTE, scaled);
-		glTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
-	}
-#else
-
 	if (scaled_width == width && scaled_height == height)
 	{
 		if (!mipmap)
@@ -79295,8 +78535,6 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 		}
 	}
 done: ;
-#endif
-
 
 	if (mipmap)
 	{
@@ -81537,19 +80775,6 @@ void Mod_LoadLeafs (lump_t *l)
 		out->firstmarksurface = loadmodel->marksurfaces +
 			LittleShort(in->firstleafface);
 		out->nummarksurfaces = LittleShort(in->numleaffaces);
-
-		// gl underwater warp
-#if 0
-		if (out->contents & (CONTENTS_WATER|CONTENTS_SLIME|CONTENTS_LAVA|CONTENTS_THINWATER) )
-		{
-			for (j=0 ; j<out->nummarksurfaces ; j++)
-			{
-				out->firstmarksurface[j]->flags |= SURF_UNDERWATER;
-				for (poly = out->firstmarksurface[j]->polys ; poly ; poly=poly->next)
-					poly->flags |= SURF_UNDERWATER;
-			}
-		}
-#endif
 	}
 }
 
@@ -82455,13 +81680,6 @@ static struct {
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
 
-static BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
-static void GL_UpdateSwapInterval() {
-	if (gl_swapinterval->modified) {
-		gl_swapinterval->modified = false;
-		wglSwapIntervalEXT(gl_swapinterval->value);
-	}
-}
 
 static void R_BeginFrame() {
 	GLimp_BeginFrame();
@@ -82515,22 +81733,9 @@ static void R_BeginFrame() {
 		gl_texturesolidmode->modified = false;
 	}
 
-	/*
-	** swapinterval stuff
-	*/
-	GL_UpdateSwapInterval();
-
-	//
-	// clear screen if desired
-	//
 	R_Clear ();
 }
 
-/*
-=============
-R_SetPalette
-=============
-*/
 unsigned r_rawpalette[256];
 
 void R_SetPalette ( const unsigned char *palette)
@@ -84087,7 +83292,6 @@ vec3_t	skyclip[6] = {
 	{1,0,1},
 	{-1,0,1}
 };
-int	c_sky;
 
 // 1 = s, 2 = t, 3 = 2048
 int	st_to_vec[6][3] =
@@ -84132,17 +83336,6 @@ void DrawSkyPolygon (int nump, vec3_t vecs)
 	int		axis;
 	float	*vp;
 
-	c_sky++;
-#if 0
-glBegin (GL_POLYGON);
-for (i=0 ; i<nump ; i++, vecs+=3)
-{
-	VectorAdd(vecs, r_origin, v);
-	glVertex3fv (v);
-}
-glEnd();
-return;
-#endif
 	// decide which face it maps to
 	VectorCopy (vec3_origin, v);
 	for (i=0, vp=vecs ; i<nump ; i++, vp+=3)
@@ -84383,13 +83576,6 @@ int	skytexorder[6] = {0,2,1,3,4,5};
 void R_DrawSkyBox (void)
 {
 	int		i;
-
-#if 0
-glEnable (GL_BLEND);
-GL_TexEnv( GL_MODULATE );
-glColor4f (1,1,1,0.5);
-glDisable (GL_DEPTH_TEST);
-#endif
 	if (skyrotate)
 	{	// check for no sky at all
 		for (i=0 ; i<6 ; i++)
@@ -84428,12 +83614,6 @@ glRotatef (r_newrefdef.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
 		glEnd ();
 	}
 glPopMatrix ();
-#if 0
-glDisable (GL_BLEND);
-glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-glColor4f (1,1,1,0.5);
-glEnable (GL_DEPTH_TEST);
-#endif
 }
 
 
@@ -84862,11 +84042,6 @@ void IN_MouseMove (usercmd_t *cmd)
 
 	mx = current_pos.x - window_center_x;
 	my = current_pos.y - window_center_y;
-
-#if 0
-	if (!mx && !my)
-		return;
-#endif
 
 	if (m_filter->value)
 	{
@@ -85410,14 +84585,12 @@ static bool DS_CreateBuffers( void )
 
 	Com_Printf( "Creating DS buffers\n" );
 
-	Com_DPrintf("...setting EXCLUSIVE coop level: " );
 	if ( DS_OK != pDS->lpVtbl->SetCooperativeLevel( pDS, cl_hwnd, DSSCL_EXCLUSIVE ) )
 	{
 		Com_Printf ("failed\n");
 		FreeSound ();
 		return false;
 	}
-	Com_DPrintf("ok\n" );
 
 // get access to the primary buffer, if possible, so we can set the
 // sound hardware format
@@ -85431,22 +84604,12 @@ static bool DS_CreateBuffers( void )
 	dsbcaps.dwSize = sizeof(dsbcaps);
 	primary_format_set = false;
 
-	Com_DPrintf( "...creating primary buffer: " );
 	if (DS_OK == pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL))
 	{
 		pformat = format;
 
-		Com_DPrintf( "ok\n" );
-		if (DS_OK != pDSPBuf->lpVtbl->SetFormat (pDSPBuf, &pformat))
+		if (DS_OK == pDSPBuf->lpVtbl->SetFormat (pDSPBuf, &pformat))
 		{
-			if (snd_firsttime)
-				Com_DPrintf ("...setting primary sound format: failed\n");
-		}
-		else
-		{
-			if (snd_firsttime)
-				Com_DPrintf ("...setting primary sound format: ok\n");
-
 			primary_format_set = true;
 		}
 	}
@@ -85465,14 +84628,12 @@ static bool DS_CreateBuffers( void )
 		memset(&dsbcaps, 0, sizeof(dsbcaps));
 		dsbcaps.dwSize = sizeof(dsbcaps);
 
-		Com_DPrintf( "...creating secondary buffer: " );
 		if (DS_OK != pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL))
 		{
 			Com_Printf( "failed\n" );
 			FreeSound ();
 			return false;
 		}
-		Com_DPrintf( "ok\n" );
 
 		dma.channels = format.nChannels;
 		dma.samplebits = format.wBitsPerSample;
@@ -85491,14 +84652,12 @@ static bool DS_CreateBuffers( void )
 	{
 		Com_Printf( "...using primary buffer\n" );
 
-		Com_DPrintf( "...setting WRITEPRIMARY coop level: " );
 		if (DS_OK != pDS->lpVtbl->SetCooperativeLevel (pDS, cl_hwnd, DSSCL_WRITEPRIMARY))
 		{
 			Com_Printf( "failed\n" );
 			FreeSound ();
 			return false;
 		}
-		Com_DPrintf( "ok\n" );
 
 		if (DS_OK != pDSPBuf->lpVtbl->GetCaps (pDSPBuf, &dsbcaps))
 		{
@@ -85541,16 +84700,13 @@ static bool DS_CreateBuffers( void )
 */
 static void DS_DestroyBuffers( void )
 {
-	Com_DPrintf( "Destroying DS buffers\n" );
 	if ( pDS )
 	{
-		Com_DPrintf( "...setting NORMAL coop level\n" );
 		pDS->lpVtbl->SetCooperativeLevel( pDS, cl_hwnd, DSSCL_NORMAL );
 	}
 
 	if ( pDSBuf )
 	{
-		Com_DPrintf( "...stopping and releasing sound buffer\n" );
 		pDSBuf->lpVtbl->Stop( pDSBuf );
 		pDSBuf->lpVtbl->Release( pDSBuf );
 	}
@@ -85558,7 +84714,6 @@ static void DS_DestroyBuffers( void )
 	// only release primary buffer if it's not also the mixing buffer we just released
 	if ( pDSPBuf && ( pDSBuf != pDSPBuf ) )
 	{
-		Com_DPrintf( "...releasing primary buffer\n" );
 		pDSPBuf->lpVtbl->Release( pDSPBuf );
 	}
 	pDSBuf = NULL;
@@ -85576,36 +84731,30 @@ void FreeSound (void)
 {
 	int		i;
 
-	Com_DPrintf( "Shutting down sound system\n" );
 
 	if ( pDS )
 		DS_DestroyBuffers();
 
 	if ( hWaveOut )
 	{
-		Com_DPrintf( "...resetting waveOut\n" );
 		waveOutReset (hWaveOut);
 
 		if (lpWaveHdr)
 		{
-			Com_DPrintf( "...unpreparing headers\n" );
 			for (i=0 ; i< WAV_BUFFERS ; i++)
 				waveOutUnprepareHeader (hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR));
 		}
 
-		Com_DPrintf( "...closing waveOut\n" );
 		waveOutClose (hWaveOut);
 
 		if (hWaveHdr)
 		{
-			Com_DPrintf( "...freeing WAV header\n" );
 			GlobalUnlock(hWaveHdr);
 			GlobalFree(hWaveHdr);
 		}
 
 		if (hData)
 		{
-			Com_DPrintf( "...freeing WAV buffer\n" );
 			GlobalUnlock(hData);
 			GlobalFree(hData);
 		}
@@ -85614,13 +84763,11 @@ void FreeSound (void)
 
 	if ( pDS )
 	{
-		Com_DPrintf( "...releasing DS object\n" );
 		pDS->lpVtbl->Release( pDS );
 	}
 
 	if ( hInstDS )
 	{
-		Com_DPrintf( "...freeing DSOUND.DLL\n" );
 		FreeLibrary( hInstDS );
 		hInstDS = NULL;
 	}
@@ -85663,7 +84810,6 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	if ( !hInstDS )
 	{
-		Com_DPrintf( "...loading dsound.dll: " );
 
 		hInstDS = LoadLibrary("dsound.dll");
 
@@ -85673,7 +84819,6 @@ sndinitstat SNDDMA_InitDirect (void)
 			return SIS_FAILURE;
 		}
 
-		Com_DPrintf ("ok\n");
 		pDirectSoundCreate = (void *)GetProcAddress(hInstDS,"DirectSoundCreate");
 
 		if (!pDirectSoundCreate)
@@ -85683,7 +84828,6 @@ sndinitstat SNDDMA_InitDirect (void)
 		}
 	}
 
-	Com_DPrintf( "...creating DS object: " );
 	while ( ( hresult = iDirectSoundCreate( NULL, &pDS, NULL ) ) != DS_OK )
 	{
 		if (hresult != DSERR_ALLOCATED)
@@ -85702,7 +84846,6 @@ sndinitstat SNDDMA_InitDirect (void)
 			return SIS_NOTAVAIL;
 		}
 	}
-	Com_DPrintf( "ok\n" );
 
 	dscaps.dwSize = sizeof(dscaps);
 
@@ -85713,7 +84856,6 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	if ( dscaps.dwFlags & DSCAPS_EMULDRIVER )
 	{
-		Com_DPrintf ("...no DSound driver found\n" );
 		FreeSound();
 		return SIS_FAILURE;
 	}
@@ -85723,7 +84865,6 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	dsound_init = true;
 
-	Com_DPrintf("...completed successfully\n" );
 
 	return SIS_SUCCESS;
 }
@@ -85769,7 +84910,6 @@ bool SNDDMA_InitWav (void)
 		*format.nBlockAlign;
 
 	/* Open a waveform device for output using window callback. */
-	Com_DPrintf ("...opening waveform device: ");
 	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER,
 					&format,
 					0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR)
@@ -85790,7 +84930,6 @@ bool SNDDMA_InitWav (void)
 			return false;
 		}
 	}
-	Com_DPrintf( "ok\n" );
 
 	/*
 	 * Allocate and lock memory for the waveform data. The memory
@@ -85798,7 +84937,6 @@ bool SNDDMA_InitWav (void)
 	 * GMEM_MOVEABLE and GMEM_SHARE flags.
 
 	*/
-	Com_DPrintf ("...allocating waveform buffer: ");
 	gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
 	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize);
 	if (!hData)
@@ -85807,9 +84945,7 @@ bool SNDDMA_InitWav (void)
 		FreeSound ();
 		return false;
 	}
-	Com_DPrintf( "ok\n" );
 
-	Com_DPrintf ("...locking waveform buffer: ");
 	lpData = GlobalLock(hData);
 	if (!lpData)
 	{
@@ -85818,14 +84954,12 @@ bool SNDDMA_InitWav (void)
 		return false;
 	}
 	memset (lpData, 0, gSndBufSize);
-	Com_DPrintf( "ok\n" );
 
 	/*
 	 * Allocate and lock memory for the header. This memory must
 	 * also be globally allocated with GMEM_MOVEABLE and
 	 * GMEM_SHARE flags.
 	 */
-	Com_DPrintf ("...allocating waveform header: ");
 	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE,
 		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
 
@@ -85835,9 +84969,7 @@ bool SNDDMA_InitWav (void)
 		FreeSound ();
 		return false;
 	}
-	Com_DPrintf( "ok\n" );
 
-	Com_DPrintf ("...locking waveform header: ");
 	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr);
 
 	if (lpWaveHdr == NULL)
@@ -85847,10 +84979,8 @@ bool SNDDMA_InitWav (void)
 		return false;
 	}
 	memset (lpWaveHdr, 0, sizeof(WAVEHDR) * WAV_BUFFERS);
-	Com_DPrintf( "ok\n" );
 
 	/* After allocation, set up and prepare headers. */
-	Com_DPrintf ("...preparing headers: ");
 	for (i=0 ; i<WAV_BUFFERS ; i++)
 	{
 		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE;
@@ -85864,7 +84994,6 @@ bool SNDDMA_InitWav (void)
 			return false;
 		}
 	}
-	Com_DPrintf ("ok\n");
 
 	dma.samples = gSndBufSize/(dma.samplebits/8);
 	dma.samplepos = 0;
@@ -86063,7 +85192,6 @@ void SNDDMA_Submit(void)
 	{
 		if ( snd_completed == snd_sent )
 		{
-			Com_DPrintf ("Sound overrun\n");
 			break;
 		}
 
@@ -86652,22 +85780,7 @@ void CL_Frame (int msec) {
 }
 
 static void Qcommon_Frame(int delta_time_msec) {
-	if (fixedtime->value) {
-		delta_time_msec = fixedtime->value;
-	} else if (timescale->value) {
-		delta_time_msec *= timescale->value;
-		if (delta_time_msec < 1) {
-			delta_time_msec = 1;
-		}
-	}
-
-	if (showtrace->value) {
-		Com_Printf ("%4i traces  %4i points\n", c_traces, c_pointcontents);
-		c_traces = 0;
-		c_brush_traces = 0;
-		c_pointcontents = 0;
-	}
-
+	assert(delta_time_msec >= 1);
 	Cmd_ExecuteCbuf();
 	SV_Frame(delta_time_msec);
 	CL_Frame(delta_time_msec);
@@ -87038,11 +86151,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		developer = COM_GetCvar("developer", "0", 0);
-		timescale = COM_GetCvar("timescale", "1", 0);
-		fixedtime = COM_GetCvar("fixedtime", "0", 0);
-		logfile_active = COM_GetCvar("logfile", "0", 0);
-		showtrace = COM_GetCvar("showtrace", "0", 0);
 		rcon_password = COM_GetCvar("rcon_password", "", 0);
 		maxclients = COM_GetCvar("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
 		hostname = COM_GetCvar("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
@@ -87097,12 +86205,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
 		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
 		gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
-		gl_ext_swapinterval = COM_GetCvar( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-		gl_ext_multitexture = COM_GetCvar( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-		gl_ext_pointparameters = COM_GetCvar( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-		gl_ext_compiled_vertex_array = COM_GetCvar( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
 		gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
-		gl_swapinterval = COM_GetCvar( "gl_swapinterval", "1", CVAR_ARCHIVE );
 		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 		gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
 		intensity = COM_GetCvar("intensity", "2", 0);
@@ -87475,8 +86578,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Init GL procs that need context created beforehand
-	wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
-	assert(wglSwapIntervalEXT);
+	{
+		static BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
+		wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
+		assert(wglSwapIntervalEXT);
+		wglSwapIntervalEXT(1);
+	}
 
 	// NOTE: Video init
 	// TODO: unglobal
@@ -87512,8 +86619,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		GL_TexEnv(GL_REPLACE);
-
-		GL_UpdateSwapInterval();
 
 		registration_sequence = 1;
 		gl_state.inverse_intensity = 1 / intensity->value;
