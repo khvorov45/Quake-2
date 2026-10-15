@@ -14433,9 +14433,6 @@ void CL_GetEntitySoundOrigin (int ent, vec3_t org);
 
 void IN_Shutdown (void);
 
-void IN_Commands (void);
-// oportunity for devices to stick commands on the script buffer
-
 void IN_Frame (void);
 
 void IN_Move (usercmd_t *cmd);
@@ -14504,51 +14501,6 @@ void IN_Move (usercmd_t *cmd);
 #define	K_MOUSE1		200
 #define	K_MOUSE2		201
 #define	K_MOUSE3		202
-
-//
-// joystick buttons
-//
-#define	K_JOY1			203
-#define	K_JOY2			204
-#define	K_JOY3			205
-#define	K_JOY4			206
-
-//
-// aux keys are for multi-buttoned joysticks to generate so they can use
-// the normal binding process
-//
-#define	K_AUX1			207
-#define	K_AUX2			208
-#define	K_AUX3			209
-#define	K_AUX4			210
-#define	K_AUX5			211
-#define	K_AUX6			212
-#define	K_AUX7			213
-#define	K_AUX8			214
-#define	K_AUX9			215
-#define	K_AUX10			216
-#define	K_AUX11			217
-#define	K_AUX12			218
-#define	K_AUX13			219
-#define	K_AUX14			220
-#define	K_AUX15			221
-#define	K_AUX16			222
-#define	K_AUX17			223
-#define	K_AUX18			224
-#define	K_AUX19			225
-#define	K_AUX20			226
-#define	K_AUX21			227
-#define	K_AUX22			228
-#define	K_AUX23			229
-#define	K_AUX24			230
-#define	K_AUX25			231
-#define	K_AUX26			232
-#define	K_AUX27			233
-#define	K_AUX28			234
-#define	K_AUX29			235
-#define	K_AUX30			236
-#define	K_AUX31			237
-#define	K_AUX32			238
 
 #define K_MWHEELDOWN	239
 #define K_MWHEELUP		240
@@ -20874,32 +20826,6 @@ void CL_FixCvarCheats (void)
 
 //============================================================================
 
-/*
-==================
-CL_SendCommand
-
-==================
-*/
-void CL_SendCommand (void)
-{
-	// allow mice or other external controllers to add commands
-	IN_Commands ();
-
-	// process console commands
-	Cmd_ExecuteCbuf ();
-
-	// fix any cheating cvars
-	CL_FixCvarCheats ();
-
-	// send intentions now
-	CL_SendCmd ();
-
-	// resend a connection request if necessary
-	CL_CheckForResend ();
-}
-
-//============================================================================
-
 extern cparticle_t	*active_particles, *free_particles;
 extern cparticle_t	particles[MAX_PARTICLES];
 extern int			cl_numparticles;
@@ -26768,44 +26694,6 @@ keyname_t keynames[] =
 	{"MOUSE2", K_MOUSE2},
 	{"MOUSE3", K_MOUSE3},
 
-	{"JOY1", K_JOY1},
-	{"JOY2", K_JOY2},
-	{"JOY3", K_JOY3},
-	{"JOY4", K_JOY4},
-
-	{"AUX1", K_AUX1},
-	{"AUX2", K_AUX2},
-	{"AUX3", K_AUX3},
-	{"AUX4", K_AUX4},
-	{"AUX5", K_AUX5},
-	{"AUX6", K_AUX6},
-	{"AUX7", K_AUX7},
-	{"AUX8", K_AUX8},
-	{"AUX9", K_AUX9},
-	{"AUX10", K_AUX10},
-	{"AUX11", K_AUX11},
-	{"AUX12", K_AUX12},
-	{"AUX13", K_AUX13},
-	{"AUX14", K_AUX14},
-	{"AUX15", K_AUX15},
-	{"AUX16", K_AUX16},
-	{"AUX17", K_AUX17},
-	{"AUX18", K_AUX18},
-	{"AUX19", K_AUX19},
-	{"AUX20", K_AUX20},
-	{"AUX21", K_AUX21},
-	{"AUX22", K_AUX22},
-	{"AUX23", K_AUX23},
-	{"AUX24", K_AUX24},
-	{"AUX25", K_AUX25},
-	{"AUX26", K_AUX26},
-	{"AUX27", K_AUX27},
-	{"AUX28", K_AUX28},
-	{"AUX29", K_AUX29},
-	{"AUX30", K_AUX30},
-	{"AUX31", K_AUX31},
-	{"AUX32", K_AUX32},
-
 	{"KP_HOME",			K_KP_HOME },
 	{"KP_UPARROW",		K_KP_UPARROW },
 	{"KP_PGUP",			K_KP_PGUP },
@@ -27526,14 +27414,9 @@ void Key_ClearStates (void)
 	}
 }
 
-/* ============ end source: client/keys.c ============ */
-/* ============ begin source: client/menu.c ============ */
-
 #ifdef _WIN32
 #include <io.h>
 #endif
-/* already inlined above: client/client.h */
-/* ============ begin inlined header: client/qmenu.h ============ */
 
 #ifndef __QMENU_H__
 #define __QMENU_H__
@@ -27638,8 +27521,6 @@ typedef struct
 	menucommon_s generic;
 } menuseparator_s;
 
-bool Field_Key( menufield_s *field, int key );
-
 void	Menu_AddItem( menuframework_s *menu, void *item );
 void	Menu_AdjustCursor( menuframework_s *menu, int dir );
 void	Menu_Center( menuframework_s *menu );
@@ -27656,7 +27537,6 @@ void	 Menu_DrawStringR2L( int, int, const char * );
 void	 Menu_DrawStringR2LDark( int, int, const char * );
 
 #endif
-/* ============ end inlined header: client/qmenu.h ============ */
 
 static int	m_main_cursor;
 
@@ -27755,137 +27635,166 @@ static void M_PopMenu() {
 	}
 }
 
+static bool Field_Key(menufield_s *field, int key_passed) {
+	int key = key_passed;
+	switch (key_passed) {
+		case K_KP_SLASH: {key = '/';} break;
+		case K_KP_MINUS: {key = '-';} break;
+		case K_KP_PLUS: {key = '+';} break;
+		case K_KP_HOME: {key = '7';} break;
+		case K_KP_UPARROW: {key = '8';} break;
+		case K_KP_PGUP: {key = '9';} break;
+		case K_KP_LEFTARROW: {key = '4';} break;
+		case K_KP_5: {key = '5';} break;
+		case K_KP_RIGHTARROW: {key = '6';} break;
+		case K_KP_END: {key = '1';} break;
+		case K_KP_DOWNARROW: {key = '2';} break;
+		case K_KP_PGDN: {key = '3';} break;
+		case K_KP_INS: {key = '0';} break;
+		case K_KP_DEL: {key = '.';} break;
+	}
 
-const char *Default_MenuKey( menuframework_s *m, int key )
-{
-	const char *sound = NULL;
-	menucommon_s *item;
+	bool handled = false;
+	bool key_is_ascii = key <= 127;
+	if (key_is_ascii && key != K_KP_ENTER && key != K_ENTER && key != K_ESCAPE && key != K_TAB) {
+		handled = true;
 
-	if ( m )
-	{
-		if ( ( item = Menu_ItemAtCursor( m ) ) != 0 )
-		{
-			if ( item->type == MTYPE_FIELD )
-			{
-				if ( Field_Key( ( menufield_s * ) item, key ) )
-					return NULL;
+		if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((( key == K_INS) || (key == K_KP_INS)) && keydown[K_SHIFT])) {
+			// support pasting from the clipboard
+			char* clipboard_data = Sys_GetClipboardData();
+			if (clipboard_data) {
+				strtok(clipboard_data, "\n\r\b");
+				strncpy(field->buffer, clipboard_data, field->length - 1);
+				field->cursor = strlen(field->buffer);
+				field->visible_offset = max(field->cursor - field->visible_length, 0);
+				free(clipboard_data);
 			}
+
+		} else {
+
+			switch (key) {
+				case K_KP_LEFTARROW:
+				case K_LEFTARROW:
+				case K_BACKSPACE: {
+					if (field->cursor > 0) {
+						memmove(&field->buffer[field->cursor-1], &field->buffer[field->cursor], strlen(&field->buffer[field->cursor]) + 1);
+						field->cursor--;
+						if (field->visible_offset) {
+							field->visible_offset--;
+						}
+					}
+				} break;
+
+				case K_KP_DEL:
+				case K_DEL: {
+					char* dest = field->buffer + field->cursor;
+					char* src = dest + 1;
+					memmove(dest, src, strlen(src) + 1);
+				} break;
+
+				default: {
+					if ( !isdigit( key ) && ( field->generic.flags & QMF_NUMBERSONLY ) )
+						return false;
+
+					if ( field->cursor < field->length )
+					{
+						field->buffer[field->cursor++] = key;
+						field->buffer[field->cursor] = 0;
+
+						if ( field->cursor > field->visible_length )
+						{
+							field->visible_offset++;
+						}
+					}
+				} break;
+			}
+
 		}
 	}
 
-	switch ( key )
-	{
-	case K_ESCAPE:
-		M_PopMenu();
-		return menu_out_sound;
-	case K_KP_UPARROW:
-	case K_UPARROW:
-		if ( m )
-		{
-			m->cursor--;
-			Menu_AdjustCursor( m, -1 );
-			sound = menu_move_sound;
-		}
-		break;
-	case K_TAB:
-		if ( m )
-		{
-			m->cursor++;
-			Menu_AdjustCursor( m, 1 );
-			sound = menu_move_sound;
-		}
-		break;
-	case K_KP_DOWNARROW:
-	case K_DOWNARROW:
-		if ( m )
-		{
-			m->cursor++;
-			Menu_AdjustCursor( m, 1 );
-			sound = menu_move_sound;
-		}
-		break;
-	case K_KP_LEFTARROW:
-	case K_LEFTARROW:
-		if ( m )
-		{
-			Menu_SlideItem( m, -1 );
-			sound = menu_move_sound;
-		}
-		break;
-	case K_KP_RIGHTARROW:
-	case K_RIGHTARROW:
-		if ( m )
-		{
-			Menu_SlideItem( m, 1 );
-			sound = menu_move_sound;
-		}
-		break;
+	return handled;
+}
 
-	case K_MOUSE1:
-	case K_MOUSE2:
-	case K_MOUSE3:
-	case K_JOY1:
-	case K_JOY2:
-	case K_JOY3:
-	case K_JOY4:
-	case K_AUX1:
-	case K_AUX2:
-	case K_AUX3:
-	case K_AUX4:
-	case K_AUX5:
-	case K_AUX6:
-	case K_AUX7:
-	case K_AUX8:
-	case K_AUX9:
-	case K_AUX10:
-	case K_AUX11:
-	case K_AUX12:
-	case K_AUX13:
-	case K_AUX14:
-	case K_AUX15:
-	case K_AUX16:
-	case K_AUX17:
-	case K_AUX18:
-	case K_AUX19:
-	case K_AUX20:
-	case K_AUX21:
-	case K_AUX22:
-	case K_AUX23:
-	case K_AUX24:
-	case K_AUX25:
-	case K_AUX26:
-	case K_AUX27:
-	case K_AUX28:
-	case K_AUX29:
-	case K_AUX30:
-	case K_AUX31:
-	case K_AUX32:
+char* Default_MenuKey(menuframework_s* m, int key) {
+	bool handled_by_field_key = false;
+	if (m) {
+		menucommon_s* item = Menu_ItemAtCursor(m);
+		if (item && item->type == MTYPE_FIELD) {
+			menufield_s* field = (menufield_s*)item;
+			handled_by_field_key = Field_Key(field, key);
+		}
+	}
 
-	case K_KP_ENTER:
-	case K_ENTER:
-		if ( m )
-			Menu_SelectItem( m );
-		sound = menu_move_sound;
-		break;
+	char* sound = 0;
+	if (!handled_by_field_key) {
+		switch (key) {
+			case K_ESCAPE: {
+				M_PopMenu();
+				sound = menu_out_sound;
+			} break;
+
+			case K_KP_UPARROW:
+			case K_UPARROW: {
+				if (m) {
+					m->cursor--;
+					Menu_AdjustCursor(m, -1);
+					sound = menu_move_sound;
+				}
+			} break;
+
+			case K_TAB: {
+				if (m) {
+					m->cursor++;
+					Menu_AdjustCursor(m, 1);
+					sound = menu_move_sound;
+				}
+			} break;
+
+			case K_KP_DOWNARROW:
+			case K_DOWNARROW: {
+				if (m) {
+					m->cursor++;
+					Menu_AdjustCursor(m, 1);
+					sound = menu_move_sound;
+				}
+			} break;
+
+			case K_KP_LEFTARROW:
+			case K_LEFTARROW: {
+				if (m) {
+					Menu_SlideItem( m, -1 );
+					sound = menu_move_sound;
+				}
+			} break;
+
+			case K_KP_RIGHTARROW:
+			case K_RIGHTARROW: {
+				if (m) {
+					Menu_SlideItem(m, 1);
+					sound = menu_move_sound;
+				}
+			} break;
+
+			case K_MOUSE1:
+			case K_MOUSE2:
+			case K_MOUSE3:
+			case K_KP_ENTER:
+			case K_ENTER: {
+				if (m) {
+					Menu_SelectItem( m );
+					sound = menu_move_sound;
+				}
+			} break;
+		}
 	}
 
 	return sound;
 }
 
-//=============================================================================
-
-/*
-================
-M_DrawCharacter
-
-Draws one solid graphics character
-cx and cy are in 320*240 coordinates, and will be centered on
-higher res screens.
-================
-*/
-void M_DrawCharacter (int cx, int cy, int num)
-{
-	Draw_Char ( cx + ((viddef.width - 320)>>1), cy + ((viddef.height - 240)>>1), num);
+// Draws one solid graphics character
+// cx and cy are in 320*240 coordinates, and will be centered on higher res screens.
+static void M_DrawCharacter(int cx, int cy, int num) {
+	Draw_Char(cx + ((viddef.width - 320) >> 1), cy + ((viddef.height - 240) >> 1), num);
 }
 
 void M_Print (int cx, int cy, char *str)
@@ -28619,16 +28528,6 @@ void M_Menu_Keys_f (void)
 	M_PushMenu( Keys_MenuDraw, Keys_MenuKey );
 }
 
-
-/*
-=======================================================================
-
-CONTROLS MENU
-
-=======================================================================
-*/
-extern cvar_t *in_joystick;
-
 static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
@@ -28640,8 +28539,6 @@ static menulist_s		s_options_lookspring_box;
 static menulist_s		s_options_lookstrafe_box;
 static menulist_s		s_options_crosshair_box;
 static menuslider_s		s_options_sfxvolume_slider;
-static menulist_s		s_options_joystick_box;
-static menulist_s		s_options_cdvolume_box;
 static menulist_s		s_options_quality_list;
 static menulist_s		s_options_compatibility_list;
 static menulist_s		s_options_console_action;
@@ -28650,12 +28547,6 @@ static void CrosshairFunc(void* unused)
 {
 	UNUSED(unused);
 	COM_SetValueCvar( "crosshair", s_options_crosshair_box.curvalue );
-}
-
-static void JoystickFunc(void* unused)
-{
-	UNUSED(unused);
-	COM_SetValueCvar( "in_joystick", s_options_joystick_box.curvalue );
 }
 
 static void CustomizeControlsFunc(void* unused)
@@ -28692,7 +28583,6 @@ static float ClampCvar( float min, float max, float value )
 static void ControlsSetMenuItemValues( void )
 {
 	s_options_sfxvolume_slider.curvalue		= Cvar_VariableValue( "s_volume" ) * 10;
-	s_options_cdvolume_box.curvalue 		= !Cvar_VariableValue("cd_nocd");
 	s_options_quality_list.curvalue			= !Cvar_VariableValue( "s_loadas8bit" );
 	s_options_sensitivity_slider.curvalue	= ( sensitivity->value ) * 2;
 
@@ -28712,9 +28602,6 @@ static void ControlsSetMenuItemValues( void )
 
 	COM_SetValueCvar( "crosshair", ClampCvar( 0, 3, crosshair->value ) );
 	s_options_crosshair_box.curvalue		= crosshair->value;
-
-	COM_SetValueCvar( "in_joystick", ClampCvar( 0, 1, in_joystick->value ) );
-	s_options_joystick_box.curvalue		= in_joystick->value;
 }
 
 static void ControlsResetDefaultsFunc(void* unused)
@@ -28909,13 +28796,6 @@ void Options_MenuInit( void )
 	s_options_crosshair_box.generic.callback = CrosshairFunc;
 	s_options_crosshair_box.itemnames = crosshair_names;
 
-	s_options_joystick_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_joystick_box.generic.x	= 0;
-	s_options_joystick_box.generic.y	= 120;
-	s_options_joystick_box.generic.name	= "use joystick";
-	s_options_joystick_box.generic.callback = JoystickFunc;
-	s_options_joystick_box.itemnames = yesno_names;
-
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
 	s_options_customize_options_action.generic.y		= 140;
@@ -28937,7 +28817,6 @@ void Options_MenuInit( void )
 	ControlsSetMenuItemValues();
 
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sfxvolume_slider );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_cdvolume_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_quality_list );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_compatibility_list );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sensitivity_slider );
@@ -28947,7 +28826,6 @@ void Options_MenuInit( void )
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookstrafe_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_freelook_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_crosshair_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_joystick_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -30068,18 +29946,15 @@ void StartServer_MenuInit( void )
 		"cooperative",
 		0
 	};
-//=======
-//PGM
+
 	static const char *dm_coop_names_rogue[] =
 	{
 		"deathmatch",
 		"cooperative",
 		"tag",
-//		"deathball",
 		0
 	};
-//PGM
-//=======
+
 	char *buffer;
 	char  mapsname[1024];
 	char *s;
@@ -31597,135 +31472,6 @@ void Field_Draw( menufield_s *f )
 					   ' ' );
 		}
 	}
-}
-
-bool Field_Key( menufield_s *f, int key )
-{
-	switch ( key )
-	{
-	case K_KP_SLASH:
-		key = '/';
-		break;
-	case K_KP_MINUS:
-		key = '-';
-		break;
-	case K_KP_PLUS:
-		key = '+';
-		break;
-	case K_KP_HOME:
-		key = '7';
-		break;
-	case K_KP_UPARROW:
-		key = '8';
-		break;
-	case K_KP_PGUP:
-		key = '9';
-		break;
-	case K_KP_LEFTARROW:
-		key = '4';
-		break;
-	case K_KP_5:
-		key = '5';
-		break;
-	case K_KP_RIGHTARROW:
-		key = '6';
-		break;
-	case K_KP_END:
-		key = '1';
-		break;
-	case K_KP_DOWNARROW:
-		key = '2';
-		break;
-	case K_KP_PGDN:
-		key = '3';
-		break;
-	case K_KP_INS:
-		key = '0';
-		break;
-	case K_KP_DEL:
-		key = '.';
-		break;
-	}
-
-	if ( key > 127 )
-	{
-		switch ( key )
-		{
-		case K_DEL:
-		default:
-			return false;
-		}
-	}
-
-	/*
-	** support pasting from the clipboard
-	*/
-	if ( ( toupper( key ) == 'V' && keydown[K_CTRL] ) ||
-		 ( ( ( key == K_INS ) || ( key == K_KP_INS ) ) && keydown[K_SHIFT] ) )
-	{
-		char *cbd;
-
-		if ( ( cbd = Sys_GetClipboardData() ) != 0 )
-		{
-			strtok( cbd, "\n\r\b" );
-
-			strncpy( f->buffer, cbd, f->length - 1 );
-			f->cursor = strlen( f->buffer );
-			f->visible_offset = f->cursor - f->visible_length;
-			if ( f->visible_offset < 0 )
-				f->visible_offset = 0;
-
-			free( cbd );
-		}
-		return true;
-	}
-
-	switch ( key )
-	{
-	case K_KP_LEFTARROW:
-	case K_LEFTARROW:
-	case K_BACKSPACE:
-		if ( f->cursor > 0 )
-		{
-			memmove( &f->buffer[f->cursor-1], &f->buffer[f->cursor], strlen( &f->buffer[f->cursor] ) + 1 );
-			f->cursor--;
-
-			if ( f->visible_offset )
-			{
-				f->visible_offset--;
-			}
-		}
-		break;
-
-	case K_KP_DEL:
-	case K_DEL:
-		memmove( &f->buffer[f->cursor], &f->buffer[f->cursor+1], strlen( &f->buffer[f->cursor+1] ) + 1 );
-		break;
-
-	case K_KP_ENTER:
-	case K_ENTER:
-	case K_ESCAPE:
-	case K_TAB:
-		return false;
-
-	case K_SPACE:
-	default:
-		if ( !isdigit( key ) && ( f->generic.flags & QMF_NUMBERSONLY ) )
-			return false;
-
-		if ( f->cursor < f->length )
-		{
-			f->buffer[f->cursor++] = key;
-			f->buffer[f->cursor] = 0;
-
-			if ( f->cursor > f->visible_length )
-			{
-				f->visible_offset++;
-			}
-		}
-	}
-
-	return true;
 }
 
 void Menu_AddItem( menuframework_s *menu, void *item )
@@ -83817,7 +83563,7 @@ extern LPDIRECTSOUNDBUFFER pDSBuf;
 
 extern DWORD gSndBufSize;
 
-extern HWND			cl_hwnd;
+extern HWND	cl_hwnd;
 static bool ActiveApp;
 static bool Minimized;
 
@@ -83826,69 +83572,7 @@ void IN_MouseEvent (int mstate);
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
 
-// joystick defines and variables
-// where should defines be moved?
-#define JOY_ABSOLUTE_AXIS	0x00000000		// control like a joystick
-#define JOY_RELATIVE_AXIS	0x00000010		// control like a mouse, spinner, trackball
-#define	JOY_MAX_AXES		6				// X, Y, Z, R, U, V
-#define JOY_AXIS_X			0
-#define JOY_AXIS_Y			1
-#define JOY_AXIS_Z			2
-#define JOY_AXIS_R			3
-#define JOY_AXIS_U			4
-#define JOY_AXIS_V			5
-
-enum _ControlList
-{
-	AxisNada = 0, AxisForward, AxisLook, AxisSide, AxisTurn, AxisUp
-};
-
-DWORD	dwAxisFlags[JOY_MAX_AXES] =
-{
-	JOY_RETURNX, JOY_RETURNY, JOY_RETURNZ, JOY_RETURNR, JOY_RETURNU, JOY_RETURNV
-};
-
-DWORD	dwAxisMap[JOY_MAX_AXES];
-DWORD	dwControlMap[JOY_MAX_AXES];
-PDWORD	pdwRawValue[JOY_MAX_AXES];
-
 cvar_t	*in_mouse;
-cvar_t	*in_joystick;
-
-
-// none of these cvars are saved over a session
-// this means that advanced controller configuration needs to be executed
-// each time.  this avoids any problems with getting back to a default usage
-// or when changing from one controller to another.  this way at least something
-// works.
-cvar_t	*joy_name;
-cvar_t	*joy_advanced;
-cvar_t	*joy_advaxisx;
-cvar_t	*joy_advaxisy;
-cvar_t	*joy_advaxisz;
-cvar_t	*joy_advaxisr;
-cvar_t	*joy_advaxisu;
-cvar_t	*joy_advaxisv;
-cvar_t	*joy_forwardthreshold;
-cvar_t	*joy_sidethreshold;
-cvar_t	*joy_pitchthreshold;
-cvar_t	*joy_yawthreshold;
-cvar_t	*joy_forwardsensitivity;
-cvar_t	*joy_sidesensitivity;
-cvar_t	*joy_pitchsensitivity;
-cvar_t	*joy_yawsensitivity;
-cvar_t	*joy_upthreshold;
-cvar_t	*joy_upsensitivity;
-
-bool	joy_avail, joy_advancedinit, joy_haspov;
-DWORD		joy_oldbuttonstate, joy_oldpovstate;
-
-int			joy_id;
-DWORD		joy_flags;
-DWORD		joy_numbuttons;
-
-static JOYINFOEX	ji;
-
 bool	in_appactive;
 
 // mouse variables
@@ -84139,70 +83823,6 @@ void IN_ClearStates (void)
 	mx_accum = 0;
 	my_accum = 0;
 	mouse_oldbuttonstate = 0;
-}
-
-void IN_Commands (void)
-{
-	int		i, key_index;
-	DWORD	buttonstate, povstate;
-
-	if (!joy_avail)
-	{
-		return;
-	}
-
-
-	// loop through the joystick buttons
-	// key a joystick event or auxillary event for higher number buttons for each state change
-	buttonstate = ji.dwButtons;
-	for (i=0 ; i < (int)joy_numbuttons ; i++)
-	{
-		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
-		{
-			key_index = (i < 4) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, true, 0);
-		}
-
-		if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
-		{
-			key_index = (i < 4) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, false, 0);
-		}
-	}
-	joy_oldbuttonstate = buttonstate;
-
-	if (joy_haspov)
-	{
-		// convert POV information into 4 bits of state information
-		// this avoids any potential problems related to moving from one
-		// direction to another without going through the center position
-		povstate = 0;
-		if(ji.dwPOV != JOY_POVCENTERED)
-		{
-			if (ji.dwPOV == JOY_POVFORWARD)
-				povstate |= 0x01;
-			if (ji.dwPOV == JOY_POVRIGHT)
-				povstate |= 0x02;
-			if (ji.dwPOV == JOY_POVBACKWARD)
-				povstate |= 0x04;
-			if (ji.dwPOV == JOY_POVLEFT)
-				povstate |= 0x08;
-		}
-		// determine which bits have changed and key an auxillary event for each change
-		for (i=0 ; i < 4 ; i++)
-		{
-			if ( (povstate & (1<<i)) && !(joy_oldpovstate & (1<<i)) )
-			{
-				Key_Event (K_AUX29 + i, true, 0);
-			}
-
-			if ( !(povstate & (1<<i)) && (joy_oldpovstate & (1<<i)) )
-			{
-				Key_Event (K_AUX29 + i, false, 0);
-			}
-		}
-		joy_oldpovstate = povstate;
-	}
 }
 
 #define	MAX_LOOPBACK	4
@@ -85724,7 +85344,11 @@ void CL_Frame (int msec) {
 	CL_ReadPackets ();
 
 	// send a new command message to the server
-	CL_SendCommand ();
+	Cmd_ExecuteCbuf();
+	CL_FixCvarCheats();
+	CL_SendCmd();
+	CL_CheckForResend();
+
 
 	// predict all unacknowledged movements
 	CL_PredictMovement ();
@@ -86244,25 +85868,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
 		m_filter = COM_GetCvar("m_filter", "0", 0);
 		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
-		in_joystick = COM_GetCvar("in_joystick", "0", CVAR_ARCHIVE);
-		joy_name = COM_GetCvar("joy_name", "joystick", 0);
-		joy_advanced = COM_GetCvar("joy_advanced", "0", 0);
-		joy_advaxisx = COM_GetCvar("joy_advaxisx", "0", 0);
-		joy_advaxisy = COM_GetCvar("joy_advaxisy", "0", 0);
-		joy_advaxisz = COM_GetCvar("joy_advaxisz", "0", 0);
-		joy_advaxisr = COM_GetCvar("joy_advaxisr", "0", 0);
-		joy_advaxisu = COM_GetCvar("joy_advaxisu", "0", 0);
-		joy_advaxisv = COM_GetCvar("joy_advaxisv", "0", 0);
-		joy_forwardthreshold = COM_GetCvar("joy_forwardthreshold", "0.15", 0);
-		joy_sidethreshold = COM_GetCvar("joy_sidethreshold", "0.15", 0);
-		joy_upthreshold = COM_GetCvar("joy_upthreshold", "0.15", 0);
-		joy_pitchthreshold = COM_GetCvar("joy_pitchthreshold", "0.15", 0);
-		joy_yawthreshold = COM_GetCvar("joy_yawthreshold", "0.15", 0);
-		joy_forwardsensitivity = COM_GetCvar("joy_forwardsensitivity", "-1", 0);
-		joy_sidesensitivity = COM_GetCvar("joy_sidesensitivity", "-1", 0);
-		joy_upsensitivity = COM_GetCvar("joy_upsensitivity", "-1", 0);
-		joy_pitchsensitivity = COM_GetCvar("joy_pitchsensitivity", "1", 0);
-		joy_yawsensitivity = COM_GetCvar("joy_yawsensitivity", "-1", 0);
 		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
 		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
 
