@@ -5712,14 +5712,13 @@ static struct {
 	int			helpchanged;	// flash F1 icon if non 0, play sound
 								// and increment only if 1, 2, or 3
 
-	gclient_t	*clients;		// [maxclients]
+	gclient_t	client;
 
 	// can't store spawnpoint in level, because
 	// it would get overwritten by the savegame restore
 	char		spawnpoint[512];	// needed for coop respawns
 
 	// store latched cvars here that we want to get at often
-	int			maxclients;
 	int			maxentities;
 
 	// cross level triggers
@@ -5799,7 +5798,6 @@ static cvar_t* fraglimit;
 static cvar_t* timelimit;
 static cvar_t* password;
 static cvar_t* spectator_password;
-static cvar_t* maxclients;
 static cvar_t* maxspectators;
 static cvar_t* maxentities;
 static cvar_t* g_select_empty;
@@ -9309,8 +9307,8 @@ typedef struct
 	int			spawncount;					// incremented each server start
 											// used to check late spawns
 
-	client_t	*clients;					// [maxclients->value];
-	int			num_client_entities;		// maxclients->value*UPDATE_BACKUP*MAX_PACKET_ENTITIES
+	client_t	client;
+	int			num_client_entities;		// UPDATE_BACKUP * MAX_PACKET_ENTITIES
 	int			next_client_entities;		// next client_entity to use
 	entity_state_t	*client_entities;		// [num_client_entities]
 
@@ -9328,7 +9326,6 @@ extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
 extern	cvar_t		*sv_paused;
-extern	cvar_t		*maxclients;
 extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
 extern	cvar_t		*sv_airaccelerate;		// don't reload level state when reentering development tool
 extern	cvar_t		*sv_enforcetime;
@@ -9478,13 +9475,13 @@ bool SV_SetPlayer (void)
 	if (s[0] >= '0' && s[0] <= '9')
 	{
 		idnum = atoi(Cmd_Argv(1));
-		if (idnum < 0 || idnum >= maxclients->value)
+		if (idnum < 0 || idnum >= 1)
 		{
 			Com_Printf ("Bad client slot: %i\n", idnum);
 			return false;
 		}
 
-		sv_client = &svs.clients[idnum];
+		sv_client = &svs.client;
 		sv_player = sv_client->edict;
 		if (!sv_client->state)
 		{
@@ -9495,7 +9492,7 @@ bool SV_SetPlayer (void)
 	}
 
 	// check for a name match
-	for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++)
+	for (i=0,cl=&svs.client ; i<1; i++,cl++)
 	{
 		if (!cl->state)
 			continue;
@@ -9825,8 +9822,8 @@ static void SV_GameMap_f() {
 			// clear all the client inuse flags before saving so that
 			// when the level is re-entered, the clients will spawn
 			// at spawn points instead of occupying body shells
-			savedInuse = malloc(maxclients->value * sizeof(bool));
-			for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++)
+			savedInuse = malloc(1 * sizeof(bool));
+			for (i=0,cl=&svs.client ; i<1; i++,cl++)
 			{
 				savedInuse[i] = cl->edict->inuse;
 				cl->edict->inuse = false;
@@ -9835,7 +9832,7 @@ static void SV_GameMap_f() {
 			SV_WriteLevelFile ();
 
 			// we must restore these for clients to transfer over correctly
-			for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++)
+			for (i=0,cl=&svs.client ; i<1; i++,cl++)
 				cl->edict->inuse = savedInuse[i];
 			free (savedInuse);
 		}
@@ -9937,7 +9934,7 @@ static void SV_Savegame_f() {
 		return;
 	}
 
-	if (maxclients->value == 1 && svs.clients[0].edict->client->ps.stats[STAT_HEALTH] <= 0)
+	if (svs.client.edict->client->ps.stats[STAT_HEALTH] <= 0)
 	{
 		Com_Printf ("\nCan't savegame while dead!\n");
 		return;
@@ -9997,16 +9994,11 @@ void SV_Status_f (void)
 	client_t	*cl;
 	char		*s;
 	int			ping;
-	if (!svs.clients)
-	{
-		Com_Printf ("No server running.\n");
-		return;
-	}
 	Com_Printf ("map              : %s\n", sv.name);
 
 	Com_Printf ("num score ping name            lastmsg address               \n");
 	Com_Printf ("--- ----- ---- --------------- ------- --------------------- \n");
-	for (i=0,cl=svs.clients ; i<maxclients->value; i++,cl++) {
+	for (i=0,cl=&svs.client ; i<1; i++,cl++) {
 		if (!cl->state) {
 			continue;
 		}
@@ -10067,7 +10059,7 @@ void SV_ConSay_f(void)
 
 	strcat(text, p);
 
-	for (j = 0, client = svs.clients; j < maxclients->value; j++, client++)
+	for (j = 0, client = &svs.client; j < 1; j++, client++)
 	{
 		if (client->state != cs_spawned)
 			continue;
@@ -10277,7 +10269,7 @@ void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t 
 			// in any bytes being emited if the entity has not changed at all
 			// note that players are always 'newentities', this updates their oldorigin always
 			// and prevents warping
-			MSG_WriteDeltaEntity (oldent, newent, msg, false, newent->number <= maxclients->value);
+			MSG_WriteDeltaEntity (oldent, newent, msg, false, newent->number <= 1);
 			oldindex++;
 			newindex++;
 			continue;
@@ -10826,10 +10818,10 @@ void PF_Unicast (edict_t *ent, bool reliable)
 		return;
 
 	p = NUM_FOR_EDICT(ent);
-	if (p < 1 || p > maxclients->value)
+	if (p < 1 || p > 1)
 		return;
 
-	client = svs.clients + (p-1);
+	client = &svs.client + (p-1);
 
 	if (reliable)
 		SZ_Write (&client->netchan.message, sv.multicast.data, sv.multicast.cursize);
@@ -10869,7 +10861,7 @@ void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 	if (ent)
 	{
 		n = NUM_FOR_EDICT(ent);
-		assert(n >= 1 && n <= maxclients->value);
+		assert(n >= 1 && n <= 1);
 	}
 
 	va_start (argptr,fmt);
@@ -10877,7 +10869,7 @@ void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 	va_end (argptr);
 
 	if (ent)
-		SV_ClientPrintf (svs.clients+(n-1), level, "%s", msg);
+		SV_ClientPrintf (&svs.client+(n-1), level, "%s", msg);
 	else
 		Com_Printf ("%s", msg);
 }
@@ -10890,7 +10882,7 @@ void PF_centerprintf (edict_t *ent, char *fmt, ...)
 	int			n;
 
 	n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > maxclients->value)
+	if (n < 1 || n > 1)
 		return;
 
 	va_start (argptr,fmt);
@@ -11207,12 +11199,13 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	strcpy (sv.name, server);
 
 	// leave slots at start for clients only
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		// needs to reconnect
-		if (svs.clients[i].state > cs_connected)
-			svs.clients[i].state = cs_connected;
-		svs.clients[i].lastframe = -1;
+		if (svs.client.state > cs_connected) {
+			svs.client.state = cs_connected;
+		}
+		svs.client.lastframe = -1;
 	}
 
 	sv.time = 1000;
@@ -11293,7 +11286,6 @@ static void SCR_EndLoadingPlaque() {
 
 // A brand new game has been started
 void SV_InitGame(void) {
-	int		i;
 	edict_t	*ent;
 
 	if (svs.initialized) {
@@ -11313,7 +11305,7 @@ void SV_InitGame(void) {
 		SCR_BeginLoadingPlaque ();
 	}
 
-	// get any latched variable changes (maxclients, etc)
+	// get any latched variable changes
 	for (cvar_t* var = cvar_vars; var; var = var->next) {
 		if (!var->latched_string) {
 			continue;
@@ -11326,43 +11318,17 @@ void SV_InitGame(void) {
 
 	svs.initialized = true;
 
-	if (Cvar_VariableValue ("coop") && Cvar_VariableValue ("deathmatch"))
-	{
-		Com_Printf("Deathmatch and Coop both set, disabling Coop\n");
-		COM_FullSetCvar ("coop", "0",  CVAR_SERVERINFO | CVAR_LATCH);
-	}
-
-	// init clients
-	if (Cvar_VariableValue ("deathmatch"))
-	{
-		if (maxclients->value <= 1)
-			COM_FullSetCvar ("maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);
-		else if (maxclients->value > MAX_CLIENTS)
-			COM_FullSetCvar ("maxclients", va("%i", MAX_CLIENTS), CVAR_SERVERINFO | CVAR_LATCH);
-	}
-	else if (Cvar_VariableValue ("coop"))
-	{
-		if (maxclients->value <= 1 || maxclients->value > 4)
-			COM_FullSetCvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-	}
-	else	// non-deathmatch, non-coop is one player
-	{
-		COM_FullSetCvar ("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-	}
-
 	svs.spawncount = rand();
-	svs.clients = Z_Malloc (sizeof(client_t)*maxclients->value);
-	svs.num_client_entities = maxclients->value*UPDATE_BACKUP*64;
-	svs.client_entities = Z_Malloc (sizeof(entity_state_t)*svs.num_client_entities);
+	svs.num_client_entities = UPDATE_BACKUP * 64;
+	svs.client_entities = Z_Malloc(sizeof(entity_state_t) * svs.num_client_entities);
 
 	// init game
 	SV_InitGameProgs ();
-	for (i=0 ; i<maxclients->value ; i++)
 	{
-		ent = EDICT_NUM(i+1);
-		ent->s.number = i+1;
-		svs.clients[i].edict = ent;
-		memset (&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
+		ent = EDICT_NUM(1);
+		ent->s.number = 1;
+		svs.client.edict = ent;
+		memset(&svs.client.lastcmd, 0, sizeof(svs.client.lastcmd));
 	}
 }
 
@@ -11484,7 +11450,6 @@ cvar_t	*sv_noreload;			// don't reload level state when reentering
 
 cvar_t	*sv_showclamp;
 
-cvar_t	*hostname;
 cvar_t	*public_server;			// should heartbeats be sent
 
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
@@ -11531,8 +11496,6 @@ void SV_DropClient (client_t *drop)
 char* SV_StatusString() {
 	char	player[1024];
 	static char	status[MAX_MSGLEN - 16];
-	int		i;
-	client_t	*cl;
 	int		statusLength;
 	int		playerLength;
 
@@ -11540,16 +11503,10 @@ char* SV_StatusString() {
 	strcat (status, "\n");
 	statusLength = strlen(status);
 
-	for (i=0 ; i<maxclients->value ; i++)
-	{
-		cl = &svs.clients[i];
-		if (cl->state == cs_connected || cl->state == cs_spawned )
-		{
-			Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n",
-				cl->edict->client->ps.stats[STAT_FRAGS], cl->ping, cl->name);
-			playerLength = strlen(player);
-			if (statusLength + playerLength >= (int)sizeof(status) )
-				break;		// can't hold any more
+	if (svs.client.state == cs_connected || svs.client.state == cs_spawned) {
+		Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n", svs.client.edict->client->ps.stats[STAT_FRAGS], svs.client.ping, svs.client.name);
+		playerLength = strlen(player);
+		if (statusLength + playerLength < (int)sizeof(status) ) {
 			strcpy (status + statusLength, player);
 			statusLength += playerLength;
 		}
@@ -11572,40 +11529,6 @@ SVC_Ack
 void SVC_Ack (void)
 {
 	Com_Printf ("Ping acknowledge from %s\n", NET_AdrToString(net_from));
-}
-
-/*
-================
-SVC_Info
-
-Responds with short info for broadcast scans
-The second parameter should be the current protocol version number.
-================
-*/
-void SVC_Info (void)
-{
-	char	string[64];
-	int		i, count;
-	int		version;
-
-	if (maxclients->value == 1)
-		return;		// ignore in single player
-
-	version = atoi (Cmd_Argv(1));
-
-	if (version != PROTOCOL_VERSION)
-		Com_sprintf (string, sizeof(string), "%s: wrong version\n", hostname->string, sizeof(string));
-	else
-	{
-		count = 0;
-		for (i=0 ; i<maxclients->value ; i++)
-			if (svs.clients[i].state >= cs_connected)
-				count++;
-
-		Com_sprintf (string, sizeof(string), "%16s %8s %2i/%2i\n", hostname->string, sv.name, count, (int)maxclients->value);
-	}
-
-	Netchan_OutOfBandPrint (NS_SERVER, net_from, "info\n%s", string);
 }
 
 /*
@@ -11727,7 +11650,7 @@ void SVC_DirectConnect (void)
 	memset (newcl, 0, sizeof(client_t));
 
 	// if there is already a slot for this ip, reuse it
-	for (i=0,cl=svs.clients ; i<maxclients->value ; i++,cl++)
+	for (i=0,cl=&svs.client ; i<1 ; i++,cl++)
 	{
 		if (cl->state == cs_free)
 			continue;
@@ -11745,7 +11668,7 @@ void SVC_DirectConnect (void)
 
 	// find a client slot
 	newcl = NULL;
-	for (i=0,cl=svs.clients ; i<maxclients->value ; i++,cl++)
+	for (i=0,cl=&svs.client ; i<1 ; i++,cl++)
 	{
 		if (cl->state == cs_free)
 		{
@@ -11765,7 +11688,7 @@ gotnewcl:
 	// this is the only place a client_t is ever initialized
 	*newcl = temp;
 	sv_client = newcl;
-	edictnum = (newcl-svs.clients)+1;
+	edictnum = (newcl - &svs.client)+1;
 	ent = EDICT_NUM(edictnum);
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
@@ -11819,8 +11742,6 @@ void SV_ConnectionlessPacket() {
 		SVC_Ack ();
 	else if (!strcmp(c,"status"))
 		SVC_Status ();
-	else if (!strcmp(c,"info"))
-		SVC_Info ();
 	else if (!strcmp(c,"getchallenge"))
 		SVC_GetChallenge ();
 	else if (!strcmp(c,"connect"))
@@ -11836,9 +11757,9 @@ void SV_CalcPings() {
 	client_t	*cl;
 	int			total, count;
 
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
-		cl = &svs.clients[i];
+		cl = &svs.client;
 		if (cl->state != cs_spawned )
 			continue;
 
@@ -11878,9 +11799,9 @@ void SV_GiveMsec (void)
 	if (sv.framenum & 15)
 		return;
 
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
-		cl = &svs.clients[i];
+		cl = &svs.client;
 		if (cl->state == cs_free )
 			continue;
 
@@ -11909,7 +11830,7 @@ void SV_ReadPackets (void)
 		}
 
 		// check for packets from connected clients
-		for (i=0, cl=svs.clients ; i<maxclients->value ; i++,cl++)
+		for (i=0, cl=&svs.client ; i<1 ; i++,cl++)
 		{
 			if (cl->state == cs_free)
 				continue;
@@ -11927,7 +11848,7 @@ void SV_ReadPackets (void)
 			break;
 		}
 
-		if (i != maxclients->value)
+		if (i != 1)
 			continue;
 	}
 }
@@ -11955,7 +11876,7 @@ void SV_CheckTimeouts (void)
 	droppoint = svs.realtime - 1000*timeout->value;
 	zombiepoint = svs.realtime - 1000*zombietime->value;
 
-	for (i=0,cl=svs.clients ; i<maxclients->value ; i++,cl++)
+	for (i = 0, cl = &svs.client; i<1 ; i++,cl++)
 	{
 		// message times may be wrong across a changelevel
 		if (cl->lastmessage > svs.realtime)
@@ -12008,7 +11929,7 @@ void SV_RunGameFrame() {
 	sv.time = sv.framenum*100;
 
 	// don't run if paused
-	if (!sv_paused->value || maxclients->value > 1)
+	if (!sv_paused->value)
 	{
 		G_RunFrame ();
 
@@ -12103,12 +12024,12 @@ void SV_FinalMessage (char *message, bool reconnect)
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
 
-	for (i=0, cl = svs.clients ; i<maxclients->value ; i++, cl++)
+	for (i=0, cl = &svs.client ; i<1 ; i++, cl++)
 		if (cl->state >= cs_connected)
 			Netchan_Transmit (&cl->netchan, net_message.cursize
 			, net_message.data);
 
-	for (i=0, cl = svs.clients ; i<maxclients->value ; i++, cl++)
+	for (i=0, cl = &svs.client ; i<1 ; i++, cl++)
 		if (cl->state >= cs_connected)
 			Netchan_Transmit (&cl->netchan, net_message.cursize
 			, net_message.data);
@@ -12116,8 +12037,7 @@ void SV_FinalMessage (char *message, bool reconnect)
 
 void SV_Shutdown (char *finalmsg, bool reconnect)
 {
-	if (svs.clients)
-		SV_FinalMessage (finalmsg, reconnect);
+	SV_FinalMessage (finalmsg, reconnect);
 
 	SV_ShutdownGameProgs ();
 
@@ -12128,12 +12048,10 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 	server_state = sv.state;
 
 	// free server static data
-	if (svs.clients)
-		Z_Free (svs.clients);
 	if (svs.client_entities)
-		Z_Free (svs.client_entities);
+		Z_Free(svs.client_entities);
 	if (svs.demofile)
-		fclose (svs.demofile);
+		fclose(svs.demofile);
 	memset (&svs, 0, sizeof(svs));
 }
 
@@ -12185,7 +12103,7 @@ void SV_BroadcastPrintf (int level, char *fmt, ...)
 		Com_Printf ("%s", copy);
 	}
 
-	for (i=0, cl = svs.clients ; i<maxclients->value; i++, cl++)
+	for (i=0, cl = &svs.client ; i<1; i++, cl++)
 	{
 		if (level < cl->messagelevel)
 			continue;
@@ -12280,7 +12198,7 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 	}
 
 	// send the data to all relevent clients
-	for (j = 0, client = svs.clients; j < maxclients->value; j++, client++)
+	for (j = 0, client = &svs.client; j < 1; j++, client++)
 	{
 		if (client->state == cs_free || client->state == cs_zombie)
 			continue;
@@ -12586,7 +12504,7 @@ void SV_SendClientMessages (void)
 	}
 
 	// send a message to each connected client
-	for (i=0, c = svs.clients ; i<maxclients->value; i++, c++)
+	for (i=0, c = &svs.client ; i<1; i++, c++)
 	{
 		if (!c->state)
 			continue;
@@ -12668,7 +12586,7 @@ void SV_New_f (void)
 	if (sv.state == ss_cinematic || sv.state == ss_pic)
 		playernum = -1;
 	else
-		playernum = sv_client - svs.clients;
+		playernum = sv_client - &svs.client;
 	MSG_WriteShort (&sv_client->netchan.message, playernum);
 
 	// send full levelname
@@ -19488,16 +19406,13 @@ void CL_ForwardToServer_f (void)
 	}
 }
 
-void CL_Pause_f (void)
-{
+static void CL_Pause_f() {
 	// never pause in multiplayer
-	if (Cvar_VariableValue ("maxclients") > 1 || !server_state)
-	{
-		COM_SetValueCvar ("paused", 0);
-		return;
+	if (!server_state) {
+		COM_SetValueCvar("paused", 0);
+	} else {
+		COM_SetValueCvar("paused", !cl_paused->value);
 	}
-
-	COM_SetValueCvar ("paused", !cl_paused->value);
 }
 
 // We have gotten a challenge from the server, so try and connect.
@@ -25796,7 +25711,7 @@ static void Con_ToggleConsole_f() {
 	} else {
 		M_ForceMenuOff();
 		cls.key_dest = key_console;
-		if (Cvar_VariableValue("maxclients") == 1 && server_state) {
+		if (server_state) {
 			COM_SetCvar("paused", "1");
 		}
 	}
@@ -27055,8 +26970,8 @@ static void M_Banner(char* name) {
 }
 
 static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
-	if (Cvar_VariableValue ("maxclients") == 1 && server_state) {
-		COM_SetCvar ("paused", "1");
+	if (server_state) {
+		COM_SetCvar("paused", "1");
 	}
 
 	// if this menu is already present, drop back to that level to avoid stacking menus by hotkeys
@@ -30788,7 +30703,6 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 /* already inlined above: game/g_local.h */
 
 bool FindTarget (edict_t* self);
-extern cvar_t	*maxclients;
 
 static bool ai_checkattack(edict_t* self);
 
@@ -30827,7 +30741,7 @@ void AI_SetSightClient (void)
 	while (1)
 	{
 		check++;
-		if (check > game.maxclients)
+		if (check > 1)
 			check = 1;
 		ent = &g_edicts[check];
 		if (ent->inuse
@@ -31972,7 +31886,7 @@ void ChaseNext(edict_t *ent)
 	i = ent->client->chase_target - g_edicts;
 	do {
 		i++;
-		if (i > maxclients->value)
+		if (i > 1)
 			i = 1;
 		e = g_edicts + i;
 		if (!e->inuse)
@@ -31997,7 +31911,7 @@ void ChasePrev(edict_t *ent)
 	do {
 		i--;
 		if (i < 1)
-			i = maxclients->value;
+			i = 1;
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
@@ -32014,7 +31928,7 @@ void GetChaseTarget(edict_t *ent)
 	int i;
 	edict_t* other;
 
-	for (i = 1; i <= maxclients->value; i++) {
+	for (i = 1; i <= 1; i++) {
 		other = g_edicts + i;
 		if (other->inuse && !other->client->resp.spectator) {
 			ent->client->chase_target = other;
@@ -32859,13 +32773,7 @@ void Cmd_InvDrop_f (edict_t *ent)
 	it->drop (ent, it);
 }
 
-/*
-=================
-Cmd_Kill_f
-=================
-*/
-void Cmd_Kill_f (edict_t *ent)
-{
+static void Cmd_Kill_f(edict_t* ent) {
 	if((level.time - ent->client->respawn_time) < 5)
 		return;
 	ent->flags &= ~FL_GODMODE;
@@ -32874,86 +32782,19 @@ void Cmd_Kill_f (edict_t *ent)
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
-/*
-=================
-Cmd_PutAway_f
-=================
-*/
-void Cmd_PutAway_f (edict_t *ent)
-{
+static void Cmd_PutAway_f(edict_t* ent) {
 	ent->client->showscores = false;
 	ent->client->showhelp = false;
 	ent->client->showinventory = false;
 }
 
-
-int PlayerSort (void const *a, void const *b)
-{
-	int		anum, bnum;
-
-	anum = *(int *)a;
-	bnum = *(int *)b;
-
-	anum = game.clients[anum].ps.stats[STAT_FRAGS];
-	bnum = game.clients[bnum].ps.stats[STAT_FRAGS];
-
-	if (anum < bnum)
-		return -1;
-	if (anum > bnum)
-		return 1;
-	return 0;
+static void Cmd_Players_f(edict_t* ent) {
+	char print_info[1280] = {};
+	Com_sprintf(print_info, sizeof(print_info), "%3i %s\n", game.client.ps.stats[STAT_FRAGS], game.client.pers.netname);
+	PF_cprintf(ent, PRINT_HIGH, "%s\n 1 player\n", print_info);
 }
 
-/*
-=================
-Cmd_Players_f
-=================
-*/
-void Cmd_Players_f (edict_t *ent)
-{
-	int		i;
-	int		count;
-	char	small[64];
-	char	large[1280];
-	int		index[256];
-
-	count = 0;
-	for (i = 0 ; i < maxclients->value ; i++)
-		if (game.clients[i].pers.connected)
-		{
-			index[count] = i;
-			count++;
-		}
-
-	// sort by frags
-	qsort (index, count, sizeof(index[0]), PlayerSort);
-
-	// print information
-	large[0] = 0;
-
-	for (i = 0 ; i < count ; i++)
-	{
-		Com_sprintf (small, sizeof(small), "%3i %s\n",
-			game.clients[index[i]].ps.stats[STAT_FRAGS],
-			game.clients[index[i]].pers.netname);
-		if (strlen (small) + strlen(large) > sizeof(large) - 100 )
-		{	// can't print all of them in one packet
-			strcat (large, "...\n");
-			break;
-		}
-		strcat (large, small);
-	}
-
-	PF_cprintf (ent, PRINT_HIGH, "%s\n%i players\n", large, count);
-}
-
-/*
-=================
-Cmd_Wave_f
-=================
-*/
-void Cmd_Wave_f (edict_t *ent)
-{
+static void Cmd_Wave_f(edict_t* ent) {
 	int		i;
 
 	i = atoi (Cmd_Argv(1));
@@ -33064,7 +32905,7 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 		cl->flood_when[cl->flood_whenhead] = level.time;
 	}
 
-	for (j = 1; j <= game.maxclients; j++)
+	for (j = 1; j <= 1; j++)
 	{
 		other = &g_edicts[j];
 		if (!other->inuse)
@@ -33089,7 +32930,7 @@ void Cmd_PlayerList_f(edict_t *ent)
 
 	// connect time, ping, score, name
 	*text = 0;
-	for (i = 0, e2 = g_edicts + 1; i < maxclients->value; i++, e2++) {
+	for (i = 0, e2 = g_edicts + 1; i < 1; i++, e2++) {
 		if (!e2->inuse)
 			continue;
 
@@ -37949,7 +37790,7 @@ void ClientEndServerFrames (void)
 
 	// calc the player views now that all pushing
 	// and damage has been added
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		ent = g_edicts + 1 + i;
 		if (!ent->inuse || !ent->client)
@@ -38065,10 +37906,10 @@ void CheckDMRules (void)
 
 	if (fraglimit->value)
 	{
-		for (i=0 ; i<maxclients->value ; i++)
+		for (i=0 ; i<1 ; i++)
 		{
-			cl = game.clients + i;
-			if (!g_edicts[i+1].inuse)
+			cl = &game.client;
+			if (!g_edicts[i + 1].inuse)
 				continue;
 
 			if (cl->resp.score >= fraglimit->value)
@@ -38101,7 +37942,7 @@ void ExitLevel (void)
 	ClientEndServerFrames ();
 
 	// clear some things before going to next level
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		ent = g_edicts + 1 + i;
 		if (!ent->inuse)
@@ -38162,7 +38003,7 @@ void G_RunFrame (void)
 			}
 		}
 
-		if (i > 0 && i <= maxclients->value)
+		if (i > 0 && i <= 1)
 		{
 			ClientBeginServerFrame (ent);
 			continue;
@@ -41839,7 +41680,6 @@ static void InitGame() {
 	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
-	maxclients = COM_GetCvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
 	maxspectators = COM_GetCvar ("maxspectators", "4", CVAR_SERVERINFO);
 	deathmatch = COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
 	coop = COM_GetCvar ("coop", "0", CVAR_LATCH);
@@ -41882,9 +41722,7 @@ static void InitGame() {
 	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
 	// initialize all clients for this game
-	game.maxclients = maxclients->value;
-	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	global_num_edicts = game.maxclients+1;
+	global_num_edicts = 2;
 }
 
 //=========================================================
@@ -41926,7 +41764,7 @@ static void WriteField1(field_t *field, u8 *base) {
 		if ( *(gclient_t **)p == NULL)
 			index = -1;
 		else
-			index = *(gclient_t **)p - game.clients;
+			index = *(gclient_t **)p - &game.client;
 		*(int *)p = index;
 		break;
 	case F_ITEM:
@@ -42024,7 +41862,7 @@ void ReadField (FILE *f, field_t *field, u8 *base)
 		if ( index == -1 )
 			*(gclient_t **)p = NULL;
 		else
-			*(gclient_t **)p = &game.clients[index];
+			*(gclient_t **)p = &game.client;
 		break;
 	case F_ITEM:
 		index = *(int *)p;
@@ -42114,7 +41952,6 @@ void ReadClient (FILE *f, gclient_t *client)
 void WriteGame (char *filename, bool autosave)
 {
 	FILE	*f;
-	int		i;
 	char	str[16];
 
 	if (!autosave)
@@ -42131,8 +41968,7 @@ void WriteGame (char *filename, bool autosave)
 	fwrite (&game, sizeof(game), 1, f);
 	game.autosaved = false;
 
-	for (i=0 ; i<game.maxclients ; i++)
-		WriteClient (f, &game.clients[i]);
+	WriteClient(f, &game.client);
 
 	fclose (f);
 }
@@ -42140,7 +41976,6 @@ void WriteGame (char *filename, bool autosave)
 void ReadGame (char *filename)
 {
 	FILE	*f;
-	int		i;
 	char	str[16];
 
 	Z_FreeTags (TAG_GAME);
@@ -42154,9 +41989,7 @@ void ReadGame (char *filename)
 	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
 	fread (&game, sizeof(game), 1, f);
-	game.clients = Z_TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	for (i=0 ; i<game.maxclients ; i++)
-		ReadClient (f, &game.clients[i]);
+	ReadClient(f, &game.client);
 
 	fclose (f);
 }
@@ -42314,7 +42147,7 @@ void ReadLevel (char *filename)
 
 	// wipe all the entities
 	memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));
-	global_num_edicts = maxclients->value+1;
+	global_num_edicts = 2;
 
 	// check edict size
 	fread (&i, sizeof(i), 1, f);
@@ -42349,10 +42182,9 @@ void ReadLevel (char *filename)
 	fclose (f);
 
 	// mark all clients as unconnected
-	for (i=0 ; i<maxclients->value ; i++)
 	{
-		ent = &g_edicts[i+1];
-		ent->client = game.clients + i;
+		ent = &g_edicts[1];
+		ent->client = &game.client;
 		ent->client->pers.connected = false;
 	}
 
@@ -42861,7 +42693,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	edict_t		*ent;
 	int			inhibit;
 	char		*com_token;
-	int			i;
 	float		skill_level;
 
 	skill_level = floor (skill->value);
@@ -42883,8 +42714,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	strncpy (game.spawnpoint, spawnpoint, sizeof(game.spawnpoint)-1);
 
 	// set client fields on player ents
-	for (i=0 ; i<game.maxclients ; i++)
-		g_edicts[i+1].client = game.clients + i;
+	g_edicts[1].client = &game.client;
 
 	ent = NULL;
 	inhibit = 0;
@@ -43005,86 +42835,6 @@ char *single_statusbar =
 "endif "
 ;
 
-char *dm_statusbar =
-"yb	-24 "
-
-// health
-"xv	0 "
-"hnum "
-"xv	50 "
-"pic 0 "
-
-// ammo
-"if 2 "
-"	xv	100 "
-"	anum "
-"	xv	150 "
-"	pic 2 "
-"endif "
-
-// armor
-"if 4 "
-"	xv	200 "
-"	rnum "
-"	xv	250 "
-"	pic 4 "
-"endif "
-
-// selected item
-"if 6 "
-"	xv	296 "
-"	pic 6 "
-"endif "
-
-"yb	-50 "
-
-// picked up item
-"if 7 "
-"	xv	0 "
-"	pic 7 "
-"	xv	26 "
-"	yb	-42 "
-"	stat_string 8 "
-"	yb	-50 "
-"endif "
-
-// timer
-"if 9 "
-"	xv	246 "
-"	num	2	10 "
-"	xv	296 "
-"	pic	9 "
-"endif "
-
-//  help / weapon icon
-"if 11 "
-"	xv	148 "
-"	pic	11 "
-"endif "
-
-//  frags
-"xr	-50 "
-"yt 2 "
-"num 3 14 "
-
-// spectator
-"if 17 "
-  "xv 0 "
-  "yb -58 "
-  "string2 \"SPECTATOR MODE\" "
-"endif "
-
-// chase camera
-"if 16 "
-  "xv 0 "
-  "yb -68 "
-  "string \"Chasing\" "
-  "xv 64 "
-  "stat_string 16 "
-"endif "
-;
-
-
 /*QUAKED worldspawn (0 0 0) ?
 
 Only used for the world.
@@ -43135,13 +42885,9 @@ void SP_worldspawn (edict_t *ent)
 
 	PF_Configstring (CS_CDTRACK, va("%i", ent->sounds) );
 
-	PF_Configstring (CS_MAXCLIENTS, va("%i", (int)(maxclients->value) ) );
+	PF_Configstring(CS_MAXCLIENTS, "1");
 
-	// status bar program
-	if (deathmatch->value)
-		PF_Configstring (CS_STATUSBAR, dm_statusbar);
-	else
-		PF_Configstring (CS_STATUSBAR, single_statusbar);
+	PF_Configstring (CS_STATUSBAR, single_statusbar);
 
 	//---------------
 
@@ -44597,7 +44343,7 @@ static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
 			for (cube = 0; cube < 8; cube++)
 				if (activator->client->pers.power_cubes & (1 << cube))
 					break;
-			for (player = 1; player <= game.maxclients; player++)
+			for (player = 1; player <= 1; player++)
 			{
 				ent = &g_edicts[player];
 				if (!ent->inuse)
@@ -44613,7 +44359,7 @@ static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
 		}
 		else
 		{
-			for (player = 1; player <= game.maxclients; player++)
+			for (player = 1; player <= 1; player++)
 			{
 				ent = &g_edicts[player];
 				if (!ent->inuse)
@@ -45777,8 +45523,8 @@ edict_t *G_Spawn (void)
 	int			i;
 	edict_t		*e;
 
-	e = &g_edicts[(int)maxclients->value+1];
-	for ( i=maxclients->value+1 ; i<global_num_edicts ; i++, e++)
+	e = &g_edicts[2];
+	for ( i=2 ; i<global_num_edicts ; i++, e++)
 	{
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
@@ -45807,9 +45553,7 @@ void G_FreeEdict (edict_t *ed)
 {
 	SV_UnlinkEdict (ed);		// unlink from world
 
-	if ((ed - g_edicts) <= (maxclients->value + BODY_QUEUE_SIZE))
-	{
-//		PF_dprintf("tried to free special edict\n");
+	if ((ed - g_edicts) <= (1 + BODY_QUEUE_SIZE)) {
 		return;
 	}
 
@@ -47885,7 +47629,7 @@ static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 		int		n;
 		edict_t	*ent;
 
-		for (n = 1; n <= game.maxclients; n++)
+		for (n = 1; n <= 1; n++)
 		{
 			ent = &g_edicts[n];
 			if (!ent->inuse)
@@ -69552,16 +69296,16 @@ void SaveClientData (void)
 	int		i;
 	edict_t	*ent;
 
-	for (i=0 ; i<game.maxclients ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		ent = &g_edicts[1+i];
 		if (!ent->inuse)
 			continue;
-		game.clients[i].pers.health = ent->health;
-		game.clients[i].pers.max_health = ent->max_health;
-		game.clients[i].pers.savedFlags = (ent->flags & (FL_GODMODE|FL_NOTARGET|FL_POWER_ARMOR));
+		game.client.pers.health = ent->health;
+		game.client.pers.max_health = ent->max_health;
+		game.client.pers.savedFlags = (ent->flags & (FL_GODMODE|FL_NOTARGET|FL_POWER_ARMOR));
 		if (coop->value)
-			game.clients[i].pers.score = ent->client->resp.score;
+			game.client.pers.score = ent->client->resp.score;
 	}
 }
 
@@ -69602,7 +69346,7 @@ float	PlayersRangeFromSpot (edict_t *spot)
 
 	bestplayerdistance = 9999999;
 
-	for (n = 1; n <= maxclients->value; n++)
+	for (n = 1; n <= 1; n++)
 	{
 		player = &g_edicts[n];
 
@@ -69734,7 +69478,7 @@ edict_t *SelectCoopSpawnPoint (edict_t *ent)
 	edict_t	*spot = NULL;
 	char	*target;
 
-	index = ent->client - game.clients;
+	index = ent->client - &game.client;
 
 	// player 0 starts in normal player spawn point
 	if (!index)
@@ -69843,7 +69587,7 @@ void CopyToBodyQue (edict_t *ent)
 	edict_t		*body;
 
 	// grab a body que and cycle to the next one
-	body = &g_edicts[(int)maxclients->value + level.body_que + 1];
+	body = &g_edicts[1 + level.body_que + 1];
 	level.body_que = (level.body_que + 1) % BODY_QUEUE_SIZE;
 
 	// FIXME: send an effect on the removed body
@@ -69923,7 +69667,7 @@ void spectator_respawn (edict_t *ent)
 		}
 
 		// count spectators
-		for (i = 1, numspec = 0; i <= maxclients->value; i++)
+		for (i = 1, numspec = 0; i <= 1; i++)
 			if (g_edicts[i].inuse && g_edicts[i].client->pers.spectator)
 				numspec++;
 
@@ -69993,7 +69737,6 @@ void PutClientInServer (edict_t *ent)
 {
 	vec3_t	mins = {-16, -16, -24};
 	vec3_t	maxs = {16, 16, 32};
-	int		index;
 	vec3_t	spawn_origin, spawn_angles;
 	gclient_t	*client;
 	int		i;
@@ -70005,7 +69748,6 @@ void PutClientInServer (edict_t *ent)
 	// ranging doesn't count this client
 	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
 
-	index = ent-g_edicts-1;
 	client = ent->client;
 
 	// deathmatch wipes most client data every spawn
@@ -70020,17 +69762,10 @@ void PutClientInServer (edict_t *ent)
 	}
 	else if (coop->value)
 	{
-//		int			n;
 		char		userinfo[MAX_INFO_STRING];
 
 		resp = client->resp;
 		memcpy (userinfo, client->pers.userinfo, sizeof(userinfo));
-		// this is kind of ugly, but it's how we want to handle keys in coop
-//		for (n = 0; n < game.num_items; n++)
-//		{
-//			if (itemlist[n].flags & IT_KEY)
-//				resp.coop_respawn.inventory[n] = client->pers.inventory[n];
-//		}
 		resp.coop_respawn.game_helpchanged = client->pers.game_helpchanged;
 		resp.coop_respawn.helpchanged = client->pers.helpchanged;
 		client->pers = resp.coop_respawn;
@@ -70056,7 +69791,7 @@ void PutClientInServer (edict_t *ent)
 
 	// clear entity values
 	ent->groundentity = NULL;
-	ent->client = &game.clients[index];
+	ent->client = &game.client;
 	ent->takedamage = DAMAGE_AIM;
 	ent->movetype = MOVETYPE_WALK;
 	ent->viewheight = 22;
@@ -70179,20 +69914,11 @@ void ClientBeginDeathmatch (edict_t *ent)
 	ClientEndServerFrame (ent);
 }
 
-
-/*
-===========
-ClientBegin
-
-called when a client has finished connecting, and is ready
-to be placed into the game.  This will happen every level load.
-============
-*/
+// Called when a client has finished connecting, and is ready to be placed into the game.
+// This will happen every level load.
 void ClientBegin (edict_t *ent)
 {
-	int		i;
-
-	ent->client = game.clients + (ent - g_edicts - 1);
+	ent->client = &game.client;
 
 	if (deathmatch->value)
 	{
@@ -70208,7 +69934,7 @@ void ClientBegin (edict_t *ent)
 		// connecting to the server, which is different than the
 		// state when the game is saved, so we need to compensate
 		// with deltaangles
-		for (i=0 ; i<3 ; i++)
+		for (i64 i = 0; i < 3; i++)
 			ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(ent->client->ps.viewangles[i]);
 	}
 	else
@@ -70225,19 +69951,6 @@ void ClientBegin (edict_t *ent)
 	if (level.intermissiontime)
 	{
 		MoveClientToIntermission (ent);
-	}
-	else
-	{
-		// send effect if in a multiplayer game
-		if (game.maxclients > 1)
-		{
-			PF_WriteByte (svc_muzzleflash);
-			PF_WriteShort (ent-g_edicts);
-			PF_WriteByte (MZ_LOGIN);
-			SV_Multicast (ent->s.origin, MULTICAST_PVS);
-
-			SV_BroadcastPrintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
-		}
 	}
 
 	// make sure all view stuff is valid
@@ -70347,7 +70060,7 @@ bool ClientConnect (edict_t *ent, char *userinfo)
 		}
 
 		// count spectators
-		for (i = numspec = 0; i < maxclients->value; i++)
+		for (i = numspec = 0; i < 1; i++)
 			if (g_edicts[i+1].inuse && g_edicts[i+1].client->pers.spectator)
 				numspec++;
 
@@ -70367,7 +70080,7 @@ bool ClientConnect (edict_t *ent, char *userinfo)
 
 
 	// they can connect
-	ent->client = game.clients + (ent - g_edicts - 1);
+	ent->client = &game.client;
 
 	// if there is already a body waiting for us (a loadgame), just
 	// take it, otherwise spawn one from scratch
@@ -70380,9 +70093,6 @@ bool ClientConnect (edict_t *ent, char *userinfo)
 	}
 
 	ClientUserinfoChanged (ent, userinfo);
-
-	if (game.maxclients > 1)
-		PF_dprintf ("%s connected\n", ent->client->pers.netname);
 
 	ent->client->pers.connected = true;
 	return true;
@@ -70631,7 +70341,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	}
 
 	// update chase cam if being followed
-	for (i = 1; i <= maxclients->value; i++) {
+	for (i = 1; i <= 1; i++) {
 		other = g_edicts + i;
 		if (other->inuse && other->client->chase_target == ent)
 			UpdateChaseCam(other);
@@ -70765,7 +70475,7 @@ void BeginIntermission (edict_t *targ)
 	game.autosaved = false;
 
 	// respawn any dead clients
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		client = g_edicts + 1 + i;
 		if (!client->inuse)
@@ -70781,7 +70491,7 @@ void BeginIntermission (edict_t *targ)
 	{
 		if (coop->value)
 		{
-			for (i=0 ; i<maxclients->value ; i++)
+			for (i=0 ; i<1 ; i++)
 			{
 				client = g_edicts + 1 + i;
 				if (!client->inuse)
@@ -70829,7 +70539,7 @@ void BeginIntermission (edict_t *targ)
 	VectorCopy (ent->s.angles, level.intermission_angle);
 
 	// move all clients to the intermission point
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		client = g_edicts + 1 + i;
 		if (!client->inuse)
@@ -70861,12 +70571,12 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 
 	// sort the clients by score
 	total = 0;
-	for (i=0 ; i<game.maxclients ; i++)
+	for (i=0 ; i<1 ; i++)
 	{
 		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse || game.clients[i].resp.spectator)
+		if (!cl_ent->inuse || game.client.resp.spectator)
 			continue;
-		score = game.clients[i].resp.score;
+		score = game.client.resp.score;
 		for (j=0 ; j<total ; j++)
 		{
 			if (score > sortedscores[j])
@@ -70893,7 +70603,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 
 	for (i=0 ; i<total ; i++)
 	{
-		cl = &game.clients[sorted[i]];
+		cl = &game.client;
 		cl_ent = g_edicts + 1 + sorted[i];
 
 		SV_ImageIndex ("i_fixme");
@@ -71215,7 +70925,7 @@ void G_CheckChaseStats (edict_t *ent)
 	int i;
 	gclient_t *cl;
 
-	for (i = 1; i <= maxclients->value; i++) {
+	for (i = 1; i <= 1; i++) {
 		cl = g_edicts[i].client;
 		if (!g_edicts[i].inuse || cl->chase_target != ent)
 			continue;
@@ -82624,8 +82334,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		maxclients = COM_GetCvar("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-		hostname = COM_GetCvar("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
 		timeout = COM_GetCvar("timeout", "125", 0);
 		zombietime = COM_GetCvar("zombietime", "2", 0);
 		sv_showclamp = COM_GetCvar("showclamp", "0", 0);
