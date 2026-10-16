@@ -1895,9 +1895,6 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	strncpy(dest, bigbuffer, size - 1);
 }
 
-// TODO: remove
-char* fs_gamedir = "baseq2";
-
 // Both client and server can use this, and it will output to the apropriate place.
 static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
@@ -9564,12 +9561,12 @@ void SV_WipeSavegame (char *savename)
 	char	*s;
 
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, savename);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/server.ssv", savename);
 	remove (name);
-	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", fs_gamedir, savename);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/game.ssv", savename);
 	remove (name);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", fs_gamedir, savename);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sav", savename);
 	s = Sys_FindFirst( name, 0, 0 );
 	while (s)
 	{
@@ -9577,7 +9574,7 @@ void SV_WipeSavegame (char *savename)
 		s = Sys_FindNext( 0, 0 );
 	}
 	Sys_FindClose ();
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sv2", fs_gamedir, savename);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sv2", savename);
 	s = Sys_FindFirst(name, 0, 0 );
 	while (s)
 	{
@@ -9640,24 +9637,24 @@ static void SV_CopySaveGame(char *src, char *dst) {
 	SV_WipeSavegame (dst);
 
 	// copy the savegame over
-	Com_sprintf(name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, src);
-	Com_sprintf(name2, sizeof(name2), "%s/save/%s/server.ssv", fs_gamedir, dst);
+	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", src);
+	Com_sprintf(name2, sizeof(name2), "baseq2/save/%s/server.ssv", dst);
 	FS_CreatePath(name2);
 	CopyFile (name, name2);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/game.ssv", fs_gamedir, src);
-	Com_sprintf (name2, sizeof(name2), "%s/save/%s/game.ssv", fs_gamedir, dst);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/game.ssv", src);
+	Com_sprintf (name2, sizeof(name2), "baseq2/save/%s/game.ssv", dst);
 	CopyFile (name, name2);
 
-	Com_sprintf (name, sizeof(name), "%s/save/%s/", fs_gamedir, src);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/", src);
 	len = strlen(name);
-	Com_sprintf (name, sizeof(name), "%s/save/%s/*.sav", fs_gamedir, src);
+	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sav", src);
 	found = Sys_FindFirst(name, 0, 0 );
 	while (found)
 	{
 		strcpy (name+len, found+len);
 
-		Com_sprintf (name2, sizeof(name2), "%s/save/%s/%s", fs_gamedir, dst, found+len);
+		Com_sprintf (name2, sizeof(name2), "baseq2/save/%s/%s", dst, found+len);
 		CopyFile (name, name2);
 
 		// change sav to sv2
@@ -9677,7 +9674,7 @@ void SV_WriteLevelFile (void)
 	char	name[MAX_OSPATH];
 	FILE	*f;
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sv2", sv.name);
 	f = fopen(name, "wb");
 	if (!f)
 	{
@@ -9688,7 +9685,7 @@ void SV_WriteLevelFile (void)
 	CM_WritePortalState (f);
 	fclose (f);
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
 
 	void WriteLevel (char *filename);
 	WriteLevel (name);
@@ -9705,7 +9702,7 @@ void SV_ReadLevelFile (void)
 	char	name[MAX_OSPATH];
 	FILE	*f;
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sv2", fs_gamedir, sv.name);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sv2", sv.name);
 	f = fopen(name, "rb");
 	if (!f)
 	{
@@ -9717,7 +9714,7 @@ void SV_ReadLevelFile (void)
 	FloodAreaConnections();
 	fclose (f);
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
 
 	void ReadLevel (char *filename);
 	ReadLevel (name);
@@ -9738,7 +9735,7 @@ void SV_WriteServerFile (bool autosave)
 	time_t	aclock;
 	struct tm	*newtime;
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", fs_gamedir);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/server.ssv");
 	f = fopen (name, "wb");
 	if (!f)
 	{
@@ -9790,7 +9787,7 @@ void SV_WriteServerFile (bool autosave)
 	fclose (f);
 
 	// write game state
-	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/game.ssv");
 	void WriteGame (char *filename, bool autosave);
 	WriteGame (name, autosave);
 }
@@ -9802,7 +9799,7 @@ void SV_ReadServerFile (void)
 	char	comment[32];
 	char	mapcmd[MAX_TOKEN_CHARS];
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/server.ssv", fs_gamedir);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/server.ssv");
 	f = fopen (name, "rb");
 	if (!f)
 	{
@@ -9833,7 +9830,7 @@ void SV_ReadServerFile (void)
 	strcpy (svs.mapcmd, mapcmd);
 
 	// read game state
-	Com_sprintf (name, sizeof(name), "%s/save/current/game.ssv", fs_gamedir);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/game.ssv");
 
 	void ReadGame (char *filename);
 	ReadGame (name);
@@ -9855,7 +9852,7 @@ static void SV_GameMap_f() {
 		return;
 	}
 
-	FS_CreatePath(va("%s/save/current/", fs_gamedir));
+	FS_CreatePath(va("baseq2/save/current/"));
 
 	// check for clearing the current savegame
 	map = Cmd_Argv(1);
@@ -9939,7 +9936,7 @@ static void SV_Loadgame_f() {
 	}
 
 	// make sure the server.ssv file exists
-	Com_sprintf(name, sizeof(name), "%s/save/%s/server.ssv", fs_gamedir, Cmd_Argv(1));
+	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", Cmd_Argv(1));
 	f = fopen(name, "rb");
 	if (!f) {
 		Com_Printf ("No such savegame: %s\n", name);
@@ -10175,7 +10172,7 @@ void SV_ServerRecord_f (void)
 	//
 	// open the demo file
 	//
-	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", fs_gamedir, Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "baseq2/demos/%s.dm2", Cmd_Argv(1));
 
 	Com_Printf ("recording to %s.\n", name);
 	FS_CreatePath (name);
@@ -11185,7 +11182,7 @@ void SV_CheckForSavegame (void)
 	if (Cvar_VariableValue ("deathmatch"))
 		return;
 
-	Com_sprintf (name, sizeof(name), "%s/save/current/%s.sav", fs_gamedir, sv.name);
+	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
 	f = fopen (name, "rb");
 	if (!f)
 		return;		// no savegame
@@ -19545,7 +19542,7 @@ void CL_Record_f (void)
 	//
 	// open the demo file
 	//
-	Com_sprintf (name, sizeof(name), "%s/demos/%s.dm2", fs_gamedir, Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "baseq2/demos/%s.dm2", Cmd_Argv(1));
 
 	Com_Printf ("recording to %s.\n", name);
 	FS_CreatePath (name);
@@ -21584,7 +21581,7 @@ char *svc_strings[256] =
 
 void CL_DownloadFileName(char *dest, int destlen, char *fn)
 {
-	Com_sprintf(dest, destlen, "%s/%s", fs_gamedir, fn);
+	Com_sprintf(dest, destlen, "baseq2/%s", fn);
 }
 
 /*
@@ -26048,7 +26045,7 @@ void Con_Dump_f (void)
 		return;
 	}
 
-	Com_sprintf (name, sizeof(name), "%s/%s.txt", fs_gamedir, Cmd_Argv(1));
+	Com_sprintf (name, sizeof(name), "baseq2/%s.txt", Cmd_Argv(1));
 
 	Com_Printf ("Dumped console text to %s.\n", name);
 	FS_CreatePath (name);
@@ -28612,7 +28609,7 @@ static void Create_Savestrings() {
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 	{
-		Com_sprintf (name, sizeof(name), "%s/save/save%i/server.ssv", fs_gamedir, i);
+		Com_sprintf (name, sizeof(name), "baseq2/save/save%i/server.ssv", i);
 		f = fopen (name, "rb");
 		if (!f)
 		{
@@ -78717,7 +78714,7 @@ void GL_ScreenShot_f(void)
 	FILE		*f;
 
 	// create the scrnshots directory if it doesn't exist
-	Com_sprintf(checkname, sizeof(checkname), "%s/scrnshot", fs_gamedir);
+	Com_sprintf(checkname, sizeof(checkname), "baseq2/scrnshot");
 	Sys_Mkdir(checkname);
 
 	// find a file name to save it to
@@ -78727,7 +78724,7 @@ void GL_ScreenShot_f(void)
 	{
 		picname[5] = i/10 + '0';
 		picname[6] = i%10 + '0';
-		Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot/%s", fs_gamedir, picname);
+		Com_sprintf (checkname, sizeof(checkname), "baseq2/scrnshot/%s", picname);
 		f = fopen (checkname, "rb");
 		if (!f)
 			break;	// file doesn't exist
@@ -82497,15 +82494,12 @@ static void windows_write_to_file_handle(HANDLE file_handle, String text) {
 	assert(write_result && (i64)written == text.len);
 }
 
-static void windows_write_config_string(String text) {temp_memory_block(&context.memory.temp) {
-	String file_path = concatenate_strings(&context.memory.temp, STRS(string_from_cstring(fs_gamedir), STR("/config.cfg")));
-
-	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+static void windows_write_config_string(String text) {
+	HANDLE file_handle = CreateFileA("baseq2/config.cfg", GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
-
 	windows_write_to_file_handle(file_handle, text);
 	CloseHandle(file_handle);
-}}
+}
 
 static void windows_print_gl_strings() {
 	Com_Printf("GL_VENDOR: %s\n", (char*)glGetString(GL_VENDOR));
@@ -83089,14 +83083,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		// add the directory to the search path
 		searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
-		strcpy(search->filename, fs_gamedir);
+		strcpy(search->filename, "baseq2");
 		search->next = fs_searchpaths;
 		fs_searchpaths = search;
 
 		// add any pak files in the format pak0.pak pak1.pak, ...
 		for (int i = 0; i < 3; i++) {
 			char pakfile[MAX_OSPATH] = {};
-			Com_sprintf(pakfile, sizeof(pakfile), "%s/pak%i.pak", fs_gamedir, i);
+			Com_sprintf(pakfile, sizeof(pakfile), "baseq2/pak%i.pak", i);
 			FILE* packhandle = fopen(pakfile, "rb");
 			assert(packhandle);
 
