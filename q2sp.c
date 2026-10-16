@@ -1860,11 +1860,6 @@ static void Con_Print(char *txt) {
 
 #define	MAX_QPATH 64 // max length of a quake game pathname
 
-static int		rd_target;
-static char*	rd_buffer;
-static int		rd_buffersize;
-static void		(*rd_flush)(int target, char *buffer);
-
 static char com_token[MAX_TOKEN_CHARS];
 
 static void COM_StripExtension(char* in, char* out) {
@@ -1895,23 +1890,12 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	strncpy(dest, bigbuffer, size - 1);
 }
 
-// Both client and server can use this, and it will output to the apropriate place.
 static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
 	va_list argptr;
 	va_start(argptr, fmt);
 	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
 	va_end(argptr);
-
-	if (rd_target) {
-		if ((int)(strlen(msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
-			rd_flush(rd_target, rd_buffer);
-			*rd_buffer = 0;
-		}
-		strcat(rd_buffer, msg);
-		return;
-	}
-
 	Con_Print(msg);
 }
 
@@ -9340,27 +9324,18 @@ typedef struct
 
 //=============================================================================
 
-extern	netadr_t	net_from;
-extern	sizebuf_t	net_message;
-
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
 extern	cvar_t		*sv_paused;
 extern	cvar_t		*maxclients;
 extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
-extern	cvar_t		*sv_airaccelerate;		// don't reload level state when reentering
-											// development tool
+extern	cvar_t		*sv_airaccelerate;		// don't reload level state when reentering development tool
 extern	cvar_t		*sv_enforcetime;
 
 extern	client_t	*sv_client;
 extern	edict_t		*sv_player;
 
-//===========================================================
-
-//
-// sv_main.c
-//
 void SV_FinalMessage (char *message, bool reconnect);
 void SV_DropClient (client_t *drop);
 
@@ -9375,30 +9350,12 @@ void SV_ExecuteUserCommand (char *s);
 void SV_SendServerinfo (client_t *client);
 void SV_UserinfoChanged (client_t *cl);
 
-
 void Master_Packet (void);
 
-//
-// sv_init.c
-//
 void SV_InitGame (void);
 void SV_Map (char *levelstring, bool loadgame);
 
-
-//
-// sv_phys.c
-//
 void SV_PrepWorldFrame (void);
-
-//
-// sv_send.c
-//
-typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
-#define	SV_OUTPUTBUF_LENGTH	(MAX_MSGLEN - 16)
-
-extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
-
-void SV_FlushRedirect (int sv_redirected, char *outputbuf);
 
 void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
@@ -11515,8 +11472,6 @@ cvar_t	*sv_enforcetime;
 cvar_t	*timeout;				// seconds without any message
 cvar_t	*zombietime;			// seconds to sink messages after disconnect
 
-cvar_t	*rcon_password;			// password for remote server commands
-
 cvar_t	*allow_download;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
@@ -11843,74 +11798,6 @@ gotnewcl:
 	newcl->lastconnect = svs.realtime;
 }
 
-int Rcon_Validate (void)
-{
-	if (!strlen (rcon_password->string))
-		return 0;
-
-	if (strcmp (Cmd_Argv(1), rcon_password->string) )
-		return 0;
-
-	return 1;
-}
-
-/*
-===============
-SVC_RemoteCommand
-
-A client issued an rcon command.
-Shift down the remaining args
-Redirect all printfs
-===============
-*/
-void SVC_RemoteCommand (void)
-{
-	int		i;
-	char	remaining[1024];
-
-	i = Rcon_Validate ();
-
-	if (i == 0)
-		Com_Printf ("Bad rcon from %s:\n%s\n", NET_AdrToString (net_from), net_message.data+4);
-	else
-		Com_Printf ("Rcon from %s:\n%s\n", NET_AdrToString (net_from), net_message.data+4);
-
-	// NOTE: Begin redirect
-	{
-		rd_target = RD_PACKET;
-		rd_buffer = sv_outputbuf;
-		rd_buffersize = SV_OUTPUTBUF_LENGTH;
-		rd_flush = SV_FlushRedirect;
-		*rd_buffer = 0;
-	}
-
-	if (!Rcon_Validate ())
-	{
-		Com_Printf ("Bad rcon_password.\n");
-	}
-	else
-	{
-		remaining[0] = 0;
-
-		for (i=2 ; i<cmd_argc ; i++)
-		{
-			strcat (remaining, Cmd_Argv(i) );
-			strcat (remaining, " ");
-		}
-
-		Cmd_ExecuteString (remaining);
-	}
-
-	// NOTE: End redirect
-	{
-		rd_flush(rd_target, rd_buffer);
-		rd_target = 0;
-		rd_buffer = NULL;
-		rd_buffersize = 0;
-		rd_flush = NULL;
-	}
-}
-
 // A connectionless packet has four leading 0xff characters to distinguish it from a game channel.
 // Clients that are in the game can still send connectionless packets.
 void SV_ConnectionlessPacket() {
@@ -11938,8 +11825,6 @@ void SV_ConnectionlessPacket() {
 		SVC_GetChallenge ();
 	else if (!strcmp(c,"connect"))
 		SVC_DirectConnect ();
-	else if (!strcmp(c, "rcon"))
-		SVC_RemoteCommand ();
 	else
 		Com_Printf ("bad connectionless packet from %s:\n%s\n"
 		, NET_AdrToString (net_from), s);
@@ -12252,54 +12137,7 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 	memset (&svs, 0, sizeof(svs));
 }
 
-/* ============ end source: server/sv_main.c ============ */
-/* ============ begin source: server/sv_send.c ============ */
-
-// sv_main.c -- server main program
-
-/* already inlined above: server/server.h */
-
-/*
-=============================================================================
-
-Com_Printf redirection
-
-=============================================================================
-*/
-
-char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
-
-void SV_FlushRedirect (int sv_redirected, char *outputbuf)
-{
-	if (sv_redirected == RD_PACKET)
-	{
-		Netchan_OutOfBandPrint (NS_SERVER, net_from, "print\n%s", outputbuf);
-	}
-	else if (sv_redirected == RD_CLIENT)
-	{
-		MSG_WriteByte (&sv_client->netchan.message, svc_print);
-		MSG_WriteByte (&sv_client->netchan.message, PRINT_HIGH);
-		MSG_WriteString (&sv_client->netchan.message, outputbuf);
-	}
-}
-
-
-/*
-=============================================================================
-
-EVENT MESSAGES
-
-=============================================================================
-*/
-
-
-/*
-=================
-SV_ClientPrintf
-
-Sends text across to be displayed if the level passes
-=================
-*/
+// Sends text across to be displayed if the level passes
 void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...)
 {
 	va_list		argptr;
@@ -13030,11 +12868,6 @@ void SV_NextDownload_f (void)
 	sv_client->download = NULL;
 }
 
-/*
-==================
-SV_BeginDownload_f
-==================
-*/
 void SV_BeginDownload_f(void)
 {
 	char	*name;
@@ -13104,37 +12937,15 @@ void SV_BeginDownload_f(void)
 	SV_NextDownload_f ();
 }
 
-
-
-//============================================================================
-
-
-/*
-=================
-SV_Disconnect_f
-
-The client is going to disconnect, so remove the connection immediately
-=================
-*/
-void SV_Disconnect_f (void)
-{
-//	SV_EndRedirect ();
-	SV_DropClient (sv_client);
+// The client is going to disconnect, so remove the connection immediately
+static void SV_Disconnect_f() {
+	SV_DropClient(sv_client);
 }
 
-
-/*
-==================
-SV_ShowServerinfo_f
-
-Dumps the serverinfo info string
-==================
-*/
-void SV_ShowServerinfo_f (void)
-{
-	Info_Print (Info_Cvar_Server());
+// Dumps the serverinfo info string
+static void SV_ShowServerinfo_f() {
+	Info_Print(Info_Cvar_Server());
 }
-
 
 void SV_Nextserver (void)
 {
@@ -13213,8 +13024,6 @@ void SV_ExecuteUserCommand (char *s)
 	Cmd_TokenizeString (s, true);
 	sv_player = sv_client->edict;
 
-//	SV_BeginRedirect (RD_CLIENT);
-
 	for (u=ucmds ; u->name ; u++)
 		if (!strcmp (Cmd_Argv(0), u->name) )
 		{
@@ -13224,8 +13033,6 @@ void SV_ExecuteUserCommand (char *s)
 
 	if (!u->name && sv.state == ss_game)
 		ClientCommand (sv_player);
-
-//	SV_EndRedirect ();
 }
 
 /*
@@ -19398,8 +19205,6 @@ cvar_t	*adr5;
 cvar_t	*adr6;
 cvar_t	*adr7;
 cvar_t	*adr8;
-
-cvar_t	*rcon_client_password;
 
 cvar_t	*cl_noskins;
 cvar_t	*cl_autoskins;
@@ -82819,7 +82624,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		rcon_password = COM_GetCvar("rcon_password", "", 0);
 		maxclients = COM_GetCvar("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
 		hostname = COM_GetCvar("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
 		timeout = COM_GetCvar("timeout", "125", 0);
@@ -82934,7 +82738,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
 		cl_paused = COM_GetCvar ("paused", "0", 0);
 		cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
-		rcon_client_password = COM_GetCvar ("rcon_password", "", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
