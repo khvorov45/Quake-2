@@ -1771,9 +1771,6 @@ static struct {
 	float		line_timestamps[4];	// cls.realtime time the line was generated
 } con;
 
-// Handles cursor positioning, line wrapping, etc
-// All console printing must go through this in order to be logged to disk
-// If no console is visible, the text will appear at the top of the game window
 static void Con_Print(char *txt) {
 	static int cr = false;
 
@@ -17299,13 +17296,6 @@ void CL_TeleporterParticles (entity_state_t *ent)
 	}
 }
 
-
-/*
-===============
-CL_LogoutEffect
-
-===============
-*/
 void CL_LogoutEffect (vec3_t org, int type)
 {
 	int			i, j;
@@ -30673,19 +30663,6 @@ void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
 	ch->pos += count;
 }
 
-// m_flash.c
-
-/* already inlined above: game/q_shared.h */
-
-/* ============ end source: game/m_flash.c ============ */
-
-/* campaign game logic (formerly gamex86.dll) */
-/* ============ begin source: game/g_ai.c ============ */
-
-// g_ai.c
-
-/* already inlined above: game/g_local.h */
-
 bool FindTarget (edict_t* self);
 
 static bool ai_checkattack(edict_t* self);
@@ -30695,20 +30672,8 @@ bool	enemy_infront;
 int			enemy_range;
 float		enemy_yaw;
 
-//============================================================================
-
-
-/*
-=================
-AI_SetSightClient
-
-Called once each frame to set level.sight_client to the
-player to be checked for in findtarget.
-
-If all clients are either dead or in notarget, sight_client
-will be null.
-=================
-*/
+// Called once each frame to set level.sight_client to the player to be checked for in findtarget.
+// If all clients are either dead or in notarget, sight_client will be null.
 void AI_SetSightClient (void)
 {
 	edict_t	*ent;
@@ -73390,10 +73355,6 @@ extern glstate_t   gl_state;
 
 void		GLimp_BeginFrame();
 
-
-
-void		GLimp_LogNewFrame( void );
-
 image_t		*draw_chars;
 
 extern	bool	scrap_dirty;
@@ -73672,6 +73633,7 @@ static image_t* GL_FindImage(char* name, imagetype_t type) {
 		// Then load
 		if (!target_image) {
 			if (string_ends_with(name_str, STR(".pcx"))) {
+				// TODO: Do this at boot time
 				u8_Slice file_content = context.load_asset_by_name(name_str);
 
 				pcx_t* pcx = (pcx_t*)file_content.ptr;
