@@ -5335,9 +5335,6 @@ typedef struct {
 	gitem_t		*weapon;
 	gitem_t		*lastweapon;
 
-	int			power_cubes;	// used for tracking the cubes in coop games
-	int			score;			// for calculating total unit score in coop games
-
 	int			game_helpchanged;
 	int			helpchanged;
 
@@ -5346,7 +5343,6 @@ typedef struct {
 
 // client data that stays across deathmatch respawns
 typedef struct {
-	client_persistant_t	coop_respawn;	// what to set client->pers to on a respawn
 	int			enterframe;			// level.framenum the client entered the game
 	int			score;				// frags, etc
 	vec3_t		cmd_angles;			// angles sent over in the last command
@@ -5480,7 +5476,6 @@ static int global_num_edicts;
 #define	SPAWNFLAG_NOT_MEDIUM		0x00000200
 #define	SPAWNFLAG_NOT_HARD			0x00000400
 #define	SPAWNFLAG_NOT_DEATHMATCH	0x00000800
-#define	SPAWNFLAG_NOT_COOP			0x00001000
 
 // edict->flags
 #define	FL_FLY					0x00000001
@@ -5617,7 +5612,6 @@ typedef struct {
 #define	IT_WEAPON		1		// use makes active weapon
 #define	IT_AMMO			2
 #define IT_ARMOR		4
-#define IT_STAY_COOP	8
 #define IT_KEY			16
 #define IT_POWERUP		32
 
@@ -5653,7 +5647,7 @@ typedef struct {
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
 
-	edict_t		*sight_client;	// changed once each frame for coop games
+	edict_t		*sight_client;
 
 	edict_t		*sight_entity;
 	int			sight_entity_framenum;
@@ -5675,8 +5669,6 @@ typedef struct {
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
 	int			body_que;			// dead bodies
-
-	int			power_cubes;		// ugly necessity for coop
 } level_locals_t;
 
 // spawn_temp_t is only used to hold entity field values that
@@ -5716,7 +5708,7 @@ static struct {
 
 	// can't store spawnpoint in level, because
 	// it would get overwritten by the savegame restore
-	char		spawnpoint[512];	// needed for coop respawns
+	char		spawnpoint[512];
 
 	// store latched cvars here that we want to get at often
 	int			maxentities;
@@ -5791,7 +5783,6 @@ static edict_t* g_edicts;
 #define crandom()	(2.0 * (random() - 0.5))
 
 static cvar_t* deathmatch;
-static cvar_t* coop;
 static cvar_t* dmflags;
 static cvar_t* skill;
 static cvar_t* fraglimit;
@@ -5833,7 +5824,6 @@ static cvar_t* sv_maplist;
 #define ITEM_TRIGGER_SPAWN		0x00000001
 #define ITEM_NO_TOUCH			0x00000002
 // 6 bits reserved for editor flags
-// 8 bits used as power cube id bits for coop games
 #define DROPPED_ITEM			0x00010000
 #define	DROPPED_PLAYER_ITEM		0x00020000
 #define ITEM_TARGETS_USED		0x00040000
@@ -9719,7 +9709,7 @@ void SV_WriteServerFile (bool autosave)
 	fwrite (svs.mapcmd, 1, sizeof(svs.mapcmd), f);
 
 	// write all CVAR_LATCH cvars
-	// these will be things like coop, skill, deathmatch, etc
+	// these will be things like skill, deathmatch, etc
 	for (var = cvar_vars ; var ; var=var->next)
 	{
 		if (!(var->flags & CVAR_LATCH))
@@ -9767,7 +9757,7 @@ void SV_ReadServerFile (void)
 	FS_Read (mapcmd, sizeof(mapcmd), f);
 
 	// read all CVAR_LATCH cvars
-	// these will be things like coop, skill, deathmatch, etc
+	// these will be things like skill, deathmatch, etc
 	while (1)
 	{
 		if (!fread (name, 1, sizeof(name), f))
@@ -11373,10 +11363,6 @@ void SV_Map(char *levelstring, bool loadgame)
 	else
 		COM_SetCvar ("nextserver", "");
 
-	//ZOID special hack for end game screen in coop mode
-	if (Cvar_VariableValue ("coop") && !Q_stricmp(level, "victory.pcx"))
-		COM_SetCvar ("nextserver", "gamemap \"*base1\"");
-
 	// if there is a $, use the remainder as a spawnpoint
 	ch = strstr(level, "$");
 	if (ch)
@@ -12869,8 +12855,7 @@ void SV_Nextserver (void)
 {
 	char	*v;
 
-	//ZOID, ss_pic can be nextserver'd in coop mode
-	if (sv.state == ss_game || (sv.state == ss_pic && !Cvar_VariableValue("coop")))
+	if (sv.state == ss_game || sv.state == ss_pic)
 		return;		// can't nextserver while playing a normal game
 
 	svs.spawncount++;	// make sure another doesn't sneak in
@@ -28296,7 +28281,6 @@ static void StartGame( void )
 	cl.servercount = -1;
 	M_ForceMenuOff ();
 	COM_SetValueCvar( "deathmatch", 0 );
-	COM_SetValueCvar( "coop", 0 );
 
 	COM_SetValueCvar( "gamerules", 0 );		//PGM
 
@@ -30723,8 +30707,6 @@ player to be checked for in findtarget.
 
 If all clients are either dead or in notarget, sight_client
 will be null.
-
-In coop games, sight_client will cycle between the clients.
 =================
 */
 void AI_SetSightClient (void)
@@ -31624,8 +31606,6 @@ void ai_run (edict_t* self, float dist)
 
 	if (enemy_vis)
 	{
-//		if (self.aiflags & AI_LOST_SIGHT)
-//			dprint("regained sight\n");
 		M_MoveToGoal (self, dist);
 		self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
 		VectorCopy (self->enemy->s.origin, self->monsterinfo.last_sighting);
@@ -31633,18 +31613,10 @@ void ai_run (edict_t* self, float dist)
 		return;
 	}
 
-	// coop will change to another enemy if visible
-	if (coop->value)
-	{	// FIXME: insane guys get mad with this, which causes crashes!
-		if (FindTarget (self))
-			return;
-	}
-
 	if ((self->monsterinfo.search_time) && (level.time > (self->monsterinfo.search_time + 20)))
 	{
 		M_MoveToGoal (self, dist);
 		self->monsterinfo.search_time = 0;
-//		dprint("search timeout\n");
 		return;
 	}
 
@@ -31657,7 +31629,6 @@ void ai_run (edict_t* self, float dist)
 	if (!(self->monsterinfo.aiflags & AI_LOST_SIGHT))
 	{
 		// just lost sight of the player, decide where to go first
-//		dprint("lost sight of player, last seen at "); dprint(vtos(self.last_sighting)); dprint("\n");
 		self->monsterinfo.aiflags |= (AI_LOST_SIGHT | AI_PURSUIT_LAST_SEEN);
 		self->monsterinfo.aiflags &= ~(AI_PURSUE_NEXT | AI_PURSUE_TEMP);
 		new = true;
@@ -31666,14 +31637,11 @@ void ai_run (edict_t* self, float dist)
 	if (self->monsterinfo.aiflags & AI_PURSUE_NEXT)
 	{
 		self->monsterinfo.aiflags &= ~AI_PURSUE_NEXT;
-//		dprint("reached current goal: "); dprint(vtos(self.origin)); dprint(" "); dprint(vtos(self.last_sighting)); dprint(" "); dprint(ftos(vlen(self.origin - self.last_sighting))); dprint("\n");
-
 		// give ourself more time since we got this far
 		self->monsterinfo.search_time = level.time + 5;
 
 		if (self->monsterinfo.aiflags & AI_PURSUE_TEMP)
 		{
-//			dprint("was temp goal; retrying original\n");
 			self->monsterinfo.aiflags &= ~AI_PURSUE_TEMP;
 			marker = NULL;
 			VectorCopy (self->monsterinfo.saved_goal, self->monsterinfo.last_sighting);
@@ -31694,9 +31662,6 @@ void ai_run (edict_t* self, float dist)
 			VectorCopy (marker->s.origin, self->monsterinfo.last_sighting);
 			self->monsterinfo.trail_time = marker->timestamp;
 			self->s.angles[YAW] = self->ideal_yaw = marker->s.angles[YAW];
-//			dprint("heading is "); dprint(ftos(self.ideal_yaw)); dprint("\n");
-
-//			debug_drawline(self.origin, self.last_sighting, 52);
 			new = true;
 		}
 	}
@@ -33126,12 +33091,9 @@ void Killed (edict_t *targ, edict_t* inflictor, edict_t* attacker, int damage, v
 
 	if ((targ->svflags & SVF_MONSTER) && (targ->deadflag != DEAD_DEAD))
 	{
-//		targ->svflags |= SVF_DEADMONSTER;	// now treat as a different content type
 		if (!(targ->monsterinfo.aiflags & AI_GOOD_GUY))
 		{
 			level.killed_monsters++;
-			if (coop->value && attacker->client)
-				attacker->client->resp.score++;
 			// medics won't heal monsters that they kill themselves
 			if (strcmp(attacker->classname, "monster_medic") == 0)
 				targ->owner = attacker;
@@ -33335,8 +33297,6 @@ void M_ReactToDamage (edict_t *targ, edict_t* attacker)
 	{
 		targ->monsterinfo.aiflags &= ~AI_SOUND_TARGET;
 
-		// this can only happen in coop (both new and old enemies are clients)
-		// only switch if can't see the current enemy
 		if (targ->enemy && targ->enemy->client)
 		{
 			if (visible(targ, targ->enemy))
@@ -33410,7 +33370,7 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 	// friendly fire avoidance
 	// if enabled you can't hurt teammates (but you can hurt yourself)
 	// knockback still occurs
-	if ((targ != attacker) && ((deathmatch->value && ((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS))) || coop->value))
+	if ((targ != attacker) && ((deathmatch->value && ((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))))
 	{
 		if (OnSameTeam (targ, attacker))
 		{
@@ -35788,18 +35748,12 @@ void SetRespawn (edict_t *ent, float delay)
 	SV_LinkEdict (ent);
 }
 
-
-//======================================================================
-
 bool Pickup_Powerup (edict_t *ent, edict_t* other)
 {
 	int		quantity;
 
 	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
 	if ((skill->value == 1 && quantity >= 2) || (skill->value >= 2 && quantity >= 1))
-		return false;
-
-	if ((coop->value) && (ent->item->flags & IT_STAY_COOP) && (quantity > 0))
 		return false;
 
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
@@ -36048,36 +36002,12 @@ void	Use_Silencer (edict_t *ent, gitem_t *item)
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
 	ValidateSelectedItem (ent);
 	ent->client->silencer_shots += 30;
-
-//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
-//======================================================================
-
-bool Pickup_Key (edict_t *ent, edict_t* other)
-{
-	if (coop->value)
-	{
-		if (strcmp(ent->classname, "key_power_cube") == 0)
-		{
-			if (other->client->pers.power_cubes & ((ent->spawnflags & 0x0000ff00)>> 8))
-				return false;
-			other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
-			other->client->pers.power_cubes |= ((ent->spawnflags & 0x0000ff00) >> 8);
-		}
-		else
-		{
-			if (other->client->pers.inventory[ITEM_INDEX(ent->item)])
-				return false;
-			other->client->pers.inventory[ITEM_INDEX(ent->item)] = 1;
-		}
-		return true;
-	}
+static bool Pickup_Key(edict_t* ent, edict_t* other) {
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
 	return true;
 }
-
-//======================================================================
 
 bool Add_Ammo (edict_t *ent, gitem_t *item, int count)
 {
@@ -36442,16 +36372,11 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 	if (!taken)
 		return;
 
-	if (!((coop->value) &&  (ent->item->flags & IT_STAY_COOP)) || (ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))
-	{
-		if (ent->flags & FL_RESPAWN)
-			ent->flags &= ~FL_RESPAWN;
-		else
-			G_FreeEdict (ent);
-	}
+	if (ent->flags & FL_RESPAWN)
+		ent->flags &= ~FL_RESPAWN;
+	else
+		G_FreeEdict (ent);
 }
-
-//======================================================================
 
 static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
@@ -36740,18 +36665,6 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 		}
 	}
 
-	if (coop->value && (strcmp(ent->classname, "key_power_cube") == 0))
-	{
-		ent->spawnflags |= (1 << (8 + level.power_cubes));
-		level.power_cubes++;
-	}
-
-	// don't let them drop items that stay in a coop game
-	if ((coop->value) && (item->flags & IT_STAY_COOP))
-	{
-		item->drop = NULL;
-	}
-
 	ent->item = item;
 	ent->nextthink = level.time + 2 * FRAMETIME;    // items start after other solids
 	ent->think = droptofloor;
@@ -36918,7 +36831,7 @@ static gitem_t itemlist[] = {
 		0,
 		0,
 		NULL,
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_BLASTER,
 		NULL,
 		0,
@@ -36940,7 +36853,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Shells",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_SHOTGUN,
 		NULL,
 		0,
@@ -36962,7 +36875,7 @@ static gitem_t itemlist[] = {
 		0,
 		2,
 		"Shells",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_SUPERSHOTGUN,
 		NULL,
 		0,
@@ -36984,7 +36897,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Bullets",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_MACHINEGUN,
 		NULL,
 		0,
@@ -37006,7 +36919,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Bullets",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_CHAINGUN,
 		NULL,
 		0,
@@ -37050,7 +36963,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Grenades",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_GRENADELAUNCHER,
 		NULL,
 		0,
@@ -37072,7 +36985,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Rockets",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_ROCKETLAUNCHER,
 		NULL,
 		0,
@@ -37094,7 +37007,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Cells",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_HYPERBLASTER,
 		NULL,
 		0,
@@ -37116,7 +37029,7 @@ static gitem_t itemlist[] = {
 		0,
 		1,
 		"Slugs",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_RAILGUN,
 		NULL,
 		0,
@@ -37138,7 +37051,7 @@ static gitem_t itemlist[] = {
 		0,
 		50,
 		"Cells",
-		IT_WEAPON|IT_STAY_COOP,
+		IT_WEAPON,
 		WEAP_BFG,
 		NULL,
 		0,
@@ -37340,7 +37253,7 @@ static gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP|IT_POWERUP,
+		IT_POWERUP,
 		0,
 		NULL,
 		0,
@@ -37362,7 +37275,7 @@ static gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP|IT_POWERUP,
+		IT_POWERUP,
 		0,
 		NULL,
 		0,
@@ -37474,7 +37387,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37496,7 +37409,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37518,7 +37431,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37540,7 +37453,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37562,7 +37475,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37584,7 +37497,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37606,7 +37519,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37628,7 +37541,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -37650,7 +37563,7 @@ static gitem_t itemlist[] = {
 		2,
 		0,
 		NULL,
-		IT_STAY_COOP|IT_KEY,
+		IT_KEY,
 		0,
 		NULL,
 		0,
@@ -41682,7 +41595,6 @@ static void InitGame() {
 
 	maxspectators = COM_GetCvar ("maxspectators", "4", CVAR_SERVERINFO);
 	deathmatch = COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
-	coop = COM_GetCvar ("coop", "0", CVAR_LATCH);
 	skill = COM_GetCvar ("skill", "1", CVAR_LATCH);
 	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
@@ -42220,10 +42132,22 @@ void SP_item_health_small (edict_t* self);
 void SP_item_health_large (edict_t* self);
 void SP_item_health_mega (edict_t* self);
 
-void SP_info_player_start (edict_t *ent);
-void SP_info_player_deathmatch (edict_t *ent);
-void SP_info_player_coop (edict_t *ent);
-void SP_info_player_intermission (edict_t *ent);
+static void SP_info_player_start(edict_t* self) {UNUSED(self);}
+
+static void SP_info_player_deathmatch(edict_t* self) {
+	if (!deathmatch->value)
+	{
+		G_FreeEdict (self);
+		return;
+	}
+	SP_misc_teleporter_dest (self);
+}
+
+static void SP_info_player_coop(edict_t* self) {
+	G_FreeEdict(self);
+}
+
+static void SP_info_player_intermission(edict_t* ent) {UNUSED(ent);}
 
 void SP_func_plat (edict_t *ent);
 void SP_func_rotating (edict_t *ent);
@@ -42752,8 +42676,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 			}
 			else
 			{
-				if ( /* ((coop->value) && (ent->spawnflags & SPAWNFLAG_NOT_COOP)) || */
-					((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+				if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
 					((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
 					(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
 					)
@@ -42764,7 +42687,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 					}
 			}
 
-			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD|SPAWNFLAG_NOT_COOP|SPAWNFLAG_NOT_DEATHMATCH);
+			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD|SPAWNFLAG_NOT_DEATHMATCH);
 		}
 
 		ED_CallSpawn (ent);
@@ -42854,7 +42777,7 @@ void SP_worldspawn (edict_t *ent)
 
 	//---------------
 
-	// reserve some spots for dead player bodies for coop / deathmatch
+	// reserve some spots for dead player bodies for deathmatch
 	InitBodyQue ();
 
 	// set configstrings for items
@@ -43573,7 +43496,7 @@ void use_target_changelevel (edict_t* self, edict_t* other, edict_t* activator)
 	if (level.intermissiontime)
 		return;		// already activated
 
-	if (!deathmatch->value && !coop->value)
+	if (!deathmatch->value)
 	{
 		if (g_edicts[1].health <= 0)
 			return;
@@ -44331,49 +44254,7 @@ static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
 	}
 
 	PF_StartSound (activator, CHAN_AUTO, SV_SoundIndex ("misc/keyuse.wav"), 1, ATTN_NORM, 0);
-	if (coop->value)
-	{
-		int		player;
-		edict_t	*ent;
-
-		if (strcmp(self->item->classname, "key_power_cube") == 0)
-		{
-			int	cube;
-
-			for (cube = 0; cube < 8; cube++)
-				if (activator->client->pers.power_cubes & (1 << cube))
-					break;
-			for (player = 1; player <= 1; player++)
-			{
-				ent = &g_edicts[player];
-				if (!ent->inuse)
-					continue;
-				if (!ent->client)
-					continue;
-				if (ent->client->pers.power_cubes & (1 << cube))
-				{
-					ent->client->pers.inventory[index]--;
-					ent->client->pers.power_cubes &= ~(1 << cube);
-				}
-			}
-		}
-		else
-		{
-			for (player = 1; player <= 1; player++)
-			{
-				ent = &g_edicts[player];
-				if (!ent->inuse)
-					continue;
-				if (!ent->client)
-					continue;
-				ent->client->pers.inventory[index] = 0;
-			}
-		}
-	}
-	else
-	{
-		activator->client->pers.inventory[index]--;
-	}
+	activator->client->pers.inventory[index]--;
 
 	G_UseTargets (self, activator);
 
@@ -46244,7 +46125,7 @@ void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* su
 	else
 	{
 		// don't throw any debris in net games
-		if (!deathmatch->value && !coop->value)
+		if (!deathmatch->value)
 		{
 			if ((surf) && !(surf->flags & (SURF_WARP|SURF_TRANS33|SURF_TRANS66|SURF_FLOWING)))
 			{
@@ -68656,165 +68537,10 @@ void SP_monster_tank (edict_t* self)
 	if (strcmp(self->classname, "monster_tank_commander") == 0)
 		self->s.skinnum = 2;
 }
-/* ============ end source: game/m_tank.c ============ */
-/* ============ begin source: game/p_client.c ============ */
-
-/* already inlined above: game/g_local.h */
-/* already inlined above: game/m_player.h */
 
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 
 void SP_misc_teleporter_dest (edict_t *ent);
-
-//
-// Gross, ugly, disgustuing hack section
-//
-
-// this function is an ugly as hell hack to fix some map flaws
-//
-// the coop spawn spots on some maps are SNAFU.  There are coop spots
-// with the wrong targetname as well as spots with no name at all
-//
-// we use carnal knowledge of the maps to fix the coop spot targetnames to match
-// that of the nearest named single player spot
-
-static void SP_FixCoopSpots (edict_t* self)
-{
-	edict_t	*spot;
-	vec3_t	d;
-
-	spot = NULL;
-
-	while(1)
-	{
-		spot = G_Find(spot, FOFS(classname), "info_player_start");
-		if (!spot)
-			return;
-		if (!spot->targetname)
-			continue;
-		VectorSubtract(self->s.origin, spot->s.origin, d);
-		if (VectorLength(d) < 384)
-		{
-			if ((!self->targetname) || Q_stricmp(self->targetname, spot->targetname) != 0)
-			{
-//				PF_dprintf("FixCoopSpots changed %s at %s targetname from %s to %s\n", self->classname, vtos(self->s.origin), self->targetname, spot->targetname);
-				self->targetname = spot->targetname;
-			}
-			return;
-		}
-	}
-}
-
-// now if that one wasn't ugly enough for you then try this one on for size
-// some maps don't have any coop spots at all, so we need to create them
-// where they should have been
-
-static void SP_CreateCoopSpots(edict_t* self) {
-	UNUSED(self);
-
-	edict_t	*spot;
-
-	if(Q_stricmp(level.mapname, "security") == 0)
-	{
-		spot = G_Spawn();
-		spot->classname = "info_player_coop";
-		spot->s.origin[0] = 188 - 64;
-		spot->s.origin[1] = -164;
-		spot->s.origin[2] = 80;
-		spot->targetname = "jail3";
-		spot->s.angles[1] = 90;
-
-		spot = G_Spawn();
-		spot->classname = "info_player_coop";
-		spot->s.origin[0] = 188 + 64;
-		spot->s.origin[1] = -164;
-		spot->s.origin[2] = 80;
-		spot->targetname = "jail3";
-		spot->s.angles[1] = 90;
-
-		spot = G_Spawn();
-		spot->classname = "info_player_coop";
-		spot->s.origin[0] = 188 + 128;
-		spot->s.origin[1] = -164;
-		spot->s.origin[2] = 80;
-		spot->targetname = "jail3";
-		spot->s.angles[1] = 90;
-
-		return;
-	}
-}
-
-
-/*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32)
-The normal starting point for a level.
-*/
-void SP_info_player_start(edict_t* self)
-{
-	if (!coop->value)
-		return;
-	if(Q_stricmp(level.mapname, "security") == 0)
-	{
-		// invoke one of our gross, ugly, disgusting hacks
-		self->think = SP_CreateCoopSpots;
-		self->nextthink = level.time + FRAMETIME;
-	}
-}
-
-/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32)
-potential spawning position for deathmatch games
-*/
-void SP_info_player_deathmatch(edict_t* self)
-{
-	if (!deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-	SP_misc_teleporter_dest (self);
-}
-
-/*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 32)
-potential spawning position for coop games
-*/
-
-void SP_info_player_coop(edict_t* self)
-{
-	if (!coop->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-	if((Q_stricmp(level.mapname, "jail2") == 0)   ||
-	   (Q_stricmp(level.mapname, "jail4") == 0)   ||
-	   (Q_stricmp(level.mapname, "mine1") == 0)   ||
-	   (Q_stricmp(level.mapname, "mine2") == 0)   ||
-	   (Q_stricmp(level.mapname, "mine3") == 0)   ||
-	   (Q_stricmp(level.mapname, "mine4") == 0)   ||
-	   (Q_stricmp(level.mapname, "lab") == 0)     ||
-	   (Q_stricmp(level.mapname, "boss1") == 0)   ||
-	   (Q_stricmp(level.mapname, "fact3") == 0)   ||
-	   (Q_stricmp(level.mapname, "biggun") == 0)  ||
-	   (Q_stricmp(level.mapname, "space") == 0)   ||
-	   (Q_stricmp(level.mapname, "command") == 0) ||
-	   (Q_stricmp(level.mapname, "power2") == 0) ||
-	   (Q_stricmp(level.mapname, "strike") == 0))
-	{
-		// invoke one of our gross, ugly, disgusting hacks
-		self->think = SP_FixCoopSpots;
-		self->nextthink = level.time + FRAMETIME;
-	}
-}
-
-
-/*QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32)
-The deathmatch intermission point will be at one of these
-Use 'angles' instead of 'angle', so you can set pitch or roll as well as yaw.  'pitch yaw roll'
-*/
-void SP_info_player_intermission(edict_t *ent)
-{
-	UNUSED(ent);
-}
 
 
 //=======================================================================
@@ -68863,10 +68589,7 @@ static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker)
 	char		*message2;
 	bool	ff;
 
-	if (coop->value && attacker->client)
-		meansOfDeath |= MOD_FRIENDLY_FIRE;
-
-	if (deathmatch->value || coop->value)
+	if (deathmatch->value)
 	{
 		ff = meansOfDeath & MOD_FRIENDLY_FIRE;
 		mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
@@ -69161,7 +68884,6 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 
 	self->maxs[2] = -8;
 
-//	self->solid = SOLID_NOT;
 	self->svflags |= SVF_DEADMONSTER;
 
 	if (!self->deadflag)
@@ -69175,11 +68897,8 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 			Cmd_Help_f (self);		// show scores
 
 		// clear inventory
-		// this is kind of ugly, but it's how we want to handle keys in coop
 		for (n = 0; n < game.num_items; n++)
 		{
-			if (coop->value && itemlist[n].flags & IT_KEY)
-				self->client->resp.coop_respawn.inventory[n] = self->client->pers.inventory[n];
 			self->client->pers.inventory[n] = 0;
 		}
 	}
@@ -69278,7 +68997,6 @@ void InitClientResp (gclient_t *client)
 {
 	memset (&client->resp, 0, sizeof(client->resp));
 	client->resp.enterframe = level.framenum;
-	client->resp.coop_respawn = client->pers;
 }
 
 /*
@@ -69304,8 +69022,6 @@ void SaveClientData (void)
 		game.client.pers.health = ent->health;
 		game.client.pers.max_health = ent->max_health;
 		game.client.pers.savedFlags = (ent->flags & (FL_GODMODE|FL_NOTARGET|FL_POWER_ARMOR));
-		if (coop->value)
-			game.client.pers.score = ent->client->resp.score;
 	}
 }
 
@@ -69314,27 +69030,9 @@ void FetchClientEntData (edict_t *ent)
 	ent->health = ent->client->pers.health;
 	ent->max_health = ent->client->pers.max_health;
 	ent->flags |= ent->client->pers.savedFlags;
-	if (coop->value)
-		ent->client->resp.score = ent->client->pers.score;
 }
 
-
-
-/*
-=======================================================================
-
-  SelectSpawnPoint
-
-=======================================================================
-*/
-
-/*
-================
-PlayersRangeFromSpot
-
-Returns the distance to the nearest player from the given spot
-================
-*/
+// Returns the distance to the nearest player from the given spot
 float	PlayersRangeFromSpot (edict_t *spot)
 {
 	edict_t	*player;
@@ -69472,51 +69170,12 @@ edict_t *SelectDeathmatchSpawnPoint (void)
 }
 
 
-edict_t *SelectCoopSpawnPoint (edict_t *ent)
-{
-	int		index;
-	edict_t	*spot = NULL;
-	char	*target;
-
-	index = ent->client - &game.client;
-
-	// player 0 starts in normal player spawn point
-	if (!index)
-		return NULL;
-
-	spot = NULL;
-
-	// assume there are four coop spots at each spawnpoint
-	while (1)
-	{
-		spot = G_Find (spot, FOFS(classname), "info_player_coop");
-		if (!spot)
-			return NULL;	// we didn't have enough...
-
-		target = spot->targetname;
-		if (!target)
-			target = "";
-		if ( Q_stricmp(game.spawnpoint, target) == 0 )
-		{	// this is a coop spawn point for one of the clients here
-			index--;
-			if (!index)
-				return spot;		// this is it
-		}
-	}
-
-
-	return spot;
-}
-
-// Chooses a player start, deathmatch start, coop start, etc
-void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
-{
+// Chooses a player start, deathmatch start, etc
+static void SelectSpawnPoint(vec3_t origin, vec3_t angles) {
 	edict_t	*spot = NULL;
 
 	if (deathmatch->value)
 		spot = SelectDeathmatchSpawnPoint ();
-	else if (coop->value)
-		spot = SelectCoopSpawnPoint (ent);
 
 	// find a single player start spot
 	if (!spot)
@@ -69618,7 +69277,7 @@ void CopyToBodyQue (edict_t *ent)
 
 void respawn (edict_t* self)
 {
-	if (deathmatch->value || coop->value)
+	if (deathmatch->value)
 	{
 		// spectator's don't leave bodies
 		if (self->movetype != MOVETYPE_NOCLIP)
@@ -69695,9 +69354,6 @@ void spectator_respawn (edict_t *ent)
 		}
 	}
 
-	// clear score on respawn
-	ent->client->pers.score = ent->client->resp.score = 0;
-
 	ent->svflags &= ~SVF_NOCLIENT;
 	PutClientInServer (ent);
 
@@ -69722,17 +69378,7 @@ void spectator_respawn (edict_t *ent)
 		SV_BroadcastPrintf (PRINT_HIGH, "%s joined the game\n", ent->client->pers.netname);
 }
 
-//==============================================================
-
-
-/*
-===========
-PutClientInServer
-
-Called when a player connects to a server or respawns in
-a deathmatch.
-============
-*/
+// Called when a player connects to a server or respawns in a deathmatch.
 void PutClientInServer (edict_t *ent)
 {
 	vec3_t	mins = {-16, -16, -24};
@@ -69746,7 +69392,7 @@ void PutClientInServer (edict_t *ent)
 	// find a spawn point
 	// do it before setting health back up, so farthest
 	// ranging doesn't count this client
-	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
+	SelectSpawnPoint(spawn_origin, spawn_angles);
 
 	client = ent->client;
 
@@ -69759,19 +69405,6 @@ void PutClientInServer (edict_t *ent)
 		memcpy (userinfo, client->pers.userinfo, sizeof(userinfo));
 		InitClientPersistant (client);
 		ClientUserinfoChanged (ent, userinfo);
-	}
-	else if (coop->value)
-	{
-		char		userinfo[MAX_INFO_STRING];
-
-		resp = client->resp;
-		memcpy (userinfo, client->pers.userinfo, sizeof(userinfo));
-		resp.coop_respawn.game_helpchanged = client->pers.game_helpchanged;
-		resp.coop_respawn.helpchanged = client->pers.helpchanged;
-		client->pers = resp.coop_respawn;
-		ClientUserinfoChanged (ent, userinfo);
-		if (resp.score > client->pers.score)
-			client->pers.score = resp.score;
 	}
 	else
 	{
@@ -70425,7 +70058,7 @@ INTERMISSION
 
 void MoveClientToIntermission (edict_t *ent)
 {
-	if (deathmatch->value || coop->value)
+	if (deathmatch->value)
 		ent->client->showscores = true;
 	VectorCopy (level.intermission_origin, ent->s.origin);
 	ent->client->ps.pmove.origin[0] = level.intermission_origin[0]*8;
@@ -70456,7 +70089,7 @@ void MoveClientToIntermission (edict_t *ent)
 
 	// add the layout
 
-	if (deathmatch->value || coop->value)
+	if (deathmatch->value)
 	{
 		DeathmatchScoreboardMessage (ent, NULL);
 		PF_Unicast (ent, true);
@@ -70466,7 +70099,7 @@ void MoveClientToIntermission (edict_t *ent)
 
 void BeginIntermission (edict_t *targ)
 {
-	int		i, n;
+	int		i;
 	edict_t	*ent, *client;
 
 	if (level.intermissiontime)
@@ -70487,25 +70120,7 @@ void BeginIntermission (edict_t *targ)
 	level.intermissiontime = level.time;
 	level.changemap = targ->map;
 
-	if (strstr(level.changemap, "*"))
-	{
-		if (coop->value)
-		{
-			for (i=0 ; i<1 ; i++)
-			{
-				client = g_edicts + 1 + i;
-				if (!client->inuse)
-					continue;
-				// strip players of all keys between units
-				for (n = 0; n < MAX_ITEMS; n++)
-				{
-					if (itemlist[n].flags & IT_KEY)
-						client->client->pers.inventory[n] = 0;
-				}
-			}
-		}
-	}
-	else
+	if (!strstr(level.changemap, "*"))
 	{
 		if (!deathmatch->value)
 		{
@@ -70671,7 +70286,7 @@ void Cmd_Score_f (edict_t *ent)
 	ent->client->showinventory = false;
 	ent->client->showhelp = false;
 
-	if (!deathmatch->value && !coop->value)
+	if (!deathmatch->value)
 		return;
 
 	if (ent->client->showscores)
@@ -70998,7 +70613,7 @@ void PlayerTrail_Init (void)
 {
 	int		n;
 
-	if (deathmatch->value /* FIXME || coop */)
+	if (deathmatch->value)
 		return;
 
 	for (n = 0; n < TRAIL_LENGTH; n++)
@@ -72264,7 +71879,7 @@ bool Pickup_Weapon (edict_t *ent, edict_t* other)
 
 	index = ITEM_INDEX(ent->item);
 
-	if ( ( ((int)(dmflags->value) & DF_WEAPONS_STAY) || coop->value)
+	if ( ( ((int)(dmflags->value) & DF_WEAPONS_STAY))
 		&& other->client->pers.inventory[index])
 	{
 		if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM) ) )
@@ -72291,8 +71906,6 @@ bool Pickup_Weapon (edict_t *ent, edict_t* other)
 				else
 					SetRespawn (ent, 30);
 			}
-			if (coop->value)
-				ent->flags |= FL_RESPAWN;
 		}
 	}
 
@@ -82467,7 +82080,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
-		COM_GetCvar("coop", "0", CVAR_LATCH);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
 		COM_GetCvar("fraglimit", "0", CVAR_SERVERINFO);
 		COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
