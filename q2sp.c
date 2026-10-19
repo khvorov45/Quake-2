@@ -73444,51 +73444,6 @@ void Draw_Char (int x, int y, int num)
 	glEnd ();
 }
 
-static void LoadPCX(char *filename, u8 **pic, u8 **palette, int *width, int *height) {
-	String file_name_str = string_from_cstring(filename);
-	u8_Slice file_content = context.load_asset_by_name(file_name_str);
-	u8* raw = file_content.ptr;
-	i64 len = file_content.len;
-	// TODO: Don't load what we don't have
-	if (!raw) {
-		context.debug_log(concatenate_strings(&context.memory.temp, STRS(file_name_str, STR(" not found"))));
-		return;
-	}
-
-	pcx_t* pcx = (pcx_t*)raw;
-	raw = &pcx->data;
-
-	assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
-
-	*width = pcx->xmax + 1;
-	*height = pcx->ymax + 1;
-	u8* out = malloc((*height) * (*width));
-	*pic = out;
-	u8* pix = out;
-
-	*palette = malloc(768);
-	memcpy(*palette, (u8*)pcx + len - 768, 768);
-
-	for (i64 y = 0; y <= pcx->ymax; y++, pix += pcx->xmax+1) {
-		for (i64 x = 0; x <= pcx->xmax;) {
-			i64 dataByte = *raw++;
-
-			i64 runLength = 1;
-			if ((dataByte & 0xC0) == 0xC0) {
-				runLength = dataByte & 0x3F;
-				dataByte = *raw++;
-			}
-
-			while(runLength-- > 0) {
-				pix[x++] = dataByte;
-			}
-		}
-
-	}
-
-	assert(raw - (u8*)pcx <= len);
-}
-
 image_t *GL_LoadWal (char *name)
 {
 	miptex_t	*mt;
@@ -73716,31 +73671,53 @@ static image_t* GL_FindImage(char* name, imagetype_t type) {
 
 		// Then load
 		if (!target_image) {
-			u8* pic = NULL;
-			u8* palette = NULL;
-			int width = 0;
-			int height = 0;
-
 			if (string_ends_with(name_str, STR(".pcx"))) {
-				LoadPCX(name, &pic, &palette, &width, &height);
-				if (pic) {
-					target_image = GL_LoadPic(name, pic, width, height, type, 8);
+				u8_Slice file_content = context.load_asset_by_name(name_str);
+
+				pcx_t* pcx = (pcx_t*)file_content.ptr;
+				assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
+
+				i64 width = pcx->xmax + 1;
+				i64 height = pcx->ymax + 1;
+				u8* pic = malloc((height) * (width));
+
+				{
+					u8* pix = pic;
+					u8* raw = &pcx->data;
+					for (i64 y = 0; y < height; y++, pix += width) {
+						for (i64 x = 0; x < width;) {
+							i64 dataByte = *raw++;
+
+							i64 runLength = 1;
+							if ((dataByte & 0xC0) == 0xC0) {
+								runLength = dataByte & 0x3F;
+								dataByte = *raw++;
+							}
+
+							while(runLength-- > 0) {
+								pix[x++] = dataByte;
+							}
+						}
+					}
+					assert(raw - (u8*)pcx <= file_content.len);
 				}
+
+				target_image = GL_LoadPic(name, pic, width, height, type, 8);
+				free(pic);
+
 			} else if (string_ends_with(name_str, STR(".wal"))) {
+
 				target_image = GL_LoadWal(name);
+
 			} else if (string_ends_with(name_str, STR(".tga"))) {
+				int width = 0;
+				int height = 0;
+				u8* pic = 0;
 				LoadTGA(name, &pic, &width, &height);
 				if (pic) {
 					target_image = GL_LoadPic(name, pic, width, height, type, 32);
+					free(pic);
 				}
-			}
-
-			if (pic) {
-				free(pic);
-			}
-
-			if (palette) {
-				free(palette);
 			}
 		}
 	}
@@ -81673,7 +81650,6 @@ static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	return result;
 }
 
-
 static u8_Slice windows_load_asset_by_name(String name) {
 	Windows_Pak_File_Entries paks = ((Windows_Platform_Data*)context.platform_data)->paks;
 
@@ -81695,15 +81671,14 @@ static u8_Slice windows_load_asset_by_name(String name) {
 	}
 
 	u8_Slice result = {};
-	if (target_file_info) {
-		assert(target_file_pak);
-		assert(target_file_info->filepos >= (i64)sizeof(Pak_File_Header));
-		result.ptr = target_file_pak->whole_file.ptr + target_file_info->filepos;
-		assert(result.ptr < (u8*)target_file_pak->infos.ptr);
-		assert(target_file_info->filelen > 0);
-		result.len = target_file_info->filelen;
-		assert((result.ptr + result.len) <= (u8*)target_file_pak->infos.ptr);
-	}
+	assert(target_file_info);
+	assert(target_file_pak);
+	assert(target_file_info->filepos >= (i64)sizeof(Pak_File_Header));
+	result.ptr = target_file_pak->whole_file.ptr + target_file_info->filepos;
+	assert(result.ptr < (u8*)target_file_pak->infos.ptr);
+	assert(target_file_info->filelen > 0);
+	result.len = target_file_info->filelen;
+	assert((result.ptr + result.len) <= (u8*)target_file_pak->infos.ptr);
 
 	return result;
 }
@@ -82183,7 +82158,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			i64 palette_value_count = 256;
 			{
 				u8_Slice file_content = context.load_asset_by_name(STR("pics/colormap.pcx"));
-				assert(file_content.ptr);
 				palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
 				assert(file_content.len >= palette.len);
 				palette.ptr = file_content.ptr + file_content.len - palette.len;
