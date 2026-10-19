@@ -1741,11 +1741,6 @@ static struct {
 		dl_single
 	} downloadtype;
 	int downloadpercent;
-
-	// demo recording info must be here, so it isn't cleared on level change
-	bool	demorecording;
-	bool	demowaiting;	// don't record until a non-delta message is received
-	FILE		*demofile;
 } cls;
 
 //
@@ -9164,7 +9159,6 @@ typedef enum {
 	ss_loading,			// spawning level edicts
 	ss_game,			// actively running
 	ss_cinematic,
-	ss_demo,
 	ss_pic
 } server_state_t;
 // some qc commands are only valid before the server has finished
@@ -9188,10 +9182,6 @@ typedef struct {
 	// it is only used to marshall data until SV_Multicast is called
 	sizebuf_t	multicast;
 	u8		multicast_buf[MAX_MSGLEN];
-
-	// demo server information
-	FILE		*demofile;
-	bool	timedemo;		// don't time sync
 } server_t;
 
 #define EDICT_NUM(n) ((edict_t *)((u8 *)g_edicts + sizeof(edict_t)*(n)))
@@ -9293,11 +9283,6 @@ typedef struct
 	entity_state_t	*client_entities;		// [num_client_entities]
 
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
-
-	// serverrecord values
-	FILE		*demofile;
-	sizebuf_t	demo_multicast;
-	u8		demo_multicast_buf[MAX_MSGLEN];
 } server_static_t;
 
 //=============================================================================
@@ -9334,7 +9319,6 @@ void SV_Map (char *levelstring, bool loadgame);
 
 void SV_PrepWorldFrame (void);
 
-void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
 
 void SV_Multicast (vec3_t origin, multicast_t to);
@@ -9361,7 +9345,6 @@ void SV_Status_f (void);
 // sv_ents.c
 //
 void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg);
-void SV_RecordDemoMessage (void);
 void SV_BuildClientFrame (client_t *client);
 
 
@@ -10070,107 +10053,6 @@ static void SV_DumpUser_f() {
 
 }
 
-// Begins server demo recording.  Every entity and every message will be
-// recorded, but no playerinfo will be stored.  Primarily for demo merging.
-void SV_ServerRecord_f (void)
-{
-	char	name[MAX_OSPATH];
-	char	buf_data[32768];
-	sizebuf_t	buf;
-	int		len;
-	int		i;
-
-	if (cmd_argc != 2)
-	{
-		Com_Printf ("serverrecord <demoname>\n");
-		return;
-	}
-
-	if (svs.demofile)
-	{
-		Com_Printf ("Already recording.\n");
-		return;
-	}
-
-	if (sv.state != ss_game)
-	{
-		Com_Printf ("You must be in a level to record.\n");
-		return;
-	}
-
-	//
-	// open the demo file
-	//
-	Com_sprintf (name, sizeof(name), "baseq2/demos/%s.dm2", Cmd_Argv(1));
-
-	Com_Printf ("recording to %s.\n", name);
-	FS_CreatePath (name);
-	svs.demofile = fopen (name, "wb");
-	if (!svs.demofile)
-	{
-		Com_Printf ("ERROR: couldn't open.\n");
-		return;
-	}
-
-	// setup a buffer to catch all multicasts
-	SZ_Init (&svs.demo_multicast, svs.demo_multicast_buf, sizeof(svs.demo_multicast_buf));
-
-	//
-	// write a single giant fake message with all the startup info
-	//
-	SZ_Init (&buf, (u8*)buf_data, sizeof(buf_data));
-
-	//
-	// serverdata needs to go over for all types of servers
-	// to make sure the protocol is right, and to set the gamedir
-	//
-	// send the serverdata
-	MSG_WriteByte (&buf, svc_serverdata);
-	MSG_WriteLong (&buf, PROTOCOL_VERSION);
-	MSG_WriteLong (&buf, svs.spawncount);
-	// 2 means server demo
-	MSG_WriteByte (&buf, 2);	// demos are always attract loops
-	MSG_WriteString (&buf, Cvar_VariableString ("gamedir"));
-	MSG_WriteShort (&buf, -1);
-	// send full levelname
-	MSG_WriteString (&buf, sv.configstrings[CS_NAME]);
-
-	for (i=0 ; i<MAX_CONFIGSTRINGS ; i++)
-		if (sv.configstrings[i][0])
-		{
-			MSG_WriteByte (&buf, svc_configstring);
-			MSG_WriteShort (&buf, i);
-			MSG_WriteString (&buf, sv.configstrings[i]);
-		}
-
-	// write it to the demo file
-	len = LittleLong (buf.cursize);
-	fwrite (&len, 4, 1, svs.demofile);
-	fwrite (buf.data, buf.cursize, 1, svs.demofile);
-
-	// the rest of the demo file will be individual frames
-}
-
-
-/*
-==============
-SV_ServerStop_f
-
-Ends server demo recording
-==============
-*/
-void SV_ServerStop_f (void)
-{
-	if (!svs.demofile)
-	{
-		Com_Printf ("Not doing a serverrecord.\n");
-		return;
-	}
-	fclose (svs.demofile);
-	svs.demofile = NULL;
-	Com_Printf ("Recording completed.\n");
-}
-
 // Kick everyone off, possibly in preparation for a new game
 void SV_KillServer_f (void)
 {
@@ -10184,30 +10066,7 @@ void SV_ServerCommand_f() {
 	ServerCommand();
 }
 
-//===========================================================
-
-
-/* ============ end source: server/sv_ccmds.c ============ */
-/* ============ begin source: server/sv_ents.c ============ */
-
-
-/* already inlined above: server/server.h */
-
-/*
-=============================================================================
-
-Encode a client frame onto the network channel
-
-=============================================================================
-*/
-
-/*
-=============
-SV_EmitPacketEntities
-
-Writes a delta update of an entity_state_t list to the message.
-=============
-*/
+// Writes a delta update of an entity_state_t list to the message.
 void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t *msg)
 {
 	entity_state_t	*oldent, *newent;
@@ -10722,62 +10581,6 @@ void SV_BuildClientFrame (client_t *client)
 }
 
 
-/*
-==================
-SV_RecordDemoMessage
-
-Save everything in the world out without deltas.
-Used for recording footage for merged or assembled demos
-==================
-*/
-void SV_RecordDemoMessage (void)
-{
-	int			e;
-	edict_t		*ent;
-	entity_state_t	nostate;
-	sizebuf_t	buf;
-	u8		buf_data[32768];
-	int			len;
-
-	if (!svs.demofile)
-		return;
-
-	memset (&nostate, 0, sizeof(nostate));
-	SZ_Init (&buf, buf_data, sizeof(buf_data));
-
-	// write a frame message that doesn't contain a player_state_t
-	MSG_WriteByte (&buf, svc_frame);
-	MSG_WriteLong (&buf, sv.framenum);
-
-	MSG_WriteByte (&buf, svc_packetentities);
-
-	e = 1;
-	ent = EDICT_NUM(e);
-	while (e < global_num_edicts)
-	{
-		// ignore ents without visible models unless they have an effect
-		if (ent->inuse &&
-			ent->s.number &&
-			(ent->s.modelindex || ent->s.effects || ent->s.sound || ent->s.event) &&
-			!(ent->svflags & SVF_NOCLIENT))
-			MSG_WriteDeltaEntity (&nostate, &ent->s, &buf, false, true);
-
-		e++;
-		ent = EDICT_NUM(e);
-	}
-
-	MSG_WriteShort (&buf, 0);		// end of packetentities
-
-	// now add the accumulated multicast information
-	SZ_Write (&buf, svs.demo_multicast.data, svs.demo_multicast.cursize);
-	SZ_Clear (&svs.demo_multicast);
-
-	// now write the entire message to the file, prefixed by the length
-	len = LittleLong (buf.cursize);
-	fwrite (&len, 4, 1, svs.demofile);
-	fwrite (buf.data, buf.cursize, 1, svs.demofile);
-}
-
 // Sends the contents of the mutlicast buffer to a single client
 void PF_Unicast (edict_t *ent, bool reliable)
 {
@@ -11136,13 +10939,7 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	int			i;
 	unsigned	checksum;
 
-	Com_Printf ("------- Server Initialization -------\n");
-
-	if (sv.demofile)
-		fclose (sv.demofile);
-
-	svs.spawncount++;		// any partially connected client will be
-							// restarted
+	svs.spawncount++;		// any partially connected client will be restarted
 	sv.state = ss_dead;
 	server_state = sv.state;
 
@@ -11312,7 +11109,7 @@ SV_Map
   map [*]<map>$<startspot>+<nextserver>
 
 command from the console or progs.
-Map can also be a.cin, .pcx, or .dm2 file
+Map can also be a .cin, .pcx
 Nextserver is used to allow a cinematic to play, then proceed to
 another level:
 
@@ -11363,12 +11160,6 @@ void SV_Map(char *levelstring, bool loadgame)
 		SCR_BeginLoadingPlaque ();			// for local system
 		SV_BroadcastCommand ("changing\n");
 		SV_SpawnServer (level, spawnpoint, ss_cinematic, loadgame);
-	}
-	else if (l > 4 && !strcmp (level+l-4, ".dm2") )
-	{
-		SCR_BeginLoadingPlaque ();			// for local system
-		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_demo, loadgame);
 	}
 	else if (l > 4 && !strcmp (level+l-4, ".pcx") )
 	{
@@ -11976,16 +11767,12 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 	SV_ShutdownGameProgs ();
 
 	// free current level
-	if (sv.demofile)
-		fclose (sv.demofile);
-	memset (&sv, 0, sizeof(sv));
+	memset(&sv, 0, sizeof(sv));
 	server_state = sv.state;
 
 	// free server static data
 	if (svs.client_entities)
 		Z_Free(svs.client_entities);
-	if (svs.demofile)
-		fclose(svs.demofile);
 	memset (&svs, 0, sizeof(svs));
 }
 
@@ -12098,10 +11885,6 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 		leafnum = 0;	// just to avoid compiler warnings
 		area1 = 0;
 	}
-
-	// if doing a serverrecord, store everything
-	if (svs.demofile)
-		SZ_Write (&svs.demo_multicast, sv.multicast.data, sv.multicast.cursize);
 
 	switch (to)
 	{
@@ -12321,56 +12104,10 @@ bool SV_SendClientDatagram (client_t *client)
 	return true;
 }
 
-void SV_DemoCompleted (void)
-{
-	if (sv.demofile)
-	{
-		fclose (sv.demofile);
-		sv.demofile = NULL;
-	}
-	SV_Nextserver ();
-}
-
 void SV_SendClientMessages (void)
 {
 	int			i;
 	client_t	*c;
-	int			msglen;
-	u8		msgbuf[MAX_MSGLEN];
-	int			r;
-
-	msglen = 0;
-
-	// read the next demo message if needed
-	if (sv.state == ss_demo && sv.demofile)
-	{
-		if (sv_paused->value)
-			msglen = 0;
-		else
-		{
-			// get the next message
-			r = fread (&msglen, 4, 1, sv.demofile);
-			if (r != 1)
-			{
-				SV_DemoCompleted ();
-				return;
-			}
-			msglen = LittleLong (msglen);
-			if (msglen == -1)
-			{
-				SV_DemoCompleted ();
-				return;
-			}
-
-			assert(msglen <= MAX_MSGLEN);
-			r = fread (msgbuf, msglen, 1, sv.demofile);
-			if (r != 1)
-			{
-				SV_DemoCompleted ();
-				return;
-			}
-		}
-	}
 
 	// send a message to each connected client
 	for (i=0, c = &svs.client ; i<1; i++, c++)
@@ -12387,11 +12124,8 @@ void SV_SendClientMessages (void)
 			SV_DropClient (c);
 		}
 
-		if (sv.state == ss_cinematic
-			|| sv.state == ss_demo
-			|| sv.state == ss_pic
-			)
-			Netchan_Transmit (&c->netchan, msglen, msgbuf);
+		if (sv.state == ss_cinematic || sv.state == ss_pic)
+			Netchan_Transmit (&c->netchan, 0, 0);
 		else if (c->state == cs_spawned)
 		{
 			SV_SendClientDatagram (c);
@@ -12407,13 +12141,6 @@ void SV_SendClientMessages (void)
 
 edict_t	*sv_player;
 
-static void SV_BeginDemoserver() {
-	char name[MAX_OSPATH] = {};
-	Com_sprintf(name, sizeof(name), "demos/%s", sv.name);
-	FS_FOpenFile(name, &sv.demofile);
-	assert(sv.demofile);
-}
-
 // Sends the first message from the server to a connected client.
 // This will be sent on the initial connection and upon each server load.
 void SV_New_f (void)
@@ -12426,13 +12153,6 @@ void SV_New_f (void)
 	if (sv_client->state != cs_connected)
 	{
 		Com_Printf ("New not valid -- already spawned\n");
-		return;
-	}
-
-	// demo servers just dump the file message
-	if (sv.state == ss_demo)
-	{
-		SV_BeginDemoserver ();
 		return;
 	}
 
@@ -14236,13 +13956,6 @@ float CL_KeyState (kbutton_t *key);
 char *Key_KeynumToString (int keynum);
 
 //
-// cl_demo.c
-//
-void CL_WriteDemoMessage (void);
-void CL_Stop_f (void);
-void CL_Record_f (void);
-
-//
 // cl_parse.c
 //
 extern	char *svc_strings[256];
@@ -15420,7 +15133,6 @@ void CL_ParseFrame (void)
 	{
 		cl.frame.valid = true;		// uncompressed frame
 		old = NULL;
-		cls.demowaiting = false;	// we can start recording now
 	}
 	else
 	{
@@ -16174,12 +15886,6 @@ void CL_AddEntities (void)
 
 	if (cl_timedemo->value)
 		cl.lerpfrac = 1.0;
-
-//	CL_AddPacketEntities (&cl.frame);
-//	CL_AddTEnts ();
-//	CL_AddParticles ();
-//	CL_AddDLights ();
-//	CL_AddLightStyles ();
 
 	CL_CalcViewValues ();
 	// PMM - moved this here so the heat beam has the right values for the vieworg, and can lock the beam to the gun
@@ -18828,10 +18534,10 @@ void CL_SendCmd (void)
 
 	// let the server know what the last frame we
 	// got was, so the next message can be delta compressed
-	if (cl_nodelta->value || !cl.frame.valid || cls.demowaiting)
-		MSG_WriteLong (&buf, -1);	// no compression
+	if (cl_nodelta->value || !cl.frame.valid)
+		MSG_WriteLong(&buf, -1);	// no compression
 	else
-		MSG_WriteLong (&buf, cl.frame.serverframe);
+		MSG_WriteLong(&buf, cl.frame.serverframe);
 
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
@@ -19023,171 +18729,6 @@ extern	cvar_t *allow_download_players;
 extern	cvar_t *allow_download_models;
 extern	cvar_t *allow_download_sounds;
 extern	cvar_t *allow_download_maps;
-
-//======================================================================
-
-
-/*
-====================
-CL_WriteDemoMessage
-
-Dumps the current net message, prefixed by the length
-====================
-*/
-void CL_WriteDemoMessage (void)
-{
-	int		len, swlen;
-
-	// the first eight bytes are just packet sequencing stuff
-	len = net_message.cursize-8;
-	swlen = LittleLong(len);
-	fwrite (&swlen, 4, 1, cls.demofile);
-	fwrite (net_message.data+8,	len, 1, cls.demofile);
-}
-
-// stop recording a demo
-void CL_Stop_f (void)
-{
-	int		len;
-
-	if (!cls.demorecording)
-	{
-		Com_Printf ("Not recording a demo.\n");
-		return;
-	}
-
-	// finish up
-	len = -1;
-	fwrite (&len, 4, 1, cls.demofile);
-	fclose (cls.demofile);
-	cls.demofile = NULL;
-	cls.demorecording = false;
-	Com_Printf ("Stopped demo.\n");
-}
-
-/*
-====================
-CL_Record_f
-
-record <demoname>
-
-Begins recording a demo from the current position
-====================
-*/
-void CL_Record_f (void)
-{
-	char	name[MAX_OSPATH];
-	char	buf_data[MAX_MSGLEN];
-	sizebuf_t	buf;
-	int		i;
-	int		len;
-	entity_state_t	*ent;
-	entity_state_t	nullstate;
-
-	if (cmd_argc != 2)
-	{
-		Com_Printf ("record <demoname>\n");
-		return;
-	}
-
-	if (cls.demorecording)
-	{
-		Com_Printf ("Already recording.\n");
-		return;
-	}
-
-	if (cls.state != ca_active)
-	{
-		Com_Printf ("You must be in a level to record.\n");
-		return;
-	}
-
-	//
-	// open the demo file
-	//
-	Com_sprintf (name, sizeof(name), "baseq2/demos/%s.dm2", Cmd_Argv(1));
-
-	Com_Printf ("recording to %s.\n", name);
-	FS_CreatePath (name);
-	cls.demofile = fopen (name, "wb");
-	if (!cls.demofile)
-	{
-		Com_Printf ("ERROR: couldn't open.\n");
-		return;
-	}
-	cls.demorecording = true;
-
-	// don't start saving messages until a non-delta compressed message is received
-	cls.demowaiting = true;
-
-	//
-	// write out messages to hold the startup information
-	//
-	SZ_Init (&buf, (u8*)buf_data, sizeof(buf_data));
-
-	// send the serverdata
-	MSG_WriteByte (&buf, svc_serverdata);
-	MSG_WriteLong (&buf, PROTOCOL_VERSION);
-	MSG_WriteLong (&buf, 0x10000 + cl.servercount);
-	MSG_WriteByte (&buf, 1);	// demos are always attract loops
-	MSG_WriteString (&buf, cl.gamedir);
-	MSG_WriteShort (&buf, cl.playernum);
-
-	MSG_WriteString (&buf, cl.configstrings[CS_NAME]);
-
-	// configstrings
-	for (i=0 ; i<MAX_CONFIGSTRINGS ; i++)
-	{
-		if (cl.configstrings[i][0])
-		{
-			if (buf.cursize + (int)strlen(cl.configstrings[i]) + 32 > buf.maxsize)
-			{	// write it out
-				len = LittleLong (buf.cursize);
-				fwrite (&len, 4, 1, cls.demofile);
-				fwrite (buf.data, buf.cursize, 1, cls.demofile);
-				buf.cursize = 0;
-			}
-
-			MSG_WriteByte (&buf, svc_configstring);
-			MSG_WriteShort (&buf, i);
-			MSG_WriteString (&buf, cl.configstrings[i]);
-		}
-
-	}
-
-	// baselines
-	memset (&nullstate, 0, sizeof(nullstate));
-	for (i=0; i<MAX_EDICTS ; i++)
-	{
-		ent = &cl_entities[i].baseline;
-		if (!ent->modelindex)
-			continue;
-
-		if (buf.cursize + 64 > buf.maxsize)
-		{	// write it out
-			len = LittleLong (buf.cursize);
-			fwrite (&len, 4, 1, cls.demofile);
-			fwrite (buf.data, buf.cursize, 1, cls.demofile);
-			buf.cursize = 0;
-		}
-
-		MSG_WriteByte (&buf, svc_spawnbaseline);
-		MSG_WriteDeltaEntity (&nullstate, &cl_entities[i].baseline, &buf, true, true);
-	}
-
-	MSG_WriteByte (&buf, svc_stufftext);
-	MSG_WriteString (&buf, "precache\n");
-
-	// write it to the demo file
-
-	len = LittleLong (buf.cursize);
-	fwrite (&len, 4, 1, cls.demofile);
-	fwrite (buf.data, buf.cursize, 1, cls.demofile);
-
-	// the rest of the demo file will be individual frames
-}
-
-//======================================================================
 
 void CL_Setenv_f( void )
 {
@@ -19381,9 +18922,6 @@ void CL_Disconnect() {
 		M_ForceMenuOff();
 		cls.connect_time = 0;
 		SCR_StopCinematic();
-		if (cls.demorecording) {
-			CL_Stop_f();
-		}
 
 		// send a disconnect message to the server
 		char final[32] = {};
@@ -21814,29 +21352,8 @@ void CL_ParseServerMessage (void)
 	}
 
 	CL_AddNetgraph ();
-
-	//
-	// we don't know if it is ok to save a demo message until
-	// after we have parsed the frame
-	//
-	if (cls.demorecording && !cls.demowaiting)
-		CL_WriteDemoMessage ();
-
 }
 
-
-/* ============ end source: client/cl_parse.c ============ */
-/* ============ begin source: client/cl_pred.c ============ */
-
-
-/* already inlined above: client/client.h */
-
-
-/*
-===================
-CL_CheckPredictionError
-===================
-*/
 void CL_CheckPredictionError (void)
 {
 	int		frame;
@@ -81290,9 +80807,6 @@ static void SV_Frame(int msec) {
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();
 
-	// save the entire world state if recording a serverdemo
-	SV_RecordDemoMessage ();
-
 	// clear teleport flags, etc for next frame
 	SV_PrepWorldFrame ();
 
@@ -81601,8 +81115,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("dumpuser", SV_DumpUser_f);
 		Cmd_AddCommand("map", SV_Map_f);
 		Cmd_AddCommand("gamemap", SV_GameMap_f);
-		Cmd_AddCommand("serverrecord", SV_ServerRecord_f);
-		Cmd_AddCommand("serverstop", SV_ServerStop_f);
 		Cmd_AddCommand("save", SV_Savegame_f);
 		Cmd_AddCommand("load", SV_Loadgame_f);
 		Cmd_AddCommand("killserver", SV_KillServer_f);
@@ -81637,8 +81149,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("userinfo", CL_Userinfo_f);
 		Cmd_AddCommand("snd_restart", CL_Snd_Restart_f);
 		Cmd_AddCommand("changing", CL_Changing_f);
-		Cmd_AddCommand("record", CL_Record_f);
-		Cmd_AddCommand("stop", CL_Stop_f);
 		Cmd_AddCommand("write_config", write_config);
 		Cmd_AddCommand("quit", context.exit_process);
 		Cmd_AddCommand("connect", CL_Connect_f);
