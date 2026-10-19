@@ -1727,7 +1727,6 @@ static struct {
 	char		servername[MAX_OSPATH];	// name of server from original connect
 	float		connect_time;			// for connection retransmits
 	netchan_t	netchan;
-	int			serverProtocol;			// in case we are doing some kind of version hack
 	int			challenge;				// from the server to use for connecting
 	FILE*		download;				// file transfer from server
 	char		downloadtempname[MAX_OSPATH];
@@ -9219,7 +9218,6 @@ typedef struct
 } client_frame_t;
 
 #define	LATENCY_COUNTS	16
-#define	RATE_MESSAGES	10
 
 typedef struct client_s
 {
@@ -9230,15 +9228,10 @@ typedef struct client_s
 	int				lastframe;			// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
 
-	int				commandMsec;		// every seconds this is reset, if user
-										// commands exhaust it, assume time cheating
+	int				commandMsec;		// every seconds this is reset, if user commands exhaust it, assume time cheating
 
 	int				frame_latency[LATENCY_COUNTS];
 	int				ping;
-
-	int				message_size[RATE_MESSAGES];	// used to rate drop packets
-	int				rate;
-	int				surpressCount;		// number of messages rate supressed
 
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	char			name[32];			// extracted from userinfo, high bits masked
@@ -10488,18 +10481,11 @@ void SV_WritePlayerstateToClient (client_frame_t *from, client_frame_t *to, size
 			MSG_WriteShort (msg, ps->stats[i]);
 }
 
-
-/*
-==================
-SV_WriteFrameToClient
-==================
-*/
 void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg)
 {
 	client_frame_t		*frame, *oldframe;
 	int					lastframe;
 
-//Com_Printf ("%i -> %i\n", client->lastframe, sv.framenum);
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
 
@@ -10510,7 +10496,6 @@ void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg)
 	}
 	else if (sv.framenum - client->lastframe >= (UPDATE_BACKUP - 3) )
 	{	// client hasn't gotten a good message through in a long time
-//		Com_Printf ("%s: Delta request from out-of-date packet.\n", client->name);
 		oldframe = NULL;
 		lastframe = -1;
 	}
@@ -10523,8 +10508,6 @@ void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg)
 	MSG_WriteByte (msg, svc_frame);
 	MSG_WriteLong (msg, sv.framenum);
 	MSG_WriteLong (msg, lastframe);	// what we are delta'ing from
-	MSG_WriteByte (msg, client->surpressCount);	// rate dropped packets
-	client->surpressCount = 0;
 
 	// send over the areabits
 	MSG_WriteByte (msg, frame->areabytes);
@@ -11926,58 +11909,26 @@ void SV_RunGameFrame() {
 	}
 }
 
-//============================================================================
-
-//============================================================================
-
-
-/*
-=================
-SV_UserinfoChanged
-
-Pull specific info from a newly changed userinfo string
-into a more C freindly form.
-=================
-*/
-void SV_UserinfoChanged (client_t *cl)
-{
-	char	*val;
-
+// Pull specific info from a newly changed userinfo string into a more C freindly form.
+void SV_UserinfoChanged(client_t* cl) {
 	// call prog code to allow overrides
-	ClientUserinfoChanged (cl->edict, cl->userinfo);
+	ClientUserinfoChanged(cl->edict, cl->userinfo);
 
 	// name for C code
-	strncpy (cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name)-1);
-	// mask off high bit
-	int i = 0;
-	for (; i < (int)sizeof(cl->name) ; i++)
-		cl->name[i] &= 127;
+	strncpy(cl->name, Info_ValueForKey(cl->userinfo, "name"), sizeof(cl->name)-1);
 
-	// rate command
-	val = Info_ValueForKey (cl->userinfo, "rate");
-	if (strlen(val))
-	{
-		i = atoi(val);
-		cl->rate = i;
-		if (cl->rate < 100)
-			cl->rate = 100;
-		if (cl->rate > 15000)
-			cl->rate = 15000;
+	// mask off high bit
+	for (int i = 0; i < (int)sizeof(cl->name) ; i++) {
+		cl->name[i] &= 127;
 	}
-	else
-		cl->rate = 5000;
 
 	// msg command
-	val = Info_ValueForKey (cl->userinfo, "msg");
-	if (strlen(val))
-	{
+	char* val = Info_ValueForKey(cl->userinfo, "msg");
+	if (strlen(val)) {
 		cl->messagelevel = atoi(val);
 	}
 
 }
-
-
-//============================================================================
 
 /*
 ==================
@@ -12334,22 +12285,6 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 	}
 }
 
-
-/*
-===============================================================================
-
-FRAME UPDATES
-
-===============================================================================
-*/
-
-
-
-/*
-=======================
-SV_SendClientDatagram
-=======================
-*/
 bool SV_SendClientDatagram (client_t *client)
 {
 	u8		msg_buf[MAX_MSGLEN];
@@ -12383,18 +12318,9 @@ bool SV_SendClientDatagram (client_t *client)
 	// send the datagram
 	Netchan_Transmit (&client->netchan, msg.cursize, msg.data);
 
-	// record the size for rate estimation
-	client->message_size[sv.framenum % RATE_MESSAGES] = msg.cursize;
-
 	return true;
 }
 
-
-/*
-==================
-SV_DemoCompleted
-==================
-*/
 void SV_DemoCompleted (void)
 {
 	if (sv.demofile)
@@ -12405,46 +12331,6 @@ void SV_DemoCompleted (void)
 	SV_Nextserver ();
 }
 
-
-/*
-=======================
-SV_RateDrop
-
-Returns true if the client is over its current
-bandwidth estimation and should not be sent another packet
-=======================
-*/
-bool SV_RateDrop (client_t *c)
-{
-	int		total;
-	int		i;
-
-	// never drop over the loopback
-	if (c->netchan.remote_address.type == NA_LOOPBACK)
-		return false;
-
-	total = 0;
-
-	for (i = 0 ; i < RATE_MESSAGES ; i++)
-	{
-		total += c->message_size[i];
-	}
-
-	if (total > c->rate)
-	{
-		c->surpressCount++;
-		c->message_size[sv.framenum % RATE_MESSAGES] = 0;
-		return true;
-	}
-
-	return false;
-}
-
-/*
-=======================
-SV_SendClientMessages
-=======================
-*/
 void SV_SendClientMessages (void)
 {
 	int			i;
@@ -12508,10 +12394,6 @@ void SV_SendClientMessages (void)
 			Netchan_Transmit (&c->netchan, msglen, msgbuf);
 		else if (c->state == cs_spawned)
 		{
-			// don't overrun bandwidth
-			if (SV_RateDrop (c))
-				continue;
-
 			SV_SendClientDatagram (c);
 		}
 		else
@@ -14051,7 +13933,6 @@ typedef struct
 	vec3_t		prediction_error;
 
 	frame_t		frame;				// received from server
-	int			surpressCount;		// number of messages rate supressed
 	frame_t		frames[UPDATE_BACKUP];
 
 	// the client maintains its own idea of view angles, which are
@@ -15526,10 +15407,6 @@ void CL_ParseFrame (void)
 	cl.frame.serverframe = MSG_ReadLong (&net_message);
 	cl.frame.deltaframe = MSG_ReadLong (&net_message);
 	cl.frame.servertime = cl.frame.serverframe*100;
-
-	// BIG HACK to let old demos continue to work
-	if (cls.serverProtocol != 26)
-		cl.surpressCount = MSG_ReadByte (&net_message);
 
 	if (cl_shownet->value == 3)
 		Com_Printf ("   frame:%i  delta:%i\n", cl.frame.serverframe,
@@ -19127,7 +19004,6 @@ cvar_t	*info_password;
 cvar_t	*info_spectator;
 cvar_t	*name;
 cvar_t	*skin;
-cvar_t	*rate;
 cvar_t	*fov;
 cvar_t	*msg;
 cvar_t	*hand;
@@ -21462,8 +21338,6 @@ void CL_ParseDownload (void)
 		char	oldn[MAX_OSPATH];
 		char	newn[MAX_OSPATH];
 
-//		Com_Printf ("100%%\n");
-
 		fclose (cls.download);
 
 		// rename the temp file to it's final name
@@ -21482,42 +21356,28 @@ void CL_ParseDownload (void)
 	}
 }
 
-void CL_ParseServerData() {
-	char	*str;
-	int		i;
-
-	// wipe the client_state_t struct
-	CL_ClearState ();
+static void CL_ParseServerData() {
+	CL_ClearState();
 	cls.state = ca_connected;
 
-	// parse protocol version number
-	i = MSG_ReadLong (&net_message);
-	cls.serverProtocol = i;
+	int protocol_version = MSG_ReadLong(&net_message);
+	assert(protocol_version == PROTOCOL_VERSION);
 
-	// BIG HACK to let demos from release work with the 3.0x patch!!!
-	assert((server_state && PROTOCOL_VERSION == 34) || i == PROTOCOL_VERSION);
+	cl.servercount = MSG_ReadLong(&net_message);
 
-	cl.servercount = MSG_ReadLong (&net_message);
+	char* game_directory = MSG_ReadString(&net_message);
+	strncpy(cl.gamedir, game_directory, sizeof(cl.gamedir) - 1);
 
-	// game directory
-	str = MSG_ReadString (&net_message);
-	strncpy(cl.gamedir, str, sizeof(cl.gamedir) - 1);
+	cl.playernum = MSG_ReadShort(&net_message);
 
-	// parse player entity number
-	cl.playernum = MSG_ReadShort (&net_message);
-
-	// get the full level name
-	str = MSG_ReadString (&net_message);
-
-	if (cl.playernum == -1)
-	{	// playing a cinematic or showing a pic, not a level
-		SCR_PlayCinematic (str);
-	}
-	else
-	{
+	char* level_name = MSG_ReadString(&net_message);
+	if (cl.playernum == -1) {
+		// playing a cinematic or showing a pic, not a level
+		SCR_PlayCinematic(level_name);
+	} else {
 		// seperate the printfs so the server message can have a color
 		Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-		Com_Printf ("%c%s\n", 2, str);
+		Com_Printf("%c%s\n", 2, level_name);
 
 		// need to prep refresh at next oportunity
 		cl.refresh_prepped = false;
@@ -22272,22 +22132,7 @@ int			crosshair_width, crosshair_height;
 
 void SCR_Loading_f (void);
 
-
-/*
-===============================================================================
-
-BAR GRAPHS
-
-===============================================================================
-*/
-
-/*
-==============
-CL_AddNetgraph
-
-A new packet was just parsed
-==============
-*/
+// A new packet was just parsed
 void CL_AddNetgraph (void)
 {
 	int		i;
@@ -22301,9 +22146,6 @@ void CL_AddNetgraph (void)
 
 	for (i=0 ; i<cls.netchan.dropped ; i++)
 		SCR_DebugGraph (30, 0x40);
-
-	for (i=0 ; i<cl.surpressCount ; i++)
-		SCR_DebugGraph (30, 0xdf);
 
 	// see what the latency was on this packet
 	in = cls.netchan.incoming_acknowledged & (CMD_BACKUP-1);
@@ -81972,7 +81814,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
 		name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
 		skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
-		rate = COM_GetCvar ("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// FIXME
 		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
 		hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
 		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
