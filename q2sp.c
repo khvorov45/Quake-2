@@ -19089,22 +19089,11 @@ void CL_DrawInventory (void)
 
 cvar_t	*freelook;
 
-cvar_t	*adr0;
-cvar_t	*adr1;
-cvar_t	*adr2;
-cvar_t	*adr3;
-cvar_t	*adr4;
-cvar_t	*adr5;
-cvar_t	*adr6;
-cvar_t	*adr7;
-cvar_t	*adr8;
-
 cvar_t	*cl_noskins;
 cvar_t	*cl_autoskins;
 cvar_t	*cl_footsteps;
 cvar_t	*cl_timeout;
 cvar_t	*cl_predict;
-//cvar_t	*cl_minfps;
 cvar_t	*cl_maxfps;
 cvar_t	*cl_gun;
 
@@ -77117,15 +77106,7 @@ cvar_t	*r_lefthand;
 
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
-cvar_t	*gl_3dlabs_broken;
-
-/*
-=================
-R_CullBox
-
-Returns true if the box is completely outside the frustom
-=================
-*/
+// Returns true if the box is completely outside the frustom
 bool R_CullBox (vec3_t mins, vec3_t maxs)
 {
 	int		i;
@@ -81937,7 +81918,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
 		gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
 		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
-		gl_3dlabs_broken = COM_GetCvar( "gl_3dlabs_broken", "1", CVAR_ARCHIVE );
 		intensity = COM_GetCvar("intensity", "2", 0);
 		crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
 		cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
@@ -81956,15 +81936,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		scr_graphheight = COM_GetCvar("graphheight", "32", 0);
 		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
 		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
-		adr0 = COM_GetCvar("adr0", "", CVAR_ARCHIVE);
-		adr1 = COM_GetCvar("adr1", "", CVAR_ARCHIVE);
-		adr2 = COM_GetCvar("adr2", "", CVAR_ARCHIVE);
-		adr3 = COM_GetCvar("adr3", "", CVAR_ARCHIVE);
-		adr4 = COM_GetCvar("adr4", "", CVAR_ARCHIVE);
-		adr5 = COM_GetCvar("adr5", "", CVAR_ARCHIVE);
-		adr6 = COM_GetCvar("adr6", "", CVAR_ARCHIVE);
-		adr7 = COM_GetCvar("adr7", "", CVAR_ARCHIVE);
-		adr8 = COM_GetCvar("adr8", "", CVAR_ARCHIVE);
 		cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
 		cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
 		cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
