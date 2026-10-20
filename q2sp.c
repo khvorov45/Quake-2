@@ -18015,8 +18015,6 @@ void CL_ClearState (void)
 
 static void M_ForceMenuOff();
 
-void R_SetPalette( const unsigned char *palette);
-
 // Goes from a connected state to full screen console state
 // Sends a disconnect message to the server
 void CL_Disconnect() {
@@ -18029,7 +18027,9 @@ void CL_Disconnect() {
 		}
 
 		VectorClear(cl.refdef.blend);
-		R_SetPalette(NULL);
+
+		void R_SetPalette();
+		R_SetPalette();
 
 		M_ForceMenuOff();
 		cls.connect_time = 0;
@@ -21950,11 +21950,6 @@ void CL_RegisterTEntSounds (void)
 //PGM
 }
 
-/*
-=================
-CL_RegisterTEntModels
-=================
-*/
 void CL_RegisterTEntModels (void)
 {
 	cl_mod_explode = R_RegisterModel ("models/objects/explode/tris.md2");
@@ -21967,28 +21962,24 @@ void CL_RegisterTEntModels (void)
 	cl_mod_bfg_explo = R_RegisterModel ("sprites/s_bfg2.sp2");
 	cl_mod_powerscreen = R_RegisterModel ("models/items/armor/effect/tris.md2");
 
-R_RegisterModel ("models/objects/laser/tris.md2");
-R_RegisterModel ("models/objects/grenade2/tris.md2");
-R_RegisterModel ("models/weapons/v_machn/tris.md2");
-R_RegisterModel ("models/weapons/v_handgr/tris.md2");
-R_RegisterModel ("models/weapons/v_shotg2/tris.md2");
-R_RegisterModel ("models/objects/gibs/bone/tris.md2");
-R_RegisterModel ("models/objects/gibs/sm_meat/tris.md2");
-R_RegisterModel ("models/objects/gibs/bone2/tris.md2");
-// RAFAEL
-// R_RegisterModel ("models/objects/blaser/tris.md2");
+	R_RegisterModel ("models/objects/laser/tris.md2");
+	R_RegisterModel ("models/objects/grenade2/tris.md2");
+	R_RegisterModel ("models/weapons/v_machn/tris.md2");
+	R_RegisterModel ("models/weapons/v_handgr/tris.md2");
+	R_RegisterModel ("models/weapons/v_shotg2/tris.md2");
+	R_RegisterModel ("models/objects/gibs/bone/tris.md2");
+	R_RegisterModel ("models/objects/gibs/sm_meat/tris.md2");
+	R_RegisterModel ("models/objects/gibs/bone2/tris.md2");
 
-Draw_FindPic ("w_machinegun");
-Draw_FindPic ("a_bullets");
-Draw_FindPic ("i_health");
-Draw_FindPic ("a_grenades");
+	Draw_FindPic ("w_machinegun");
+	Draw_FindPic ("a_bullets");
+	Draw_FindPic ("i_health");
+	Draw_FindPic ("a_grenades");
 
-//ROGUE
 	cl_mod_explo4_big = R_RegisterModel ("models/objects/r_explode2/tris.md2");
 	cl_mod_lightning = R_RegisterModel ("models/proj/lightning/tris.md2");
 	cl_mod_heatbeam = R_RegisterModel ("models/proj/beam/tris.md2");
 	cl_mod_monster_heatbeam = R_RegisterModel ("models/proj/widowbeam/tris.md2");
-//ROGUE
 }
 
 void CL_ClearTEnts (void)
@@ -26990,9 +26981,6 @@ void SpinControl_Draw( menulist_s *s )
 		Menu_DrawString( RCOLUMN_OFFSET + s->generic.x + s->generic.parent->x, s->generic.y + s->generic.parent->y + 10, buffer );
 	}
 }
-
-#undef Draw_Char
-#undef Draw_Fill
 
 #ifndef SND_LOC_H
 #define SND_LOC_H
@@ -69365,14 +69353,6 @@ void R_DrawSkyBox (void);
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node);
 
 void	Draw_Pic (int x, int y, char *name);
-
-void	Draw_Char (int x, int y, int c);
-
-void	Draw_Fill (int x, int y, int w, int h, int c);
-
-
-
-
 void	R_SwapBuffers( int );
 
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
@@ -69406,17 +69386,8 @@ image_t		*draw_chars;
 extern	bool	scrap_dirty;
 void Scrap_Upload (void);
 
-
-
-/*
-================
-Draw_Char
-
-Draws one 8*8 graphics character with 0 being transparent.
-It can be clipped to the top of the screen to allow the console to be
-smoothly scrolled off.
-================
-*/
+// Draws one 8*8 graphics character with 0 being transparent.
+// It can be clipped to the top of the screen to allow the console to be smoothly scrolled off.
 void Draw_Char (int x, int y, int num)
 {
 	int				row, col;
@@ -73620,43 +73591,12 @@ static void R_BeginFrame() {
 	R_Clear ();
 }
 
-unsigned r_rawpalette[256];
-
-void R_SetPalette ( const unsigned char *palette)
-{
-	int		i;
-
-	u8 *rp = ( u8 * ) r_rawpalette;
-
-	if ( palette )
-	{
-		for ( i = 0; i < 256; i++ )
-		{
-			rp[i*4+0] = palette[i*3+0];
-			rp[i*4+1] = palette[i*3+1];
-			rp[i*4+2] = palette[i*3+2];
-			rp[i*4+3] = 0xff;
-		}
-	}
-	else
-	{
-		for ( i = 0; i < 256; i++ )
-		{
-			rp[i*4+0] = d_8to24table[i] & 0xff;
-			rp[i*4+1] = ( d_8to24table[i] >> 8 ) & 0xff;
-			rp[i*4+2] = ( d_8to24table[i] >> 16 ) & 0xff;
-			rp[i*4+3] = 0xff;
-		}
-	}
-
-	glClearColor (0,0,0,0);
-	glClear (GL_COLOR_BUFFER_BIT);
-	glClearColor (1,0, 0.5 , 0.5);
+void R_SetPalette() {
+	glClearColor(0,0,0,0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(1,0, 0.5 , 0.5);
 }
 
-/*
-** R_DrawBeam
-*/
 void R_DrawBeam( Entity *e )
 {
 #define NUM_BEAM_SEGS 6
@@ -73722,27 +73662,6 @@ void R_DrawBeam( Entity *e )
 	glDisable( GL_BLEND );
 	glDepthMask( GL_TRUE );
 }
-
-//===================================================================
-
-
-struct model_s	*R_RegisterModel (char *name);
-struct image_s	*R_RegisterSkin (char *name);
-void R_SetSky (char *name, float rotate, vec3_t axis);
-void	R_EndRegistration (void);
-struct image_s	*Draw_FindPic (char *name);
-
-void	Draw_Pic (int x, int y, char *name);
-void	Draw_Char (int x, int y, int c);
-void	Draw_Fill (int x, int y, int w, int h, int c);
-void	Draw_FadeScreen (void);
-
-/* ============ end source: ref_gl/gl_rmain.c ============ */
-/* ============ begin source: ref_gl/gl_rmisc.c ============ */
-
-// r_misc.c
-
-/* already inlined above: ref_gl/gl_local.h */
 
 void GL_ScreenShot_f(void)
 {
