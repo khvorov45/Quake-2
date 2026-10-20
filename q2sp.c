@@ -5328,17 +5328,12 @@ typedef struct {
 
 	int			game_helpchanged;
 	int			helpchanged;
-
-	bool	spectator;			// client is a spectator
 } client_persistant_t;
 
-// client data that stays across deathmatch respawns
 typedef struct {
 	int			enterframe;			// level.framenum the client entered the game
 	int			score;				// frags, etc
 	vec3_t		cmd_angles;			// angles sent over in the last command
-
-	bool	spectator;			// client is a spectator
 } client_respawn_t;
 
 typedef enum {
@@ -5359,7 +5354,6 @@ typedef struct gclient_s {
 	client_respawn_t	resp;
 	pmove_state_t		old_pmove;	// for detecting out-of-pmove changes
 
-	bool	showscores;			// set layout stat
 	bool	showinventory;		// set layout stat
 	bool	showhelp;
 	bool	showhelpicon;
@@ -5466,7 +5460,6 @@ static int global_num_edicts;
 #define	SPAWNFLAG_NOT_EASY			0x00000100
 #define	SPAWNFLAG_NOT_MEDIUM		0x00000200
 #define	SPAWNFLAG_NOT_HARD			0x00000400
-#define	SPAWNFLAG_NOT_DEATHMATCH	0x00000800
 
 // edict->flags
 #define	FL_FLY					0x00000001
@@ -5491,8 +5484,6 @@ static int global_num_edicts;
 #define	TAG_LEVEL	766		// clear when loading a new level
 
 #define MELEE_DISTANCE	80
-
-#define BODY_QUEUE_SIZE		8
 
 typedef enum {
 	AMMO_BULLETS,
@@ -5629,7 +5620,7 @@ typedef struct {
 
 	char		level_name[MAX_QPATH];	// the descriptive name (Outer Base, etc)
 	char		mapname[MAX_QPATH];		// the server name (base1, etc)
-	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
+	char		nextmap[MAX_QPATH];
 
 	// intermission state
 	float		intermissiontime;		// time the intermission was started
@@ -5659,7 +5650,6 @@ typedef struct {
 	int			killed_monsters;
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
-	int			body_que;			// dead bodies
 } level_locals_t;
 
 // spawn_temp_t is only used to hold entity field values that
@@ -5718,7 +5708,6 @@ static spawn_temp_t		st;
 
 static int sm_meat_index;
 static int snd_fry;
-static int meansOfDeath;
 
 static int	jacket_armor_index;
 static int	combat_armor_index;
@@ -5773,14 +5762,9 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* deathmatch;
 static cvar_t* dmflags;
 static cvar_t* skill;
-static cvar_t* fraglimit;
-static cvar_t* timelimit;
 static cvar_t* password;
-static cvar_t* spectator_password;
-static cvar_t* maxspectators;
 static cvar_t* maxentities;
 static cvar_t* g_select_empty;
 
@@ -5801,13 +5785,9 @@ static cvar_t* bob_up;
 static cvar_t* bob_pitch;
 static cvar_t* bob_roll;
 
-static cvar_t* sv_cheats;
-
 static cvar_t* flood_msgs;
 static cvar_t* flood_persecond;
 static cvar_t* flood_waitdelay;
-
-static cvar_t* sv_maplist;
 
 #define world	(&g_edicts[0])
 
@@ -5858,19 +5838,16 @@ extern	gitem_t	itemlist[];
 // g_cmds.c
 //
 void Cmd_Help_f (edict_t *ent);
-void Cmd_Score_f (edict_t *ent);
 
 //
 // g_items.c
 //
 void PrecacheItem (gitem_t *it);
 void InitItems (void);
-void SetItemNames (void);
 gitem_t	*FindItem (char *pickup_name);
 gitem_t	*FindItemByClassname (char *classname);
 #define	ITEM_INDEX(x) ((x)-itemlist)
 edict_t *Drop_Item (edict_t *ent, gitem_t *item);
-void SetRespawn (edict_t *ent, float delay);
 void ChangeWeapon (edict_t *ent);
 void SpawnItem (edict_t *ent, gitem_t *item);
 void Think_Weapon (edict_t *ent);
@@ -5924,7 +5901,6 @@ void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_
 #define DEFAULT_BULLET_VSPREAD	500
 #define DEFAULT_SHOTGUN_HSPREAD	1000
 #define DEFAULT_SHOTGUN_VSPREAD	500
-#define DEFAULT_DEATHMATCH_SHOTGUN_COUNT	12
 #define DEFAULT_SHOTGUN_COUNT	12
 #define DEFAULT_SSHOTGUN_COUNT	20
 
@@ -6007,7 +5983,6 @@ void BeginIntermission (edict_t *targ);
 void PutClientInServer (edict_t *ent);
 void InitClientPersistant (gclient_t *client);
 void InitClientResp (gclient_t *client);
-void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
 
 //
@@ -6035,7 +6010,6 @@ void G_SetStats (edict_t *ent);
 void G_SetSpectatorStats (edict_t *ent);
 void G_CheckChaseStats (edict_t *ent);
 void ValidateSelectedItem (edict_t *ent);
-void DeathmatchScoreboardMessage (edict_t *client, edict_t *killer);
 
 //
 // g_pweapon.c
@@ -9290,7 +9264,6 @@ extern	server_t		sv;					// local server
 
 extern	cvar_t		*sv_paused;
 extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
-extern	cvar_t		*sv_airaccelerate;		// don't reload level state when reentering development tool
 extern	cvar_t		*sv_enforcetime;
 
 extern	client_t	*sv_client;
@@ -9676,7 +9649,7 @@ void SV_WriteServerFile (bool autosave)
 	fwrite (svs.mapcmd, 1, sizeof(svs.mapcmd), f);
 
 	// write all CVAR_LATCH cvars
-	// these will be things like skill, deathmatch, etc
+	// these will be things like skill, etc
 	for (var = cvar_vars ; var ; var=var->next)
 	{
 		if (!(var->flags & CVAR_LATCH))
@@ -9724,7 +9697,7 @@ void SV_ReadServerFile (void)
 	FS_Read (mapcmd, sizeof(mapcmd), f);
 
 	// read all CVAR_LATCH cvars
-	// these will be things like skill, deathmatch, etc
+	// these will be things like skill, etc
 	while (1)
 	{
 		if (!fread (name, 1, sizeof(name), f))
@@ -9873,12 +9846,6 @@ static void SV_Savegame_f() {
 	if (cmd_argc != 2)
 	{
 		Com_Printf ("USAGE: savegame <directory>\n");
-		return;
-	}
-
-	if (Cvar_VariableValue("deathmatch"))
-	{
-		Com_Printf ("Can't savegame in a deathmatch\n");
 		return;
 	}
 
@@ -10892,9 +10859,6 @@ void SV_CheckForSavegame (void)
 	if (sv_noreload->value)
 		return;
 
-	if (Cvar_VariableValue ("deathmatch"))
-		return;
-
 	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
 	f = fopen (name, "rb");
 	if (!f)
@@ -10941,16 +10905,9 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 	// save name for levels that don't set message
 	strcpy (sv.configstrings[CS_NAME], server);
-	if (Cvar_VariableValue ("deathmatch"))
-	{
-		sprintf(sv.configstrings[CS_AIRACCEL], "%g", sv_airaccelerate->value);
-		pm_airaccelerate = sv_airaccelerate->value;
-	}
-	else
-	{
-		strcpy(sv.configstrings[CS_AIRACCEL], "0");
-		pm_airaccelerate = 0;
-	}
+
+	strcpy(sv.configstrings[CS_AIRACCEL], "0");
+	pm_airaccelerate = 0;
 
 	SZ_Init (&sv.multicast, sv.multicast_buf, sizeof(sv.multicast_buf));
 
@@ -11140,8 +11097,6 @@ cvar_t *allow_download_players;
 cvar_t *allow_download_models;
 cvar_t *allow_download_sounds;
 cvar_t *allow_download_maps;
-
-cvar_t *sv_airaccelerate;
 
 cvar_t	*sv_noreload;			// don't reload level state when reentering
 
@@ -21618,7 +21573,7 @@ void SCR_ExecuteLayoutString (char *s)
 		}
 
 		if (!strcmp(token, "client"))
-		{	// draw a deathmatch client block
+		{
 			int		score, ping, time;
 
 			token = COM_Parse (&s);
@@ -26676,7 +26631,6 @@ static void StartGame( void )
 {
 	cl.servercount = -1;
 	M_ForceMenuOff ();
-	COM_SetValueCvar( "deathmatch", 0 );
 
 	COM_SetValueCvar( "gamerules", 0 );		//PGM
 
@@ -29918,10 +29872,6 @@ void ai_run (edict_t* self, float dist)
 	if (self)
 		self->goalentity = save;
 }
-/* ============ end source: game/g_ai.c ============ */
-/* ============ begin source: game/g_chase.c ============ */
-
-/* already inlined above: game/g_local.h */
 
 void UpdateChaseCam(edict_t *ent)
 {
@@ -29934,8 +29884,7 @@ void UpdateChaseCam(edict_t *ent)
 	vec3_t angles;
 
 	// is our chase target gone?
-	if (!ent->client->chase_target->inuse
-		|| ent->client->chase_target->client->resp.spectator) {
+	if (!ent->client->chase_target->inuse) {
 		edict_t *old = ent->client->chase_target;
 		ChaseNext(ent);
 		if (ent->client->chase_target == old) {
@@ -30028,8 +29977,7 @@ void ChaseNext(edict_t *ent)
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (!e->client->resp.spectator)
-			break;
+		break;
 	} while (e != ent->client->chase_target);
 
 	ent->client->chase_target = e;
@@ -30052,8 +30000,7 @@ void ChasePrev(edict_t *ent)
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (!e->client->resp.spectator)
-			break;
+		break;
 	} while (e != ent->client->chase_target);
 
 	ent->client->chase_target = e;
@@ -30067,7 +30014,7 @@ void GetChaseTarget(edict_t *ent)
 
 	for (i = 1; i <= 1; i++) {
 		other = g_edicts + i;
-		if (other->inuse && !other->client->resp.spectator) {
+		if (other->inuse) {
 			ent->client->chase_target = other;
 			ent->client->update_chase = true;
 			UpdateChaseCam(ent);
@@ -30076,16 +30023,6 @@ void GetChaseTarget(edict_t *ent)
 	}
 	PF_centerprintf(ent, "No other players to chase.");
 }
-
-/* ============ end source: game/g_chase.c ============ */
-/* ============ begin source: game/g_cmds.c ============ */
-
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_player.h ============ */
-
-// G:\quake2\baseq2\models/player_x/frames
-
-// This file generated by qdata - Do NOT Modify
 
 #define FRAME_stand01         	0
 #define FRAME_stand02         	1
@@ -30409,17 +30346,8 @@ void ValidateSelectedItem (edict_t *ent)
 	SelectNextItem (ent, -1);
 }
 
-
-//=================================================================================
-
-/*
-==================
-Cmd_Give_f
-
-Give items to a client
-==================
-*/
-void Cmd_Give_f (edict_t *ent)
+// Give items to a client
+static void Cmd_Give_f (edict_t *ent)
 {
 	char		*name;
 	gitem_t		*it;
@@ -30427,12 +30355,6 @@ void Cmd_Give_f (edict_t *ent)
 	int			i;
 	bool	give_all;
 	edict_t		*it_ent;
-
-	if (deathmatch->value && !sv_cheats->value)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
-		return;
-	}
 
 	name = Cmd_Args();
 
@@ -30565,25 +30487,10 @@ void Cmd_Give_f (edict_t *ent)
 	}
 }
 
-
-/*
-==================
-Cmd_God_f
-
-Sets client to godmode
-
-argv(0) god
-==================
-*/
+// argv(0) god
 void Cmd_God_f (edict_t *ent)
 {
 	char	*msg;
-
-	if (deathmatch->value && !sv_cheats->value)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
-		return;
-	}
 
 	ent->flags ^= FL_GODMODE;
 	if (!(ent->flags & FL_GODMODE) )
@@ -30594,25 +30501,10 @@ void Cmd_God_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-
-/*
-==================
-Cmd_Notarget_f
-
-Sets client to notarget
-
-argv(0) notarget
-==================
-*/
+// argv(0) notarget
 void Cmd_Notarget_f (edict_t *ent)
 {
 	char	*msg;
-
-	if (deathmatch->value && !sv_cheats->value)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
-		return;
-	}
 
 	ent->flags ^= FL_NOTARGET;
 	if (!(ent->flags & FL_NOTARGET) )
@@ -30623,23 +30515,10 @@ void Cmd_Notarget_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-
-/*
-==================
-Cmd_Noclip_f
-
-argv(0) noclip
-==================
-*/
+// argv(0) noclip
 void Cmd_Noclip_f (edict_t *ent)
 {
 	char	*msg;
-
-	if (deathmatch->value && !sv_cheats->value)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "You must run the server with '+set cheats 1' to enable this command.\n");
-		return;
-	}
 
 	if (ent->movetype == MOVETYPE_NOCLIP)
 	{
@@ -30655,14 +30534,7 @@ void Cmd_Noclip_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-
-/*
-==================
-Cmd_Use_f
-
-Use an inventory item
-==================
-*/
+// Use an inventory item
 void Cmd_Use_f (edict_t *ent)
 {
 	int			index;
@@ -30691,14 +30563,7 @@ void Cmd_Use_f (edict_t *ent)
 	it->use (ent, it);
 }
 
-
-/*
-==================
-Cmd_Drop_f
-
-Drop an inventory item
-==================
-*/
+// Drop an inventory item
 void Cmd_Drop_f (edict_t *ent)
 {
 	int			index;
@@ -30740,7 +30605,6 @@ void Cmd_Inven_f (edict_t *ent)
 
 	cl = ent->client;
 
-	cl->showscores = false;
 	cl->showhelp = false;
 
 	if (cl->showinventory)
@@ -30915,12 +30779,10 @@ static void Cmd_Kill_f(edict_t* ent) {
 		return;
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
-	meansOfDeath = MOD_SUICIDE;
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
 static void Cmd_PutAway_f(edict_t* ent) {
-	ent->client->showscores = false;
 	ent->client->showhelp = false;
 	ent->client->showinventory = false;
 }
@@ -31071,13 +30933,12 @@ void Cmd_PlayerList_f(edict_t *ent)
 		if (!e2->inuse)
 			continue;
 
-		sprintf(st, "%02d:%02d %4d %3d %s%s\n",
+		sprintf(st, "%02d:%02d %4d %3d %s\n",
 			(level.framenum - e2->client->resp.enterframe) / 600,
 			((level.framenum - e2->client->resp.enterframe) % 600)/10,
 			e2->client->ping,
 			e2->client->resp.score,
-			e2->client->pers.netname,
-			e2->client->resp.spectator ? " (spectator)" : "");
+			e2->client->pers.netname);
 		if (strlen(text) + strlen(st) > sizeof(text) - 50) {
 			sprintf(text+strlen(text), "And more...\n");
 			PF_cprintf(ent, PRINT_HIGH, "%s", text);
@@ -31088,12 +30949,6 @@ void Cmd_PlayerList_f(edict_t *ent)
 	PF_cprintf(ent, PRINT_HIGH, "%s", text);
 }
 
-
-/*
-=================
-ClientCommand
-=================
-*/
 void ClientCommand (edict_t *ent)
 {
 	char	*cmd;
@@ -31116,11 +30971,6 @@ void ClientCommand (edict_t *ent)
 	if (Q_stricmp (cmd, "say_team") == 0)
 	{
 		Cmd_Say_f (ent, true, false);
-		return;
-	}
-	if (Q_stricmp (cmd, "score") == 0)
-	{
-		Cmd_Score_f (ent);
 		return;
 	}
 	if (Q_stricmp (cmd, "help") == 0)
@@ -31529,6 +31379,8 @@ static bool CheckTeamDamage(edict_t *targ, edict_t* attacker) {
 
 void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
 {
+	UNUSED(mod);
+
 	gclient_t	*client;
 	int			take;
 	int			save;
@@ -31539,23 +31391,8 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 	if (!targ->takedamage)
 		return;
 
-	// friendly fire avoidance
-	// if enabled you can't hurt teammates (but you can hurt yourself)
-	// knockback still occurs
-	if ((targ != attacker) && ((deathmatch->value && ((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))))
-	{
-		if (OnSameTeam (targ, attacker))
-		{
-			if ((int)(dmflags->value) & DF_NO_FRIENDLY_FIRE)
-				damage = 0;
-			else
-				mod |= MOD_FRIENDLY_FIRE;
-		}
-	}
-	meansOfDeath = mod;
-
 	// easy mode takes half damage
-	if (skill->value == 0 && deathmatch->value == 0 && targ->client)
+	if (skill->value == 0 && targ->client)
 	{
 		damage *= 0.5;
 		if (!damage)
@@ -32888,8 +32725,6 @@ void SP_func_door (edict_t *ent)
 
 	if (!ent->speed)
 		ent->speed = 100;
-	if (deathmatch->value)
-		ent->speed *= 2;
 
 	if (!ent->accel)
 		ent->accel = ent->speed;
@@ -33910,16 +33745,6 @@ void DoRespawn (edict_t *ent)
 	ent->s.event = EV_ITEM_RESPAWN;
 }
 
-void SetRespawn (edict_t *ent, float delay)
-{
-	ent->flags |= FL_RESPAWN;
-	ent->svflags |= SVF_NOCLIENT;
-	ent->solid = SOLID_NOT;
-	ent->nextthink = level.time + delay;
-	ent->think = DoRespawn;
-	SV_LinkEdict (ent);
-}
-
 bool Pickup_Powerup (edict_t *ent, edict_t* other)
 {
 	int		quantity;
@@ -33929,18 +33754,6 @@ bool Pickup_Powerup (edict_t *ent, edict_t* other)
 		return false;
 
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
-
-	if (deathmatch->value)
-	{
-		if (!(ent->spawnflags & DROPPED_ITEM) )
-			SetRespawn (ent, ent->item->quantity);
-		if (((int)dmflags->value & DF_INSTANT_ITEMS) || ((ent->item->use == Use_Quad) && (ent->spawnflags & DROPPED_PLAYER_ITEM)))
-		{
-			if ((ent->item->use == Use_Quad) && (ent->spawnflags & DROPPED_PLAYER_ITEM))
-				quad_drop_timeout_hack = (ent->nextthink - level.time) / FRAMETIME;
-			ent->item->use (other, ent->item);
-		}
-	}
 
 	return true;
 }
@@ -33952,35 +33765,28 @@ void Drop_General (edict_t *ent, gitem_t *item)
 	ValidateSelectedItem (ent);
 }
 
-
-//======================================================================
-
 bool Pickup_Adrenaline (edict_t *ent, edict_t* other)
 {
-	if (!deathmatch->value)
-		other->max_health += 1;
+	UNUSED(ent);
+
+	other->max_health += 1;
 
 	if (other->health < other->max_health)
 		other->health = other->max_health;
-
-	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (ent, ent->item->quantity);
 
 	return true;
 }
 
 bool Pickup_AncientHead (edict_t *ent, edict_t* other)
 {
+	UNUSED(ent);
 	other->max_health += 2;
-
-	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (ent, ent->item->quantity);
-
 	return true;
 }
 
 bool Pickup_Bandolier (edict_t *ent, edict_t* other)
 {
+	UNUSED(ent);
 	gitem_t	*item;
 	int		index;
 
@@ -34011,14 +33817,12 @@ bool Pickup_Bandolier (edict_t *ent, edict_t* other)
 			other->client->pers.inventory[index] = other->client->pers.max_shells;
 	}
 
-	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (ent, ent->item->quantity);
-
 	return true;
 }
 
 bool Pickup_Pack (edict_t *ent, edict_t* other)
 {
+	UNUSED(ent);
 	gitem_t	*item;
 	int		index;
 
@@ -34089,13 +33893,8 @@ bool Pickup_Pack (edict_t *ent, edict_t* other)
 			other->client->pers.inventory[index] = other->client->pers.max_slugs;
 	}
 
-	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (ent, ent->item->quantity);
-
 	return true;
 }
-
-//======================================================================
 
 void Use_Quad (edict_t *ent, gitem_t *item)
 {
@@ -34121,8 +33920,6 @@ void Use_Quad (edict_t *ent, gitem_t *item)
 
 	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
-
-//======================================================================
 
 void Use_Breather (edict_t *ent, gitem_t *item)
 {
@@ -34238,12 +34035,10 @@ bool Pickup_Ammo (edict_t *ent, edict_t* other)
 
 	if (weapon && !oldcount)
 	{
-		if (other->client->pers.weapon != ent->item && ( !deathmatch->value || other->client->pers.weapon == FindItem("blaster") ) )
+		if (other->client->pers.weapon != ent->item)
 			other->client->newweapon = ent->item;
 	}
 
-	if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) && (deathmatch->value))
-		SetRespawn (ent, 30);
 	return true;
 }
 
@@ -34272,9 +34067,6 @@ void Drop_Ammo (edict_t *ent, gitem_t *item)
 	ValidateSelectedItem (ent);
 }
 
-
-//======================================================================
-
 void MegaHealth_think (edict_t* self)
 {
 	if (self->owner->health > self->owner->max_health)
@@ -34284,10 +34076,7 @@ void MegaHealth_think (edict_t* self)
 		return;
 	}
 
-	if (!(self->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (self, 20);
-	else
-		G_FreeEdict (self);
+	G_FreeEdict (self);
 }
 
 bool Pickup_Health (edict_t *ent, edict_t* other)
@@ -34312,11 +34101,6 @@ bool Pickup_Health (edict_t *ent, edict_t* other)
 		ent->flags |= FL_RESPAWN;
 		ent->svflags |= SVF_NOCLIENT;
 		ent->solid = SOLID_NOT;
-	}
-	else
-	{
-		if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-			SetRespawn (ent, 30);
 	}
 
 	return true;
@@ -34414,9 +34198,6 @@ bool Pickup_Armor (edict_t *ent, edict_t* other)
 		}
 	}
 
-	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
-		SetRespawn (ent, 20);
-
 	return true;
 }
 
@@ -34464,21 +34245,7 @@ static void Use_PowerArmor(edict_t *ent, gitem_t *item) {
 
 bool Pickup_PowerArmor (edict_t *ent, edict_t* other)
 {
-	int		quantity;
-
-	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
-
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
-
-	if (deathmatch->value)
-	{
-		if (!(ent->spawnflags & DROPPED_ITEM) )
-			SetRespawn (ent, ent->item->quantity);
-		// auto-use for DM only if we didn't already have one
-		if (!quantity)
-			ent->item->use (other, ent->item);
-	}
-
 	return true;
 }
 
@@ -34561,11 +34328,6 @@ static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csur
 static void drop_make_touchable (edict_t *ent)
 {
 	ent->touch = Touch_Item;
-	if (deathmatch->value)
-	{
-		ent->nextthink = level.time + 29;
-		ent->think = G_FreeEdict;
-	}
 }
 
 edict_t *Drop_Item (edict_t *ent, gitem_t *item)
@@ -34797,43 +34559,6 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 		{
 			ent->spawnflags = 0;
 			PF_dprintf("%s at %s has invalid spawnflags set\n", ent->classname, vtos(ent->s.origin));
-		}
-	}
-
-	// some items will be prevented in deathmatch
-	if (deathmatch->value)
-	{
-		if ( (int)dmflags->value & DF_NO_ARMOR )
-		{
-			if (item->pickup == Pickup_Armor || item->pickup == Pickup_PowerArmor)
-			{
-				G_FreeEdict (ent);
-				return;
-			}
-		}
-		if ( (int)dmflags->value & DF_NO_ITEMS )
-		{
-			if (item->pickup == Pickup_Powerup)
-			{
-				G_FreeEdict (ent);
-				return;
-			}
-		}
-		if ( (int)dmflags->value & DF_NO_HEALTH )
-		{
-			if (item->pickup == Pickup_Health || item->pickup == Pickup_Adrenaline || item->pickup == Pickup_AncientHead)
-			{
-				G_FreeEdict (ent);
-				return;
-			}
-		}
-		if ( (int)dmflags->value & DF_INFINITE_AMMO )
-		{
-			if ( (item->flags == IT_AMMO) || (strcmp(ent->classname, "weapon_bfg") == 0) )
-			{
-				G_FreeEdict (ent);
-				return;
-			}
 		}
 	}
 
@@ -35767,32 +35492,16 @@ static gitem_t itemlist[] = {
 	{}
 };
 
-
-/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 void SP_item_health (edict_t* self)
 {
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->model = "models/items/healing/medium/tris.md2";
 	self->count = 10;
 	SpawnItem (self, FindItem ("Health"));
 	SV_SoundIndex ("items/n_health.wav");
 }
 
-/*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
 void SP_item_health_small (edict_t* self)
 {
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->model = "models/items/healing/stimpack/tris.md2";
 	self->count = 2;
 	SpawnItem (self, FindItem ("Health"));
@@ -35800,32 +35509,16 @@ void SP_item_health_small (edict_t* self)
 	SV_SoundIndex ("items/s_health.wav");
 }
 
-/*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
 void SP_item_health_large (edict_t* self)
 {
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->model = "models/items/healing/large/tris.md2";
 	self->count = 25;
 	SpawnItem (self, FindItem ("Health"));
 	SV_SoundIndex ("items/l_health.wav");
 }
 
-/*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
 void SP_item_health_mega (edict_t* self)
 {
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->model = "models/items/mega_h/tris.md2";
 	self->count = 100;
 	SpawnItem (self, FindItem ("Health"));
@@ -35833,22 +35526,14 @@ void SP_item_health_mega (edict_t* self)
 	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;
 }
 
-
 void InitItems (void)
 {
 	game.num_items = sizeof(itemlist)/sizeof(itemlist[0]) - 1;
 }
 
-
-
-/*
-===============
-SetItemNames
-
-Called by worldspawn
-===============
-*/
-void SetItemNames (void)
+// Called by worldspawn
+// TODO: inline
+static void SetItemNames (void)
 {
 	int		i;
 	gitem_t	*it;
@@ -35885,134 +35570,6 @@ void ClientEndServerFrames (void)
 
 }
 
-/*
-=================
-CreateTargetChangeLevel
-
-Returns the created target changelevel
-=================
-*/
-edict_t *CreateTargetChangeLevel(char *map)
-{
-	edict_t *ent;
-
-	ent = G_Spawn ();
-	ent->classname = "target_changelevel";
-	Com_sprintf(level.nextmap, sizeof(level.nextmap), "%s", map);
-	ent->map = level.nextmap;
-	return ent;
-}
-
-/*
-=================
-EndDMLevel
-
-The timelimit or fraglimit has been exceeded
-=================
-*/
-void EndDMLevel (void)
-{
-	edict_t		*ent;
-	char *s, *t, *f;
-	static const char *seps = " ,\n\r";
-
-	// stay on same level flag
-	if ((int)dmflags->value & DF_SAME_LEVEL)
-	{
-		BeginIntermission (CreateTargetChangeLevel (level.mapname) );
-		return;
-	}
-
-	// see if it's in the map list
-	if (*sv_maplist->string) {
-		s = _strdup(sv_maplist->string);
-		f = NULL;
-		t = strtok(s, seps);
-		while (t != NULL) {
-			if (Q_stricmp(t, level.mapname) == 0) {
-				// it's in the list, go to the next one
-				t = strtok(NULL, seps);
-				if (t == NULL) { // end of list, go to first one
-					if (f == NULL) // there isn't a first one, same level
-						BeginIntermission (CreateTargetChangeLevel (level.mapname) );
-					else
-						BeginIntermission (CreateTargetChangeLevel (f) );
-				} else
-					BeginIntermission (CreateTargetChangeLevel (t) );
-				free(s);
-				return;
-			}
-			if (!f)
-				f = t;
-			t = strtok(NULL, seps);
-		}
-		free(s);
-	}
-
-	if (level.nextmap[0]) // go to a specific map
-		BeginIntermission (CreateTargetChangeLevel (level.nextmap) );
-	else {	// search for a changelevel
-		ent = G_Find (NULL, FOFS(classname), "target_changelevel");
-		if (!ent)
-		{	// the map designer didn't include a changelevel,
-			// so create a fake ent that goes back to the same level
-			BeginIntermission (CreateTargetChangeLevel (level.mapname) );
-			return;
-		}
-		BeginIntermission (ent);
-	}
-}
-
-/*
-=================
-CheckDMRules
-=================
-*/
-void CheckDMRules (void)
-{
-	int			i;
-	gclient_t	*cl;
-
-	if (level.intermissiontime)
-		return;
-
-	if (!deathmatch->value)
-		return;
-
-	if (timelimit->value)
-	{
-		if (level.time >= timelimit->value*60)
-		{
-			SV_BroadcastPrintf (PRINT_HIGH, "Timelimit hit.\n");
-			EndDMLevel ();
-			return;
-		}
-	}
-
-	if (fraglimit->value)
-	{
-		for (i=0 ; i<1 ; i++)
-		{
-			cl = &game.client;
-			if (!g_edicts[i + 1].inuse)
-				continue;
-
-			if (cl->resp.score >= fraglimit->value)
-			{
-				SV_BroadcastPrintf (PRINT_HIGH, "Fraglimit hit.\n");
-				EndDMLevel ();
-				return;
-			}
-		}
-	}
-}
-
-
-/*
-=============
-ExitLevel
-=============
-*/
 void ExitLevel (void)
 {
 	int		i;
@@ -36096,9 +35653,6 @@ void G_RunFrame (void)
 
 		G_RunEntity (ent);
 	}
-
-	// see if it is time to end a deathmatch
-	CheckDMRules ();
 
 	// build the playerstate_t structures for all players
 	ClientEndServerFrames ();
@@ -36558,11 +36112,6 @@ static void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 
 void SP_point_combat (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
 	self->solid = SOLID_TRIGGER;
 	self->touch = point_combat_touch;
 	VectorSet (self->mins, -8, -8, -16);
@@ -36645,8 +36194,7 @@ static void light_use(edict_t* self, edict_t* other, edict_t* activator) {
 
 void SP_light (edict_t* self)
 {
-	// no targeted lights in deathmatch, because they cause global messages
-	if (!self->targetname || deathmatch->value)
+	if (!self->targetname)
 	{
 		G_FreeEdict (self);
 		return;
@@ -36919,12 +36467,6 @@ static void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activa
 
 void SP_func_explosive (edict_t* self)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->movetype = MOVETYPE_PUSH;
 
 	SV_ModelIndex ("models/objects/debris1/tris.md2");
@@ -37074,12 +36616,6 @@ static void barrel_delay(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 
 void SP_misc_explobox (edict_t* self)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (self);
-		return;
-	}
-
 	SV_ModelIndex ("models/objects/debris1/tris.md2");
 	SV_ModelIndex ("models/objects/debris2/tris.md2");
 	SV_ModelIndex ("models/objects/debris3/tris.md2");
@@ -37331,12 +36867,6 @@ static void misc_deadsoldier_die(edict_t* self, edict_t* inflictor, edict_t* att
 
 void SP_misc_deadsoldier (edict_t *ent)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (ent);
-		return;
-	}
-
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
 	ent->s.modelindex=SV_ModelIndex ("models/deadbods/dude/tris.md2");
@@ -38498,22 +38028,12 @@ void monster_death_use (edict_t* self)
 	G_UseTargets (self, self->enemy);
 }
 
-
-//============================================================================
-
 bool monster_start (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return false;
-	}
-
 	if ((self->spawnflags & 4) && !(self->monsterinfo.aiflags & AI_GOOD_GUY))
 	{
 		self->spawnflags &= ~4;
 		self->spawnflags |= 1;
-//		PF_dprintf("fixed spawnflags on %s at %s\n", self->classname, vtos(self->s.origin));
 	}
 
 	if (!(self->monsterinfo.aiflags & AI_GOOD_GUY))
@@ -39761,21 +39281,15 @@ static void InitGame() {
 	sv_gravity = COM_GetCvar ("sv_gravity", "800", 0);
 
 	// latched vars
-	sv_cheats = COM_GetCvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
 	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
-	maxspectators = COM_GetCvar ("maxspectators", "4", CVAR_SERVERINFO);
-	deathmatch = COM_GetCvar ("deathmatch", "0", CVAR_LATCH);
 	skill = COM_GetCvar ("skill", "1", CVAR_LATCH);
 	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
 	dmflags = COM_GetCvar ("dmflags", "0", CVAR_SERVERINFO);
-	fraglimit = COM_GetCvar ("fraglimit", "0", CVAR_SERVERINFO);
-	timelimit = COM_GetCvar ("timelimit", "0", CVAR_SERVERINFO);
 	password = COM_GetCvar ("password", "", CVAR_USERINFO);
-	spectator_password = COM_GetCvar ("spectator_password", "", CVAR_USERINFO);
 	filterban = COM_GetCvar ("filterban", "1", 0);
 
 	g_select_empty = COM_GetCvar ("g_select_empty", "0", CVAR_ARCHIVE);
@@ -39791,11 +39305,8 @@ static void InitGame() {
 	flood_persecond = COM_GetCvar ("flood_persecond", "4", 0);
 	flood_waitdelay = COM_GetCvar ("flood_waitdelay", "10", 0);
 
-	// dm map list
-	sv_maplist = COM_GetCvar ("sv_maplist", "", 0);
-
 	// items
-	InitItems ();
+	InitItems();
 
 	Com_sprintf (game.helpmessage1, sizeof(game.helpmessage1), "");
 
@@ -40286,11 +39797,6 @@ void ReadLevel (char *filename)
 				ent->nextthink = level.time + ent->delay;
 	}
 }
-/* ============ end source: game/g_save.c ============ */
-/* ============ begin source: game/g_spawn.c ============ */
-
-
-/* already inlined above: game/g_local.h */
 
 typedef struct
 {
@@ -40307,12 +39813,7 @@ void SP_item_health_mega (edict_t* self);
 static void SP_info_player_start(edict_t* self) {UNUSED(self);}
 
 static void SP_info_player_deathmatch(edict_t* self) {
-	if (!deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-	SP_misc_teleporter_dest (self);
+	G_FreeEdict(self);
 }
 
 static void SP_info_player_coop(edict_t* self) {
@@ -40834,32 +40335,20 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		if (!Q_stricmp(level.mapname, "command") && !Q_stricmp(ent->classname, "trigger_once") && !Q_stricmp(ent->model, "*27"))
 			ent->spawnflags &= ~SPAWNFLAG_NOT_HARD;
 
-		// remove things (except the world) from different skill levels or deathmatch
+		// remove things (except the world) from different skill levels
 		if (ent != g_edicts)
 		{
-			if (deathmatch->value)
-			{
-				if ( ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH )
+			if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+				((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+				(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
+				)
 				{
 					G_FreeEdict (ent);
 					inhibit++;
 					continue;
 				}
-			}
-			else
-			{
-				if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-					((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-					(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
-					)
-					{
-						G_FreeEdict (ent);
-						inhibit++;
-						continue;
-					}
-			}
 
-			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD|SPAWNFLAG_NOT_DEATHMATCH);
+			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD);
 		}
 
 		ED_CallSpawn (ent);
@@ -40946,11 +40435,6 @@ void SP_worldspawn (edict_t *ent)
 	ent->solid = SOLID_BSP;
 	ent->inuse = true;			// since the world doesn't use G_Spawn()
 	ent->s.modelindex = 1;		// world model is always index 1
-
-	//---------------
-
-	// reserve some spots for dead player bodies for deathmatch
-	InitBodyQue ();
 
 	// set configstrings for items
 	SetItemNames ();
@@ -41515,17 +40999,9 @@ static void Use_Target_Help(edict_t *ent, edict_t* other, edict_t* activator) {
 	game.helpchanged++;
 }
 
-/*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) help1
-When fired, the "message" key becomes the current personal computer string, and the message light will be set on all clients status bars.
-*/
+// When fired, the "message" key becomes the current personal computer string, and the message light will be set on all clients status bars.
 void SP_target_help(edict_t *ent)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (ent);
-		return;
-	}
-
 	if (!ent->message)
 	{
 		PF_dprintf ("%s with no message at %s\n", ent->classname, vtos(ent->s.origin));
@@ -41535,12 +41011,8 @@ void SP_target_help(edict_t *ent)
 	ent->use = Use_Target_Help;
 }
 
-//==========================================================
-
-/*QUAKED target_secret (1 0 1) (-8 -8 -8) (8 8 8)
-Counts a secret found.
-These are single use targets.
-*/
+// Counts a secret found.
+// These are single use targets.
 static void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
@@ -41555,12 +41027,6 @@ static void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
 
 void SP_target_secret (edict_t *ent)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (ent);
-		return;
-	}
-
 	ent->use = use_target_secret;
 	if (!st.noise)
 		st.noise = "misc/secret.wav";
@@ -41572,12 +41038,8 @@ void SP_target_secret (edict_t *ent)
 		ent->message = "You have found a secret area.";
 }
 
-//==========================================================
-
-/*QUAKED target_goal (1 0 1) (-8 -8 -8) (8 8 8)
-Counts a goal completed.
-These are single use targets.
-*/
+// Counts a goal completed.
+// These are single use targets.
 static void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
@@ -41595,12 +41057,6 @@ static void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
 
 void SP_target_goal (edict_t *ent)
 {
-	if (deathmatch->value)
-	{	// auto-remove for deathmatch
-		G_FreeEdict (ent);
-		return;
-	}
-
 	ent->use = use_target_goal;
 	if (!st.noise)
 		st.noise = "misc/secret.wav";
@@ -41657,36 +41113,17 @@ void SP_target_explosion (edict_t *ent)
 	ent->svflags = SVF_NOCLIENT;
 }
 
-
-//==========================================================
-
-/*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8)
-Changes level to "map" when fired
-*/
+// Changes level to "map" when fired
 void use_target_changelevel (edict_t* self, edict_t* other, edict_t* activator)
 {
+	UNUSED(other);
+	UNUSED(activator);
+
 	if (level.intermissiontime)
 		return;		// already activated
 
-	if (!deathmatch->value)
-	{
-		if (g_edicts[1].health <= 0)
-			return;
-	}
-
-	// if noexit, do a ton of damage to other
-	if (deathmatch->value && !( (int)dmflags->value & DF_ALLOW_EXIT) && other != world)
-	{
-		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, 10 * other->max_health, 1000, 0, MOD_EXIT);
+	if (g_edicts[1].health <= 0)
 		return;
-	}
-
-	// if multiplayer, let everyone know who hit the exit
-	if (deathmatch->value)
-	{
-		if (activator && activator->client)
-			SV_BroadcastPrintf (PRINT_HIGH, "%s exited the level.\n", activator->client->pers.netname);
-	}
 
 	// if going to a new unit, clear cross triggers
 	if (strstr(self->map, "*"))
@@ -42112,12 +41549,6 @@ void SP_target_lightramp (edict_t* self)
 	if (!self->message || strlen(self->message) != 2 || self->message[0] < 'a' || self->message[0] > 'z' || self->message[1] < 'a' || self->message[1] > 'z' || self->message[0] == self->message[1])
 	{
 		PF_dprintf("target_lightramp has bad ramp (%s) at %s\n", self->message, vtos(self->s.origin));
-		G_FreeEdict (self);
-		return;
-	}
-
-	if (deathmatch->value)
-	{
 		G_FreeEdict (self);
 		return;
 	}
@@ -43134,12 +42565,6 @@ void turret_driver_link (edict_t* self)
 
 void SP_turret_driver (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->movetype = MOVETYPE_PUSH;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = SV_ModelIndex("models/monsters/infantry/tris.md2");
@@ -43595,18 +43020,12 @@ edict_t *G_Spawn (void)
 	return e;
 }
 
-/*
-=================
-G_FreeEdict
-
-Marks the edict as free
-=================
-*/
-void G_FreeEdict (edict_t *ed)
+// Marks the edict as free
+void G_FreeEdict(edict_t* ed)
 {
-	SV_UnlinkEdict (ed);		// unlink from world
+	SV_UnlinkEdict (ed);
 
-	if ((ed - g_edicts) <= (1 + BODY_QUEUE_SIZE)) {
+	if ((ed - g_edicts) <= 1) {
 		return;
 	}
 
@@ -43616,14 +43035,7 @@ void G_FreeEdict (edict_t *ed)
 	ed->inuse = false;
 }
 
-
-/*
-============
-G_TouchTriggers
-
-============
-*/
-void	G_TouchTriggers (edict_t *ent)
+void G_TouchTriggers(edict_t* ent)
 {
 	int			i, num;
 	edict_t		*touch[MAX_EDICTS], *hit;
@@ -44296,15 +43708,11 @@ void rocket_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* su
 	}
 	else
 	{
-		// don't throw any debris in net games
-		if (!deathmatch->value)
+		if ((surf) && !(surf->flags & (SURF_WARP|SURF_TRANS33|SURF_TRANS66|SURF_FLOWING)))
 		{
-			if ((surf) && !(surf->flags & (SURF_WARP|SURF_TRANS33|SURF_TRANS66|SURF_FLOWING)))
-			{
-				n = rand() % 5;
-				while(n--)
-					ThrowDebris (ent, "models/objects/debris2/tris.md2", 2, ent->s.origin);
-			}
+			n = rand() % 5;
+			while(n--)
+				ThrowDebris (ent, "models/objects/debris2/tris.md2", 2, ent->s.origin);
 		}
 	}
 
@@ -44516,10 +43924,7 @@ void bfg_think (edict_t* self)
 	int		dmg;
 	trace_t	tr;
 
-	if (deathmatch->value)
-		dmg = 5;
-	else
-		dmg = 10;
+	dmg = 10;
 
 	ent = NULL;
 	while ((ent = findradius(ent, self->s.origin, 256)) != NULL)
@@ -45588,18 +44993,8 @@ static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	self->target = NULL;
 }
 
-
-/*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32)
-*/
-
 void SP_misc_actor (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	if (!self->targetname)
 	{
 		PF_dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
@@ -46397,17 +45792,8 @@ static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 		self->monsterinfo.currentmove = &berserk_move_death2;
 }
 
-
-/*QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_berserk (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	// pre-caches
 	sound_pain  = SV_SoundIndex ("berserk/berpain2.wav");
 	sound_die   = SV_SoundIndex ("berserk/berdeth2.wav");
@@ -47284,18 +46670,8 @@ bool Boss2_CheckAttack (edict_t* self)
 	return false;
 }
 
-
-
-/*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_boss2 (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("bosshovr/bhvpain1.wav");
 	sound_pain2 = SV_SoundIndex ("bosshovr/bhvpain2.wav");
 	sound_pain3 = SV_SoundIndex ("bosshovr/bhvpain3.wav");
@@ -48042,18 +47418,9 @@ void Think_Boss3Stand (edict_t *ent)
 	ent->nextthink = level.time + FRAMETIME;
 }
 
-/*QUAKED monster_boss3_stand (1 .5 0) (-32 -32 0) (32 32 90)
-
-Just stands and cycles in one place until targeted, then teleports away.
-*/
+// Just stands and cycles in one place until targeted, then teleports away.
 void SP_monster_boss3_stand (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->model = "models/monsters/boss3/rider/tris.md2";
@@ -48070,23 +47437,6 @@ void SP_monster_boss3_stand (edict_t* self)
 	self->nextthink = level.time + FRAMETIME;
 	SV_LinkEdict (self);
 }
-/* ============ end source: game/m_boss3.c ============ */
-/* ============ begin source: game/m_boss31.c ============ */
-
-/*
-==============================================================================
-
-jorg
-
-==============================================================================
-*/
-
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_boss31.h ============ */
-
-// G:\quake2\baseq2\models/monsters/boss3/jorg
-
-// This file generated by ModelGen - Do NOT Modify
 
 #define FRAME_attak101        	0
 #define FRAME_attak102        	1
@@ -48278,7 +47628,6 @@ jorg
 #define FRAME_walk25          	187
 
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_boss31.h ============ */
 
 extern void SP_monster_makron (edict_t* self);
 bool visible (edict_t* self, edict_t* other);
@@ -48904,16 +48253,8 @@ bool Jorg_CheckAttack (edict_t* self)
 
 void MakronPrecache (void);
 
-/*QUAKED monster_jorg (1 .5 0) (-80 -80 0) (90 90 140) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_jorg (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("boss3/bs3pain1.wav");
 	sound_pain2 = SV_SoundIndex ("boss3/bs3pain2.wav");
 	sound_pain3 = SV_SoundIndex ("boss3/bs3pain3.wav");
@@ -49739,11 +49080,6 @@ bool Makron_CheckAttack (edict_t* self)
 	return false;
 }
 
-
-//
-// monster_makron
-//
-
 void MakronPrecache (void)
 {
 	sound_pain4 = SV_SoundIndex ("makron/pain3.wav");
@@ -49764,16 +49100,8 @@ void MakronPrecache (void)
 	SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
 }
 
-/*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_makron (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	MakronPrecache ();
 
 	self->movetype = MOVETYPE_STEP;
@@ -50723,7 +50051,7 @@ static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	self->s.effects = 0;
 	self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
 
-// check for gib
+	// check for gib
 	if (self->health <= self->gib_health)
 	{
 		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -50739,7 +50067,7 @@ static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-// regular death
+	// regular death
 	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
@@ -50749,16 +50077,8 @@ static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int
 		self->monsterinfo.currentmove = &brain_move_death2;
 }
 
-/*QUAKED monster_brain (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_brain (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_chest_open = SV_SoundIndex ("brain/brnatck1.wav");
 	sound_tentacles_extend = SV_SoundIndex ("brain/brnatck2.wav");
 	sound_tentacles_retract = SV_SoundIndex ("brain/brnatck3.wav");
@@ -51912,16 +51232,8 @@ static void chick_sight(edict_t* self, edict_t* other) {
 	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-/*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_chick (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_missile_prelaunch	= SV_SoundIndex ("chick/chkatck1.wav");
 	sound_missile_launch	= SV_SoundIndex ("chick/chkatck2.wav");
 	sound_melee_swing		= SV_SoundIndex ("chick/chkatck3.wav");
@@ -52460,7 +51772,7 @@ static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, i
 
 	int		n;
 
-// check for gib
+	// check for gib
 	if (self->health <= self->gib_health)
 	{
 		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -52476,23 +51788,15 @@ static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-// regular death
+	// regular death
 	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &flipper_move_death;
 }
 
-/*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_flipper (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1		= SV_SoundIndex ("flipper/flppain1.wav");
 	sound_pain2		= SV_SoundIndex ("flipper/flppain2.wav");
 	sound_death		= SV_SoundIndex ("flipper/flpdeth1.wav");
@@ -53549,16 +52853,8 @@ static void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	BecomeExplosion1(self);
 }
 
-/*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_floater (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_attack2 = SV_SoundIndex ("floater/fltatck2.wav");
 	sound_attack3 = SV_SoundIndex ("floater/fltatck3.wav");
 	sound_death1 = SV_SoundIndex ("floater/fltdeth1.wav");
@@ -54433,16 +53729,8 @@ static void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	BecomeExplosion1(self);
 }
 
-/*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_flyer (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	// fix a map bug in jail5.bsp
 	if (!Q_stricmp(level.mapname, "jail5") && (self->s.origin[2] == -104))
 	{
@@ -54953,7 +54241,7 @@ static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 
 	int		n;
 
-// check for gib
+	// check for gib
 	if (self->health <= self->gib_health)
 	{
 		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -54969,7 +54257,7 @@ static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-// regular death
+	// regular death
 	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
@@ -54977,18 +54265,8 @@ static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 	self->monsterinfo.currentmove = &gladiator_move_death;
 }
 
-
-/*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_gladiator (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-
 	sound_pain1 = SV_SoundIndex ("gladiator/pain.wav");
 	sound_pain2 = SV_SoundIndex ("gladiator/gldpain2.wav");
 	sound_die = SV_SoundIndex ("gladiator/glddeth2.wav");
@@ -56010,16 +55288,8 @@ void gunner_refire_chain(edict_t* self)
 	self->monsterinfo.currentmove = &gunner_move_endfire_chain;
 }
 
-/*QUAKED monster_gunner (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_gunner (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_death = SV_SoundIndex ("gunner/death1.wav");
 	sound_pain = SV_SoundIndex ("gunner/gunpain2.wav");
 	sound_pain2 = SV_SoundIndex ("gunner/gunpain1.wav");
@@ -56863,7 +56133,7 @@ static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 
 	int		n;
 
-// check for gib
+	// check for gib
 	if (self->health <= self->gib_health)
 	{
 		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -56879,7 +56149,7 @@ static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-// regular death
+	// regular death
 	if (random() < 0.5)
 		PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	else
@@ -56889,16 +56159,8 @@ static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	self->monsterinfo.currentmove = &hover_move_death1;
 }
 
-/*QUAKED monster_hover (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_hover (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("hover/hovpain1.wav");
 	sound_pain2 = SV_SoundIndex ("hover/hovpain2.wav");
 	sound_death1 = SV_SoundIndex ("hover/hovdeth1.wav");
@@ -57893,17 +57155,8 @@ void infantry_attack(edict_t* self)
 		self->monsterinfo.currentmove = &infantry_move_attack1;
 }
 
-
-/*QUAKED monster_infantry (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_infantry (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("infantry/infpain1.wav");
 	sound_pain2 = SV_SoundIndex ("infantry/infpain2.wav");
 	sound_die1 = SV_SoundIndex ("infantry/infdeth1.wav");
@@ -58988,19 +58241,8 @@ static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	}
 }
 
-
-/*QUAKED misc_insane (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn CRAWL CRUCIFIED STAND_GROUND ALWAYS_STAND
-*/
 void SP_misc_insane (edict_t* self)
 {
-//	static int skin = 0;	//@@
-
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_fist = SV_SoundIndex ("insane/insane11.wav");
 	sound_shake = SV_SoundIndex ("insane/insane5.wav");
 	sound_moan = SV_SoundIndex ("insane/insane7.wav");
@@ -60127,17 +59369,8 @@ bool medic_checkattack (edict_t* self)
 	return M_CheckAttack (self);
 }
 
-
-/*QUAKED monster_medic (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_medic (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_idle1 = SV_SoundIndex ("medic/idle.wav");
 	sound_pain1 = SV_SoundIndex ("medic/medpain1.wav");
 	sound_pain2 = SV_SoundIndex ("medic/medpain2.wav");
@@ -61611,21 +60844,8 @@ static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 		self->monsterinfo.currentmove = &mutant_move_death2;
 }
 
-
-//
-// SPAWN
-//
-
-/*QUAKED monster_mutant (1 .5 0) (-32 -32 -24) (32 32 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_mutant (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_swing = SV_SoundIndex ("mutant/mutatck1.wav");
 	sound_hit = SV_SoundIndex ("mutant/mutatck2.wav");
 	sound_hit2 = SV_SoundIndex ("mutant/mutatck3.wav");
@@ -62347,22 +61567,8 @@ static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	self->monsterinfo.currentmove = &parasite_move_death;
 }
 
-/*
-===
-End Death Stuff
-===
-*/
-
-/*QUAKED monster_parasite (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_parasite (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("parasite/parpain1.wav");
 	sound_pain2 = SV_SoundIndex ("parasite/parpain2.wav");
 	sound_die = SV_SoundIndex ("parasite/pardeth1.wav");
@@ -64265,17 +63471,8 @@ void SP_monster_soldier_x (edict_t* self)
 	walkmonster_start (self);
 }
 
-
-/*QUAKED monster_soldier_light (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_soldier_light (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	SP_monster_soldier_x (self);
 
 	sound_pain_light = SV_SoundIndex ("soldier/solpain2.wav");
@@ -64289,16 +63486,8 @@ void SP_monster_soldier_light (edict_t* self)
 	self->gib_health = -30;
 }
 
-/*QUAKED monster_soldier (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_soldier (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	SP_monster_soldier_x (self);
 
 	sound_pain = SV_SoundIndex ("soldier/solpain1.wav");
@@ -64310,16 +63499,8 @@ void SP_monster_soldier (edict_t* self)
 	self->gib_health = -30;
 }
 
-/*QUAKED monster_soldier_ss (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_soldier_ss (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	SP_monster_soldier_x (self);
 
 	sound_pain_ss = SV_SoundIndex ("soldier/solpain3.wav");
@@ -65246,20 +64427,8 @@ static void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 	self->monsterinfo.currentmove = &supertank_move_death;
 }
 
-//
-// monster_supertank
-//
-
-/*QUAKED monster_supertank (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_supertank (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	sound_pain1 = SV_SoundIndex ("bosstank/btkpain1.wav");
 	sound_pain2 = SV_SoundIndex ("bosstank/btkpain2.wav");
 	sound_pain3 = SV_SoundIndex ("bosstank/btkpain3.wav");
@@ -65267,7 +64436,6 @@ void SP_monster_supertank (edict_t* self)
 	sound_search1 = SV_SoundIndex ("bosstank/btkunqv1.wav");
 	sound_search2 = SV_SoundIndex ("bosstank/btkunqv2.wav");
 
-//	self->s.sound = SV_SoundIndex ("bosstank/btkengn1.wav");
 	tread_sound = SV_SoundIndex ("bosstank/btkengn1.wav");
 
 	self->movetype = MOVETYPE_STEP;
@@ -65298,23 +64466,6 @@ void SP_monster_supertank (edict_t* self)
 
 	walkmonster_start(self);
 }
-/* ============ end source: game/m_supertank.c ============ */
-/* ============ begin source: game/m_tank.c ============ */
-
-/*
-==============================================================================
-
-TANK
-
-==============================================================================
-*/
-
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_tank.h ============ */
-
-// G:\quake2\baseq2\models/monsters/tank
-
-// This file generated by qdata - Do NOT Modify
 
 #undef FRAME_stand01
 #define FRAME_stand01         	0
@@ -66609,7 +65760,7 @@ static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 
 	int		n;
 
-// check for gib
+	// check for gib
 	if (self->health <= self->gib_health)
 	{
 		PF_StartSound (self, CHAN_VOICE, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -66626,7 +65777,7 @@ static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-// regular death
+	// regular death
 	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
@@ -66635,23 +65786,8 @@ static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int d
 
 }
 
-
-//
-// monster_tank
-//
-
-/*QUAKED monster_tank (1 .5 0) (-32 -32 -16) (32 32 72) Ambush Trigger_Spawn Sight
-*/
-/*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) Ambush Trigger_Spawn Sight
-*/
 void SP_monster_tank (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
 	self->s.modelindex = SV_ModelIndex ("models/monsters/tank/tris.md2");
 	VectorSet (self->mins, -32, -32, -16);
 	VectorSet (self->maxs, 32, 32, 72);
@@ -66755,254 +65891,12 @@ bool IsNeutral (edict_t *ent)
 
 static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker) {
 	UNUSED(inflictor);
-
-	int			mod;
-	char		*message;
-	char		*message2;
-	bool	ff;
-
-	if (deathmatch->value)
-	{
-		ff = meansOfDeath & MOD_FRIENDLY_FIRE;
-		mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
-		message = NULL;
-		message2 = "";
-
-		switch (mod)
-		{
-		case MOD_SUICIDE:
-			message = "suicides";
-			break;
-		case MOD_FALLING:
-			message = "cratered";
-			break;
-		case MOD_CRUSH:
-			message = "was squished";
-			break;
-		case MOD_WATER:
-			message = "sank like a rock";
-			break;
-		case MOD_SLIME:
-			message = "melted";
-			break;
-		case MOD_LAVA:
-			message = "does a back flip into the lava";
-			break;
-		case MOD_EXPLOSIVE:
-		case MOD_BARREL:
-			message = "blew up";
-			break;
-		case MOD_EXIT:
-			message = "found a way out";
-			break;
-		case MOD_TARGET_LASER:
-			message = "saw the light";
-			break;
-		case MOD_TARGET_BLASTER:
-			message = "got blasted";
-			break;
-		case MOD_BOMB:
-		case MOD_SPLASH:
-		case MOD_TRIGGER_HURT:
-			message = "was in the wrong place";
-			break;
-		}
-		if (attacker == self)
-		{
-			switch (mod)
-			{
-			case MOD_HELD_GRENADE:
-				message = "tried to put the pin back in";
-				break;
-			case MOD_HG_SPLASH:
-			case MOD_G_SPLASH:
-				if (IsNeutral(self))
-					message = "tripped on its own grenade";
-				else if (IsFemale(self))
-					message = "tripped on her own grenade";
-				else
-					message = "tripped on his own grenade";
-				break;
-			case MOD_R_SPLASH:
-				if (IsNeutral(self))
-					message = "blew itself up";
-				else if (IsFemale(self))
-					message = "blew herself up";
-				else
-					message = "blew himself up";
-				break;
-			case MOD_BFG_BLAST:
-				message = "should have used a smaller gun";
-				break;
-			default:
-				if (IsNeutral(self))
-					message = "killed itself";
-				else if (IsFemale(self))
-					message = "killed herself";
-				else
-					message = "killed himself";
-				break;
-			}
-		}
-		if (message)
-		{
-			SV_BroadcastPrintf (PRINT_MEDIUM, "%s %s.\n", self->client->pers.netname, message);
-			if (deathmatch->value)
-				self->client->resp.score--;
-			self->enemy = NULL;
-			return;
-		}
-
-		self->enemy = attacker;
-		if (attacker && attacker->client)
-		{
-			switch (mod)
-			{
-			case MOD_BLASTER:
-				message = "was blasted by";
-				break;
-			case MOD_SHOTGUN:
-				message = "was gunned down by";
-				break;
-			case MOD_SSHOTGUN:
-				message = "was blown away by";
-				message2 = "'s super shotgun";
-				break;
-			case MOD_MACHINEGUN:
-				message = "was machinegunned by";
-				break;
-			case MOD_CHAINGUN:
-				message = "was cut in half by";
-				message2 = "'s chaingun";
-				break;
-			case MOD_GRENADE:
-				message = "was popped by";
-				message2 = "'s grenade";
-				break;
-			case MOD_G_SPLASH:
-				message = "was shredded by";
-				message2 = "'s shrapnel";
-				break;
-			case MOD_ROCKET:
-				message = "ate";
-				message2 = "'s rocket";
-				break;
-			case MOD_R_SPLASH:
-				message = "almost dodged";
-				message2 = "'s rocket";
-				break;
-			case MOD_HYPERBLASTER:
-				message = "was melted by";
-				message2 = "'s hyperblaster";
-				break;
-			case MOD_RAILGUN:
-				message = "was railed by";
-				break;
-			case MOD_BFG_LASER:
-				message = "saw the pretty lights from";
-				message2 = "'s BFG";
-				break;
-			case MOD_BFG_BLAST:
-				message = "was disintegrated by";
-				message2 = "'s BFG blast";
-				break;
-			case MOD_BFG_EFFECT:
-				message = "couldn't hide from";
-				message2 = "'s BFG";
-				break;
-			case MOD_HANDGRENADE:
-				message = "caught";
-				message2 = "'s handgrenade";
-				break;
-			case MOD_HG_SPLASH:
-				message = "didn't see";
-				message2 = "'s handgrenade";
-				break;
-			case MOD_HELD_GRENADE:
-				message = "feels";
-				message2 = "'s pain";
-				break;
-			case MOD_TELEFRAG:
-				message = "tried to invade";
-				message2 = "'s personal space";
-				break;
-			}
-			if (message)
-			{
-				SV_BroadcastPrintf (PRINT_MEDIUM,"%s %s %s%s\n", self->client->pers.netname, message, attacker->client->pers.netname, message2);
-				if (deathmatch->value)
-				{
-					if (ff)
-						attacker->client->resp.score--;
-					else
-						attacker->client->resp.score++;
-				}
-				return;
-			}
-		}
-	}
-
+	UNUSED(attacker);
 	SV_BroadcastPrintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
-	if (deathmatch->value)
-		self->client->resp.score--;
 }
-
 
 void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf);
 
-void TossClientWeapon (edict_t* self)
-{
-	gitem_t		*item;
-	edict_t		*drop;
-	bool	quad;
-	float		spread;
-
-	if (!deathmatch->value)
-		return;
-
-	item = self->client->pers.weapon;
-	if (! self->client->pers.inventory[self->client->ammo_index] )
-		item = NULL;
-	if (item && (strcmp (item->pickup_name, "Blaster") == 0))
-		item = NULL;
-
-	if (!((int)(dmflags->value) & DF_QUAD_DROP))
-		quad = false;
-	else
-		quad = (self->client->quad_framenum > (level.framenum + 10));
-
-	if (item && quad)
-		spread = 22.5;
-	else
-		spread = 0.0;
-
-	if (item)
-	{
-		self->client->v_angle[YAW] -= spread;
-		drop = Drop_Item (self, item);
-		self->client->v_angle[YAW] += spread;
-		drop->spawnflags = DROPPED_PLAYER_ITEM;
-	}
-
-	if (quad)
-	{
-		self->client->v_angle[YAW] += spread;
-		drop = Drop_Item (self, FindItemByClassname ("item_quad"));
-		self->client->v_angle[YAW] -= spread;
-		drop->spawnflags |= DROPPED_PLAYER_ITEM;
-
-		drop->touch = Touch_Item;
-		drop->nextthink = level.time + (self->client->quad_framenum - level.framenum) * FRAMETIME;
-		drop->think = G_FreeEdict;
-	}
-}
-
-
-/*
-==================
-LookAtKiller
-==================
-*/
 void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 {
 	vec3_t		dir;
@@ -67064,9 +65958,6 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 		LookAtKiller (self, inflictor, attacker);
 		self->client->ps.pmove.pm_type = PM_DEAD;
 		ClientObituary (self, inflictor, attacker);
-		TossClientWeapon (self);
-		if (deathmatch->value)
-			Cmd_Help_f (self);		// show scores
 
 		// clear inventory
 		for (n = 0; n < game.num_items; n++)
@@ -67204,174 +66095,30 @@ void FetchClientEntData (edict_t *ent)
 	ent->flags |= ent->client->pers.savedFlags;
 }
 
-// Returns the distance to the nearest player from the given spot
-float	PlayersRangeFromSpot (edict_t *spot)
-{
-	edict_t	*player;
-	float	bestplayerdistance;
-	vec3_t	v;
-	int		n;
-	float	playerdistance;
-
-
-	bestplayerdistance = 9999999;
-
-	for (n = 1; n <= 1; n++)
-	{
-		player = &g_edicts[n];
-
-		if (!player->inuse)
-			continue;
-
-		if (player->health <= 0)
-			continue;
-
-		VectorSubtract (spot->s.origin, player->s.origin, v);
-		playerdistance = VectorLength (v);
-
-		if (playerdistance < bestplayerdistance)
-			bestplayerdistance = playerdistance;
-	}
-
-	return bestplayerdistance;
-}
-
-/*
-================
-SelectRandomDeathmatchSpawnPoint
-
-go to a random point, but NOT the two points closest
-to other players
-================
-*/
-edict_t *SelectRandomDeathmatchSpawnPoint (void)
-{
-	edict_t	*spot, *spot1, *spot2;
-	int		count = 0;
-	int		selection;
-	float	range, range1, range2;
-
-	spot = NULL;
-	range1 = range2 = 99999;
-	spot1 = spot2 = NULL;
-
-	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
-		count++;
-		range = PlayersRangeFromSpot(spot);
-		if (range < range1)
-		{
-			range1 = range;
-			spot1 = spot;
-		}
-		else if (range < range2)
-		{
-			range2 = range;
-			spot2 = spot;
-		}
-	}
-
-	if (!count)
-		return NULL;
-
-	if (count <= 2)
-	{
-		spot1 = spot2 = NULL;
-	}
-	else
-		count -= 2;
-
-	selection = rand() % count;
-
-	spot = NULL;
-	do
-	{
-		spot = G_Find (spot, FOFS(classname), "info_player_deathmatch");
-		if (spot == spot1 || spot == spot2)
-			selection++;
-	} while(selection--);
-
-	return spot;
-}
-
-/*
-================
-SelectFarthestDeathmatchSpawnPoint
-
-================
-*/
-edict_t *SelectFarthestDeathmatchSpawnPoint (void)
-{
-	edict_t	*bestspot;
-	float	bestdistance, bestplayerdistance;
-	edict_t	*spot;
-
-
-	spot = NULL;
-	bestspot = NULL;
-	bestdistance = 0;
-	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
-		bestplayerdistance = PlayersRangeFromSpot (spot);
-
-		if (bestplayerdistance > bestdistance)
-		{
-			bestspot = spot;
-			bestdistance = bestplayerdistance;
-		}
-	}
-
-	if (bestspot)
-	{
-		return bestspot;
-	}
-
-	// if there is a player just spawned on each and every start spot
-	// we have no choice to turn one into a telefrag meltdown
-	spot = G_Find (NULL, FOFS(classname), "info_player_deathmatch");
-
-	return spot;
-}
-
-edict_t *SelectDeathmatchSpawnPoint (void)
-{
-	if ( (int)(dmflags->value) & DF_SPAWN_FARTHEST)
-		return SelectFarthestDeathmatchSpawnPoint ();
-	else
-		return SelectRandomDeathmatchSpawnPoint ();
-}
-
-
 // Chooses a player start, deathmatch start, etc
 static void SelectSpawnPoint(vec3_t origin, vec3_t angles) {
 	edict_t	*spot = NULL;
 
-	if (deathmatch->value)
-		spot = SelectDeathmatchSpawnPoint ();
-
 	// find a single player start spot
+	while ((spot = G_Find (spot, FOFS(classname), "info_player_start")) != NULL)
+	{
+		if (!game.spawnpoint[0] && !spot->targetname)
+			break;
+
+		if (!game.spawnpoint[0] || !spot->targetname)
+			continue;
+
+		if (Q_stricmp(game.spawnpoint, spot->targetname) == 0)
+			break;
+	}
+
 	if (!spot)
 	{
-		while ((spot = G_Find (spot, FOFS(classname), "info_player_start")) != NULL)
-		{
-			if (!game.spawnpoint[0] && !spot->targetname)
-				break;
-
-			if (!game.spawnpoint[0] || !spot->targetname)
-				continue;
-
-			if (Q_stricmp(game.spawnpoint, spot->targetname) == 0)
-				break;
+		if (!game.spawnpoint[0])
+		{	// there wasn't a spawnpoint without a target, so use any
+			spot = G_Find (spot, FOFS(classname), "info_player_start");
 		}
-
-		if (!spot)
-		{
-			if (!game.spawnpoint[0])
-			{	// there wasn't a spawnpoint without a target, so use any
-				spot = G_Find (spot, FOFS(classname), "info_player_start");
-			}
-			assert(spot);
-		}
+		assert(spot);
 	}
 
 	VectorCopy (spot->s.origin, origin);
@@ -67379,175 +66126,12 @@ static void SelectSpawnPoint(vec3_t origin, vec3_t angles) {
 	VectorCopy (spot->s.angles, angles);
 }
 
-//======================================================================
-
-
-void InitBodyQue (void)
-{
-	int		i;
-	edict_t	*ent;
-
-	level.body_que = 0;
-	for (i=0; i<BODY_QUEUE_SIZE ; i++)
-	{
-		ent = G_Spawn();
-		ent->classname = "bodyque";
-	}
-}
-
-static void body_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
-	UNUSED(inflictor);
-	UNUSED(attacker);
-	UNUSED(point);
-
-	int	n;
-
-	if (self->health < -40)
-	{
-		PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
-		for (n= 0; n < 4; n++)
-			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
-		self->s.origin[2] -= 48;
-		ThrowClientHead (self, damage);
-		self->takedamage = DAMAGE_NO;
-	}
-}
-
-void CopyToBodyQue (edict_t *ent)
-{
-	edict_t		*body;
-
-	// grab a body que and cycle to the next one
-	body = &g_edicts[1 + level.body_que + 1];
-	level.body_que = (level.body_que + 1) % BODY_QUEUE_SIZE;
-
-	// FIXME: send an effect on the removed body
-
-	SV_UnlinkEdict (ent);
-
-	SV_UnlinkEdict (body);
-	body->s = ent->s;
-	body->s.number = body - g_edicts;
-
-	body->svflags = ent->svflags;
-	VectorCopy (ent->mins, body->mins);
-	VectorCopy (ent->maxs, body->maxs);
-	VectorCopy (ent->absmin, body->absmin);
-	VectorCopy (ent->absmax, body->absmax);
-	VectorCopy (ent->size, body->size);
-	body->solid = ent->solid;
-	body->clipmask = ent->clipmask;
-	body->owner = ent->owner;
-	body->movetype = ent->movetype;
-
-	body->die = body_die;
-	body->takedamage = DAMAGE_YES;
-
-	SV_LinkEdict (body);
-}
-
-
 void respawn (edict_t* self)
 {
-	if (deathmatch->value)
-	{
-		// spectator's don't leave bodies
-		if (self->movetype != MOVETYPE_NOCLIP)
-			CopyToBodyQue (self);
-		self->svflags &= ~SVF_NOCLIENT;
-		PutClientInServer (self);
-
-		// add a teleportation effect
-		self->s.event = EV_PLAYER_TELEPORT;
-
-		// hold in place briefly
-		self->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-		self->client->ps.pmove.pm_time = 14;
-
-		self->client->respawn_time = level.time;
-
-		return;
-	}
+	UNUSED(self);
 
 	// restart the entire server
 	Cbuf_AddText ("menu_loadgame\n");
-}
-
-/*
- * only called when pers.spectator changes
- * note that resp.spectator should be the opposite of pers.spectator here
- */
-void spectator_respawn (edict_t *ent)
-{
-	int i, numspec;
-
-	// if the user wants to become a spectator, make sure he doesn't
-	// exceed max_spectators
-
-	if (ent->client->pers.spectator) {
-		char *value = Info_ValueForKey (ent->client->pers.userinfo, "spectator");
-		if (*spectator_password->string &&
-			strcmp(spectator_password->string, "none") &&
-			strcmp(spectator_password->string, value)) {
-			PF_cprintf(ent, PRINT_HIGH, "Spectator password incorrect.\n");
-			ent->client->pers.spectator = false;
-			PF_WriteByte (svc_stufftext);
-			PF_WriteString ("spectator 0\n");
-			PF_Unicast(ent, true);
-			return;
-		}
-
-		// count spectators
-		for (i = 1, numspec = 0; i <= 1; i++)
-			if (g_edicts[i].inuse && g_edicts[i].client->pers.spectator)
-				numspec++;
-
-		if (numspec >= maxspectators->value) {
-			PF_cprintf(ent, PRINT_HIGH, "Server spectator limit is full.");
-			ent->client->pers.spectator = false;
-			// reset his spectator var
-			PF_WriteByte (svc_stufftext);
-			PF_WriteString ("spectator 0\n");
-			PF_Unicast(ent, true);
-			return;
-		}
-	} else {
-		// he was a spectator and wants to join the game
-		// he must have the right password
-		char *value = Info_ValueForKey (ent->client->pers.userinfo, "password");
-		if (*password->string && strcmp(password->string, "none") &&
-			strcmp(password->string, value)) {
-			PF_cprintf(ent, PRINT_HIGH, "Password incorrect.\n");
-			ent->client->pers.spectator = true;
-			PF_WriteByte (svc_stufftext);
-			PF_WriteString ("spectator 1\n");
-			PF_Unicast(ent, true);
-			return;
-		}
-	}
-
-	ent->svflags &= ~SVF_NOCLIENT;
-	PutClientInServer (ent);
-
-	// add a teleportation effect
-	if (!ent->client->pers.spectator)  {
-		// send effect
-		PF_WriteByte (svc_muzzleflash);
-		PF_WriteShort (ent-g_edicts);
-		PF_WriteByte (MZ_LOGIN);
-		SV_Multicast (ent->s.origin, MULTICAST_PVS);
-
-		// hold in place briefly
-		ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-		ent->client->ps.pmove.pm_time = 14;
-	}
-
-	ent->client->respawn_time = level.time;
-
-	if (ent->client->pers.spectator)
-		SV_BroadcastPrintf (PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
-	else
-		SV_BroadcastPrintf (PRINT_HIGH, "%s joined the game\n", ent->client->pers.netname);
 }
 
 // Called when a player connects to a server or respawns in a deathmatch.
@@ -67567,21 +66151,7 @@ void PutClientInServer (edict_t *ent)
 	SelectSpawnPoint(spawn_origin, spawn_angles);
 
 	client = ent->client;
-
-	// deathmatch wipes most client data every spawn
-	if (deathmatch->value)
-	{
-		char		userinfo[MAX_INFO_STRING];
-
-		resp = client->resp;
-		memcpy (userinfo, client->pers.userinfo, sizeof(userinfo));
-		InitClientPersistant (client);
-		ClientUserinfoChanged (ent, userinfo);
-	}
-	else
-	{
-		memset (&resp, 0, sizeof(resp));
-	}
+	memset (&resp, 0, sizeof(resp));
 
 	// clear everything but the persistant data
 	saved = client->pers;
@@ -67625,19 +66195,11 @@ void PutClientInServer (edict_t *ent)
 	client->ps.pmove.origin[0] = spawn_origin[0]*8;
 	client->ps.pmove.origin[1] = spawn_origin[1]*8;
 	client->ps.pmove.origin[2] = spawn_origin[2]*8;
-
-	if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV))
-	{
+	client->ps.fov = atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
+	if (client->ps.fov < 1)
 		client->ps.fov = 90;
-	}
-	else
-	{
-		client->ps.fov = atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
-		if (client->ps.fov < 1)
-			client->ps.fov = 90;
-		else if (client->ps.fov > 160)
-			client->ps.fov = 160;
-	}
+	else if (client->ps.fov > 160)
+		client->ps.fov = 160;
 
 	client->ps.gunindex = SV_ModelIndex(client->pers.weapon->view_model);
 
@@ -67664,21 +66226,6 @@ void PutClientInServer (edict_t *ent)
 	VectorCopy (ent->s.angles, client->ps.viewangles);
 	VectorCopy (ent->s.angles, client->v_angle);
 
-	// spawn a spectator
-	if (client->pers.spectator) {
-		client->chase_target = NULL;
-
-		client->resp.spectator = true;
-
-		ent->movetype = MOVETYPE_NOCLIP;
-		ent->solid = SOLID_NOT;
-		ent->svflags |= SVF_NOCLIENT;
-		ent->client->ps.gunindex = 0;
-		SV_LinkEdict (ent);
-		return;
-	} else
-		client->resp.spectator = false;
-
 	if (!KillBox (ent))
 	{	// could't spawn in?
 	}
@@ -67690,46 +66237,11 @@ void PutClientInServer (edict_t *ent)
 	ChangeWeapon (ent);
 }
 
-/*
-=====================
-ClientBeginDeathmatch
-
-A client has just connected to the server in
-deathmatch mode, so clear everything out before starting them.
-=====================
-*/
-void ClientBeginDeathmatch (edict_t *ent)
-{
-	G_InitEdict (ent);
-
-	InitClientResp (ent->client);
-
-	// locate ent at a spawn point
-	PutClientInServer (ent);
-
-	// send effect
-	PF_WriteByte (svc_muzzleflash);
-	PF_WriteShort (ent-g_edicts);
-	PF_WriteByte (MZ_LOGIN);
-	SV_Multicast (ent->s.origin, MULTICAST_PVS);
-
-	SV_BroadcastPrintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
-
-	// make sure all view stuff is valid
-	ClientEndServerFrame (ent);
-}
-
 // Called when a client has finished connecting, and is ready to be placed into the game.
 // This will happen every level load.
 void ClientBegin (edict_t *ent)
 {
 	ent->client = &game.client;
-
-	if (deathmatch->value)
-	{
-		ClientBeginDeathmatch (ent);
-		return;
-	}
 
 	// if there is already a body waiting for us (a loadgame), just
 	// take it, otherwise spawn one from scratch
@@ -67787,14 +66299,6 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	s = Info_ValueForKey (userinfo, "name");
 	strncpy (ent->client->pers.netname, s, sizeof(ent->client->pers.netname)-1);
 
-	// set spectator
-	s = Info_ValueForKey (userinfo, "spectator");
-	// spectators are only supported in deathmatch
-	if (deathmatch->value && *s && strcmp(s, "0"))
-		ent->client->pers.spectator = true;
-	else
-		ent->client->pers.spectator = false;
-
 	// set skin
 	s = Info_ValueForKey (userinfo, "skin");
 
@@ -67803,19 +66307,11 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	// combine name and skin into a configstring
 	PF_Configstring (CS_PLAYERSKINS+playernum, va("%s\\%s", ent->client->pers.netname, s) );
 
-	// fov
-	if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV))
-	{
+	ent->client->ps.fov = atoi(Info_ValueForKey(userinfo, "fov"));
+	if (ent->client->ps.fov < 1)
 		ent->client->ps.fov = 90;
-	}
-	else
-	{
-		ent->client->ps.fov = atoi(Info_ValueForKey(userinfo, "fov"));
-		if (ent->client->ps.fov < 1)
-			ent->client->ps.fov = 90;
-		else if (ent->client->ps.fov > 160)
-			ent->client->ps.fov = 160;
-	}
+	else if (ent->client->ps.fov > 160)
+		ent->client->ps.fov = 160;
 
 	// handedness
 	s = Info_ValueForKey (userinfo, "hand");
@@ -67852,35 +66348,12 @@ bool ClientConnect (edict_t *ent, char *userinfo)
 		return false;
 	}
 
-	// check for a spectator
-	value = Info_ValueForKey (userinfo, "spectator");
-	if (deathmatch->value && *value && strcmp(value, "0")) {
-		int i, numspec;
-
-		if (*spectator_password->string &&
-			strcmp(spectator_password->string, "none") &&
-			strcmp(spectator_password->string, value)) {
-			Info_SetValueForKey(userinfo, "rejmsg", "Spectator password required or incorrect.");
-			return false;
-		}
-
-		// count spectators
-		for (i = numspec = 0; i < 1; i++)
-			if (g_edicts[i+1].inuse && g_edicts[i+1].client->pers.spectator)
-				numspec++;
-
-		if (numspec >= maxspectators->value) {
-			Info_SetValueForKey(userinfo, "rejmsg", "Server spectator limit is full.");
-			return false;
-		}
-	} else {
-		// check for a password
-		value = Info_ValueForKey (userinfo, "password");
-		if (*password->string && strcmp(password->string, "none") &&
-			strcmp(password->string, value)) {
-			Info_SetValueForKey(userinfo, "rejmsg", "Password required or incorrect.");
-			return false;
-		}
+	// check for a password
+	value = Info_ValueForKey (userinfo, "password");
+	if (*password->string && strcmp(password->string, "none") &&
+		strcmp(password->string, value)) {
+		Info_SetValueForKey(userinfo, "rejmsg", "Password required or incorrect.");
+		return false;
 	}
 
 
@@ -68116,33 +66589,10 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	// fire weapon from final position if needed
 	if (client->latched_buttons & BUTTON_ATTACK)
 	{
-		if (client->resp.spectator) {
-
-			client->latched_buttons = 0;
-
-			if (client->chase_target) {
-				client->chase_target = NULL;
-				client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
-			} else
-				GetChaseTarget(ent);
-
-		} else if (!client->weapon_thunk) {
+		if (!client->weapon_thunk) {
 			client->weapon_thunk = true;
 			Think_Weapon (ent);
 		}
-	}
-
-	if (client->resp.spectator) {
-		if (ucmd->upmove >= 10) {
-			if (!(client->ps.pmove.pm_flags & PMF_JUMP_HELD)) {
-				client->ps.pmove.pm_flags |= PMF_JUMP_HELD;
-				if (client->chase_target)
-					ChaseNext(ent);
-				else
-					GetChaseTarget(ent);
-			}
-		} else
-			client->ps.pmove.pm_flags &= ~PMF_JUMP_HELD;
 	}
 
 	// update chase cam if being followed
@@ -68172,15 +66622,8 @@ void ClientBeginServerFrame (edict_t *ent)
 
 	client = ent->client;
 
-	if (deathmatch->value &&
-		client->pers.spectator != client->resp.spectator &&
-		(level.time - client->respawn_time) >= 5) {
-		spectator_respawn(ent);
-		return;
-	}
-
 	// run weapon animations if it hasn't been done by a ucmd_t
-	if (!client->weapon_thunk && !client->resp.spectator)
+	if (!client->weapon_thunk)
 		Think_Weapon (ent);
 	else
 		client->weapon_thunk = false;
@@ -68190,15 +66633,8 @@ void ClientBeginServerFrame (edict_t *ent)
 		// wait for any button just going down
 		if ( level.time > client->respawn_time)
 		{
-			// in deathmatch, only wait for attack button
-			if (deathmatch->value)
-				buttonMask = BUTTON_ATTACK;
-			else
-				buttonMask = -1;
-
-			if ( ( client->latched_buttons & buttonMask ) ||
-				(deathmatch->value && ((int)dmflags->value & DF_FORCE_RESPAWN) ) )
-			{
+			buttonMask = -1;
+			if ((client->latched_buttons & buttonMask)) {
 				respawn(ent);
 				client->latched_buttons = 0;
 			}
@@ -68207,31 +66643,14 @@ void ClientBeginServerFrame (edict_t *ent)
 	}
 
 	// add player trail so monsters can follow
-	if (!deathmatch->value)
-		if (!visible (ent, PlayerTrail_LastSpot() ) )
-			PlayerTrail_Add (ent->s.old_origin);
+	if (!visible (ent, PlayerTrail_LastSpot() ) )
+		PlayerTrail_Add (ent->s.old_origin);
 
 	client->latched_buttons = 0;
 }
-/* ============ end source: game/p_client.c ============ */
-/* ============ begin source: game/p_hud.c ============ */
-
-/* already inlined above: game/g_local.h */
-
-
-
-/*
-======================================================================
-
-INTERMISSION
-
-======================================================================
-*/
 
 void MoveClientToIntermission (edict_t *ent)
 {
-	if (deathmatch->value)
-		ent->client->showscores = true;
 	VectorCopy (level.intermission_origin, ent->s.origin);
 	ent->client->ps.pmove.origin[0] = level.intermission_origin[0]*8;
 	ent->client->ps.pmove.origin[1] = level.intermission_origin[1]*8;
@@ -68258,15 +66677,6 @@ void MoveClientToIntermission (edict_t *ent)
 	ent->s.effects = 0;
 	ent->s.sound = 0;
 	ent->solid = SOLID_NOT;
-
-	// add the layout
-
-	if (deathmatch->value)
-	{
-		DeathmatchScoreboardMessage (ent, NULL);
-		PF_Unicast (ent, true);
-	}
-
 }
 
 void BeginIntermission (edict_t *targ)
@@ -68294,11 +66704,8 @@ void BeginIntermission (edict_t *targ)
 
 	if (!strstr(level.changemap, "*"))
 	{
-		if (!deathmatch->value)
-		{
-			level.exitintermission = 1;		// go immediately to the next level
-			return;
-		}
+		level.exitintermission = 1;		// go immediately to the next level
+		return;
 	}
 
 	level.exitintermission = 0;
@@ -68335,150 +66742,7 @@ void BeginIntermission (edict_t *targ)
 	}
 }
 
-
-/*
-==================
-DeathmatchScoreboardMessage
-
-==================
-*/
-void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
-{
-	char	entry[1024];
-	char	string[1400];
-	int		stringlength;
-	int		i, j, k;
-	int		sorted[MAX_CLIENTS];
-	int		sortedscores[MAX_CLIENTS];
-	int		score, total;
-	int		x, y;
-	gclient_t	*cl;
-	edict_t		*cl_ent;
-	char	*tag;
-
-	// sort the clients by score
-	total = 0;
-	for (i=0 ; i<1 ; i++)
-	{
-		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse || game.client.resp.spectator)
-			continue;
-		score = game.client.resp.score;
-		for (j=0 ; j<total ; j++)
-		{
-			if (score > sortedscores[j])
-				break;
-		}
-		for (k=total ; k>j ; k--)
-		{
-			sorted[k] = sorted[k-1];
-			sortedscores[k] = sortedscores[k-1];
-		}
-		sorted[j] = i;
-		sortedscores[j] = score;
-		total++;
-	}
-
-	// print level name and exit rules
-	string[0] = 0;
-
-	stringlength = strlen(string);
-
-	// add the clients in sorted order
-	if (total > 12)
-		total = 12;
-
-	for (i=0 ; i<total ; i++)
-	{
-		cl = &game.client;
-		cl_ent = g_edicts + 1 + sorted[i];
-
-		SV_ImageIndex ("i_fixme");
-		x = (i>=6) ? 160 : 0;
-		y = 32 + 32 * (i%6);
-
-		// add a dogtag
-		if (cl_ent == ent)
-			tag = "tag1";
-		else if (cl_ent == killer)
-			tag = "tag2";
-		else
-			tag = NULL;
-		if (tag)
-		{
-			Com_sprintf (entry, sizeof(entry),
-				"xv %i yv %i picn %s ",x+32, y, tag);
-			j = strlen(entry);
-			if (stringlength + j > 1024)
-				break;
-			strcpy (string + stringlength, entry);
-			stringlength += j;
-		}
-
-		// send the layout
-		Com_sprintf (entry, sizeof(entry),
-			"client %i %i %i %i %i %i ",
-			x, y, sorted[i], cl->resp.score, cl->ping, (level.framenum - cl->resp.enterframe)/600);
-		j = strlen(entry);
-		if (stringlength + j > 1024)
-			break;
-		strcpy (string + stringlength, entry);
-		stringlength += j;
-	}
-
-	PF_WriteByte (svc_layout);
-	PF_WriteString (string);
-}
-
-
-/*
-==================
-DeathmatchScoreboard
-
-Draw instead of help message.
-Note that it isn't that hard to overflow the 1400 u8 message limit!
-==================
-*/
-void DeathmatchScoreboard (edict_t *ent)
-{
-	DeathmatchScoreboardMessage (ent, ent->enemy);
-	PF_Unicast (ent, true);
-}
-
-
-/*
-==================
-Cmd_Score_f
-
-Display the scoreboard
-==================
-*/
-void Cmd_Score_f (edict_t *ent)
-{
-	ent->client->showinventory = false;
-	ent->client->showhelp = false;
-
-	if (!deathmatch->value)
-		return;
-
-	if (ent->client->showscores)
-	{
-		ent->client->showscores = false;
-		return;
-	}
-
-	ent->client->showscores = true;
-	DeathmatchScoreboard (ent);
-}
-
-
-/*
-==================
-HelpComputer
-
-Draw help computer.
-==================
-*/
+// Draw help computer.
 void HelpComputer (edict_t *ent)
 {
 	char	string[1024];
@@ -68515,25 +66779,10 @@ void HelpComputer (edict_t *ent)
 	PF_Unicast (ent, true);
 }
 
-
-/*
-==================
-Cmd_Help_f
-
-Display the current help message
-==================
-*/
+// Display the current help message
 void Cmd_Help_f (edict_t *ent)
 {
-	// this is for backwards compatability
-	if (deathmatch->value)
-	{
-		Cmd_Score_f (ent);
-		return;
-	}
-
 	ent->client->showinventory = false;
-	ent->client->showscores = false;
 
 	if (ent->client->showhelp && (ent->client->pers.game_helpchanged == game.helpchanged))
 	{
@@ -68546,14 +66795,6 @@ void Cmd_Help_f (edict_t *ent)
 	HelpComputer (ent);
 }
 
-
-//=======================================================================
-
-/*
-===============
-G_SetStats
-===============
-*/
 void G_SetStats (edict_t *ent)
 {
 	gitem_t		*item;
@@ -68667,21 +66908,10 @@ void G_SetStats (edict_t *ent)
 	//
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
-	if (deathmatch->value)
-	{
-		if (ent->client->pers.health <= 0 || level.intermissiontime
-			|| ent->client->showscores)
-			ent->client->ps.stats[STAT_LAYOUTS] |= 1;
-		if (ent->client->showinventory && ent->client->pers.health > 0)
-			ent->client->ps.stats[STAT_LAYOUTS] |= 2;
-	}
-	else
-	{
-		if (ent->client->showscores || ent->client->showhelp)
-			ent->client->ps.stats[STAT_LAYOUTS] |= 1;
-		if (ent->client->showinventory && ent->client->pers.health > 0)
-			ent->client->ps.stats[STAT_LAYOUTS] |= 2;
-	}
+	if (ent->client->showhelp)
+		ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+	if (ent->client->showinventory && ent->client->pers.health > 0)
+		ent->client->ps.stats[STAT_LAYOUTS] |= 2;
 
 	//
 	// frags
@@ -68721,11 +66951,6 @@ void G_CheckChaseStats (edict_t *ent)
 	}
 }
 
-/*
-===============
-G_SetSpectatorStats
-===============
-*/
 void G_SetSpectatorStats (edict_t *ent)
 {
 	gclient_t *cl = ent->client;
@@ -68737,7 +66962,7 @@ void G_SetSpectatorStats (edict_t *ent)
 
 	// layouts are independant in spectator
 	cl->ps.stats[STAT_LAYOUTS] = 0;
-	if (cl->pers.health <= 0 || level.intermissiontime || cl->showscores)
+	if (cl->pers.health <= 0 || level.intermissiontime)
 		cl->ps.stats[STAT_LAYOUTS] |= 1;
 	if (cl->showinventory && cl->pers.health > 0)
 		cl->ps.stats[STAT_LAYOUTS] |= 2;
@@ -68749,27 +66974,10 @@ void G_SetSpectatorStats (edict_t *ent)
 		cl->ps.stats[STAT_CHASE] = 0;
 }
 
-/* ============ end source: game/p_hud.c ============ */
-/* ============ begin source: game/p_trail.c ============ */
-
-/* already inlined above: game/g_local.h */
-
-
-/*
-==============================================================================
-
-PLAYER TRAIL
-
-==============================================================================
-
-This is a circular list containing the a list of points of where
-the player has been recently.  It is used by monsters for pursuit.
-
-.origin		the spot
-.owner		forward link
-.aiment		backward link
-*/
-
+// This is a circular list containing the a list of points of where the player has been recently.  It is used by monsters for pursuit.
+// .origin		the spot
+// .owner		forward link
+// .aiment		backward link
 
 #define	TRAIL_LENGTH	8
 
@@ -68780,13 +66988,9 @@ bool	trail_active = false;
 #define NEXT(n)		(((n) + 1) & (TRAIL_LENGTH - 1))
 #define PREV(n)		(((n) - 1) & (TRAIL_LENGTH - 1))
 
-
 void PlayerTrail_Init (void)
 {
 	int		n;
-
-	if (deathmatch->value)
-		return;
 
 	for (n = 0; n < TRAIL_LENGTH; n++)
 	{
@@ -69350,12 +67554,6 @@ void SV_CalcBlend (edict_t *ent)
 		ent->client->bonus_alpha = 0;
 }
 
-
-/*
-=================
-P_FallingDamage
-=================
-*/
 void P_FallingDamage (edict_t *ent)
 {
 	float	delta;
@@ -69417,8 +67615,7 @@ void P_FallingDamage (edict_t *ent)
 			damage = 1;
 		VectorSet (dir, 0, 0, 1);
 
-		if (!deathmatch->value || !((int)dmflags->value & DF_NO_FALLING) )
-			T_Damage (ent, world, world, dir, ent->s.origin, vec3_origin, damage, 0, 0, MOD_FALLING);
+		T_Damage (ent, world, world, dir, ent->s.origin, vec3_origin, damage, 0, 0, MOD_FALLING);
 	}
 	else
 	{
@@ -69914,10 +68111,7 @@ void ClientEndServerFrame (edict_t *ent)
 	SV_CalcBlend (ent);
 
 	// chase cam stuff
-	if (ent->client->resp.spectator)
-		G_SetSpectatorStats(ent);
-	else
-		G_SetStats (ent);
+	G_SetStats(ent);
 	G_CheckChaseStats(ent);
 
 	G_SetClientEvent (ent);
@@ -69934,23 +68128,7 @@ void ClientEndServerFrame (edict_t *ent)
 	// clear weapon kicks
 	VectorClear (ent->client->kick_origin);
 	VectorClear (ent->client->kick_angles);
-
-	// if the scoreboard is up, update it
-	if (ent->client->showscores && !(level.framenum & 31) )
-	{
-		DeathmatchScoreboardMessage (ent, ent->enemy);
-		PF_Unicast (ent, false);
-	}
 }
-
-/* ============ end source: game/p_view.c ============ */
-/* ============ begin source: game/p_weapon.c ============ */
-
-// g_weapon.c
-
-/* already inlined above: game/g_local.h */
-/* already inlined above: game/m_player.h */
-
 
 static bool	is_quad;
 static u8		is_silenced;
@@ -69996,9 +68174,6 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 			return;
 		}
 	}
-
-	if (deathmatch->value)
-		return;
 
 	if (who->flags & FL_NOTARGET)
 		return;
@@ -70068,36 +68243,15 @@ bool Pickup_Weapon (edict_t *ent, edict_t* other)
 			Add_Ammo (other, ammo, 1000);
 		else
 			Add_Ammo (other, ammo, ammo->quantity);
-
-		if (! (ent->spawnflags & DROPPED_PLAYER_ITEM) )
-		{
-			if (deathmatch->value)
-			{
-				if ((int)(dmflags->value) & DF_WEAPONS_STAY)
-					ent->flags |= FL_RESPAWN;
-				else
-					SetRespawn (ent, 30);
-			}
-		}
 	}
 
-	if (other->client->pers.weapon != ent->item &&
-		(other->client->pers.inventory[index] == 1) &&
-		( !deathmatch->value || other->client->pers.weapon == FindItem("blaster") ) )
+	if (other->client->pers.weapon != ent->item && (other->client->pers.inventory[index] == 1))
 		other->client->newweapon = ent->item;
 
 	return true;
 }
 
-
-/*
-===============
-ChangeWeapon
-
-The old weapon has been dropped all the way, so make the new one
-current
-===============
-*/
+// The old weapon has been dropped all the way, so make the new one current
 void ChangeWeapon (edict_t *ent)
 {
 	int i;
@@ -70731,15 +68885,6 @@ void Weapon_RocketLauncher (edict_t *ent)
 	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 }
 
-
-/*
-======================================================================
-
-BLASTER / HYPERBLASTER
-
-======================================================================
-*/
-
 void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, bool hyper, int effect)
 {
 	vec3_t	forward, right;
@@ -70770,15 +68915,9 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, bool hyper, int ef
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 }
 
-
 void Weapon_Blaster_Fire (edict_t *ent)
 {
-	int		damage;
-
-	if (deathmatch->value)
-		damage = 15;
-	else
-		damage = 10;
+	int damage = 10;
 	Blaster_Fire (ent, vec3_origin, damage, false, EF_BLASTER);
 	ent->client->ps.gunframe++;
 }
@@ -70827,10 +68966,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 				effect = EF_HYPERBLASTER;
 			else
 				effect = 0;
-			if (deathmatch->value)
-				damage = 15;
-			else
-				damage = 20;
+			damage = 20;
 			Blaster_Fire (ent, offset, damage, true, effect);
 			if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
 				ent->client->pers.inventory[ent->client->ammo_index]--;
@@ -70926,12 +69062,9 @@ void Machinegun_Fire (edict_t *ent)
 	ent->client->kick_angles[0] = ent->client->machinegun_shots * -1.5;
 
 	// raise the gun as it is firing
-	if (!deathmatch->value)
-	{
-		ent->client->machinegun_shots++;
-		if (ent->client->machinegun_shots > 9)
-			ent->client->machinegun_shots = 9;
-	}
+	ent->client->machinegun_shots++;
+	if (ent->client->machinegun_shots > 9)
+		ent->client->machinegun_shots = 9;
 
 	// get start / end positions
 	VectorAdd (ent->client->v_angle, ent->client->kick_angles, angles);
@@ -70982,10 +69115,7 @@ void Chaingun_Fire (edict_t *ent)
 	int			damage;
 	int			kick = 2;
 
-	if (deathmatch->value)
-		damage = 6;
-	else
-		damage = 8;
+	damage = 8;
 
 	if (ent->client->ps.gunframe == 5)
 		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("weapons/chngnu1a.wav"), 1, ATTN_IDLE, 0);
@@ -71136,10 +69266,7 @@ void weapon_shotgun_fire (edict_t *ent)
 		kick *= 4;
 	}
 
-	if (deathmatch->value)
-		fire_shotgun (ent, start, forward, damage, kick, 500, 500, DEFAULT_DEATHMATCH_SHOTGUN_COUNT, MOD_SHOTGUN);
-	else
-		fire_shotgun (ent, start, forward, damage, kick, 500, 500, DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
+	fire_shotgun (ent, start, forward, damage, kick, 500, 500, DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
 
 	// send muzzle flash
 	PF_WriteByte (svc_muzzleflash);
@@ -71216,16 +69343,6 @@ void Weapon_SuperShotgun (edict_t *ent)
 	Weapon_Generic (ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
 }
 
-
-
-/*
-======================================================================
-
-RAILGUN
-
-======================================================================
-*/
-
 void weapon_railgun_fire (edict_t *ent)
 {
 	vec3_t		start;
@@ -71234,16 +69351,8 @@ void weapon_railgun_fire (edict_t *ent)
 	int			damage;
 	int			kick;
 
-	if (deathmatch->value)
-	{	// normal damage is too extreme in dm
-		damage = 100;
-		kick = 200;
-	}
-	else
-	{
-		damage = 150;
-		kick = 250;
-	}
+	damage = 150;
+	kick = 250;
 
 	if (is_quad)
 	{
@@ -71282,15 +69391,6 @@ void Weapon_Railgun (edict_t *ent)
 	Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 }
 
-
-/*
-======================================================================
-
-BFG10K
-
-======================================================================
-*/
-
 void weapon_bfg_fire (edict_t *ent)
 {
 	vec3_t	offset, start;
@@ -71298,10 +69398,7 @@ void weapon_bfg_fire (edict_t *ent)
 	int		damage;
 	float	damage_radius = 1000;
 
-	if (deathmatch->value)
-		damage = 200;
-	else
-		damage = 500;
+	damage = 500;
 
 	if (ent->client->ps.gunframe == 9)
 	{
@@ -80013,7 +78110,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		allow_download_sounds = COM_GetCvar("allow_download_sounds", "1", CVAR_ARCHIVE);
 		allow_download_maps = COM_GetCvar("allow_download_maps", "1", CVAR_ARCHIVE);
 		sv_noreload = COM_GetCvar("sv_noreload", "0", 0);
-		sv_airaccelerate = COM_GetCvar("sv_airaccelerate", "0", CVAR_LATCH);
 		public_server = COM_GetCvar("public", "0", 0);
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
@@ -80122,11 +78218,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
 
 		COM_GetCvar("skill", "1", 0);
-		COM_GetCvar("deathmatch", "0", CVAR_LATCH);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
-		COM_GetCvar("fraglimit", "0", CVAR_SERVERINFO);
-		COM_GetCvar("timelimit", "0", CVAR_SERVERINFO);
-		COM_GetCvar("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
 		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
 		COM_GetCvar("in_initmouse", "1", CVAR_NOSET);
 	}
