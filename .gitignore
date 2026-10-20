@@ -5,3 +5,4 @@ debug
 *.rdbg
 .clangd
 build.bat
+.github

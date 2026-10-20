@@ -4698,7 +4698,7 @@ static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 		numclusters = 1;
 		numareas = 1;
 		*checksum = 0;
-		return &map_cmodels[0]; // cinematic servers won't have anything at all
+		return &map_cmodels[0];
 	}
 
 	unsigned* buf = 0;
@@ -9158,8 +9158,6 @@ typedef enum {
 	ss_dead,			// no map loaded
 	ss_loading,			// spawning level edicts
 	ss_game,			// actively running
-	ss_cinematic,
-	ss_pic
 } server_state_t;
 // some qc commands are only valid before the server has finished
 // initializing (precache commands, static sounds / objects, etc)
@@ -9172,7 +9170,7 @@ typedef struct {
 	unsigned	time;				// always sv.framenum * 100 msec
 	int			framenum;
 
-	char		name[MAX_QPATH];			// map name, or cinematic name
+	char		name[MAX_QPATH];			// map name
 	struct cmodel_s		*models[MAX_MODELS];
 
 	char		configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
@@ -9329,10 +9327,6 @@ void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...);
 void SV_BroadcastPrintf (int level, char *fmt, ...);
 void SV_BroadcastCommand (char *fmt, ...);
 
-//
-// sv_user.c
-//
-void SV_Nextserver (void);
 void SV_ExecuteClientMessage (client_t *cl);
 
 //
@@ -9755,9 +9749,6 @@ void SV_ReadServerFile (void)
 
 // Saves the state of the map just being exited and goes to a new map.
 // If the initial character of the map string is '*', the next map is in a new unit, so the current savegame directory is cleared of map files.
-// Example:
-// *inter.cin+jail
-// Clears the archived maps, plays the inter.cin cinematic, then goes to map jail.bsp.
 static void SV_GameMap_f() {
 	char		*map;
 	int			i;
@@ -9817,7 +9808,7 @@ static void SV_GameMap_f() {
 // Goes directly to a given map without any savegame archiving.
 // For development work
 static void SV_Map_f() {
-	// if not a pcx, demo, or cinematic, check to make sure the level exists
+	// make sure the level exists
 	char* map = Cmd_Argv(1);
 	if (!strstr(map, ".")) {
 		char expanded[MAX_QPATH] = {};
@@ -10935,7 +10926,7 @@ void SV_CheckForSavegame (void)
 }
 
 // Change the server to a new map, taking all connected clients along with it.
-void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, bool loadgame) {
+static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	int			i;
 	unsigned	checksum;
 
@@ -10980,18 +10971,9 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	strcpy (sv.name, server);
 	strcpy (sv.configstrings[CS_NAME], server);
 
-	if (serverstate != ss_game)
-	{
-		sv.models[1] = CM_LoadMap ("", false, &checksum);	// no real map
-	}
-	else
-	{
-		Com_sprintf (sv.configstrings[CS_MODELS+1],sizeof(sv.configstrings[CS_MODELS+1]),
-			"maps/%s.bsp", server);
-		sv.models[1] = CM_LoadMap (sv.configstrings[CS_MODELS+1], false, &checksum);
-	}
-	Com_sprintf (sv.configstrings[CS_MAPCHECKSUM],sizeof(sv.configstrings[CS_MAPCHECKSUM]),
-		"%i", checksum);
+	Com_sprintf(sv.configstrings[CS_MODELS+1],sizeof(sv.configstrings[CS_MODELS+1]), "maps/%s.bsp", server);
+	sv.models[1] = CM_LoadMap(sv.configstrings[CS_MODELS+1], false, &checksum);
+	Com_sprintf (sv.configstrings[CS_MAPCHECKSUM],sizeof(sv.configstrings[CS_MAPCHECKSUM]), "%i", checksum);
 
 	//
 	// clear physics interaction links
@@ -11023,19 +11005,17 @@ void SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate, 
 	G_RunFrame();
 
 	// all precaches are complete
-	sv.state = serverstate;
+	sv.state = ss_game;
 	server_state = sv.state;
 
 	// create a baseline for more efficient communications
-	SV_CreateBaseline ();
+	SV_CreateBaseline();
 
 	// check for a savegame
-	SV_CheckForSavegame ();
+	SV_CheckForSavegame();
 
 	// set serverinfo variable
-	COM_FullSetCvar ("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
-
-	Com_Printf ("-------------------------------------\n");
+	COM_FullSetCvar("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
 }
 
 void CL_Disconnect(void);
@@ -11099,25 +11079,7 @@ void SV_InitGame(void) {
 	}
 }
 
-
-/*
-======================
-SV_Map
-
-  the full syntax is:
-
-  map [*]<map>$<startspot>+<nextserver>
-
-command from the console or progs.
-Map can also be a .cin, .pcx
-Nextserver is used to allow a cinematic to play, then proceed to
-another level:
-
-	map tram.cin+jail_e3
-======================
-*/
-void SV_Map(char *levelstring, bool loadgame)
-{
+void SV_Map(char* levelstring, bool loadgame) {
 	char	level[MAX_QPATH];
 	char	*ch;
 	int		l;
@@ -11125,61 +11087,39 @@ void SV_Map(char *levelstring, bool loadgame)
 
 	sv.loadgame = loadgame;
 
-	if (sv.state == ss_dead && !sv.loadgame)
-		SV_InitGame ();	// the game is just starting
-
-	strcpy (level, levelstring);
-
-	// if there is a + in the map, set nextserver to the remainder
-	ch = strstr(level, "+");
-	if (ch)
-	{
-		*ch = 0;
-			COM_SetCvar ("nextserver", va("gamemap \"%s\"", ch+1));
+	if (sv.state == ss_dead && !sv.loadgame) {
+		SV_InitGame();	// the game is just starting
 	}
-	else
-		COM_SetCvar ("nextserver", "");
+
+	strcpy(level, levelstring);
 
 	// if there is a $, use the remainder as a spawnpoint
 	ch = strstr(level, "$");
-	if (ch)
-	{
+	if (ch) {
 		*ch = 0;
 		strcpy (spawnpoint, ch+1);
-	}
-	else
+	} else {
 		spawnpoint[0] = 0;
+	}
 
 	// skip the end-of-unit flag if necessary
 	if (level[0] == '*')
 		strcpy (level, level+1);
 
 	l = strlen(level);
-	if (l > 4 && !strcmp (level+l-4, ".cin") )
-	{
-		SCR_BeginLoadingPlaque ();			// for local system
-		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_cinematic, loadgame);
-	}
-	else if (l > 4 && !strcmp (level+l-4, ".pcx") )
-	{
-		SCR_BeginLoadingPlaque ();			// for local system
-		SV_BroadcastCommand ("changing\n");
-		SV_SpawnServer (level, spawnpoint, ss_pic, loadgame);
-	}
-	else
-	{
-		SCR_BeginLoadingPlaque ();			// for local system
-		SV_BroadcastCommand ("changing\n");
-		SV_SendClientMessages ();
-		SV_SpawnServer (level, spawnpoint, ss_game, loadgame);
+	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
+	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
 
-		// NOTE: Copy to defer
-		{
-			memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
-			defer_text_buf[cmd_text.cursize] = 0;
-			cmd_text.cursize = 0;
-		}
+	SCR_BeginLoadingPlaque();			// for local system
+	SV_BroadcastCommand("changing\n");
+	SV_SendClientMessages();
+	SV_SpawnServer(level, spawnpoint, loadgame);
+
+	// NOTE: Copy to defer
+	{
+		memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
+		defer_text_buf[cmd_text.cursize] = 0;
+		cmd_text.cursize = 0;
 	}
 
 	SV_BroadcastCommand ("reconnect\n");
@@ -12124,9 +12064,7 @@ void SV_SendClientMessages (void)
 			SV_DropClient (c);
 		}
 
-		if (sv.state == ss_cinematic || sv.state == ss_pic)
-			Netchan_Transmit (&c->netchan, 0, 0);
-		else if (c->state == cs_spawned)
+		if (c->state == cs_spawned)
 		{
 			SV_SendClientDatagram (c);
 		}
@@ -12168,10 +12106,7 @@ void SV_New_f (void)
 	MSG_WriteLong (&sv_client->netchan.message, svs.spawncount);
 	MSG_WriteString (&sv_client->netchan.message, gamedir);
 
-	if (sv.state == ss_cinematic || sv.state == ss_pic)
-		playernum = -1;
-	else
-		playernum = sv_client - &svs.client;
+	playernum = sv_client - &svs.client;
 	MSG_WriteShort (&sv_client->netchan.message, playernum);
 
 	// send full levelname
@@ -12450,58 +12385,18 @@ static void SV_ShowServerinfo_f() {
 	Info_Print(Info_Cvar_Server());
 }
 
-void SV_Nextserver (void)
-{
-	char	*v;
-
-	if (sv.state == ss_game || sv.state == ss_pic)
-		return;		// can't nextserver while playing a normal game
-
-	svs.spawncount++;	// make sure another doesn't sneak in
-	v = Cvar_VariableString ("nextserver");
-	if (!v[0])
-		Cbuf_AddText ("killserver\n");
-	else
-	{
-		Cbuf_AddText (v);
-		Cbuf_AddText ("\n");
-	}
-	COM_SetCvar ("nextserver","");
-}
-
-/*
-==================
-SV_Nextserver_f
-
-A cinematic has completed or been aborted by a client, so move
-to the next server,
-==================
-*/
-void SV_Nextserver_f (void)
-{
-	if ( atoi(Cmd_Argv(1)) != svs.spawncount ) {
-		return;		// leftover from last server
-	}
-
-
-	SV_Nextserver ();
-}
-
-typedef struct
-{
+typedef struct {
 	char	*name;
 	void	(*func) (void);
 } ucmd_t;
 
-ucmd_t ucmds[] =
+static ucmd_t ucmds[] =
 {
 	// auto issued
 	{"new", SV_New_f},
 	{"configstrings", SV_Configstrings_f},
 	{"baselines", SV_Baselines_f},
 	{"begin", SV_Begin_f},
-
-	{"nextserver", SV_Nextserver_f},
 
 	{"disconnect", SV_Disconnect_f},
 
@@ -12514,11 +12409,6 @@ ucmd_t ucmds[] =
 	{NULL, NULL}
 };
 
-/*
-==================
-SV_ExecuteUserCommand
-==================
-*/
 void SV_ExecuteUserCommand (char *s)
 {
 	ucmd_t	*u;
@@ -13313,22 +13203,6 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 	return clip.trace;
 }
 
-/* ============ end source: server/sv_world.c ============ */
-
-/* client */
-/* ============ begin source: client/cl_cin.c ============ */
-
-/* ============ begin inlined header: client/client.h ============ */
-
-#ifndef CLIENT_H
-#define CLIENT_H
-
-// client.h -- primary header for client
-
-//define	PARANOID			// speed sapping error checking
-
-
-
 #define	MAX_DLIGHTS		32
 #define	MAX_ENTITIES	128
 #define	MAX_PARTICLES	4096
@@ -13447,16 +13321,6 @@ extern	vrect_t		scr_vrect;		// position of render window
 extern	char		crosshair_pic[MAX_QPATH];
 extern	int			crosshair_width, crosshair_height;
 
-//
-// scr_cin.c
-//
-void SCR_PlayCinematic (char *name);
-void SCR_RunCinematic (void);
-void SCR_FinishCinematic (void);
-
-/* ============ end inlined header: client/screen.h ============ */
-/* ============ begin inlined header: client/sound.h ============ */
-
 
 struct sfx_s;
 
@@ -13465,8 +13329,6 @@ void S_Shutdown (void);
 // if origin is NULL, the sound will be dynamically sourced from the entity
 void S_StartSound (vec3_t origin, int entnum, int entchannel, struct sfx_s *sfx, float fvol,  float attenuation, float timeofs);
 void S_StartLocalSound (char *s);
-
-void S_RawSamples (int samples, int rate, int width, int channels, u8 *data);
 
 void S_StopAllSounds(void);
 void S_Update (vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up);
@@ -13677,15 +13539,6 @@ typedef struct
 	int			inventory[MAX_ITEMS];
 
 	//
-	// non-gameserver infornamtion
-	// FIXME: move this cinematic stuff into the cin_t structure
-	FILE		*cinematic_file;
-	int			cinematictime;		// cls.realtime for first cinematic frame
-	int			cinematicframe;
-	char		cinematicpalette[768];
-	bool	cinematicpalette_active;
-
-	//
 	// server state information
 	//
 	int			servercount;	// server identification for prespawns
@@ -13816,15 +13669,8 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 void CL_TeleporterParticles (entity_state_t *ent);
 void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
-
-// RAFAEL
 void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count);
 
-
-//=================================================
-
-// ========
-// PGM
 typedef struct particle_s
 {
 	struct particle_s	*next;
@@ -13840,13 +13686,9 @@ typedef struct particle_s
 	float		alphavel;
 } cparticle_t;
 
-
 #define	PARTICLE_GRAVITY	40
 #define BLASTER_PARTICLE_COLOR		0xe0
-// PMM
 #define INSTANT_PARTICLE	-10000.0
-// PGM
-// ========
 
 void CL_ClearEffects (void);
 void CL_ClearTEnts (void);
@@ -13855,12 +13697,8 @@ void CL_QuadTrail (vec3_t start, vec3_t end);
 void CL_RailTrail (vec3_t start, vec3_t end);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
 void CL_FlagTrail (vec3_t start, vec3_t end, float color);
-
-// RAFAEL
 void CL_IonripperTrail (vec3_t start, vec3_t end);
 
-// ========
-// PGM
 void CL_BlasterParticles2 (vec3_t org, vec3_t dir, unsigned int color);
 void CL_BlasterTrail2 (vec3_t start, vec3_t end);
 void CL_DebugTrail (vec3_t start, vec3_t end);
@@ -13882,8 +13720,6 @@ void CL_ParticleSmokeEffect (vec3_t org, vec3_t dir, int color, int count, int m
 void CL_Widowbeamout (cl_sustain_t *self);
 void CL_Nukeblast (cl_sustain_t *self);
 void CL_WidowSplash (vec3_t org);
-// PGM
-// ========
 
 int CL_ParseEntityBits (unsigned *bits);
 void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, int bits);
@@ -13905,8 +13741,6 @@ void CL_AddEntities (void);
 void CL_AddDLights (void);
 void CL_AddTEnts (void);
 void CL_AddLightStyles (void);
-
-//=================================================
 
 void CL_PrepRefresh (void);
 void CL_RegisterSounds (void);
@@ -14018,645 +13852,17 @@ void CL_KeyInventory (int key);
 //
 void CL_PredictMovement (void);
 
-#endif	// CLIENT_H
-/* ============ end inlined header: client/client.h ============ */
-
-typedef struct
-{
-	u8	*data;
-	int		count;
-} cblock_t;
-
-typedef struct
-{
-	bool	restart_sound;
-	int		s_rate;
-	int		s_width;
-	int		s_channels;
-
-	int		width;
-	int		height;
-	u8	*pic;
-	u8	*pic_pending;
-
-	// order 1 huffman stuff
-	int		*hnodes1;	// [256][256][2];
-	int		numhnodes1[256];
-
-	int		h_used[512];
-	int		h_count[512];
-} cinematics_t;
-
-cinematics_t	cin;
-
-/*
-=================================================================
-
-PCX LOADING
-
-=================================================================
-*/
-
-
-/*
-==============
-SCR_LoadPCX
-==============
-*/
-void SCR_LoadPCX (char *filename, u8 **pic, u8 **palette, int *width, int *height)
-{
-	u8	*raw;
-	pcx_t	*pcx;
-	int		x, y;
-	int		len;
-	int		dataByte, runLength;
-	u8	*out, *pix;
-
-	*pic = NULL;
-
-	//
-	// load the file
-	//
-	len = FS_LoadFile (filename, (void **)&raw);
-	if (!raw)
-		return;	// Com_Printf ("Bad pcx file %s\n", filename);
-
-	//
-	// parse the PCX file
-	//
-	pcx = (pcx_t *)raw;
-	raw = &pcx->data;
-
-	if (pcx->manufacturer != 0x0a
-		|| pcx->version != 5
-		|| pcx->encoding != 1
-		|| pcx->bits_per_pixel != 8
-		|| pcx->xmax >= 640
-		|| pcx->ymax >= 480)
-	{
-		Com_Printf ("Bad pcx file %s\n", filename);
-		return;
-	}
-
-	out = Z_Malloc ( (pcx->ymax+1) * (pcx->xmax+1) );
-
-	*pic = out;
-
-	pix = out;
-
-	if (palette)
-	{
-		*palette = Z_Malloc(768);
-		memcpy (*palette, (u8 *)pcx + len - 768, 768);
-	}
-
-	if (width)
-		*width = pcx->xmax+1;
-	if (height)
-		*height = pcx->ymax+1;
-
-	for (y=0 ; y<=pcx->ymax ; y++, pix += pcx->xmax+1)
-	{
-		for (x=0 ; x<=pcx->xmax ; )
-		{
-			dataByte = *raw++;
-
-			if((dataByte & 0xC0) == 0xC0)
-			{
-				runLength = dataByte & 0x3F;
-				dataByte = *raw++;
-			}
-			else
-				runLength = 1;
-
-			while(runLength-- > 0)
-				pix[x++] = dataByte;
-		}
-
-	}
-
-	if ( raw - (u8 *)pcx > len)
-	{
-		Com_Printf ("PCX file %s was malformed", filename);
-		Z_Free (*pic);
-		*pic = NULL;
-	}
-
-	FS_FreeFile (pcx);
-}
-
-void R_SetPalette ( const unsigned char *palette);
-
-void SCR_StopCinematic (void)
-{
-	cl.cinematictime = 0;	// done
-	if (cin.pic)
-	{
-		Z_Free (cin.pic);
-		cin.pic = NULL;
-	}
-	if (cin.pic_pending)
-	{
-		Z_Free (cin.pic_pending);
-		cin.pic_pending = NULL;
-	}
-	if (cl.cinematicpalette_active)
-	{
-		R_SetPalette(NULL);
-		cl.cinematicpalette_active = false;
-	}
-	if (cl.cinematic_file)
-	{
-		fclose (cl.cinematic_file);
-		cl.cinematic_file = NULL;
-	}
-	if (cin.hnodes1)
-	{
-		Z_Free (cin.hnodes1);
-		cin.hnodes1 = NULL;
-	}
-
-	// switch back down to 11 khz sound if necessary
-	if (cin.restart_sound)
-	{
-		cin.restart_sound = false;
-		CL_Snd_Restart_f ();
-	}
-
-}
-
-/*
-====================
-SCR_FinishCinematic
-
-Called when either the cinematic completes, or it is aborted
-====================
-*/
-void SCR_FinishCinematic (void)
-{
-	// tell the server to advance to the next map / cinematic
-	MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-	SZ_Print (&cls.netchan.message, va("nextserver %i\n", cl.servercount));
-}
-
-//==========================================================================
-
-/*
-==================
-SmallestNode1
-==================
-*/
-int	SmallestNode1 (int numhnodes)
-{
-	int		i;
-	int		best, bestnode;
-
-	best = 99999999;
-	bestnode = -1;
-	for (i=0 ; i<numhnodes ; i++)
-	{
-		if (cin.h_used[i])
-			continue;
-		if (!cin.h_count[i])
-			continue;
-		if (cin.h_count[i] < best)
-		{
-			best = cin.h_count[i];
-			bestnode = i;
-		}
-	}
-
-	if (bestnode == -1)
-		return -1;
-
-	cin.h_used[bestnode] = true;
-	return bestnode;
-}
-
-
-/*
-==================
-Huff1TableInit
-
-Reads the 64k counts table and initializes the node trees
-==================
-*/
-void Huff1TableInit (void)
-{
-	int		prev;
-	int		j;
-	int		*node, *nodebase;
-	u8	counts[256];
-	int		numhnodes;
-
-	cin.hnodes1 = Z_Malloc (256*256*2*4);
-	memset (cin.hnodes1, 0, 256*256*2*4);
-
-	for (prev=0 ; prev<256 ; prev++)
-	{
-		memset (cin.h_count,0,sizeof(cin.h_count));
-		memset (cin.h_used,0,sizeof(cin.h_used));
-
-		// read a row of counts
-		FS_Read (counts, sizeof(counts), cl.cinematic_file);
-		for (j=0 ; j<256 ; j++)
-			cin.h_count[j] = counts[j];
-
-		// build the nodes
-		numhnodes = 256;
-		nodebase = cin.hnodes1 + prev*256*2;
-
-		while (numhnodes != 511)
-		{
-			node = nodebase + (numhnodes-256)*2;
-
-			// pick two lowest counts
-			node[0] = SmallestNode1 (numhnodes);
-			if (node[0] == -1)
-				break;	// no more
-
-			node[1] = SmallestNode1 (numhnodes);
-			if (node[1] == -1)
-				break;
-
-			cin.h_count[numhnodes] = cin.h_count[node[0]] + cin.h_count[node[1]];
-			numhnodes++;
-		}
-
-		cin.numhnodes1[prev] = numhnodes-1;
-	}
-}
-
-/*
-==================
-Huff1Decompress
-==================
-*/
-cblock_t Huff1Decompress (cblock_t in)
-{
-	u8		*input;
-	u8		*out_p;
-	int			nodenum;
-	int			count;
-	cblock_t	out;
-	int			inbyte;
-	int			*hnodes, *hnodesbase;
-//int		i;
-
-	// get decompressed count
-	count = in.data[0] + (in.data[1]<<8) + (in.data[2]<<16) + (in.data[3]<<24);
-	input = in.data + 4;
-	out_p = out.data = Z_Malloc (count);
-
-	// read bits
-
-	hnodesbase = cin.hnodes1 - 256*2;	// nodes 0-255 aren't stored
-
-	hnodes = hnodesbase;
-	nodenum = cin.numhnodes1[0];
-	while (count)
-	{
-		inbyte = *input++;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-		//-----------
-		if (nodenum < 256)
-		{
-			hnodes = hnodesbase + (nodenum<<9);
-			*out_p++ = nodenum;
-			if (!--count)
-				break;
-			nodenum = cin.numhnodes1[nodenum];
-		}
-		nodenum = hnodes[nodenum*2 + (inbyte&1)];
-		inbyte >>=1;
-	}
-
-	if (input - in.data != in.count && input - in.data != in.count+1)
-	{
-		Com_Printf ("Decompression overread by %i", (input - in.data) - in.count);
-	}
-	out.count = out_p - out.data;
-
-	return out;
-}
-
-/*
-==================
-SCR_ReadNextFrame
-==================
-*/
-u8 *SCR_ReadNextFrame (void)
-{
-	int		r;
-	int		command;
-	u8	samples[22050/14*4];
-	u8	compressed[0x20000];
-	int		size;
-	u8	*pic;
-	cblock_t	in, huf1;
-	int		start, end, count;
-
-	// read the next frame
-	r = fread (&command, 4, 1, cl.cinematic_file);
-	if (r == 0)		// we'll give it one more chance
-		r = fread (&command, 4, 1, cl.cinematic_file);
-
-	if (r != 1)
-		return NULL;
-	command = LittleLong(command);
-	if (command == 2)
-		return NULL;	// last frame marker
-
-	if (command == 1)
-	{	// read palette
-		FS_Read (cl.cinematicpalette, sizeof(cl.cinematicpalette), cl.cinematic_file);
-		cl.cinematicpalette_active=0;	// dubious....  exposes an edge case
-	}
-
-	// decompress the next frame
-	FS_Read(&size, 4, cl.cinematic_file);
-	size = LittleLong(size);
-	assert(size >= 1 && size <= (int)sizeof(compressed));
-	FS_Read (compressed, size, cl.cinematic_file);
-
-	// read sound
-	start = cl.cinematicframe*cin.s_rate/14;
-	end = (cl.cinematicframe+1)*cin.s_rate/14;
-	count = end - start;
-
-	FS_Read (samples, count*cin.s_width*cin.s_channels, cl.cinematic_file);
-
-	S_RawSamples (count, cin.s_rate, cin.s_width, cin.s_channels, samples);
-
-	in.data = compressed;
-	in.count = size;
-
-	huf1 = Huff1Decompress (in);
-
-	pic = huf1.data;
-
-	cl.cinematicframe++;
-
-	return pic;
-}
-
-void SCR_RunCinematic (void)
-{
-	int		frame;
-
-	if (cl.cinematictime <= 0)
-	{
-		SCR_StopCinematic ();
-		return;
-	}
-
-	if (cl.cinematicframe == -1)
-		return;		// static image
-
-	if (cls.key_dest != key_game)
-	{	// pause if menu or console is up
-		cl.cinematictime = cls.realtime - cl.cinematicframe*1000/14;
-		return;
-	}
-
-	frame = (cls.realtime - cl.cinematictime)*14.0/1000;
-	if (frame <= cl.cinematicframe)
-		return;
-	if (frame > cl.cinematicframe+1)
-	{
-		Com_Printf ("Dropped frame: %i > %i\n", frame, cl.cinematicframe+1);
-		cl.cinematictime = cls.realtime - cl.cinematicframe*1000/14;
-	}
-	if (cin.pic)
-		Z_Free (cin.pic);
-	cin.pic = cin.pic_pending;
-	cin.pic_pending = NULL;
-	cin.pic_pending = SCR_ReadNextFrame ();
-	if (!cin.pic_pending)
-	{
-		SCR_StopCinematic ();
-		SCR_FinishCinematic ();
-		cl.cinematictime = 1;	// hack to get the black screen behind loading
-		SCR_BeginLoadingPlaque ();
-		cl.cinematictime = 0;
-		return;
-	}
-}
-
 static struct {
 	int width;
 	int height;
 } viddef;
 
-// Returns true if a cinematic is active, meaning the view rendering should be skipped
-static bool SCR_DrawCinematic() {
-	if (cl.cinematictime <= 0) {
-		return false;
-	}
-
-	// blank screen and pause if menu is up
-	if (cls.key_dest == key_menu) {
-		R_SetPalette(NULL);
-		cl.cinematicpalette_active = false;
-		return true;
-	}
-
-	if (!cl.cinematicpalette_active) {
-		R_SetPalette((unsigned char*)cl.cinematicpalette);
-		cl.cinematicpalette_active = true;
-	}
-
-	if (!cin.pic) {
-		return true;
-	}
-
-	void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data);
-	Draw_StretchRaw(0, 0, viddef.width, viddef.height, cin.width, cin.height, cin.pic);
-
-	return true;
-}
-
-void SCR_PlayCinematic (char *arg)
-{
-	int		width, height;
-	u8	*palette;
-	char	name[MAX_OSPATH], *dot;
-	int		old_khz;
-
-	cl.cinematicframe = 0;
-	dot = strstr (arg, ".");
-	if (dot && !strcmp (dot, ".pcx"))
-	{	// static pcx image
-		Com_sprintf (name, sizeof(name), "pics/%s", arg);
-		SCR_LoadPCX (name, &cin.pic, &palette, &cin.width, &cin.height);
-		cl.cinematicframe = -1;
-		cl.cinematictime = 1;
-		SCR_EndLoadingPlaque ();
-		cls.state = ca_active;
-		if (!cin.pic)
-		{
-			Com_Printf ("%s not found.\n", name);
-			cl.cinematictime = 0;
-		}
-		else
-		{
-			memcpy (cl.cinematicpalette, palette, sizeof(cl.cinematicpalette));
-			Z_Free (palette);
-		}
-		return;
-	}
-
-	Com_sprintf (name, sizeof(name), "video/%s", arg);
-	FS_FOpenFile (name, &cl.cinematic_file);
-	if (!cl.cinematic_file)
-	{
-		SCR_FinishCinematic ();
-		cl.cinematictime = 0;	// done
-		return;
-	}
-
-	SCR_EndLoadingPlaque ();
-
-	cls.state = ca_active;
-
-	FS_Read (&width, 4, cl.cinematic_file);
-	FS_Read (&height, 4, cl.cinematic_file);
-	cin.width = LittleLong(width);
-	cin.height = LittleLong(height);
-
-	FS_Read (&cin.s_rate, 4, cl.cinematic_file);
-	cin.s_rate = LittleLong(cin.s_rate);
-	FS_Read (&cin.s_width, 4, cl.cinematic_file);
-	cin.s_width = LittleLong(cin.s_width);
-	FS_Read (&cin.s_channels, 4, cl.cinematic_file);
-	cin.s_channels = LittleLong(cin.s_channels);
-
-	Huff1TableInit ();
-
-	// switch up to 22 khz sound if necessary
-	old_khz = Cvar_VariableValue ("s_khz");
-	if (old_khz != cin.s_rate/1000)
-	{
-		cin.restart_sound = true;
-		COM_SetValueCvar ("s_khz", (float)cin.s_rate / 1000.0f);
-		CL_Snd_Restart_f ();
-		COM_SetValueCvar ("s_khz", old_khz);
-	}
-
-	cl.cinematicframe = 0;
-	cin.pic = SCR_ReadNextFrame ();
-	cl.cinematictime = Sys_Milliseconds ();
-}
-/* ============ end source: client/cl_cin.c ============ */
-/* ============ begin source: client/cl_ents.c ============ */
-
-// cl_ents.c -- entity parsing and management
-
-/* already inlined above: client/client.h */
-
-
 extern	struct model_s	*cl_mod_powerscreen;
 
-//PGM
-
-//PGM
-
-/*
-=========================================================================
-
-FRAME PARSING
-
-=========================================================================
-*/
-
-/*
-=================
-CL_ParseEntityBits
-
-Returns the entity number and the header bits
-=================
-*/
-int	bitcounts[32];	/// just for protocol profiling
+// Returns the entity number and the header bits
 int CL_ParseEntityBits (unsigned *bits)
 {
 	unsigned	b, total;
-	int			i;
 	int			number;
 
 	total = MSG_ReadByte (&net_message);
@@ -14675,11 +13881,6 @@ int CL_ParseEntityBits (unsigned *bits)
 		b = MSG_ReadByte (&net_message);
 		total |= b<<24;
 	}
-
-	// count the bits for net profiling
-	for (i=0 ; i<32 ; i++)
-		if (total&(1<<i))
-			bitcounts[i]++;
 
 	if (total & U_NUMBER16)
 		number = MSG_ReadShort (&net_message);
@@ -18083,25 +17284,12 @@ void CL_EntityEvent (entity_state_t *ent)
 	}
 }
 
-
-/*
-==============
-CL_ClearEffects
-
-==============
-*/
 void CL_ClearEffects (void)
 {
 	CL_ClearParticles ();
 	CL_ClearDlights ();
 	CL_ClearLightStyles ();
 }
-/* ============ end source: client/cl_fx.c ============ */
-/* ============ begin source: client/cl_input.c ============ */
-
-// cl.input.c  -- builds an intended movement command to send to the server
-
-/* already inlined above: client/client.h */
 
 cvar_t	*cl_nodelta;
 
@@ -18466,19 +17654,11 @@ usercmd_t CL_CreateCmd (void)
 	return cmd;
 }
 
-
 void IN_CenterView (void)
 {
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
-
-
-/*
-=================
-CL_SendCmd
-=================
-*/
 void CL_SendCmd (void)
 {
 	sizebuf_t	buf;
@@ -18519,11 +17699,6 @@ void CL_SendCmd (void)
 	}
 
 	SZ_Init (&buf, data, sizeof(data));
-
-	if (cmd->buttons && cl.cinematictime > 0 && cls.realtime - cl.cinematictime > 1000)
-	{	// skip the rest of the cinematic
-		SCR_FinishCinematic ();
-	}
 
 	// begin a client move command
 	MSG_WriteByte (&buf, clc_move);
@@ -18905,6 +18080,8 @@ void CL_ClearState (void)
 
 static void M_ForceMenuOff();
 
+void R_SetPalette( const unsigned char *palette);
+
 // Goes from a connected state to full screen console state
 // Sends a disconnect message to the server
 void CL_Disconnect() {
@@ -18921,7 +18098,6 @@ void CL_Disconnect() {
 
 		M_ForceMenuOff();
 		cls.connect_time = 0;
-		SCR_StopCinematic();
 
 		// send a disconnect message to the server
 		char final[32] = {};
@@ -20641,12 +19817,6 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
 		VectorAdd (move, vec, move);
 	}
 }
-/* ============ end source: client/cl_newfx.c ============ */
-/* ============ begin source: client/cl_parse.c ============ */
-
-// cl_parse.c  -- parse a message received from the server
-
-/* already inlined above: client/client.h */
 
 char *svc_strings[256] =
 {
@@ -20674,8 +19844,6 @@ char *svc_strings[256] =
 	"svc_deltapacketentities",
 	"svc_frame"
 };
-
-//=============================================================================
 
 void CL_DownloadFileName(char *dest, int destlen, char *fn)
 {
@@ -20907,19 +20075,14 @@ static void CL_ParseServerData() {
 	strncpy(cl.gamedir, game_directory, sizeof(cl.gamedir) - 1);
 
 	cl.playernum = MSG_ReadShort(&net_message);
-
 	char* level_name = MSG_ReadString(&net_message);
-	if (cl.playernum == -1) {
-		// playing a cinematic or showing a pic, not a level
-		SCR_PlayCinematic(level_name);
-	} else {
-		// seperate the printfs so the server message can have a color
-		Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-		Com_Printf("%c%s\n", 2, level_name);
 
-		// need to prep refresh at next oportunity
-		cl.refresh_prepped = false;
-	}
+	// seperate the printfs so the server message can have a color
+	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	Com_Printf("%c%s\n", 2, level_name);
+
+	// need to prep refresh at next oportunity
+	cl.refresh_prepped = false;
 }
 
 void CL_ParseBaseline (void)
@@ -21603,25 +20766,6 @@ void CL_PredictMovement (void)
 
 	VectorCopy (pm.viewangles, cl.predicted_angles);
 }
-/* ============ end source: client/cl_pred.c ============ */
-/* ============ begin source: client/cl_scrn.c ============ */
-
-// cl_scrn.c -- master for refresh, status bar, console, chat, notify, etc
-
-/*
-
-  full screen console
-  put up loading plaque
-  blanked background with loading plaque
-  blanked background with menu
-  cinematics
-  full screen image for quit and victory
-
-  end of unit intermissions
-
-  */
-
-/* already inlined above: client/client.h */
 
 float		scr_con_current;	// aproaches scr_conlines at scr_conspeed
 float		scr_conlines;		// 0.0 to 1.0 lines of console to display
@@ -22026,11 +21170,8 @@ void SCR_BeginLoadingPlaque (void)
 		return;	// if at console, don't bring up the plaque
 	if (cls.key_dest == key_console)
 		return;
-	if (cl.cinematictime > 0)
-		scr_draw_loading = 2;	// clear to balack first
-	else
-		scr_draw_loading = 1;
-	SCR_UpdateScreen ();
+	scr_draw_loading = 1;
+	SCR_UpdateScreen();
 	cls.disable_screen = Sys_Milliseconds ();
 	cls.disable_servercount = cl.servercount;
 }
@@ -22681,8 +21822,6 @@ void SCR_ExecuteLayoutString (char *s)
 
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 static void SCR_UpdateScreen() {
-	void M_Draw();
-
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
 	if (cls.disable_screen) {
 		if (Sys_Milliseconds() - cls.disable_screen > 120000) {
@@ -22696,79 +21835,41 @@ static void SCR_UpdateScreen() {
 		return;
 	}
 
-	{
-		R_BeginFrame();
+	R_BeginFrame();
 
-		if (scr_draw_loading == 2) {
-			//  loading plaque over black screen
+	// do 3D refresh drawing, and then update the screen
+	SCR_CalcVrect();
 
-			R_SetPalette(NULL);
-			scr_draw_loading = false;
+	V_RenderView();
 
-			int w = 0;
-			int h = 0;
-			Draw_GetPicSize(&w, &h, "loading");
-			Draw_Pic((viddef.width - w) / 2, (viddef.height - h) / 2, "loading");
+	SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 
-		} else if (cl.cinematictime > 0) {
-			// if a cinematic is supposed to be running, handle menus and console specially
-
-			if (cls.key_dest == key_menu) {
-				if (cl.cinematicpalette_active) {
-					R_SetPalette(NULL);
-					cl.cinematicpalette_active = false;
-				}
-				M_Draw();
-			} else if (cls.key_dest == key_console) {
-				if (cl.cinematicpalette_active) {
-					R_SetPalette(NULL);
-					cl.cinematicpalette_active = false;
-				}
-				SCR_DrawConsole();
-			} else {
-				SCR_DrawCinematic();
-			}
-
-		} else {
-
-			// make sure the game palette is active
-			if (cl.cinematicpalette_active) {
-				R_SetPalette(NULL);
-				cl.cinematicpalette_active = false;
-			}
-
-			// do 3D refresh drawing, and then update the screen
-			SCR_CalcVrect();
-
-			V_RenderView();
-
-			SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
-
-			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
-				SCR_ExecuteLayoutString(cl.layout);
-			}
-
-			if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
-				CL_DrawInventory();
-			}
-
-			SCR_DrawNet();
-			SCR_CheckDrawCenterString();
-
-			if (scr_timegraph->value) {
-				SCR_DebugGraph (cls.frametime*300, 0);
-			}
-
-			if (scr_debuggraph->value || scr_timegraph->value || scr_netgraph->value) {
-				SCR_DrawDebugGraph();
-			}
-
-			SCR_DrawPause();
-			SCR_DrawConsole();
-			M_Draw();
-			SCR_DrawLoading();
-		}
+	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
+		SCR_ExecuteLayoutString(cl.layout);
 	}
+
+	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
+		CL_DrawInventory();
+	}
+
+	SCR_DrawNet();
+	SCR_CheckDrawCenterString();
+
+	if (scr_timegraph->value) {
+		SCR_DebugGraph (cls.frametime*300, 0);
+	}
+
+	if (scr_debuggraph->value || scr_timegraph->value || scr_netgraph->value) {
+		SCR_DrawDebugGraph();
+	}
+
+	SCR_DrawPause();
+	SCR_DrawConsole();
+
+	void M_Draw();
+	M_Draw();
+
+	SCR_DrawLoading();
 
 	GLimp_EndFrame();
 }
@@ -24451,7 +23552,6 @@ void CL_ProcessSustain ()
 		{
 			if ((s->endtime >= cl.time) && (cl.time >= s->nextthink))
 			{
-//				Com_Printf ("think %d %d %d\n", cl.time, s->nextthink, s->thinkinterval);
 				s->think (s);
 			}
 			else if (s->endtime < cl.time)
@@ -24460,11 +23560,6 @@ void CL_ProcessSustain ()
 	}
 }
 
-/*
-=================
-CL_AddTEnts
-=================
-*/
 void CL_AddTEnts (void)
 {
 	CL_AddBeams ();
@@ -24475,12 +23570,6 @@ void CL_AddTEnts (void)
 	// PMM - set up sustain
 	CL_ProcessSustain();
 }
-/* ============ end source: client/cl_tent.c ============ */
-/* ============ begin source: client/cl_view.c ============ */
-
-// cl_view.c -- player rendering positioning
-
-/* already inlined above: client/client.h */
 
 //=============
 //
@@ -24488,8 +23577,6 @@ void CL_AddTEnts (void)
 //
 int			gun_frame;
 struct model_s	*gun_model;
-
-//=============
 
 cvar_t		*crosshair;
 cvar_t		*cl_testparticles;
@@ -24966,25 +24053,12 @@ void V_RenderView()
 	SCR_DrawCrosshair ();
 }
 
-
-/*
-=============
-V_Viewpos_f
-=============
-*/
 void V_Viewpos_f (void)
 {
 	Com_Printf ("(%i %i %i) : %i\n", (int)cl.refdef.vieworg[0],
 		(int)cl.refdef.vieworg[1], (int)cl.refdef.vieworg[2],
 		(int)cl.refdef.viewangles[YAW]);
 }
-
-/* ============ end source: client/cl_view.c ============ */
-/* ============ begin source: client/console.c ============ */
-
-// console.c
-
-/* already inlined above: client/client.h */
 
 cvar_t		*con_notifytime;
 
@@ -25306,14 +24380,14 @@ void Con_DrawConsole (float frac)
 	for (x=0 ; x<5 ; x++)
 		Draw_Char (viddef.width-44+x*8, lines-12, 128 + version[x] );
 
-// draw the text
+	// draw the text
 	con.vislines = lines;
 
 	rows = (lines-22)>>3;		// rows of text to draw
 
 	y = lines - 30;
 
-// draw from the bottom up
+	// draw from the bottom up
 	if (con.display != con.current)
 	{
 	// draw arrows to show the buffer is backscrolled
@@ -25338,7 +24412,6 @@ void Con_DrawConsole (float frac)
 			Draw_Char ( (x+1)<<3, y, text[x]);
 	}
 
-//ZOID
 	// draw the download bar
 	// figure out width
 	if (cls.download) {
@@ -25381,24 +24454,10 @@ void Con_DrawConsole (float frac)
 		for (i = 0; i < (int)strlen(dlbar); i++)
 			Draw_Char ( (i+1)<<3, y, dlbar[i]);
 	}
-//ZOID
 
-// draw the input prompt, user text, and cursor if desired
+	// draw the input prompt, user text, and cursor if desired
 	Con_DrawInput ();
 }
-
-
-/* ============ end source: client/console.c ============ */
-/* ============ begin source: client/keys.c ============ */
-
-/* already inlined above: client/client.h */
-
-/*
-
-key up events are sent even if in console mode
-
-*/
-
 
 #define		MAXCMDLINE	256
 char	key_lines[32][MAXCMDLINE];
@@ -27615,7 +26674,6 @@ static void M_Menu_Video_f() {
 
 static void StartGame( void )
 {
-	// disable updates and start the cinematic going
 	cl.servercount = -1;
 	M_ForceMenuOff ();
 	COM_SetValueCvar( "deathmatch", 0 );
@@ -27939,10 +26997,7 @@ static void M_Draw() {
 		return;
 	}
 
-	// dim everything behind it down
-	if (cl.cinematictime > 0) {
-		Draw_Fill(0, 0, viddef.width, viddef.height, 0);
-	} else {
+	{
 		void Draw_FadeScreen();
 		Draw_FadeScreen();
 	}
@@ -28002,27 +27057,13 @@ void SpinControl_Draw( menulist_s *s )
 	}
 }
 
-// keep the re.* shims file-local — ref_gl's own Draw_Char/Draw_Fill
-// follow later in the unity translation unit
 #undef Draw_Char
 #undef Draw_Fill
-
-/* ============ end source: client/qmenu.c ============ */
-/* ============ begin source: client/snd_dma.c ============ */
-
-// snd_dma.c -- main control for any streaming sound output device
-
-/* already inlined above: client/client.h */
-/* ============ begin inlined header: client/snd_loc.h ============ */
 
 #ifndef SND_LOC_H
 #define SND_LOC_H
 
-// snd_loc.h -- private sound functions
-
-// !!! if this is changed, the asm code must change !!!
-typedef struct
-{
+typedef struct {
 	int			left;
 	int			right;
 } portable_samplepair_t;
@@ -28127,16 +27168,12 @@ void	SNDDMA_Submit(void);
 #define	MAX_CHANNELS			32
 extern	channel_t   channels[MAX_CHANNELS];
 
-extern	int		s_rawend;
 extern	vec3_t	listener_origin;
 extern	vec3_t	listener_forward;
 extern	vec3_t	listener_right;
 extern	vec3_t	listener_up;
 extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
-
-#define	MAX_RAW_SAMPLES	8192
-extern	portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
 
 extern cvar_t	*s_volume;
 extern cvar_t	*s_nosound;
@@ -28222,16 +27259,6 @@ cvar_t		*s_khz;
 cvar_t		*s_show;
 cvar_t		*s_mixahead;
 cvar_t		*s_primary;
-
-
-int		s_rawend;
-portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
-
-
-// ====================================================================
-// User-setable variables
-// ====================================================================
-
 
 void S_SoundInfo_f(void)
 {
@@ -28854,12 +27881,6 @@ void S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx, float f
 	ps->prev->next = ps;
 }
 
-
-/*
-==================
-S_StartLocalSound
-==================
-*/
 void S_StartLocalSound (char *sound)
 {
 	sfx_t	*sfx;
@@ -28876,30 +27897,19 @@ void S_StartLocalSound (char *sound)
 	S_StartSound (NULL, cl.playernum+1, 0, sfx, 1, 1, 0);
 }
 
+static void S_ClearBuffer() {
+	if (sound_started) {
+		int clear = 0;
+		if (dma.samplebits == 8) {
+			clear = 0x80;
+		}
 
-/*
-==================
-S_ClearBuffer
-==================
-*/
-void S_ClearBuffer (void)
-{
-	int		clear;
-
-	if (!sound_started)
-		return;
-
-	s_rawend = 0;
-
-	if (dma.samplebits == 8)
-		clear = 0x80;
-	else
-		clear = 0;
-
-	SNDDMA_BeginPainting ();
-	if (dma.buffer)
-		memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
-	SNDDMA_Submit ();
+		SNDDMA_BeginPainting();
+		if (dma.buffer) {
+			memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
+		}
+		SNDDMA_Submit();
+	}
 }
 
 void S_StopAllSounds(void)
@@ -29018,114 +28028,7 @@ void S_AddLoopSounds (void)
 	}
 }
 
-//=============================================================================
-
-/*
-============
-S_RawSamples
-
-Cinematic streaming and voice over network
-============
-*/
-void S_RawSamples (int samples, int rate, int width, int channels, u8 *data)
-{
-	int		i;
-	int		src, dst;
-	float	scale;
-
-	if (!sound_started)
-		return;
-
-	if (s_rawend < paintedtime)
-		s_rawend = paintedtime;
-	scale = (float)rate / dma.speed;
-
-//Com_Printf ("%i < %i < %i\n", soundtime, paintedtime, s_rawend);
-	if (channels == 2 && width == 2)
-	{
-		if (scale == 1.0)
-		{	// optimized case
-			for (i=0 ; i<samples ; i++)
-			{
-				dst = s_rawend&(MAX_RAW_SAMPLES-1);
-				s_rawend++;
-				s_rawsamples[dst].left =
-					LittleShort(((short *)data)[i*2]) << 8;
-				s_rawsamples[dst].right =
-					LittleShort(((short *)data)[i*2+1]) << 8;
-			}
-		}
-		else
-		{
-			for (i=0 ; ; i++)
-			{
-				src = i*scale;
-				if (src >= samples)
-					break;
-				dst = s_rawend&(MAX_RAW_SAMPLES-1);
-				s_rawend++;
-				s_rawsamples[dst].left =
-					LittleShort(((short *)data)[src*2]) << 8;
-				s_rawsamples[dst].right =
-					LittleShort(((short *)data)[src*2+1]) << 8;
-			}
-		}
-	}
-	else if (channels == 1 && width == 2)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-				LittleShort(((short *)data)[src]) << 8;
-			s_rawsamples[dst].right =
-				LittleShort(((short *)data)[src]) << 8;
-		}
-	}
-	else if (channels == 2 && width == 1)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-				((char *)data)[src*2] << 16;
-			s_rawsamples[dst].right =
-				((char *)data)[src*2+1] << 16;
-		}
-	}
-	else if (channels == 1 && width == 1)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-				(((u8 *)data)[src]-128) << 16;
-			s_rawsamples[dst].right = (((u8 *)data)[src]-128) << 16;
-		}
-	}
-}
-
-//=============================================================================
-
-/*
-============
-S_Update
-
-Called once each time through the main loop
-============
-*/
+// Called once each time through the main loop
 void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 {
 	int			i;
@@ -29326,14 +28229,6 @@ void S_SoundList(void)
 	}
 	Com_Printf ("Total resident: %i\n", total);
 }
-
-/* ============ end source: client/snd_dma.c ============ */
-/* ============ begin source: client/snd_mem.c ============ */
-
-// snd_mem.c: sound caching
-
-/* already inlined above: client/client.h */
-/* already inlined above: client/snd_loc.h */
 
 int			cache_full_cycle;
 
@@ -29661,14 +28556,6 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	return info;
 }
 
-/* ============ end source: client/snd_mem.c ============ */
-/* ============ begin source: client/snd_mix.c ============ */
-
-// snd_mix.c -- portable code to mix sounds for snd_dma.c
-
-/* already inlined above: client/client.h */
-/* already inlined above: client/snd_loc.h */
-
 #define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 int		snd_scaletable[32][256];
@@ -29827,7 +28714,6 @@ void S_PaintChannels(int endtime)
 
 	snd_vol = s_volume->value*256;
 
-//Com_Printf ("%i to %i\n", paintedtime, endtime);
 	while (paintedtime < endtime)
 	{
 	// if paintbuffer is smaller than DMA buffer
@@ -29852,37 +28738,10 @@ void S_PaintChannels(int endtime)
 			break;
 		}
 
-	// clear the paint buffer
-		if (s_rawend < paintedtime)
-		{
-//			Com_Printf ("clear\n");
-			memset(paintbuffer, 0, (end - paintedtime) * sizeof(portable_samplepair_t));
-		}
-		else
-		{	// copy from the streaming sound source
-			int		s;
-			int		stop;
+		// clear the paint buffer
+		memset(paintbuffer, 0, (end - paintedtime) * sizeof(portable_samplepair_t));
 
-			stop = (end < s_rawend) ? end : s_rawend;
-
-			for (i=paintedtime ; i<stop ; i++)
-			{
-				s = i&(MAX_RAW_SAMPLES-1);
-				paintbuffer[i-paintedtime] = s_rawsamples[s];
-			}
-//		if (i != end)
-//			Com_Printf ("partial stream\n");
-//		else
-//			Com_Printf ("full stream\n");
-			for ( ; i<end ; i++)
-			{
-				paintbuffer[i-paintedtime].left =
-				paintbuffer[i-paintedtime].right = 0;
-			}
-		}
-
-
-	// paint in the channels.
+		// paint in the channels.
 		ch = channels;
 		for (i=0; i<MAX_CHANNELS ; i++, ch++)
 		{
@@ -73171,72 +72030,6 @@ void Draw_FadeScreen (void)
 	glDisable (GL_BLEND);
 }
 
-
-//====================================================================
-
-extern unsigned	r_rawpalette[256];
-
-void Draw_StretchRaw (int x, int y, int w, int h, int cols, int rows, u8 *data)
-{
-	unsigned	image32[256*256];
-	int			i, j, trows;
-	u8		*source;
-	int			frac, fracstep;
-	float		hscale;
-	int			row;
-	float		t;
-
-	GL_Bind (0);
-
-	if (rows<=256)
-	{
-		hscale = 1;
-		trows = rows;
-	}
-	else
-	{
-		hscale = rows/256.0;
-		trows = 256;
-	}
-	t = rows*hscale / 256;
-
-	{
-		unsigned *dest;
-
-		for (i=0 ; i<trows ; i++)
-		{
-			row = (int)(i*hscale);
-			if (row > rows)
-				break;
-			source = data + cols*row;
-			dest = &image32[i*256];
-			fracstep = cols*0x10000/256;
-			frac = fracstep >> 1;
-			for (j=0 ; j<256 ; j++)
-			{
-				dest[j] = r_rawpalette[source[frac>>16]];
-				frac += fracstep;
-			}
-		}
-
-		glTexImage2D (GL_TEXTURE_2D, 0, gl_tex_solid_format, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, image32);
-	}
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glBegin (GL_QUADS);
-	glTexCoord2f (0, 0);
-	glVertex2f (x, y);
-	glTexCoord2f (1, 0);
-	glVertex2f (x+w, y);
-	glTexCoord2f (1, t);
-	glVertex2f (x+w, y+h);
-	glTexCoord2f (0, t);
-	glVertex2f (x, y+h);
-	glEnd ();
-}
-
 image_t		gltextures[MAX_GLTEXTURES];
 int			numgltextures;
 int			base_textureid;		// gltextures[i] = base_textureid+i
@@ -79575,17 +78368,7 @@ void Sys_FindClose (void)
 	findhandle = 0;
 }
 
-
-//============================================
-
-/* ============ end source: win32/q_shwin.c ============ */
-/* ============ begin source: win32/snd_win.c ============ */
-
 #include <float.h>
-
-/* already inlined above: client/client.h */
-/* already inlined above: client/snd_loc.h */
-/* already inlined above: win32/winquake.h */
 
 #define iDirectSoundCreate(a,b,c)	pDirectSoundCreate(a,b,c)
 
@@ -80812,21 +79595,21 @@ static void SV_Frame(int msec) {
 
 }
 
-void CL_Frame (int msec) {
-	static int	extratime;
-
+static void CL_Frame (int msec) {
+	static i64 extratime = 0;
 	extratime += msec;
 
-	if (!cl_timedemo->value)
-	{
-		if (cls.state == ca_connected && extratime < 100)
+	if (!cl_timedemo->value) {
+		if (cls.state == ca_connected && extratime < 100) {
 			return;			// don't flood packets out while connecting
-		if (extratime < 1000/cl_maxfps->value)
+		}
+		if (extratime < 1000/cl_maxfps->value) {
 			return;			// framerate is too high
+		}
 	}
 
 	// let the mouse activate or deactivate
-	IN_Frame ();
+	IN_Frame();
 
 	// decide the simulation time
 	cls.frametime = extratime/1000.0;
@@ -80834,15 +79617,17 @@ void CL_Frame (int msec) {
 	cls.realtime = curtime;
 
 	extratime = 0;
-	if (cls.frametime > (1.0 / 5))
+	if (cls.frametime > (1.0 / 5)) {
 		cls.frametime = (1.0 / 5);
+	}
 
 	// if in the debugger last frame, don't timeout
-	if (msec > 5000)
-		cls.netchan.last_received = Sys_Milliseconds ();
+	if (msec > 5000) {
+		cls.netchan.last_received = Sys_Milliseconds();
+	}
 
 	// fetch results from server
-	CL_ReadPackets ();
+	CL_ReadPackets();
 
 	// send a new command message to the server
 	Cmd_ExecuteCbuf();
@@ -80850,24 +79635,23 @@ void CL_Frame (int msec) {
 	CL_SendCmd();
 	CL_CheckForResend();
 
-
 	// predict all unacknowledged movements
-	CL_PredictMovement ();
+	CL_PredictMovement();
 
-	if (!cl.refresh_prepped && cls.state == ca_active)
-		CL_PrepRefresh ();
+	if (!cl.refresh_prepped && cls.state == ca_active) {
+		CL_PrepRefresh();
+	}
 
 	// update the screen
-	SCR_UpdateScreen ();
+	SCR_UpdateScreen();
 
 	// update audio
-	S_Update (cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
+	S_Update(cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
 
 	// advance local effects for next frame
-	CL_RunDLights ();
-	CL_RunLightStyles ();
-	SCR_RunCinematic ();
-	SCR_RunConsole ();
+	CL_RunDLights();
+	CL_RunLightStyles();
+	SCR_RunConsole();
 
 	cls.framecount++;
 }
