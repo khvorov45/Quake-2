@@ -4883,7 +4883,6 @@ void Pmove (pmove_t *pmove);
 #define	PMF_TIME_WATERJUMP	8	// pm_time is waterjump
 #define	PMF_TIME_LAND		16	// pm_time is time before rejump
 #define	PMF_TIME_TELEPORT	32	// pm_time is non-moving time
-#define PMF_NO_PREDICTION	64	// temporarily disables prediction (used for grappling hook)
 
 // button bits
 #define	BUTTON_ATTACK		1
@@ -5030,8 +5029,6 @@ void Pmove (pmove_t *pmove);
 #define	STAT_LAYOUTS			13
 #define	STAT_FRAGS				14
 #define	STAT_FLASHES			15		// cleared each frame, 1 = health, 2 = armor
-#define STAT_CHASE				16
-#define STAT_SPECTATOR			17
 #define	MAX_STATS				32
 
 // dmflags->value flags
@@ -5421,12 +5418,7 @@ typedef struct gclient_s {
 	int			flood_whenhead;		// head pointer for when said
 
 	float		respawn_time;		// can respawn when time > this
-
-	edict_t		*chase_target;		// player we are chasing
-	bool	update_chase;		// need to update chase info?
 } gclient_t;
-
-//===============================================================
 
 // destination class for SV_Multicast()
 typedef enum {
@@ -6007,8 +5999,6 @@ void ClientEndServerFrame (edict_t *ent);
 //
 void MoveClientToIntermission (edict_t *client);
 void G_SetStats (edict_t *ent);
-void G_SetSpectatorStats (edict_t *ent);
-void G_CheckChaseStats (edict_t *ent);
 void ValidateSelectedItem (edict_t *ent);
 
 //
@@ -6034,16 +6024,6 @@ void G_RunEntity (edict_t *ent);
 //
 void SaveClientData (void);
 void FetchClientEntData (edict_t *ent);
-
-//
-// g_chase.c
-//
-void UpdateChaseCam(edict_t *ent);
-void ChaseNext(edict_t *ent);
-void ChasePrev(edict_t *ent);
-void GetChaseTarget(edict_t *ent);
-
-//============================================================================
 
 // client_t->anim_priority
 #define	ANIM_BASIC		0		// stand / run
@@ -14958,7 +14938,7 @@ void CL_CalcViewValues (void)
 	lerp = cl.lerpfrac;
 
 	// calculate the origin
-	if ((cl_predict->value) && !(cl.frame.playerstate.pmove.pm_flags & PMF_NO_PREDICTION))
+	if ((cl_predict->value))
 	{	// use predicted values
 		unsigned	delta;
 
@@ -20479,7 +20459,7 @@ void CL_CheckPredictionError (void)
 	int		i;
 	int		len;
 
-	if (!cl_predict->value || (cl.frame.playerstate.pmove.pm_flags & PMF_NO_PREDICTION))
+	if (!cl_predict->value)
 		return;
 
 	// calculate the last usercmd_t we sent that the server has processed
@@ -20658,7 +20638,7 @@ void CL_PredictMovement (void)
 	if (cl_paused->value)
 		return;
 
-	if (!cl_predict->value || (cl.frame.playerstate.pmove.pm_flags & PMF_NO_PREDICTION))
+	if (!cl_predict->value)
 	{	// just set angles
 		for (i=0 ; i<3 ; i++)
 		{
@@ -29677,14 +29657,7 @@ static bool ai_checkattack(edict_t* self) {
 	return self->monsterinfo.checkattack (self);
 }
 
-
-/*
-=============
-ai_run
-
-The monster has an enemy it is trying to kill
-=============
-*/
+// The monster has an enemy it is trying to kill
 void ai_run (edict_t* self, float dist)
 {
 	vec3_t		v;
@@ -29804,8 +29777,6 @@ void ai_run (edict_t* self, float dist)
 
 	if (new)
 	{
-//		PF_dprintf("checking for course correction\n");
-
 		tr = SV_Trace(self->s.origin, self->mins, self->maxs, self->monsterinfo.last_sighting, self, MASK_PLAYERSOLID);
 		if (tr.fraction < 1)
 		{
@@ -29833,7 +29804,6 @@ void ai_run (edict_t* self, float dist)
 				{
 					VectorSet(v, d2 * left * 0.5, -16, 0);
 					G_ProjectSource (self->s.origin, v, v_forward, v_right, left_target);
-//					PF_dprintf("incomplete path, go part way and adjust again\n");
 				}
 				VectorCopy (self->monsterinfo.last_sighting, self->monsterinfo.saved_goal);
 				self->monsterinfo.aiflags |= AI_PURSUE_TEMP;
@@ -29841,8 +29811,6 @@ void ai_run (edict_t* self, float dist)
 				VectorCopy (left_target, self->monsterinfo.last_sighting);
 				VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
 				self->s.angles[YAW] = self->ideal_yaw = vectoyaw(v);
-//				PF_dprintf("adjusted left\n");
-//				debug_drawline(self.origin, self.last_sighting, 152);
 			}
 			else if (right >= center && right > left)
 			{
@@ -29850,7 +29818,6 @@ void ai_run (edict_t* self, float dist)
 				{
 					VectorSet(v, d2 * right * 0.5, 16, 0);
 					G_ProjectSource (self->s.origin, v, v_forward, v_right, right_target);
-//					PF_dprintf("incomplete path, go part way and adjust again\n");
 				}
 				VectorCopy (self->monsterinfo.last_sighting, self->monsterinfo.saved_goal);
 				self->monsterinfo.aiflags |= AI_PURSUE_TEMP;
@@ -29858,11 +29825,8 @@ void ai_run (edict_t* self, float dist)
 				VectorCopy (right_target, self->monsterinfo.last_sighting);
 				VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
 				self->s.angles[YAW] = self->ideal_yaw = vectoyaw(v);
-//				PF_dprintf("adjusted right\n");
-//				debug_drawline(self.origin, self.last_sighting, 152);
 			}
 		}
-//		else PF_dprintf("course was fine\n");
 	}
 
 	M_MoveToGoal (self, dist);
@@ -29871,157 +29835,6 @@ void ai_run (edict_t* self, float dist)
 
 	if (self)
 		self->goalentity = save;
-}
-
-void UpdateChaseCam(edict_t *ent)
-{
-	vec3_t o, ownerv, goal;
-	edict_t *targ;
-	vec3_t forward, right;
-	trace_t trace;
-	int i;
-	vec3_t oldgoal;
-	vec3_t angles;
-
-	// is our chase target gone?
-	if (!ent->client->chase_target->inuse) {
-		edict_t *old = ent->client->chase_target;
-		ChaseNext(ent);
-		if (ent->client->chase_target == old) {
-			ent->client->chase_target = NULL;
-			ent->client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
-			return;
-		}
-	}
-
-	targ = ent->client->chase_target;
-
-	VectorCopy(targ->s.origin, ownerv);
-	VectorCopy(ent->s.origin, oldgoal);
-
-	ownerv[2] += targ->viewheight;
-
-	VectorCopy(targ->client->v_angle, angles);
-	if (angles[PITCH] > 56)
-		angles[PITCH] = 56;
-	AngleVectors (angles, forward, right, NULL);
-	VectorNormalize(forward);
-	VectorMA(ownerv, -30, forward, o);
-
-	if (o[2] < targ->s.origin[2] + 20)
-		o[2] = targ->s.origin[2] + 20;
-
-	// jump animation lifts
-	if (!targ->groundentity)
-		o[2] += 16;
-
-	trace = SV_Trace(ownerv, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
-
-	VectorCopy(trace.endpos, goal);
-
-	VectorMA(goal, 2, forward, goal);
-
-	// pad for floors and ceilings
-	VectorCopy(goal, o);
-	o[2] += 6;
-	trace = SV_Trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
-	if (trace.fraction < 1) {
-		VectorCopy(trace.endpos, goal);
-		goal[2] -= 6;
-	}
-
-	VectorCopy(goal, o);
-	o[2] -= 6;
-	trace = SV_Trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
-	if (trace.fraction < 1) {
-		VectorCopy(trace.endpos, goal);
-		goal[2] += 6;
-	}
-
-	if (targ->deadflag)
-		ent->client->ps.pmove.pm_type = PM_DEAD;
-	else
-		ent->client->ps.pmove.pm_type = PM_FREEZE;
-
-	VectorCopy(goal, ent->s.origin);
-	for (i=0 ; i<3 ; i++)
-		ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - ent->client->resp.cmd_angles[i]);
-
-	if (targ->deadflag) {
-		ent->client->ps.viewangles[ROLL] = 40;
-		ent->client->ps.viewangles[PITCH] = -15;
-		ent->client->ps.viewangles[YAW] = targ->client->killer_yaw;
-	} else {
-		VectorCopy(targ->client->v_angle, ent->client->ps.viewangles);
-		VectorCopy(targ->client->v_angle, ent->client->v_angle);
-	}
-
-	ent->viewheight = 0;
-	ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
-	SV_LinkEdict(ent);
-}
-
-void ChaseNext(edict_t *ent)
-{
-	int i;
-	edict_t *e;
-
-	if (!ent->client->chase_target)
-		return;
-
-	i = ent->client->chase_target - g_edicts;
-	do {
-		i++;
-		if (i > 1)
-			i = 1;
-		e = g_edicts + i;
-		if (!e->inuse)
-			continue;
-		break;
-	} while (e != ent->client->chase_target);
-
-	ent->client->chase_target = e;
-	ent->client->update_chase = true;
-}
-
-void ChasePrev(edict_t *ent)
-{
-	int i;
-	edict_t *e;
-
-	if (!ent->client->chase_target)
-		return;
-
-	i = ent->client->chase_target - g_edicts;
-	do {
-		i--;
-		if (i < 1)
-			i = 1;
-		e = g_edicts + i;
-		if (!e->inuse)
-			continue;
-		break;
-	} while (e != ent->client->chase_target);
-
-	ent->client->chase_target = e;
-	ent->client->update_chase = true;
-}
-
-void GetChaseTarget(edict_t *ent)
-{
-	int i;
-	edict_t* other;
-
-	for (i = 1; i <= 1; i++) {
-		other = g_edicts + i;
-		if (other->inuse) {
-			ent->client->chase_target = other;
-			ent->client->update_chase = true;
-			UpdateChaseCam(ent);
-			return;
-		}
-	}
-	PF_centerprintf(ent, "No other players to chase.");
 }
 
 #define FRAME_stand01         	0
@@ -30278,11 +30091,6 @@ void SelectNextItem (edict_t *ent, int itflags)
 
 	cl = ent->client;
 
-	if (cl->chase_target) {
-		ChaseNext(ent);
-		return;
-	}
-
 	// scan  for the next valid one
 	for (i=1 ; i<=MAX_ITEMS ; i++)
 	{
@@ -30309,11 +30117,6 @@ void SelectPrevItem (edict_t *ent, int itflags)
 	gitem_t		*it;
 
 	cl = ent->client;
-
-	if (cl->chase_target) {
-		ChasePrev(ent);
-		return;
-	}
 
 	// scan  for the next valid one
 	for (i=1 ; i<=MAX_ITEMS ; i++)
@@ -66472,14 +66275,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	pm_passent = ent;
 
-	if (ent->client->chase_target) {
-
-		client->resp.cmd_angles[0] = SHORT2ANGLE(ucmd->angles[0]);
-		client->resp.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
-		client->resp.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
-
-	} else {
-
+	{
 		// set up for pmove
 		memset (&pm, 0, sizeof(pm));
 
@@ -66504,7 +66300,6 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		if (memcmp(&client->old_pmove, &pm.s, sizeof(pm.s)))
 		{
 			pm.snapinitial = true;
-	//		PF_dprintf ("pmove changed!\n");
 		}
 
 		pm.cmd = *ucmd;
@@ -66593,13 +66388,6 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			client->weapon_thunk = true;
 			Think_Weapon (ent);
 		}
-	}
-
-	// update chase cam if being followed
-	for (i = 1; i <= 1; i++) {
-		other = g_edicts + i;
-		if (other->inuse && other->client->chase_target == ent)
-			UpdateChaseCam(other);
 	}
 }
 
@@ -66928,50 +66716,6 @@ void G_SetStats (edict_t *ent)
 		ent->client->ps.stats[STAT_HELPICON] = SV_ImageIndex (ent->client->pers.weapon->icon);
 	else
 		ent->client->ps.stats[STAT_HELPICON] = 0;
-
-	ent->client->ps.stats[STAT_SPECTATOR] = 0;
-}
-
-/*
-===============
-G_CheckChaseStats
-===============
-*/
-void G_CheckChaseStats (edict_t *ent)
-{
-	int i;
-	gclient_t *cl;
-
-	for (i = 1; i <= 1; i++) {
-		cl = g_edicts[i].client;
-		if (!g_edicts[i].inuse || cl->chase_target != ent)
-			continue;
-		memcpy(cl->ps.stats, ent->client->ps.stats, sizeof(cl->ps.stats));
-		G_SetSpectatorStats(g_edicts + i);
-	}
-}
-
-void G_SetSpectatorStats (edict_t *ent)
-{
-	gclient_t *cl = ent->client;
-
-	if (!cl->chase_target)
-		G_SetStats (ent);
-
-	cl->ps.stats[STAT_SPECTATOR] = 1;
-
-	// layouts are independant in spectator
-	cl->ps.stats[STAT_LAYOUTS] = 0;
-	if (cl->pers.health <= 0 || level.intermissiontime)
-		cl->ps.stats[STAT_LAYOUTS] |= 1;
-	if (cl->showinventory && cl->pers.health > 0)
-		cl->ps.stats[STAT_LAYOUTS] |= 2;
-
-	if (cl->chase_target && cl->chase_target->inuse)
-		cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS +
-			(cl->chase_target - g_edicts) - 1;
-	else
-		cl->ps.stats[STAT_CHASE] = 0;
 }
 
 // This is a circular list containing the a list of points of where the player has been recently.  It is used by monsters for pursuit.
@@ -68110,9 +67854,7 @@ void ClientEndServerFrame (edict_t *ent)
 	// should be determined by the client
 	SV_CalcBlend (ent);
 
-	// chase cam stuff
 	G_SetStats(ent);
-	G_CheckChaseStats(ent);
 
 	G_SetClientEvent (ent);
 
