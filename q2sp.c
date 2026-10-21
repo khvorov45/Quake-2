@@ -48,10 +48,16 @@ typedef struct {
 	i64 temp_memory_count;
 } Arena;
 
+typedef struct {
+	u8* pixels;
+	i64 width;
+	i64 height;
+} Texture;
+
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String text);
-typedef u8_Slice (*Load_Asset_By_Name_Proc)(String name);
+typedef Texture (*Load_Decompressed_PCX_Proc)(String name);
 
 // Platform is responsible for initialising this
 static struct {
@@ -61,7 +67,7 @@ static struct {
 	Exit_Process_Proc exit_process;
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
-	Load_Asset_By_Name_Proc load_asset_by_name;
+	Load_Decompressed_PCX_Proc load_decompressed_pcx;
 } context = {};
 
 //
@@ -117,6 +123,9 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 }
 
 #define arena_alloc_slice(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), (count)}
+#define arena_alloc_fixed_cap(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), 0, (count)}
+#define append_fixed_cap(arr, val) do {assert((arr)->len < (arr)->cap); (arr)->ptr[(arr)->len++] = val;} while(0)
+#define copy_slice(arena, dest, source, type) do {(dest)->len = (source)->len; (dest)->ptr = (type*)arena_alloc_bytes(arena, (dest)->len * sizeof(type)); copy_bytes((dest)->ptr, (source)->ptr, (dest)->len * sizeof(type));} while (0)
 
 //
 // SECTION Strings
@@ -142,6 +151,15 @@ static String string_from_cstring(char* cstring) {
 		while (cstring[len]) {len++;}
 		result = (String){cstring, len};
 	}
+	return result;
+}
+
+static String copy_string(Arena* arena, String text) {
+	i64 len_with_null = text.len + 1;
+	char* dest = arena_alloc_bytes(arena, len_with_null);
+	copy_bytes(dest, text.ptr, text.len);
+	dest[text.len] = 0;
+	String result = {dest, text.len};
 	return result;
 }
 
@@ -13541,8 +13559,6 @@ extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
 extern	cvar_t	*m_side;
-
-extern	cvar_t	*freelook;
 
 extern	cvar_t	*cl_lightlevel;	// FIXME HACK
 
@@ -61877,39 +61893,9 @@ static image_t* GL_FindImage(char* name, imagetype_t type) {
 		// Then load
 		if (!target_image) {
 			if (string_ends_with(name_str, STR(".pcx"))) {
-				// TODO: Do this at boot time
-				u8_Slice file_content = context.load_asset_by_name(name_str);
 
-				pcx_t* pcx = (pcx_t*)file_content.ptr;
-				assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
-
-				i64 width = pcx->xmax + 1;
-				i64 height = pcx->ymax + 1;
-				u8* pic = malloc((height) * (width));
-
-				{
-					u8* pix = pic;
-					u8* raw = &pcx->data;
-					for (i64 y = 0; y < height; y++, pix += width) {
-						for (i64 x = 0; x < width;) {
-							i64 dataByte = *raw++;
-
-							i64 runLength = 1;
-							if ((dataByte & 0xC0) == 0xC0) {
-								runLength = dataByte & 0x3F;
-								dataByte = *raw++;
-							}
-
-							while(runLength-- > 0) {
-								pix[x++] = dataByte;
-							}
-						}
-					}
-					assert(raw - (u8*)pcx <= file_content.len);
-				}
-
-				target_image = GL_LoadPic(name, pic, width, height, type, 8);
-				free(pic);
+				Texture texture = context.load_decompressed_pcx(name_str);
+				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, type, 8);
 
 			} else if (string_ends_with(name_str, STR(".wal"))) {
 
@@ -62678,15 +62664,8 @@ static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap) {
 	return GL_Upload32 (trans, width, height, mipmap);
 }
 
-
-/*
-================
-GL_LoadPic
-
-This is also used as an entry point for the generated r_notexture
-================
-*/
-image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits)
+// This is also used as an entry point for the generated r_notexture
+image_t* GL_LoadPic(char* name, u8* pic, int width, int height, imagetype_t type, int bits)
 {
 	image_t		*image;
 	int			i;
@@ -69646,13 +69625,13 @@ static void CL_Frame (int msec) {
 //
 
 typedef struct {
-	u8_Slice whole_file;
-	Pak_File_Infos infos;
-} Windows_Pak_File_Entry;
-typedef struct {Windows_Pak_File_Entry* ptr; i64 len;} Windows_Pak_File_Entries;
+	String name;
+	Texture texture;
+} Decompressed_PCX;
+typedef struct {Decompressed_PCX* ptr; i64 len;} Decompressed_PCXs;
 
 typedef struct {
-	Windows_Pak_File_Entries paks;
+	Decompressed_PCXs decompressed_pcxs;
 } Windows_Platform_Data;
 
 static void windows_exit_process() {
@@ -69718,35 +69697,19 @@ static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	return result;
 }
 
-static u8_Slice windows_load_asset_by_name(String name) {
-	Windows_Pak_File_Entries paks = ((Windows_Platform_Data*)context.platform_data)->paks;
+static Texture windows_load_decompressed_pcx(String name) {
+	Decompressed_PCXs pcxs = ((Windows_Platform_Data*)context.platform_data)->decompressed_pcxs;
 
-	Pak_File_Info* target_file_info = 0;
-	Windows_Pak_File_Entry* target_file_pak = 0;
-	for (i64 pak_index = paks.len - 1; !target_file_info && pak_index >= 0; pak_index--) {
-		Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
+	Texture result = {};
+	for (i64 ind = 0; ind < pcxs.len; ind++) {
+		Decompressed_PCX pcx = pcxs.ptr[ind];
 
-		for (i64 file_index = 0; !target_file_info && file_index < pak->infos.len; file_index++) {
-			Pak_File_Info* info = pak->infos.ptr + file_index;
-			String info_name = string_from_cstring(info->name);
-			assert(info_name.len > 0 && info_name.len < (i64)carray_count(info->name));
-
-			if (streq(info_name, name)) {
-				target_file_info = info;
-				target_file_pak = pak;
-			}
+		if (streq(pcx.name, name)) {
+			result = pcx.texture;
+			break;
 		}
 	}
-
-	u8_Slice result = {};
-	assert(target_file_info);
-	assert(target_file_pak);
-	assert(target_file_info->filepos >= (i64)sizeof(Pak_File_Header));
-	result.ptr = target_file_pak->whole_file.ptr + target_file_info->filepos;
-	assert(result.ptr < (u8*)target_file_pak->infos.ptr);
-	assert(target_file_info->filelen > 0);
-	result.len = target_file_info->filelen;
-	assert((result.ptr + result.len) <= (u8*)target_file_pak->infos.ptr);
+	assert(result.pixels);
 
 	return result;
 }
@@ -69777,7 +69740,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 	context.debug_log = windows_debug_log;
-	context.load_asset_by_name = windows_load_asset_by_name;
+	context.load_decompressed_pcx = windows_load_decompressed_pcx;
 
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
@@ -70073,7 +70036,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_pitchspeed = COM_GetCvar ("cl_pitchspeed", "150", 0);
 		cl_anglespeedkey = COM_GetCvar ("cl_anglespeedkey", "1.5", 0);
 		cl_run = COM_GetCvar ("cl_run", "0", CVAR_ARCHIVE);
-		freelook = COM_GetCvar( "freelook", "0", CVAR_ARCHIVE );
+		freelook = COM_GetCvar( "freelook", "1", CVAR_ARCHIVE );
 		lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
 		lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
 		sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
@@ -70128,12 +70091,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
 	// TODO: complete
 	temp_memory_block(&context.memory.temp) {
-		// NOTE: Load pre-existing
+		// TODO: Once all the files are processed, the raw paks/loose files can move to temp memory
+
+		typedef struct {
+			u8_Slice whole_file;
+			Pak_File_Infos infos;
+		} Windows_Pak_File_Entry;
+		typedef struct {Windows_Pak_File_Entry* ptr; i64 len;} Windows_Pak_File_Entries;
+
+		// NOTE: Load pre-existing pak files
 		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
-		windows_platform_data.paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
+		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
 		for (i64 ind = 0; ind < preexisting_pak_paths.len; ind++) {
 			String file_path = preexisting_pak_paths.ptr[ind];
-			Windows_Pak_File_Entry* dest_entry = windows_platform_data.paks.ptr + ind;
+			Windows_Pak_File_Entry* dest_entry = paks.ptr + ind;
 
 			dest_entry->whole_file = windows_read_entire_file(&context.memory.perm, file_path);
 			Pak_File_Header* header = (Pak_File_Header*)dest_entry->whole_file.ptr;
@@ -70158,7 +70129,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			STR("baseq2/players/male/*"),
 			STR("baseq2/players/zumlin/*"),
 		);
-		Windows_Pak_File_Entry* loose_files_pak = windows_platform_data.paks.ptr + windows_platform_data.paks.len - 1;
+		Windows_Pak_File_Entry* loose_files_pak = paks.ptr + paks.len - 1;
 		loose_files_pak->whole_file = (u8_Slice)arena_alloc_slice(&context.memory.perm, u8, 500 * Megabyte);
 		Pak_File_Header* loose_files_header = (Pak_File_Header*)loose_files_pak->whole_file.ptr;
 		*loose_files_header = (Pak_File_Header){id_pack_header_magic, 490 * Megabyte, 0};
@@ -70196,32 +70167,90 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// NOTE: Process the files to get the data we actually want
-		// TODO: Once all the files are processed, the raw paks/loose files can move to temp memory
+		typedef struct {Decompressed_PCX* ptr; i64 len; i64 cap;} Decompressed_PCXs_Fixed_Cap;
+		Decompressed_PCXs_Fixed_Cap temp_decompressed_pcxs = arena_alloc_fixed_cap(&context.memory.temp, Decompressed_PCX, 1024);
+		for (i64 pak_index = paks.len - 1; pak_index >= 0; pak_index--) {
+			Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
 
-		// NOTE: Colormap init
-		// TODO: unglobal
-		{
-			// NOTE: Palette is just at the end of the file
-			u8_Slice palette = {};
-			i64 palette_value_count = 256;
-			{
-				u8_Slice file_content = context.load_asset_by_name(STR("pics/colormap.pcx"));
-				palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
-				assert(file_content.len >= palette.len);
-				palette.ptr = file_content.ptr + file_content.len - palette.len;
-			}
+			for (i64 file_index = 0; file_index < pak->infos.len; file_index++) {
+				Pak_File_Info* info = pak->infos.ptr + file_index;
+				String info_name = string_from_cstring(info->name);
+				assert(info_name.len > 0 && info_name.len < (i64)carray_count(info->name));
 
-			for (i64 ind = 0; ind < palette_value_count; ind++) {
-				u32 red = palette.ptr[ind * 3 + 0];
-				u32 grn = palette.ptr[ind * 3 + 1];
-				u32 blu = palette.ptr[ind * 3 + 2];
+				u8_Slice file_content = {};
+				{
+					assert(info->filepos >= (i64)sizeof(Pak_File_Header));
+					file_content.ptr = pak->whole_file.ptr + info->filepos;
+					assert(file_content.ptr < (u8*)pak->infos.ptr);
+					assert(info->filelen > 0);
+					file_content.len = info->filelen;
+					assert((file_content.ptr + file_content.len) <= (u8*)pak->infos.ptr);
+				}
 
-				u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
-				d_8to24table[ind] = val;
-			}
-			d_8to24table[255] &= 0xffffff;
-		}
-	}
+				if (streq(info_name, STR("pics/colormap.pcx"))) {
+					// NOTE: Colormap init
+					// TODO: unglobal
+
+					// NOTE: Palette is just at the end of the file
+					u8_Slice palette = {};
+					i64 palette_value_count = 256;
+					{
+						palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
+						assert(file_content.len >= palette.len);
+						palette.ptr = file_content.ptr + file_content.len - palette.len;
+					}
+
+					for (i64 ind = 0; ind < palette_value_count; ind++) {
+						u32 red = palette.ptr[ind * 3 + 0];
+						u32 grn = palette.ptr[ind * 3 + 1];
+						u32 blu = palette.ptr[ind * 3 + 2];
+
+						u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
+						d_8to24table[ind] = val;
+					}
+					d_8to24table[255] &= 0xffffff;
+
+				} else if (string_ends_with(info_name, STR(".pcx"))) {
+					// NOTE: Unpack PCX
+					pcx_t* pcx = (pcx_t*)file_content.ptr;
+					assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
+
+					Decompressed_PCX decomp = {
+						.name = copy_string(&context.memory.perm, info_name),
+						.texture = {
+							.width = pcx->xmax + 1,
+							.height = pcx->ymax + 1,
+							.pixels = arena_alloc_bytes(&context.memory.perm, (pcx->xmax + 1) * (pcx->ymax + 1)),
+						},
+					};
+
+					{
+						u8* pix = decomp.texture.pixels;
+						u8* raw = &pcx->data;
+						for (i64 y = 0; y < decomp.texture.height; y++, pix += decomp.texture.width) {
+							for (i64 x = 0; x < decomp.texture.width;) {
+								i64 dataByte = *raw++;
+
+								i64 runLength = 1;
+								if ((dataByte & 0xC0) == 0xC0) {
+									runLength = dataByte & 0x3F;
+									dataByte = *raw++;
+								}
+
+								while(runLength-- > 0) {
+									pix[x++] = dataByte;
+								}
+							}
+						}
+						assert(raw - (u8*)pcx <= file_content.len);
+					}
+
+					append_fixed_cap(&temp_decompressed_pcxs, decomp);
+				} // file processing
+			} // for file
+		} // for pak
+		copy_slice(&context.memory.perm, &windows_platform_data.decompressed_pcxs, &temp_decompressed_pcxs, Decompressed_PCX);
+	} // load assets
 
 	// TODO: Remove
 	#if 1
