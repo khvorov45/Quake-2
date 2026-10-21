@@ -29825,204 +29825,6 @@ void ai_run (edict_t* self, float dist)
 		self->goalentity = save;
 }
 
-#define FRAME_stand01         	0
-#define FRAME_stand02         	1
-#define FRAME_stand03         	2
-#define FRAME_stand04         	3
-#define FRAME_stand05         	4
-#define FRAME_stand06         	5
-#define FRAME_stand07         	6
-#define FRAME_stand08         	7
-#define FRAME_stand09         	8
-#define FRAME_stand10         	9
-#define FRAME_stand11         	10
-#define FRAME_stand12         	11
-#define FRAME_stand13         	12
-#define FRAME_stand14         	13
-#define FRAME_stand15         	14
-#define FRAME_stand16         	15
-#define FRAME_stand17         	16
-#define FRAME_stand18         	17
-#define FRAME_stand19         	18
-#define FRAME_stand20         	19
-#define FRAME_stand21         	20
-#define FRAME_stand22         	21
-#define FRAME_stand23         	22
-#define FRAME_stand24         	23
-#define FRAME_stand25         	24
-#define FRAME_stand26         	25
-#define FRAME_stand27         	26
-#define FRAME_stand28         	27
-#define FRAME_stand29         	28
-#define FRAME_stand30         	29
-#define FRAME_stand31         	30
-#define FRAME_stand32         	31
-#define FRAME_stand33         	32
-#define FRAME_stand34         	33
-#define FRAME_stand35         	34
-#define FRAME_stand36         	35
-#define FRAME_stand37         	36
-#define FRAME_stand38         	37
-#define FRAME_stand39         	38
-#define FRAME_stand40         	39
-#define FRAME_run1            	40
-#define FRAME_run2            	41
-#define FRAME_run3            	42
-#define FRAME_run4            	43
-#define FRAME_run5            	44
-#define FRAME_run6            	45
-#define FRAME_attack1         	46
-#define FRAME_attack2         	47
-#define FRAME_attack3         	48
-#define FRAME_attack4         	49
-#define FRAME_attack5         	50
-#define FRAME_attack6         	51
-#define FRAME_attack7         	52
-#define FRAME_attack8         	53
-#define FRAME_pain101         	54
-#define FRAME_pain102         	55
-#define FRAME_pain103         	56
-#define FRAME_pain104         	57
-#define FRAME_pain201         	58
-#define FRAME_pain202         	59
-#define FRAME_pain203         	60
-#define FRAME_pain204         	61
-#define FRAME_pain301         	62
-#define FRAME_pain302         	63
-#define FRAME_pain303         	64
-#define FRAME_pain304         	65
-#define FRAME_jump1           	66
-#define FRAME_jump2           	67
-#define FRAME_jump3           	68
-#define FRAME_jump4           	69
-#define FRAME_jump5           	70
-#define FRAME_jump6           	71
-#define FRAME_flip01          	72
-#define FRAME_flip02          	73
-#define FRAME_flip03          	74
-#define FRAME_flip04          	75
-#define FRAME_flip05          	76
-#define FRAME_flip06          	77
-#define FRAME_flip07          	78
-#define FRAME_flip08          	79
-#define FRAME_flip09          	80
-#define FRAME_flip10          	81
-#define FRAME_flip11          	82
-#define FRAME_flip12          	83
-#define FRAME_salute01        	84
-#define FRAME_salute02        	85
-#define FRAME_salute03        	86
-#define FRAME_salute04        	87
-#define FRAME_salute05        	88
-#define FRAME_salute06        	89
-#define FRAME_salute07        	90
-#define FRAME_salute08        	91
-#define FRAME_salute09        	92
-#define FRAME_salute10        	93
-#define FRAME_salute11        	94
-#define FRAME_taunt01         	95
-#define FRAME_taunt02         	96
-#define FRAME_taunt03         	97
-#define FRAME_taunt04         	98
-#define FRAME_taunt05         	99
-#define FRAME_taunt06         	100
-#define FRAME_taunt07         	101
-#define FRAME_taunt08         	102
-#define FRAME_taunt09         	103
-#define FRAME_taunt10         	104
-#define FRAME_taunt11         	105
-#define FRAME_taunt12         	106
-#define FRAME_taunt13         	107
-#define FRAME_taunt14         	108
-#define FRAME_taunt15         	109
-#define FRAME_taunt16         	110
-#define FRAME_taunt17         	111
-#define FRAME_wave01          	112
-#define FRAME_wave02          	113
-#define FRAME_wave03          	114
-#define FRAME_wave04          	115
-#define FRAME_wave05          	116
-#define FRAME_wave06          	117
-#define FRAME_wave07          	118
-#define FRAME_wave08          	119
-#define FRAME_wave09          	120
-#define FRAME_wave10          	121
-#define FRAME_wave11          	122
-#define FRAME_point01         	123
-#define FRAME_point02         	124
-#define FRAME_point03         	125
-#define FRAME_point04         	126
-#define FRAME_point05         	127
-#define FRAME_point06         	128
-#define FRAME_point07         	129
-#define FRAME_point08         	130
-#define FRAME_point09         	131
-#define FRAME_point10         	132
-#define FRAME_point11         	133
-#define FRAME_point12         	134
-#define FRAME_crstnd01        	135
-#define FRAME_crstnd02        	136
-#define FRAME_crstnd03        	137
-#define FRAME_crstnd04        	138
-#define FRAME_crstnd05        	139
-#define FRAME_crstnd06        	140
-#define FRAME_crstnd07        	141
-#define FRAME_crstnd08        	142
-#define FRAME_crstnd09        	143
-#define FRAME_crstnd10        	144
-#define FRAME_crstnd11        	145
-#define FRAME_crstnd12        	146
-#define FRAME_crstnd13        	147
-#define FRAME_crstnd14        	148
-#define FRAME_crstnd15        	149
-#define FRAME_crstnd16        	150
-#define FRAME_crstnd17        	151
-#define FRAME_crstnd18        	152
-#define FRAME_crstnd19        	153
-#define FRAME_crwalk1         	154
-#define FRAME_crwalk2         	155
-#define FRAME_crwalk3         	156
-#define FRAME_crwalk4         	157
-#define FRAME_crwalk5         	158
-#define FRAME_crwalk6         	159
-#define FRAME_crattak1        	160
-#define FRAME_crattak2        	161
-#define FRAME_crattak3        	162
-#define FRAME_crattak4        	163
-#define FRAME_crattak5        	164
-#define FRAME_crattak6        	165
-#define FRAME_crattak7        	166
-#define FRAME_crattak8        	167
-#define FRAME_crattak9        	168
-#define FRAME_crpain1         	169
-#define FRAME_crpain2         	170
-#define FRAME_crpain3         	171
-#define FRAME_crpain4         	172
-#define FRAME_crdeath1        	173
-#define FRAME_crdeath2        	174
-#define FRAME_crdeath3        	175
-#define FRAME_crdeath4        	176
-#define FRAME_crdeath5        	177
-#define FRAME_death101        	178
-#define FRAME_death102        	179
-#define FRAME_death103        	180
-#define FRAME_death104        	181
-#define FRAME_death105        	182
-#define FRAME_death106        	183
-#define FRAME_death201        	184
-#define FRAME_death202        	185
-#define FRAME_death203        	186
-#define FRAME_death204        	187
-#define FRAME_death205        	188
-#define FRAME_death206        	189
-#define FRAME_death301        	190
-#define FRAME_death302        	191
-#define FRAME_death303        	192
-#define FRAME_death304        	193
-#define FRAME_death305        	194
-#define FRAME_death306        	195
-#define FRAME_death307        	196
-#define FRAME_death308        	197
 
 #define MODEL_SCALE		1.000000
 
@@ -30602,29 +30404,29 @@ static void Cmd_Wave_f(edict_t* ent) {
 	{
 	case 0:
 		PF_cprintf (ent, PRINT_HIGH, "flipoff\n");
-		ent->s.frame = FRAME_flip01-1;
-		ent->client->anim_end = FRAME_flip12;
+		ent->s.frame = 72-1;
+		ent->client->anim_end = 83;
 		break;
 	case 1:
 		PF_cprintf (ent, PRINT_HIGH, "salute\n");
-		ent->s.frame = FRAME_salute01-1;
-		ent->client->anim_end = FRAME_salute11;
+		ent->s.frame = 84-1;
+		ent->client->anim_end = 94;
 		break;
 	case 2:
 		PF_cprintf (ent, PRINT_HIGH, "taunt\n");
-		ent->s.frame = FRAME_taunt01-1;
-		ent->client->anim_end = FRAME_taunt17;
+		ent->s.frame = 95-1;
+		ent->client->anim_end = 111;
 		break;
 	case 3:
 		PF_cprintf (ent, PRINT_HIGH, "wave\n");
-		ent->s.frame = FRAME_wave01-1;
-		ent->client->anim_end = FRAME_wave11;
+		ent->s.frame = 112-1;
+		ent->client->anim_end = 122;
 		break;
 	case 4:
 	default:
 		PF_cprintf (ent, PRINT_HIGH, "point\n");
-		ent->s.frame = FRAME_point01-1;
-		ent->client->anim_end = FRAME_point12;
+		ent->s.frame = 123-1;
+		ent->client->anim_end = 134;
 		break;
 	}
 }
@@ -43826,567 +43628,6 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_attak01         	0
-#define FRAME_attak02         	1
-#define FRAME_attak03         	2
-#define FRAME_attak04         	3
-#undef FRAME_death101
-#define FRAME_death101        	4
-#undef FRAME_death102
-#define FRAME_death102        	5
-#undef FRAME_death103
-#define FRAME_death103        	6
-#undef FRAME_death104
-#define FRAME_death104        	7
-#undef FRAME_death105
-#define FRAME_death105        	8
-#undef FRAME_death106
-#define FRAME_death106        	9
-#define FRAME_death107        	10
-#undef FRAME_death201
-#define FRAME_death201        	11
-#undef FRAME_death202
-#define FRAME_death202        	12
-#undef FRAME_death203
-#define FRAME_death203        	13
-#undef FRAME_death204
-#define FRAME_death204        	14
-#undef FRAME_death205
-#define FRAME_death205        	15
-#undef FRAME_death206
-#define FRAME_death206        	16
-#define FRAME_death207        	17
-#define FRAME_death208        	18
-#define FRAME_death209        	19
-#define FRAME_death210        	20
-#define FRAME_death211        	21
-#define FRAME_death212        	22
-#define FRAME_death213        	23
-#undef FRAME_death301
-#define FRAME_death301        	24
-#undef FRAME_death302
-#define FRAME_death302        	25
-#undef FRAME_death303
-#define FRAME_death303        	26
-#undef FRAME_death304
-#define FRAME_death304        	27
-#undef FRAME_death305
-#define FRAME_death305        	28
-#undef FRAME_death306
-#define FRAME_death306        	29
-#undef FRAME_death307
-#define FRAME_death307        	30
-#undef FRAME_death308
-#define FRAME_death308        	31
-#define FRAME_death309        	32
-#define FRAME_death310        	33
-#define FRAME_death311        	34
-#define FRAME_death312        	35
-#define FRAME_death313        	36
-#define FRAME_death314        	37
-#define FRAME_death315        	38
-#undef FRAME_flip01
-#define FRAME_flip01          	39
-#undef FRAME_flip02
-#define FRAME_flip02          	40
-#undef FRAME_flip03
-#define FRAME_flip03          	41
-#undef FRAME_flip04
-#define FRAME_flip04          	42
-#undef FRAME_flip05
-#define FRAME_flip05          	43
-#undef FRAME_flip06
-#define FRAME_flip06          	44
-#undef FRAME_flip07
-#define FRAME_flip07          	45
-#undef FRAME_flip08
-#define FRAME_flip08          	46
-#undef FRAME_flip09
-#define FRAME_flip09          	47
-#undef FRAME_flip10
-#define FRAME_flip10          	48
-#undef FRAME_flip11
-#define FRAME_flip11          	49
-#undef FRAME_flip12
-#define FRAME_flip12          	50
-#define FRAME_flip13          	51
-#define FRAME_flip14          	52
-#define FRAME_grenad01        	53
-#define FRAME_grenad02        	54
-#define FRAME_grenad03        	55
-#define FRAME_grenad04        	56
-#define FRAME_grenad05        	57
-#define FRAME_grenad06        	58
-#define FRAME_grenad07        	59
-#define FRAME_grenad08        	60
-#define FRAME_grenad09        	61
-#define FRAME_grenad10        	62
-#define FRAME_grenad11        	63
-#define FRAME_grenad12        	64
-#define FRAME_grenad13        	65
-#define FRAME_grenad14        	66
-#define FRAME_grenad15        	67
-#define FRAME_jump01          	68
-#define FRAME_jump02          	69
-#define FRAME_jump03          	70
-#define FRAME_jump04          	71
-#define FRAME_jump05          	72
-#define FRAME_jump06          	73
-#undef FRAME_pain101
-#define FRAME_pain101         	74
-#undef FRAME_pain102
-#define FRAME_pain102         	75
-#undef FRAME_pain103
-#define FRAME_pain103         	76
-#undef FRAME_pain201
-#define FRAME_pain201         	77
-#undef FRAME_pain202
-#define FRAME_pain202         	78
-#undef FRAME_pain203
-#define FRAME_pain203         	79
-#undef FRAME_pain301
-#define FRAME_pain301         	80
-#undef FRAME_pain302
-#define FRAME_pain302         	81
-#undef FRAME_pain303
-#define FRAME_pain303         	82
-#define FRAME_push01          	83
-#define FRAME_push02          	84
-#define FRAME_push03          	85
-#define FRAME_push04          	86
-#define FRAME_push05          	87
-#define FRAME_push06          	88
-#define FRAME_push07          	89
-#define FRAME_push08          	90
-#define FRAME_push09          	91
-#define FRAME_run01           	92
-#define FRAME_run02           	93
-#define FRAME_run03           	94
-#define FRAME_run04           	95
-#define FRAME_run05           	96
-#define FRAME_run06           	97
-#define FRAME_run07           	98
-#define FRAME_run08           	99
-#define FRAME_run09           	100
-#define FRAME_run10           	101
-#define FRAME_run11           	102
-#define FRAME_run12           	103
-#define FRAME_runs01          	104
-#define FRAME_runs02          	105
-#define FRAME_runs03          	106
-#define FRAME_runs04          	107
-#define FRAME_runs05          	108
-#define FRAME_runs06          	109
-#define FRAME_runs07          	110
-#define FRAME_runs08          	111
-#define FRAME_runs09          	112
-#define FRAME_runs10          	113
-#define FRAME_runs11          	114
-#define FRAME_runs12          	115
-#undef FRAME_salute01
-#define FRAME_salute01        	116
-#undef FRAME_salute02
-#define FRAME_salute02        	117
-#undef FRAME_salute03
-#define FRAME_salute03        	118
-#undef FRAME_salute04
-#define FRAME_salute04        	119
-#undef FRAME_salute05
-#define FRAME_salute05        	120
-#undef FRAME_salute06
-#define FRAME_salute06        	121
-#undef FRAME_salute07
-#define FRAME_salute07        	122
-#undef FRAME_salute08
-#define FRAME_salute08        	123
-#undef FRAME_salute09
-#define FRAME_salute09        	124
-#undef FRAME_salute10
-#define FRAME_salute10        	125
-#undef FRAME_salute11
-#define FRAME_salute11        	126
-#define FRAME_salute12        	127
-#define FRAME_stand101        	128
-#define FRAME_stand102        	129
-#define FRAME_stand103        	130
-#define FRAME_stand104        	131
-#define FRAME_stand105        	132
-#define FRAME_stand106        	133
-#define FRAME_stand107        	134
-#define FRAME_stand108        	135
-#define FRAME_stand109        	136
-#define FRAME_stand110        	137
-#define FRAME_stand111        	138
-#define FRAME_stand112        	139
-#define FRAME_stand113        	140
-#define FRAME_stand114        	141
-#define FRAME_stand115        	142
-#define FRAME_stand116        	143
-#define FRAME_stand117        	144
-#define FRAME_stand118        	145
-#define FRAME_stand119        	146
-#define FRAME_stand120        	147
-#define FRAME_stand121        	148
-#define FRAME_stand122        	149
-#define FRAME_stand123        	150
-#define FRAME_stand124        	151
-#define FRAME_stand125        	152
-#define FRAME_stand126        	153
-#define FRAME_stand127        	154
-#define FRAME_stand128        	155
-#define FRAME_stand129        	156
-#define FRAME_stand130        	157
-#define FRAME_stand131        	158
-#define FRAME_stand132        	159
-#define FRAME_stand133        	160
-#define FRAME_stand134        	161
-#define FRAME_stand135        	162
-#define FRAME_stand136        	163
-#define FRAME_stand137        	164
-#define FRAME_stand138        	165
-#define FRAME_stand139        	166
-#define FRAME_stand140        	167
-#define FRAME_stand201        	168
-#define FRAME_stand202        	169
-#define FRAME_stand203        	170
-#define FRAME_stand204        	171
-#define FRAME_stand205        	172
-#define FRAME_stand206        	173
-#define FRAME_stand207        	174
-#define FRAME_stand208        	175
-#define FRAME_stand209        	176
-#define FRAME_stand210        	177
-#define FRAME_stand211        	178
-#define FRAME_stand212        	179
-#define FRAME_stand213        	180
-#define FRAME_stand214        	181
-#define FRAME_stand215        	182
-#define FRAME_stand216        	183
-#define FRAME_stand217        	184
-#define FRAME_stand218        	185
-#define FRAME_stand219        	186
-#define FRAME_stand220        	187
-#define FRAME_stand221        	188
-#define FRAME_stand222        	189
-#define FRAME_stand223        	190
-#define FRAME_swim01          	191
-#define FRAME_swim02          	192
-#define FRAME_swim03          	193
-#define FRAME_swim04          	194
-#define FRAME_swim05          	195
-#define FRAME_swim06          	196
-#define FRAME_swim07          	197
-#define FRAME_swim08          	198
-#define FRAME_swim09          	199
-#define FRAME_swim10          	200
-#define FRAME_swim11          	201
-#define FRAME_swim12          	202
-#define FRAME_sw_atk01        	203
-#define FRAME_sw_atk02        	204
-#define FRAME_sw_atk03        	205
-#define FRAME_sw_atk04        	206
-#define FRAME_sw_atk05        	207
-#define FRAME_sw_atk06        	208
-#define FRAME_sw_pan01        	209
-#define FRAME_sw_pan02        	210
-#define FRAME_sw_pan03        	211
-#define FRAME_sw_pan04        	212
-#define FRAME_sw_pan05        	213
-#define FRAME_sw_std01        	214
-#define FRAME_sw_std02        	215
-#define FRAME_sw_std03        	216
-#define FRAME_sw_std04        	217
-#define FRAME_sw_std05        	218
-#define FRAME_sw_std06        	219
-#define FRAME_sw_std07        	220
-#define FRAME_sw_std08        	221
-#define FRAME_sw_std09        	222
-#define FRAME_sw_std10        	223
-#define FRAME_sw_std11        	224
-#define FRAME_sw_std12        	225
-#define FRAME_sw_std13        	226
-#define FRAME_sw_std14        	227
-#define FRAME_sw_std15        	228
-#define FRAME_sw_std16        	229
-#define FRAME_sw_std17        	230
-#define FRAME_sw_std18        	231
-#define FRAME_sw_std19        	232
-#define FRAME_sw_std20        	233
-#undef FRAME_taunt01
-#define FRAME_taunt01         	234
-#undef FRAME_taunt02
-#define FRAME_taunt02         	235
-#undef FRAME_taunt03
-#define FRAME_taunt03         	236
-#undef FRAME_taunt04
-#define FRAME_taunt04         	237
-#undef FRAME_taunt05
-#define FRAME_taunt05         	238
-#undef FRAME_taunt06
-#define FRAME_taunt06         	239
-#undef FRAME_taunt07
-#define FRAME_taunt07         	240
-#undef FRAME_taunt08
-#define FRAME_taunt08         	241
-#undef FRAME_taunt09
-#define FRAME_taunt09         	242
-#undef FRAME_taunt10
-#define FRAME_taunt10         	243
-#undef FRAME_taunt11
-#define FRAME_taunt11         	244
-#undef FRAME_taunt12
-#define FRAME_taunt12         	245
-#undef FRAME_taunt13
-#define FRAME_taunt13         	246
-#undef FRAME_taunt14
-#define FRAME_taunt14         	247
-#undef FRAME_taunt15
-#define FRAME_taunt15         	248
-#undef FRAME_taunt16
-#define FRAME_taunt16         	249
-#undef FRAME_taunt17
-#define FRAME_taunt17         	250
-#define FRAME_walk01          	251
-#define FRAME_walk02          	252
-#define FRAME_walk03          	253
-#define FRAME_walk04          	254
-#define FRAME_walk05          	255
-#define FRAME_walk06          	256
-#define FRAME_walk07          	257
-#define FRAME_walk08          	258
-#define FRAME_walk09          	259
-#define FRAME_walk10          	260
-#define FRAME_walk11          	261
-#undef FRAME_wave01
-#define FRAME_wave01          	262
-#undef FRAME_wave02
-#define FRAME_wave02          	263
-#undef FRAME_wave03
-#define FRAME_wave03          	264
-#undef FRAME_wave04
-#define FRAME_wave04          	265
-#undef FRAME_wave05
-#define FRAME_wave05          	266
-#undef FRAME_wave06
-#define FRAME_wave06          	267
-#undef FRAME_wave07
-#define FRAME_wave07          	268
-#undef FRAME_wave08
-#define FRAME_wave08          	269
-#undef FRAME_wave09
-#define FRAME_wave09          	270
-#undef FRAME_wave10
-#define FRAME_wave10          	271
-#undef FRAME_wave11
-#define FRAME_wave11          	272
-#define FRAME_wave12          	273
-#define FRAME_wave13          	274
-#define FRAME_wave14          	275
-#define FRAME_wave15          	276
-#define FRAME_wave16          	277
-#define FRAME_wave17          	278
-#define FRAME_wave18          	279
-#define FRAME_wave19          	280
-#define FRAME_wave20          	281
-#define FRAME_wave21          	282
-#define FRAME_bl_atk01        	283
-#define FRAME_bl_atk02        	284
-#define FRAME_bl_atk03        	285
-#define FRAME_bl_atk04        	286
-#define FRAME_bl_atk05        	287
-#define FRAME_bl_atk06        	288
-#define FRAME_bl_flp01        	289
-#define FRAME_bl_flp02        	290
-#define FRAME_bl_flp13        	291
-#define FRAME_bl_flp14        	292
-#define FRAME_bl_flp15        	293
-#define FRAME_bl_jmp01        	294
-#define FRAME_bl_jmp02        	295
-#define FRAME_bl_jmp03        	296
-#define FRAME_bl_jmp04        	297
-#define FRAME_bl_jmp05        	298
-#define FRAME_bl_jmp06        	299
-#define FRAME_bl_pn101        	300
-#define FRAME_bl_pn102        	301
-#define FRAME_bl_pn103        	302
-#define FRAME_bl_pn201        	303
-#define FRAME_bl_pn202        	304
-#define FRAME_bl_pn203        	305
-#define FRAME_bl_pn301        	306
-#define FRAME_bl_pn302        	307
-#define FRAME_bl_pn303        	308
-#define FRAME_bl_psh08        	309
-#define FRAME_bl_psh09        	310
-#define FRAME_bl_run01        	311
-#define FRAME_bl_run02        	312
-#define FRAME_bl_run03        	313
-#define FRAME_bl_run04        	314
-#define FRAME_bl_run05        	315
-#define FRAME_bl_run06        	316
-#define FRAME_bl_run07        	317
-#define FRAME_bl_run08        	318
-#define FRAME_bl_run09        	319
-#define FRAME_bl_run10        	320
-#define FRAME_bl_run11        	321
-#define FRAME_bl_run12        	322
-#define FRAME_bl_rns03        	323
-#define FRAME_bl_rns04        	324
-#define FRAME_bl_rns05        	325
-#define FRAME_bl_rns06        	326
-#define FRAME_bl_rns07        	327
-#define FRAME_bl_rns08        	328
-#define FRAME_bl_rns09        	329
-#define FRAME_bl_sal10        	330
-#define FRAME_bl_sal11        	331
-#define FRAME_bl_sal12        	332
-#define FRAME_bl_std01        	333
-#define FRAME_bl_std02        	334
-#define FRAME_bl_std03        	335
-#define FRAME_bl_std04        	336
-#define FRAME_bl_std05        	337
-#define FRAME_bl_std06        	338
-#define FRAME_bl_std07        	339
-#define FRAME_bl_std08        	340
-#define FRAME_bl_std09        	341
-#define FRAME_bl_std10        	342
-#define FRAME_bl_std11        	343
-#define FRAME_bl_std12        	344
-#define FRAME_bl_std13        	345
-#define FRAME_bl_std14        	346
-#define FRAME_bl_std15        	347
-#define FRAME_bl_std16        	348
-#define FRAME_bl_std17        	349
-#define FRAME_bl_std18        	350
-#define FRAME_bl_std19        	351
-#define FRAME_bl_std20        	352
-#define FRAME_bl_std21        	353
-#define FRAME_bl_std22        	354
-#define FRAME_bl_std23        	355
-#define FRAME_bl_std24        	356
-#define FRAME_bl_std25        	357
-#define FRAME_bl_std26        	358
-#define FRAME_bl_std27        	359
-#define FRAME_bl_std28        	360
-#define FRAME_bl_std29        	361
-#define FRAME_bl_std30        	362
-#define FRAME_bl_std31        	363
-#define FRAME_bl_std32        	364
-#define FRAME_bl_std33        	365
-#define FRAME_bl_std34        	366
-#define FRAME_bl_std35        	367
-#define FRAME_bl_std36        	368
-#define FRAME_bl_std37        	369
-#define FRAME_bl_std38        	370
-#define FRAME_bl_std39        	371
-#define FRAME_bl_std40        	372
-#define FRAME_bl_swm01        	373
-#define FRAME_bl_swm02        	374
-#define FRAME_bl_swm03        	375
-#define FRAME_bl_swm04        	376
-#define FRAME_bl_swm05        	377
-#define FRAME_bl_swm06        	378
-#define FRAME_bl_swm07        	379
-#define FRAME_bl_swm08        	380
-#define FRAME_bl_swm09        	381
-#define FRAME_bl_swm10        	382
-#define FRAME_bl_swm11        	383
-#define FRAME_bl_swm12        	384
-#define FRAME_bl_swk01        	385
-#define FRAME_bl_swk02        	386
-#define FRAME_bl_swk03        	387
-#define FRAME_bl_swk04        	388
-#define FRAME_bl_swk05        	389
-#define FRAME_bl_swk06        	390
-#define FRAME_bl_swp01        	391
-#define FRAME_bl_swp02        	392
-#define FRAME_bl_swp03        	393
-#define FRAME_bl_swp04        	394
-#define FRAME_bl_swp05        	395
-#define FRAME_bl_sws01        	396
-#define FRAME_bl_sws02        	397
-#define FRAME_bl_sws03        	398
-#define FRAME_bl_sws04        	399
-#define FRAME_bl_sws05        	400
-#define FRAME_bl_sws06        	401
-#define FRAME_bl_sws07        	402
-#define FRAME_bl_sws08        	403
-#define FRAME_bl_sws09        	404
-#define FRAME_bl_sws10        	405
-#define FRAME_bl_sws11        	406
-#define FRAME_bl_sws12        	407
-#define FRAME_bl_sws13        	408
-#define FRAME_bl_sws14        	409
-#define FRAME_bl_tau14        	410
-#define FRAME_bl_tau15        	411
-#define FRAME_bl_tau16        	412
-#define FRAME_bl_tau17        	413
-#define FRAME_bl_wlk01        	414
-#define FRAME_bl_wlk02        	415
-#define FRAME_bl_wlk03        	416
-#define FRAME_bl_wlk04        	417
-#define FRAME_bl_wlk05        	418
-#define FRAME_bl_wlk06        	419
-#define FRAME_bl_wlk07        	420
-#define FRAME_bl_wlk08        	421
-#define FRAME_bl_wlk09        	422
-#define FRAME_bl_wlk10        	423
-#define FRAME_bl_wlk11        	424
-#define FRAME_bl_wav19        	425
-#define FRAME_bl_wav20        	426
-#define FRAME_bl_wav21        	427
-#define FRAME_cr_atk01        	428
-#define FRAME_cr_atk02        	429
-#define FRAME_cr_atk03        	430
-#define FRAME_cr_atk04        	431
-#define FRAME_cr_atk05        	432
-#define FRAME_cr_atk06        	433
-#define FRAME_cr_atk07        	434
-#define FRAME_cr_atk08        	435
-#define FRAME_cr_pan01        	436
-#define FRAME_cr_pan02        	437
-#define FRAME_cr_pan03        	438
-#define FRAME_cr_pan04        	439
-#define FRAME_cr_std01        	440
-#define FRAME_cr_std02        	441
-#define FRAME_cr_std03        	442
-#define FRAME_cr_std04        	443
-#define FRAME_cr_std05        	444
-#define FRAME_cr_std06        	445
-#define FRAME_cr_std07        	446
-#define FRAME_cr_std08        	447
-#define FRAME_cr_wlk01        	448
-#define FRAME_cr_wlk02        	449
-#define FRAME_cr_wlk03        	450
-#define FRAME_cr_wlk04        	451
-#define FRAME_cr_wlk05        	452
-#define FRAME_cr_wlk06        	453
-#define FRAME_cr_wlk07        	454
-#define FRAME_crbl_a01        	455
-#define FRAME_crbl_a02        	456
-#define FRAME_crbl_a03        	457
-#define FRAME_crbl_a04        	458
-#define FRAME_crbl_a05        	459
-#define FRAME_crbl_a06        	460
-#define FRAME_crbl_a07        	461
-#define FRAME_crbl_p01        	462
-#define FRAME_crbl_p02        	463
-#define FRAME_crbl_p03        	464
-#define FRAME_crbl_p04        	465
-#define FRAME_crbl_s01        	466
-#define FRAME_crbl_s02        	467
-#define FRAME_crbl_s03        	468
-#define FRAME_crbl_s04        	469
-#define FRAME_crbl_s05        	470
-#define FRAME_crbl_s06        	471
-#define FRAME_crbl_s07        	472
-#define FRAME_crbl_s08        	473
-#define FRAME_crbl_w01        	474
-#define FRAME_crbl_w02        	475
-#define FRAME_crbl_w03        	476
-#define FRAME_crbl_w04        	477
-#define FRAME_crbl_w05        	478
-#define FRAME_crbl_w06        	479
-#define FRAME_crbl_w07        	480
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_actor.h ============ */
@@ -44448,7 +43689,7 @@ static mframe_t actor_frames_stand[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
+static mmove_t actor_move_stand = {128, 167, actor_frames_stand, NULL};
 
 static void actor_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_stand;
@@ -44473,7 +43714,7 @@ static mframe_t actor_frames_walk[] = {
 	{ai_walk, 0,  NULL},
 };
 
-static mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
+static mmove_t actor_move_walk = {251, 258, actor_frames_walk, NULL};
 
 static void actor_walk(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_walk;
@@ -44494,7 +43735,7 @@ static mframe_t actor_frames_run[] = {
 	{ai_run, -1, NULL},
 };
 
-static mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
+static mmove_t actor_move_run = {93, 98, actor_frames_run, NULL};
 
 static void actor_run(edict_t* self) {
 	if ((level.time < self->pain_debounce_time) && (!self->enemy))
@@ -44522,7 +43763,7 @@ static mframe_t actor_frames_pain1 [] = {
 	{ai_move, 1,  NULL},
 };
 
-static mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
+static mmove_t actor_move_pain1 = {74, 76, actor_frames_pain1, actor_run};
 
 static mframe_t actor_frames_pain2[] = {
 	{ai_move, -4, NULL},
@@ -44530,7 +43771,7 @@ static mframe_t actor_frames_pain2[] = {
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
+static mmove_t actor_move_pain2 = {77, 79, actor_frames_pain2, actor_run};
 
 static mframe_t actor_frames_pain3[] = {
 	{ai_move, -1, NULL},
@@ -44538,7 +43779,7 @@ static mframe_t actor_frames_pain3[] = {
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t actor_move_pain3 = {FRAME_pain301, FRAME_pain303, actor_frames_pain3, actor_run};
+static mmove_t actor_move_pain3 = {80, 82, actor_frames_pain3, actor_run};
 
 static mframe_t actor_frames_flipoff[] = {
 	{ai_turn, 0,  NULL},
@@ -44557,7 +43798,7 @@ static mframe_t actor_frames_flipoff[] = {
 	{ai_turn, 0,  NULL},
 };
 
-static mmove_t actor_move_flipoff = {FRAME_flip01, FRAME_flip14, actor_frames_flipoff, actor_run};
+static mmove_t actor_move_flipoff = {39, 52, actor_frames_flipoff, actor_run};
 
 static mframe_t actor_frames_taunt[] = {
 	{ai_turn, 0,  NULL},
@@ -44579,7 +43820,7 @@ static mframe_t actor_frames_taunt[] = {
 	{ai_turn, 0,  NULL},
 };
 
-static mmove_t actor_move_taunt = {FRAME_taunt01, FRAME_taunt17, actor_frames_taunt, actor_run};
+static mmove_t actor_move_taunt = {234, 250, actor_frames_taunt, actor_run};
 
 static char* messages[] = {
 	"Watch it",
@@ -44679,7 +43920,7 @@ static mframe_t actor_frames_death1[] = {
 	{ai_move, 1,   NULL},
 };
 
-static mmove_t actor_move_death1 = {FRAME_death101, FRAME_death107, actor_frames_death1, actor_dead};
+static mmove_t actor_move_death1 = {4, 10, actor_frames_death1, actor_dead};
 
 static mframe_t actor_frames_death2[] = {
 	{ai_move, 0,   NULL},
@@ -44697,7 +43938,7 @@ static mframe_t actor_frames_death2[] = {
 	{ai_move, 0,   NULL},
 };
 
-static mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
+static mmove_t actor_move_death2 = {11, 23, actor_frames_death2, actor_dead};
 
 static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -44751,7 +43992,7 @@ static mframe_t actor_frames_attack[] = {
 	{ai_charge, 2,   NULL},
 };
 
-static mmove_t actor_move_attack = {FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run};
+static mmove_t actor_move_attack = {0, 3, actor_frames_attack, actor_run};
 
 static void actor_attack(edict_t* self) {
 	int		n;
@@ -44983,256 +44224,6 @@ BERSERK
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_stand1          	0
-#define FRAME_stand2          	1
-#define FRAME_stand3          	2
-#define FRAME_stand4          	3
-#define FRAME_stand5          	4
-#define FRAME_standb1         	5
-#define FRAME_standb2         	6
-#define FRAME_standb3         	7
-#define FRAME_standb4         	8
-#define FRAME_standb5         	9
-#define FRAME_standb6         	10
-#define FRAME_standb7         	11
-#define FRAME_standb8         	12
-#define FRAME_standb9         	13
-#define FRAME_standb10        	14
-#define FRAME_standb11        	15
-#define FRAME_standb12        	16
-#define FRAME_standb13        	17
-#define FRAME_standb14        	18
-#define FRAME_standb15        	19
-#define FRAME_standb16        	20
-#define FRAME_standb17        	21
-#define FRAME_standb18        	22
-#define FRAME_standb19        	23
-#define FRAME_standb20        	24
-#define FRAME_walkc1          	25
-#define FRAME_walkc2          	26
-#define FRAME_walkc3          	27
-#define FRAME_walkc4          	28
-#define FRAME_walkc5          	29
-#define FRAME_walkc6          	30
-#define FRAME_walkc7          	31
-#define FRAME_walkc8          	32
-#define FRAME_walkc9          	33
-#define FRAME_walkc10         	34
-#define FRAME_walkc11         	35
-#undef FRAME_run1
-#define FRAME_run1            	36
-#undef FRAME_run2
-#define FRAME_run2            	37
-#undef FRAME_run3
-#define FRAME_run3            	38
-#undef FRAME_run4
-#define FRAME_run4            	39
-#undef FRAME_run5
-#define FRAME_run5            	40
-#undef FRAME_run6
-#define FRAME_run6            	41
-#define FRAME_att_a1          	42
-#define FRAME_att_a2          	43
-#define FRAME_att_a3          	44
-#define FRAME_att_a4          	45
-#define FRAME_att_a5          	46
-#define FRAME_att_a6          	47
-#define FRAME_att_a7          	48
-#define FRAME_att_a8          	49
-#define FRAME_att_a9          	50
-#define FRAME_att_a10         	51
-#define FRAME_att_a11         	52
-#define FRAME_att_a12         	53
-#define FRAME_att_a13         	54
-#define FRAME_att_b1          	55
-#define FRAME_att_b2          	56
-#define FRAME_att_b3          	57
-#define FRAME_att_b4          	58
-#define FRAME_att_b5          	59
-#define FRAME_att_b6          	60
-#define FRAME_att_b7          	61
-#define FRAME_att_b8          	62
-#define FRAME_att_b9          	63
-#define FRAME_att_b10         	64
-#define FRAME_att_b11         	65
-#define FRAME_att_b12         	66
-#define FRAME_att_b13         	67
-#define FRAME_att_b14         	68
-#define FRAME_att_b15         	69
-#define FRAME_att_b16         	70
-#define FRAME_att_b17         	71
-#define FRAME_att_b18         	72
-#define FRAME_att_b19         	73
-#define FRAME_att_b20         	74
-#define FRAME_att_b21         	75
-#define FRAME_att_c1          	76
-#define FRAME_att_c2          	77
-#define FRAME_att_c3          	78
-#define FRAME_att_c4          	79
-#define FRAME_att_c5          	80
-#define FRAME_att_c6          	81
-#define FRAME_att_c7          	82
-#define FRAME_att_c8          	83
-#define FRAME_att_c9          	84
-#define FRAME_att_c10         	85
-#define FRAME_att_c11         	86
-#define FRAME_att_c12         	87
-#define FRAME_att_c13         	88
-#define FRAME_att_c14         	89
-#define FRAME_att_c15         	90
-#define FRAME_att_c16         	91
-#define FRAME_att_c17         	92
-#define FRAME_att_c18         	93
-#define FRAME_att_c19         	94
-#define FRAME_att_c20         	95
-#define FRAME_att_c21         	96
-#define FRAME_att_c22         	97
-#define FRAME_att_c23         	98
-#define FRAME_att_c24         	99
-#define FRAME_att_c25         	100
-#define FRAME_att_c26         	101
-#define FRAME_att_c27         	102
-#define FRAME_att_c28         	103
-#define FRAME_att_c29         	104
-#define FRAME_att_c30         	105
-#define FRAME_att_c31         	106
-#define FRAME_att_c32         	107
-#define FRAME_att_c33         	108
-#define FRAME_att_c34         	109
-#define FRAME_r_att1          	110
-#define FRAME_r_att2          	111
-#define FRAME_r_att3          	112
-#define FRAME_r_att4          	113
-#define FRAME_r_att5          	114
-#define FRAME_r_att6          	115
-#define FRAME_r_att7          	116
-#define FRAME_r_att8          	117
-#define FRAME_r_att9          	118
-#define FRAME_r_att10         	119
-#define FRAME_r_att11         	120
-#define FRAME_r_att12         	121
-#define FRAME_r_att13         	122
-#define FRAME_r_att14         	123
-#define FRAME_r_att15         	124
-#define FRAME_r_att16         	125
-#define FRAME_r_att17         	126
-#define FRAME_r_att18         	127
-#define FRAME_r_attb1         	128
-#define FRAME_r_attb2         	129
-#define FRAME_r_attb3         	130
-#define FRAME_r_attb4         	131
-#define FRAME_r_attb5         	132
-#define FRAME_r_attb6         	133
-#define FRAME_r_attb7         	134
-#define FRAME_r_attb8         	135
-#define FRAME_r_attb9         	136
-#define FRAME_r_attb10        	137
-#define FRAME_r_attb11        	138
-#define FRAME_r_attb12        	139
-#define FRAME_r_attb13        	140
-#define FRAME_r_attb14        	141
-#define FRAME_r_attb15        	142
-#define FRAME_r_attb16        	143
-#define FRAME_r_attb17        	144
-#define FRAME_r_attb18        	145
-#define FRAME_slam1           	146
-#define FRAME_slam2           	147
-#define FRAME_slam3           	148
-#define FRAME_slam4           	149
-#define FRAME_slam5           	150
-#define FRAME_slam6           	151
-#define FRAME_slam7           	152
-#define FRAME_slam8           	153
-#define FRAME_slam9           	154
-#define FRAME_slam10          	155
-#define FRAME_slam11          	156
-#define FRAME_slam12          	157
-#define FRAME_slam13          	158
-#define FRAME_slam14          	159
-#define FRAME_slam15          	160
-#define FRAME_slam16          	161
-#define FRAME_slam17          	162
-#define FRAME_slam18          	163
-#define FRAME_slam19          	164
-#define FRAME_slam20          	165
-#define FRAME_slam21          	166
-#define FRAME_slam22          	167
-#define FRAME_slam23          	168
-#define FRAME_duck1           	169
-#define FRAME_duck2           	170
-#define FRAME_duck3           	171
-#define FRAME_duck4           	172
-#define FRAME_duck5           	173
-#define FRAME_duck6           	174
-#define FRAME_duck7           	175
-#define FRAME_duck8           	176
-#define FRAME_duck9           	177
-#define FRAME_duck10          	178
-#define FRAME_fall1           	179
-#define FRAME_fall2           	180
-#define FRAME_fall3           	181
-#define FRAME_fall4           	182
-#define FRAME_fall5           	183
-#define FRAME_fall6           	184
-#define FRAME_fall7           	185
-#define FRAME_fall8           	186
-#define FRAME_fall9           	187
-#define FRAME_fall10          	188
-#define FRAME_fall11          	189
-#define FRAME_fall12          	190
-#define FRAME_fall13          	191
-#define FRAME_fall14          	192
-#define FRAME_fall15          	193
-#define FRAME_fall16          	194
-#define FRAME_fall17          	195
-#define FRAME_fall18          	196
-#define FRAME_fall19          	197
-#define FRAME_fall20          	198
-#define FRAME_painc1          	199
-#define FRAME_painc2          	200
-#define FRAME_painc3          	201
-#define FRAME_painc4          	202
-#define FRAME_painb1          	203
-#define FRAME_painb2          	204
-#define FRAME_painb3          	205
-#define FRAME_painb4          	206
-#define FRAME_painb5          	207
-#define FRAME_painb6          	208
-#define FRAME_painb7          	209
-#define FRAME_painb8          	210
-#define FRAME_painb9          	211
-#define FRAME_painb10         	212
-#define FRAME_painb11         	213
-#define FRAME_painb12         	214
-#define FRAME_painb13         	215
-#define FRAME_painb14         	216
-#define FRAME_painb15         	217
-#define FRAME_painb16         	218
-#define FRAME_painb17         	219
-#define FRAME_painb18         	220
-#define FRAME_painb19         	221
-#define FRAME_painb20         	222
-#define FRAME_death1          	223
-#define FRAME_death2          	224
-#define FRAME_death3          	225
-#define FRAME_death4          	226
-#define FRAME_death5          	227
-#define FRAME_death6          	228
-#define FRAME_death7          	229
-#define FRAME_death8          	230
-#define FRAME_death9          	231
-#define FRAME_death10         	232
-#define FRAME_death11         	233
-#define FRAME_death12         	234
-#define FRAME_death13         	235
-#define FRAME_deathc1         	236
-#define FRAME_deathc2         	237
-#define FRAME_deathc3         	238
-#define FRAME_deathc4         	239
-#define FRAME_deathc5         	240
-#define FRAME_deathc6         	241
-#define FRAME_deathc7         	242
-#define FRAME_deathc8         	243
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_berserk.h ============ */
@@ -45265,7 +44256,7 @@ static mframe_t berserk_frames_stand[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t berserk_move_stand = {FRAME_stand1, FRAME_stand5, berserk_frames_stand, NULL};
+static mmove_t berserk_move_stand = {0, 4, berserk_frames_stand, NULL};
 
 static void berserk_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &berserk_move_stand;
@@ -45294,7 +44285,7 @@ static mframe_t berserk_frames_stand_fidget[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
+static mmove_t berserk_move_stand_fidget = {5, 24, berserk_frames_stand_fidget, berserk_stand};
 
 void berserk_fidget (edict_t* self)
 {
@@ -45322,7 +44313,7 @@ static mframe_t berserk_frames_walk[] = {
 	{ai_walk, 4.8, NULL},
 };
 
-static mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
+static mmove_t berserk_move_walk = {25, 35, berserk_frames_walk, NULL};
 
 void berserk_walk (edict_t* self)
 {
@@ -45362,7 +44353,7 @@ static mframe_t berserk_frames_run1[] = {
 	{ai_run, 19, NULL},
 };
 
-static mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
+static mmove_t berserk_move_run1 = {36, 41, berserk_frames_run1, NULL};
 
 void berserk_run (edict_t* self)
 {
@@ -45396,7 +44387,7 @@ static mframe_t berserk_frames_attack_spike[] = {
 	{ai_charge, 0, NULL},
 };
 
-static mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
+static mmove_t berserk_move_attack_spike = {76, 83, berserk_frames_attack_spike, berserk_run};
 
 void berserk_attack_club (edict_t* self)
 {
@@ -45421,7 +44412,7 @@ static mframe_t berserk_frames_attack_club [] = {
 	{ai_charge, 0, NULL},
 };
 
-static mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
+static mmove_t berserk_move_attack_club = {84, 95, berserk_frames_attack_club, berserk_run};
 
 void berserk_melee (edict_t* self)
 {
@@ -45461,7 +44452,7 @@ static mframe_t berserk_frames_pain1[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
+static mmove_t berserk_move_pain1 = {199, 202, berserk_frames_pain1, berserk_run};
 
 static mframe_t berserk_frames_pain2[] = {
 	{ai_move, 0, NULL},
@@ -45486,7 +44477,7 @@ static mframe_t berserk_frames_pain2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
+static mmove_t berserk_move_pain2 = {203, 222, berserk_frames_pain2, berserk_run};
 
 static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -45536,7 +44527,7 @@ static mframe_t berserk_frames_death1[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
+static mmove_t berserk_move_death1 = {223, 235, berserk_frames_death1, berserk_dead};
 
 static mframe_t berserk_frames_death2[] = {
 	{ai_move, 0, NULL},
@@ -45549,7 +44540,7 @@ static mframe_t berserk_frames_death2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
+static mmove_t berserk_move_death2 = {236, 243, berserk_frames_death2, berserk_dead};
 
 static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -45640,245 +44631,6 @@ boss2
 
 // This file generated by ModelGen - Do NOT Modify
 
-#undef FRAME_stand30
-#define FRAME_stand30         	0
-#undef FRAME_stand31
-#define FRAME_stand31         	1
-#undef FRAME_stand32
-#define FRAME_stand32         	2
-#undef FRAME_stand33
-#define FRAME_stand33         	3
-#undef FRAME_stand34
-#define FRAME_stand34         	4
-#undef FRAME_stand35
-#define FRAME_stand35         	5
-#undef FRAME_stand36
-#define FRAME_stand36         	6
-#undef FRAME_stand37
-#define FRAME_stand37         	7
-#undef FRAME_stand38
-#define FRAME_stand38         	8
-#undef FRAME_stand39
-#define FRAME_stand39         	9
-#undef FRAME_stand40
-#define FRAME_stand40         	10
-#define FRAME_stand41         	11
-#define FRAME_stand42         	12
-#define FRAME_stand43         	13
-#define FRAME_stand44         	14
-#define FRAME_stand45         	15
-#define FRAME_stand46         	16
-#define FRAME_stand47         	17
-#define FRAME_stand48         	18
-#define FRAME_stand49         	19
-#define FRAME_stand50         	20
-#undef FRAME_stand1
-#define FRAME_stand1          	21
-#undef FRAME_stand2
-#define FRAME_stand2          	22
-#undef FRAME_stand3
-#define FRAME_stand3          	23
-#undef FRAME_stand4
-#define FRAME_stand4          	24
-#undef FRAME_stand5
-#define FRAME_stand5          	25
-#define FRAME_stand6          	26
-#define FRAME_stand7          	27
-#define FRAME_stand8          	28
-#define FRAME_stand9          	29
-#undef FRAME_stand10
-#define FRAME_stand10         	30
-#undef FRAME_stand11
-#define FRAME_stand11         	31
-#undef FRAME_stand12
-#define FRAME_stand12         	32
-#undef FRAME_stand13
-#define FRAME_stand13         	33
-#undef FRAME_stand14
-#define FRAME_stand14         	34
-#undef FRAME_stand15
-#define FRAME_stand15         	35
-#undef FRAME_stand16
-#define FRAME_stand16         	36
-#undef FRAME_stand17
-#define FRAME_stand17         	37
-#undef FRAME_stand18
-#define FRAME_stand18         	38
-#undef FRAME_stand19
-#define FRAME_stand19         	39
-#undef FRAME_stand20
-#define FRAME_stand20         	40
-#undef FRAME_stand21
-#define FRAME_stand21         	41
-#undef FRAME_stand22
-#define FRAME_stand22         	42
-#undef FRAME_stand23
-#define FRAME_stand23         	43
-#undef FRAME_stand24
-#define FRAME_stand24         	44
-#undef FRAME_stand25
-#define FRAME_stand25         	45
-#undef FRAME_stand26
-#define FRAME_stand26         	46
-#undef FRAME_stand27
-#define FRAME_stand27         	47
-#undef FRAME_stand28
-#define FRAME_stand28         	48
-#undef FRAME_stand29
-#define FRAME_stand29         	49
-#define FRAME_walk1           	50
-#define FRAME_walk2           	51
-#define FRAME_walk3           	52
-#define FRAME_walk4           	53
-#define FRAME_walk5           	54
-#define FRAME_walk6           	55
-#define FRAME_walk7           	56
-#define FRAME_walk8           	57
-#define FRAME_walk9           	58
-#undef FRAME_walk10
-#define FRAME_walk10          	59
-#undef FRAME_walk11
-#define FRAME_walk11          	60
-#define FRAME_walk12          	61
-#define FRAME_walk13          	62
-#define FRAME_walk14          	63
-#define FRAME_walk15          	64
-#define FRAME_walk16          	65
-#define FRAME_walk17          	66
-#define FRAME_walk18          	67
-#define FRAME_walk19          	68
-#define FRAME_walk20          	69
-#undef FRAME_attack1
-#define FRAME_attack1         	70
-#undef FRAME_attack2
-#define FRAME_attack2         	71
-#undef FRAME_attack3
-#define FRAME_attack3         	72
-#undef FRAME_attack4
-#define FRAME_attack4         	73
-#undef FRAME_attack5
-#define FRAME_attack5         	74
-#undef FRAME_attack6
-#define FRAME_attack6         	75
-#undef FRAME_attack7
-#define FRAME_attack7         	76
-#undef FRAME_attack8
-#define FRAME_attack8         	77
-#define FRAME_attack9         	78
-#define FRAME_attack10        	79
-#define FRAME_attack11        	80
-#define FRAME_attack12        	81
-#define FRAME_attack13        	82
-#define FRAME_attack14        	83
-#define FRAME_attack15        	84
-#define FRAME_attack16        	85
-#define FRAME_attack17        	86
-#define FRAME_attack18        	87
-#define FRAME_attack19        	88
-#define FRAME_attack20        	89
-#define FRAME_attack21        	90
-#define FRAME_attack22        	91
-#define FRAME_attack23        	92
-#define FRAME_attack24        	93
-#define FRAME_attack25        	94
-#define FRAME_attack26        	95
-#define FRAME_attack27        	96
-#define FRAME_attack28        	97
-#define FRAME_attack29        	98
-#define FRAME_attack30        	99
-#define FRAME_attack31        	100
-#define FRAME_attack32        	101
-#define FRAME_attack33        	102
-#define FRAME_attack34        	103
-#define FRAME_attack35        	104
-#define FRAME_attack36        	105
-#define FRAME_attack37        	106
-#define FRAME_attack38        	107
-#define FRAME_attack39        	108
-#define FRAME_attack40        	109
-#define FRAME_pain2           	110
-#define FRAME_pain3           	111
-#define FRAME_pain4           	112
-#define FRAME_pain5           	113
-#define FRAME_pain6           	114
-#define FRAME_pain7           	115
-#define FRAME_pain8           	116
-#define FRAME_pain9           	117
-#define FRAME_pain10          	118
-#define FRAME_pain11          	119
-#define FRAME_pain12          	120
-#define FRAME_pain13          	121
-#define FRAME_pain14          	122
-#define FRAME_pain15          	123
-#define FRAME_pain16          	124
-#define FRAME_pain17          	125
-#define FRAME_pain18          	126
-#define FRAME_pain19          	127
-#define FRAME_pain20          	128
-#define FRAME_pain21          	129
-#define FRAME_pain22          	130
-#define FRAME_pain23          	131
-#undef FRAME_death2
-#define FRAME_death2          	132
-#undef FRAME_death3
-#define FRAME_death3          	133
-#undef FRAME_death4
-#define FRAME_death4          	134
-#undef FRAME_death5
-#define FRAME_death5          	135
-#undef FRAME_death6
-#define FRAME_death6          	136
-#undef FRAME_death7
-#define FRAME_death7          	137
-#undef FRAME_death8
-#define FRAME_death8          	138
-#undef FRAME_death9
-#define FRAME_death9          	139
-#undef FRAME_death10
-#define FRAME_death10         	140
-#undef FRAME_death11
-#define FRAME_death11         	141
-#undef FRAME_death12
-#define FRAME_death12         	142
-#undef FRAME_death13
-#define FRAME_death13         	143
-#define FRAME_death14         	144
-#define FRAME_death15         	145
-#define FRAME_death16         	146
-#define FRAME_death17         	147
-#define FRAME_death18         	148
-#define FRAME_death19         	149
-#define FRAME_death20         	150
-#define FRAME_death21         	151
-#define FRAME_death22         	152
-#define FRAME_death23         	153
-#define FRAME_death24         	154
-#define FRAME_death25         	155
-#define FRAME_death26         	156
-#define FRAME_death27         	157
-#define FRAME_death28         	158
-#define FRAME_death29         	159
-#define FRAME_death30         	160
-#define FRAME_death31         	161
-#define FRAME_death32         	162
-#define FRAME_death33         	163
-#define FRAME_death34         	164
-#define FRAME_death35         	165
-#define FRAME_death36         	166
-#define FRAME_death37         	167
-#define FRAME_death38         	168
-#define FRAME_death39         	169
-#define FRAME_death40         	170
-#define FRAME_death41         	171
-#define FRAME_death42         	172
-#define FRAME_death43         	173
-#define FRAME_death44         	174
-#define FRAME_death45         	175
-#define FRAME_death46         	176
-#define FRAME_death47         	177
-#define FRAME_death48         	178
-#define FRAME_death49         	179
-#define FRAME_death50         	180
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss2.h ============ */
@@ -46028,7 +44780,7 @@ mframe_t boss2_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	boss2_move_stand = {FRAME_stand30, FRAME_stand50, boss2_frames_stand, NULL};
+mmove_t	boss2_move_stand = {0, 20, boss2_frames_stand, NULL};
 
 mframe_t boss2_frames_fidget [] =
 {
@@ -46063,7 +44815,7 @@ mframe_t boss2_frames_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t boss2_move_fidget = {FRAME_stand1, FRAME_stand30, boss2_frames_fidget, NULL};
+mmove_t boss2_move_fidget = {21, 0, boss2_frames_fidget, NULL};
 
 mframe_t boss2_frames_walk [] =
 {
@@ -46088,7 +44840,7 @@ mframe_t boss2_frames_walk [] =
 	{ai_walk,	8,	NULL},
 	{ai_walk,	8,	NULL},
 };
-mmove_t boss2_move_walk = {FRAME_walk1, FRAME_walk20, boss2_frames_walk, NULL};
+mmove_t boss2_move_walk = {50, 69, boss2_frames_walk, NULL};
 
 
 mframe_t boss2_frames_run [] =
@@ -46114,7 +44866,7 @@ mframe_t boss2_frames_run [] =
 	{ai_run,	8,	NULL},
 	{ai_run,	8,	NULL},
 };
-mmove_t boss2_move_run = {FRAME_walk1, FRAME_walk20, boss2_frames_run, NULL};
+mmove_t boss2_move_run = {50, 69, boss2_frames_run, NULL};
 
 mframe_t boss2_frames_attack_pre_mg [] =
 {
@@ -46128,7 +44880,7 @@ mframe_t boss2_frames_attack_pre_mg [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	boss2_attack_mg},
 };
-mmove_t boss2_move_attack_pre_mg = {FRAME_attack1, FRAME_attack9, boss2_frames_attack_pre_mg, NULL};
+mmove_t boss2_move_attack_pre_mg = {70, 78, boss2_frames_attack_pre_mg, NULL};
 
 
 // Loop this
@@ -46141,7 +44893,7 @@ mframe_t boss2_frames_attack_mg [] =
 	{ai_charge,	1,	Boss2MachineGun},
 	{ai_charge,	1,	boss2_reattack_mg},
 };
-mmove_t boss2_move_attack_mg = {FRAME_attack10, FRAME_attack15, boss2_frames_attack_mg, NULL};
+mmove_t boss2_move_attack_mg = {79, 84, boss2_frames_attack_mg, NULL};
 
 mframe_t boss2_frames_attack_post_mg [] =
 {
@@ -46150,7 +44902,7 @@ mframe_t boss2_frames_attack_post_mg [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t boss2_move_attack_post_mg = {FRAME_attack16, FRAME_attack19, boss2_frames_attack_post_mg, boss2_run};
+mmove_t boss2_move_attack_post_mg = {85, 88, boss2_frames_attack_post_mg, boss2_run};
 
 mframe_t boss2_frames_attack_rocket [] =
 {
@@ -46176,7 +44928,7 @@ mframe_t boss2_frames_attack_rocket [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t boss2_move_attack_rocket = {FRAME_attack20, FRAME_attack40, boss2_frames_attack_rocket, boss2_run};
+mmove_t boss2_move_attack_rocket = {89, 109, boss2_frames_attack_rocket, boss2_run};
 
 mframe_t boss2_frames_pain_heavy [] =
 {
@@ -46199,7 +44951,7 @@ mframe_t boss2_frames_pain_heavy [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t boss2_move_pain_heavy = {FRAME_pain2, FRAME_pain19, boss2_frames_pain_heavy, boss2_run};
+mmove_t boss2_move_pain_heavy = {110, 127, boss2_frames_pain_heavy, boss2_run};
 
 mframe_t boss2_frames_pain_light [] =
 {
@@ -46208,7 +44960,7 @@ mframe_t boss2_frames_pain_light [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t boss2_move_pain_light = {FRAME_pain20, FRAME_pain23, boss2_frames_pain_light, boss2_run};
+mmove_t boss2_move_pain_light = {128, 131, boss2_frames_pain_light, boss2_run};
 
 mframe_t boss2_frames_death [] =
 {
@@ -46262,7 +45014,7 @@ mframe_t boss2_frames_death [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	BossExplode},
 };
-mmove_t boss2_move_death = {FRAME_death2, FRAME_death50, boss2_frames_death, boss2_dead};
+mmove_t boss2_move_death = {132, 180, boss2_frames_death, boss2_dead};
 
 void boss2_stand (edict_t* self)
 {
@@ -46517,675 +45269,6 @@ boss3
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_attak101        	0
-#define FRAME_attak102        	1
-#define FRAME_attak103        	2
-#define FRAME_attak104        	3
-#define FRAME_attak105        	4
-#define FRAME_attak106        	5
-#define FRAME_attak107        	6
-#define FRAME_attak108        	7
-#define FRAME_attak109        	8
-#define FRAME_attak110        	9
-#define FRAME_attak111        	10
-#define FRAME_attak112        	11
-#define FRAME_attak113        	12
-#define FRAME_attak114        	13
-#define FRAME_attak115        	14
-#define FRAME_attak116        	15
-#define FRAME_attak117        	16
-#define FRAME_attak118        	17
-#define FRAME_attak201        	18
-#define FRAME_attak202        	19
-#define FRAME_attak203        	20
-#define FRAME_attak204        	21
-#define FRAME_attak205        	22
-#define FRAME_attak206        	23
-#define FRAME_attak207        	24
-#define FRAME_attak208        	25
-#define FRAME_attak209        	26
-#define FRAME_attak210        	27
-#define FRAME_attak211        	28
-#define FRAME_attak212        	29
-#define FRAME_attak213        	30
-#define FRAME_death01         	31
-#define FRAME_death02         	32
-#define FRAME_death03         	33
-#define FRAME_death04         	34
-#define FRAME_death05         	35
-#define FRAME_death06         	36
-#define FRAME_death07         	37
-#define FRAME_death08         	38
-#define FRAME_death09         	39
-#undef FRAME_death10
-#define FRAME_death10         	40
-#undef FRAME_death11
-#define FRAME_death11         	41
-#undef FRAME_death12
-#define FRAME_death12         	42
-#undef FRAME_death13
-#define FRAME_death13         	43
-#undef FRAME_death14
-#define FRAME_death14         	44
-#undef FRAME_death15
-#define FRAME_death15         	45
-#undef FRAME_death16
-#define FRAME_death16         	46
-#undef FRAME_death17
-#define FRAME_death17         	47
-#undef FRAME_death18
-#define FRAME_death18         	48
-#undef FRAME_death19
-#define FRAME_death19         	49
-#undef FRAME_death20
-#define FRAME_death20         	50
-#undef FRAME_death21
-#define FRAME_death21         	51
-#undef FRAME_death22
-#define FRAME_death22         	52
-#undef FRAME_death23
-#define FRAME_death23         	53
-#undef FRAME_death24
-#define FRAME_death24         	54
-#undef FRAME_death25
-#define FRAME_death25         	55
-#undef FRAME_death26
-#define FRAME_death26         	56
-#undef FRAME_death27
-#define FRAME_death27         	57
-#undef FRAME_death28
-#define FRAME_death28         	58
-#undef FRAME_death29
-#define FRAME_death29         	59
-#undef FRAME_death30
-#define FRAME_death30         	60
-#undef FRAME_death31
-#define FRAME_death31         	61
-#undef FRAME_death32
-#define FRAME_death32         	62
-#undef FRAME_death33
-#define FRAME_death33         	63
-#undef FRAME_death34
-#define FRAME_death34         	64
-#undef FRAME_death35
-#define FRAME_death35         	65
-#undef FRAME_death36
-#define FRAME_death36         	66
-#undef FRAME_death37
-#define FRAME_death37         	67
-#undef FRAME_death38
-#define FRAME_death38         	68
-#undef FRAME_death39
-#define FRAME_death39         	69
-#undef FRAME_death40
-#define FRAME_death40         	70
-#undef FRAME_death41
-#define FRAME_death41         	71
-#undef FRAME_death42
-#define FRAME_death42         	72
-#undef FRAME_death43
-#define FRAME_death43         	73
-#undef FRAME_death44
-#define FRAME_death44         	74
-#undef FRAME_death45
-#define FRAME_death45         	75
-#undef FRAME_death46
-#define FRAME_death46         	76
-#undef FRAME_death47
-#define FRAME_death47         	77
-#undef FRAME_death48
-#define FRAME_death48         	78
-#undef FRAME_death49
-#define FRAME_death49         	79
-#undef FRAME_death50
-#define FRAME_death50         	80
-#undef FRAME_pain101
-#define FRAME_pain101         	81
-#undef FRAME_pain102
-#define FRAME_pain102         	82
-#undef FRAME_pain103
-#define FRAME_pain103         	83
-#undef FRAME_pain201
-#define FRAME_pain201         	84
-#undef FRAME_pain202
-#define FRAME_pain202         	85
-#undef FRAME_pain203
-#define FRAME_pain203         	86
-#undef FRAME_pain301
-#define FRAME_pain301         	87
-#undef FRAME_pain302
-#define FRAME_pain302         	88
-#undef FRAME_pain303
-#define FRAME_pain303         	89
-#undef FRAME_pain304
-#define FRAME_pain304         	90
-#define FRAME_pain305         	91
-#define FRAME_pain306         	92
-#define FRAME_pain307         	93
-#define FRAME_pain308         	94
-#define FRAME_pain309         	95
-#define FRAME_pain310         	96
-#define FRAME_pain311         	97
-#define FRAME_pain312         	98
-#define FRAME_pain313         	99
-#define FRAME_pain314         	100
-#define FRAME_pain315         	101
-#define FRAME_pain316         	102
-#define FRAME_pain317         	103
-#define FRAME_pain318         	104
-#define FRAME_pain319         	105
-#define FRAME_pain320         	106
-#define FRAME_pain321         	107
-#define FRAME_pain322         	108
-#define FRAME_pain323         	109
-#define FRAME_pain324         	110
-#define FRAME_pain325         	111
-#undef FRAME_stand01
-#define FRAME_stand01         	112
-#undef FRAME_stand02
-#define FRAME_stand02         	113
-#undef FRAME_stand03
-#define FRAME_stand03         	114
-#undef FRAME_stand04
-#define FRAME_stand04         	115
-#undef FRAME_stand05
-#define FRAME_stand05         	116
-#undef FRAME_stand06
-#define FRAME_stand06         	117
-#undef FRAME_stand07
-#define FRAME_stand07         	118
-#undef FRAME_stand08
-#define FRAME_stand08         	119
-#undef FRAME_stand09
-#define FRAME_stand09         	120
-#undef FRAME_stand10
-#define FRAME_stand10         	121
-#undef FRAME_stand11
-#define FRAME_stand11         	122
-#undef FRAME_stand12
-#define FRAME_stand12         	123
-#undef FRAME_stand13
-#define FRAME_stand13         	124
-#undef FRAME_stand14
-#define FRAME_stand14         	125
-#undef FRAME_stand15
-#define FRAME_stand15         	126
-#undef FRAME_stand16
-#define FRAME_stand16         	127
-#undef FRAME_stand17
-#define FRAME_stand17         	128
-#undef FRAME_stand18
-#define FRAME_stand18         	129
-#undef FRAME_stand19
-#define FRAME_stand19         	130
-#undef FRAME_stand20
-#define FRAME_stand20         	131
-#undef FRAME_stand21
-#define FRAME_stand21         	132
-#undef FRAME_stand22
-#define FRAME_stand22         	133
-#undef FRAME_stand23
-#define FRAME_stand23         	134
-#undef FRAME_stand24
-#define FRAME_stand24         	135
-#undef FRAME_stand25
-#define FRAME_stand25         	136
-#undef FRAME_stand26
-#define FRAME_stand26         	137
-#undef FRAME_stand27
-#define FRAME_stand27         	138
-#undef FRAME_stand28
-#define FRAME_stand28         	139
-#undef FRAME_stand29
-#define FRAME_stand29         	140
-#undef FRAME_stand30
-#define FRAME_stand30         	141
-#undef FRAME_stand31
-#define FRAME_stand31         	142
-#undef FRAME_stand32
-#define FRAME_stand32         	143
-#undef FRAME_stand33
-#define FRAME_stand33         	144
-#undef FRAME_stand34
-#define FRAME_stand34         	145
-#undef FRAME_stand35
-#define FRAME_stand35         	146
-#undef FRAME_stand36
-#define FRAME_stand36         	147
-#undef FRAME_stand37
-#define FRAME_stand37         	148
-#undef FRAME_stand38
-#define FRAME_stand38         	149
-#undef FRAME_stand39
-#define FRAME_stand39         	150
-#undef FRAME_stand40
-#define FRAME_stand40         	151
-#undef FRAME_stand41
-#define FRAME_stand41         	152
-#undef FRAME_stand42
-#define FRAME_stand42         	153
-#undef FRAME_stand43
-#define FRAME_stand43         	154
-#undef FRAME_stand44
-#define FRAME_stand44         	155
-#undef FRAME_stand45
-#define FRAME_stand45         	156
-#undef FRAME_stand46
-#define FRAME_stand46         	157
-#undef FRAME_stand47
-#define FRAME_stand47         	158
-#undef FRAME_stand48
-#define FRAME_stand48         	159
-#undef FRAME_stand49
-#define FRAME_stand49         	160
-#undef FRAME_stand50
-#define FRAME_stand50         	161
-#define FRAME_stand51         	162
-#undef FRAME_walk01
-#define FRAME_walk01          	163
-#undef FRAME_walk02
-#define FRAME_walk02          	164
-#undef FRAME_walk03
-#define FRAME_walk03          	165
-#undef FRAME_walk04
-#define FRAME_walk04          	166
-#undef FRAME_walk05
-#define FRAME_walk05          	167
-#undef FRAME_walk06
-#define FRAME_walk06          	168
-#undef FRAME_walk07
-#define FRAME_walk07          	169
-#undef FRAME_walk08
-#define FRAME_walk08          	170
-#undef FRAME_walk09
-#define FRAME_walk09          	171
-#undef FRAME_walk10
-#define FRAME_walk10          	172
-#undef FRAME_walk11
-#define FRAME_walk11          	173
-#undef FRAME_walk12
-#define FRAME_walk12          	174
-#undef FRAME_walk13
-#define FRAME_walk13          	175
-#undef FRAME_walk14
-#define FRAME_walk14          	176
-#undef FRAME_walk15
-#define FRAME_walk15          	177
-#undef FRAME_walk16
-#define FRAME_walk16          	178
-#undef FRAME_walk17
-#define FRAME_walk17          	179
-#undef FRAME_walk18
-#define FRAME_walk18          	180
-#undef FRAME_walk19
-#define FRAME_walk19          	181
-#undef FRAME_walk20
-#define FRAME_walk20          	182
-#define FRAME_walk21          	183
-#define FRAME_walk22          	184
-#define FRAME_walk23          	185
-#define FRAME_walk24          	186
-#define FRAME_walk25          	187
-#define FRAME_active01        	188
-#define FRAME_active02        	189
-#define FRAME_active03        	190
-#define FRAME_active04        	191
-#define FRAME_active05        	192
-#define FRAME_active06        	193
-#define FRAME_active07        	194
-#define FRAME_active08        	195
-#define FRAME_active09        	196
-#define FRAME_active10        	197
-#define FRAME_active11        	198
-#define FRAME_active12        	199
-#define FRAME_active13        	200
-#define FRAME_attak301        	201
-#define FRAME_attak302        	202
-#define FRAME_attak303        	203
-#define FRAME_attak304        	204
-#define FRAME_attak305        	205
-#define FRAME_attak306        	206
-#define FRAME_attak307        	207
-#define FRAME_attak308        	208
-#define FRAME_attak401        	209
-#define FRAME_attak402        	210
-#define FRAME_attak403        	211
-#define FRAME_attak404        	212
-#define FRAME_attak405        	213
-#define FRAME_attak406        	214
-#define FRAME_attak407        	215
-#define FRAME_attak408        	216
-#define FRAME_attak409        	217
-#define FRAME_attak410        	218
-#define FRAME_attak411        	219
-#define FRAME_attak412        	220
-#define FRAME_attak413        	221
-#define FRAME_attak414        	222
-#define FRAME_attak415        	223
-#define FRAME_attak416        	224
-#define FRAME_attak417        	225
-#define FRAME_attak418        	226
-#define FRAME_attak419        	227
-#define FRAME_attak420        	228
-#define FRAME_attak421        	229
-#define FRAME_attak422        	230
-#define FRAME_attak423        	231
-#define FRAME_attak424        	232
-#define FRAME_attak425        	233
-#define FRAME_attak426        	234
-#define FRAME_attak501        	235
-#define FRAME_attak502        	236
-#define FRAME_attak503        	237
-#define FRAME_attak504        	238
-#define FRAME_attak505        	239
-#define FRAME_attak506        	240
-#define FRAME_attak507        	241
-#define FRAME_attak508        	242
-#define FRAME_attak509        	243
-#define FRAME_attak510        	244
-#define FRAME_attak511        	245
-#define FRAME_attak512        	246
-#define FRAME_attak513        	247
-#define FRAME_attak514        	248
-#define FRAME_attak515        	249
-#define FRAME_attak516        	250
-#undef FRAME_death201
-#define FRAME_death201        	251
-#undef FRAME_death202
-#define FRAME_death202        	252
-#undef FRAME_death203
-#define FRAME_death203        	253
-#undef FRAME_death204
-#define FRAME_death204        	254
-#undef FRAME_death205
-#define FRAME_death205        	255
-#undef FRAME_death206
-#define FRAME_death206        	256
-#undef FRAME_death207
-#define FRAME_death207        	257
-#undef FRAME_death208
-#define FRAME_death208        	258
-#undef FRAME_death209
-#define FRAME_death209        	259
-#undef FRAME_death210
-#define FRAME_death210        	260
-#undef FRAME_death211
-#define FRAME_death211        	261
-#undef FRAME_death212
-#define FRAME_death212        	262
-#undef FRAME_death213
-#define FRAME_death213        	263
-#define FRAME_death214        	264
-#define FRAME_death215        	265
-#define FRAME_death216        	266
-#define FRAME_death217        	267
-#define FRAME_death218        	268
-#define FRAME_death219        	269
-#define FRAME_death220        	270
-#define FRAME_death221        	271
-#define FRAME_death222        	272
-#define FRAME_death223        	273
-#define FRAME_death224        	274
-#define FRAME_death225        	275
-#define FRAME_death226        	276
-#define FRAME_death227        	277
-#define FRAME_death228        	278
-#define FRAME_death229        	279
-#define FRAME_death230        	280
-#define FRAME_death231        	281
-#define FRAME_death232        	282
-#define FRAME_death233        	283
-#define FRAME_death234        	284
-#define FRAME_death235        	285
-#define FRAME_death236        	286
-#define FRAME_death237        	287
-#define FRAME_death238        	288
-#define FRAME_death239        	289
-#define FRAME_death240        	290
-#define FRAME_death241        	291
-#define FRAME_death242        	292
-#define FRAME_death243        	293
-#define FRAME_death244        	294
-#define FRAME_death245        	295
-#define FRAME_death246        	296
-#define FRAME_death247        	297
-#define FRAME_death248        	298
-#define FRAME_death249        	299
-#define FRAME_death250        	300
-#define FRAME_death251        	301
-#define FRAME_death252        	302
-#define FRAME_death253        	303
-#define FRAME_death254        	304
-#define FRAME_death255        	305
-#define FRAME_death256        	306
-#define FRAME_death257        	307
-#define FRAME_death258        	308
-#define FRAME_death259        	309
-#define FRAME_death260        	310
-#define FRAME_death261        	311
-#define FRAME_death262        	312
-#define FRAME_death263        	313
-#define FRAME_death264        	314
-#define FRAME_death265        	315
-#define FRAME_death266        	316
-#define FRAME_death267        	317
-#define FRAME_death268        	318
-#define FRAME_death269        	319
-#define FRAME_death270        	320
-#define FRAME_death271        	321
-#define FRAME_death272        	322
-#define FRAME_death273        	323
-#define FRAME_death274        	324
-#define FRAME_death275        	325
-#define FRAME_death276        	326
-#define FRAME_death277        	327
-#define FRAME_death278        	328
-#define FRAME_death279        	329
-#define FRAME_death280        	330
-#define FRAME_death281        	331
-#define FRAME_death282        	332
-#define FRAME_death283        	333
-#define FRAME_death284        	334
-#define FRAME_death285        	335
-#define FRAME_death286        	336
-#define FRAME_death287        	337
-#define FRAME_death288        	338
-#define FRAME_death289        	339
-#define FRAME_death290        	340
-#define FRAME_death291        	341
-#define FRAME_death292        	342
-#define FRAME_death293        	343
-#define FRAME_death294        	344
-#define FRAME_death295        	345
-#undef FRAME_death301
-#define FRAME_death301        	346
-#undef FRAME_death302
-#define FRAME_death302        	347
-#undef FRAME_death303
-#define FRAME_death303        	348
-#undef FRAME_death304
-#define FRAME_death304        	349
-#undef FRAME_death305
-#define FRAME_death305        	350
-#undef FRAME_death306
-#define FRAME_death306        	351
-#undef FRAME_death307
-#define FRAME_death307        	352
-#undef FRAME_death308
-#define FRAME_death308        	353
-#undef FRAME_death309
-#define FRAME_death309        	354
-#undef FRAME_death310
-#define FRAME_death310        	355
-#undef FRAME_death311
-#define FRAME_death311        	356
-#undef FRAME_death312
-#define FRAME_death312        	357
-#undef FRAME_death313
-#define FRAME_death313        	358
-#undef FRAME_death314
-#define FRAME_death314        	359
-#undef FRAME_death315
-#define FRAME_death315        	360
-#define FRAME_death316        	361
-#define FRAME_death317        	362
-#define FRAME_death318        	363
-#define FRAME_death319        	364
-#define FRAME_death320        	365
-#undef FRAME_jump01
-#define FRAME_jump01          	366
-#undef FRAME_jump02
-#define FRAME_jump02          	367
-#undef FRAME_jump03
-#define FRAME_jump03          	368
-#undef FRAME_jump04
-#define FRAME_jump04          	369
-#undef FRAME_jump05
-#define FRAME_jump05          	370
-#undef FRAME_jump06
-#define FRAME_jump06          	371
-#define FRAME_jump07          	372
-#define FRAME_jump08          	373
-#define FRAME_jump09          	374
-#define FRAME_jump10          	375
-#define FRAME_jump11          	376
-#define FRAME_jump12          	377
-#define FRAME_jump13          	378
-#define FRAME_pain401         	379
-#define FRAME_pain402         	380
-#define FRAME_pain403         	381
-#define FRAME_pain404         	382
-#define FRAME_pain501         	383
-#define FRAME_pain502         	384
-#define FRAME_pain503         	385
-#define FRAME_pain504         	386
-#define FRAME_pain601         	387
-#define FRAME_pain602         	388
-#define FRAME_pain603         	389
-#define FRAME_pain604         	390
-#define FRAME_pain605         	391
-#define FRAME_pain606         	392
-#define FRAME_pain607         	393
-#define FRAME_pain608         	394
-#define FRAME_pain609         	395
-#define FRAME_pain610         	396
-#define FRAME_pain611         	397
-#define FRAME_pain612         	398
-#define FRAME_pain613         	399
-#define FRAME_pain614         	400
-#define FRAME_pain615         	401
-#define FRAME_pain616         	402
-#define FRAME_pain617         	403
-#define FRAME_pain618         	404
-#define FRAME_pain619         	405
-#define FRAME_pain620         	406
-#define FRAME_pain621         	407
-#define FRAME_pain622         	408
-#define FRAME_pain623         	409
-#define FRAME_pain624         	410
-#define FRAME_pain625         	411
-#define FRAME_pain626         	412
-#define FRAME_pain627         	413
-#undef FRAME_stand201
-#define FRAME_stand201        	414
-#undef FRAME_stand202
-#define FRAME_stand202        	415
-#undef FRAME_stand203
-#define FRAME_stand203        	416
-#undef FRAME_stand204
-#define FRAME_stand204        	417
-#undef FRAME_stand205
-#define FRAME_stand205        	418
-#undef FRAME_stand206
-#define FRAME_stand206        	419
-#undef FRAME_stand207
-#define FRAME_stand207        	420
-#undef FRAME_stand208
-#define FRAME_stand208        	421
-#undef FRAME_stand209
-#define FRAME_stand209        	422
-#undef FRAME_stand210
-#define FRAME_stand210        	423
-#undef FRAME_stand211
-#define FRAME_stand211        	424
-#undef FRAME_stand212
-#define FRAME_stand212        	425
-#undef FRAME_stand213
-#define FRAME_stand213        	426
-#undef FRAME_stand214
-#define FRAME_stand214        	427
-#undef FRAME_stand215
-#define FRAME_stand215        	428
-#undef FRAME_stand216
-#define FRAME_stand216        	429
-#undef FRAME_stand217
-#define FRAME_stand217        	430
-#undef FRAME_stand218
-#define FRAME_stand218        	431
-#undef FRAME_stand219
-#define FRAME_stand219        	432
-#undef FRAME_stand220
-#define FRAME_stand220        	433
-#undef FRAME_stand221
-#define FRAME_stand221        	434
-#undef FRAME_stand222
-#define FRAME_stand222        	435
-#undef FRAME_stand223
-#define FRAME_stand223        	436
-#define FRAME_stand224        	437
-#define FRAME_stand225        	438
-#define FRAME_stand226        	439
-#define FRAME_stand227        	440
-#define FRAME_stand228        	441
-#define FRAME_stand229        	442
-#define FRAME_stand230        	443
-#define FRAME_stand231        	444
-#define FRAME_stand232        	445
-#define FRAME_stand233        	446
-#define FRAME_stand234        	447
-#define FRAME_stand235        	448
-#define FRAME_stand236        	449
-#define FRAME_stand237        	450
-#define FRAME_stand238        	451
-#define FRAME_stand239        	452
-#define FRAME_stand240        	453
-#define FRAME_stand241        	454
-#define FRAME_stand242        	455
-#define FRAME_stand243        	456
-#define FRAME_stand244        	457
-#define FRAME_stand245        	458
-#define FRAME_stand246        	459
-#define FRAME_stand247        	460
-#define FRAME_stand248        	461
-#define FRAME_stand249        	462
-#define FRAME_stand250        	463
-#define FRAME_stand251        	464
-#define FRAME_stand252        	465
-#define FRAME_stand253        	466
-#define FRAME_stand254        	467
-#define FRAME_stand255        	468
-#define FRAME_stand256        	469
-#define FRAME_stand257        	470
-#define FRAME_stand258        	471
-#define FRAME_stand259        	472
-#define FRAME_stand260        	473
-#define FRAME_walk201         	474
-#define FRAME_walk202         	475
-#define FRAME_walk203         	476
-#define FRAME_walk204         	477
-#define FRAME_walk205         	478
-#define FRAME_walk206         	479
-#define FRAME_walk207         	480
-#define FRAME_walk208         	481
-#define FRAME_walk209         	482
-#define FRAME_walk210         	483
-#define FRAME_walk211         	484
-#define FRAME_walk212         	485
-#define FRAME_walk213         	486
-#define FRAME_walk214         	487
-#define FRAME_walk215         	488
-#define FRAME_walk216         	489
-#define FRAME_walk217         	490
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss32.h ============ */
@@ -47202,8 +45285,8 @@ static void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
 
 void Think_Boss3Stand (edict_t *ent)
 {
-	if (ent->s.frame == FRAME_stand260)
-		ent->s.frame = FRAME_stand201;
+	if (ent->s.frame == 473)
+		ent->s.frame = 414;
 	else
 		ent->s.frame++;
 	ent->nextthink = level.time + FRAMETIME;
@@ -47216,7 +45299,7 @@ void SP_monster_boss3_stand (edict_t* self)
 	self->solid = SOLID_BBOX;
 	self->model = "models/monsters/boss3/rider/tris.md2";
 	self->s.modelindex = SV_ModelIndex (self->model);
-	self->s.frame = FRAME_stand201;
+	self->s.frame = 414;
 
 	SV_SoundIndex ("misc/bigtele.wav");
 
@@ -47229,194 +45312,6 @@ void SP_monster_boss3_stand (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-#define FRAME_attak101        	0
-#define FRAME_attak102        	1
-#define FRAME_attak103        	2
-#define FRAME_attak104        	3
-#define FRAME_attak105        	4
-#define FRAME_attak106        	5
-#define FRAME_attak107        	6
-#define FRAME_attak108        	7
-#define FRAME_attak109        	8
-#define FRAME_attak110        	9
-#define FRAME_attak111        	10
-#define FRAME_attak112        	11
-#define FRAME_attak113        	12
-#define FRAME_attak114        	13
-#define FRAME_attak115        	14
-#define FRAME_attak116        	15
-#define FRAME_attak117        	16
-#define FRAME_attak118        	17
-#define FRAME_attak201        	18
-#define FRAME_attak202        	19
-#define FRAME_attak203        	20
-#define FRAME_attak204        	21
-#define FRAME_attak205        	22
-#define FRAME_attak206        	23
-#define FRAME_attak207        	24
-#define FRAME_attak208        	25
-#define FRAME_attak209        	26
-#define FRAME_attak210        	27
-#define FRAME_attak211        	28
-#define FRAME_attak212        	29
-#define FRAME_attak213        	30
-#define FRAME_death01         	31
-#define FRAME_death02         	32
-#define FRAME_death03         	33
-#define FRAME_death04         	34
-#define FRAME_death05         	35
-#define FRAME_death06         	36
-#define FRAME_death07         	37
-#define FRAME_death08         	38
-#define FRAME_death09         	39
-#define FRAME_death10         	40
-#define FRAME_death11         	41
-#define FRAME_death12         	42
-#define FRAME_death13         	43
-#define FRAME_death14         	44
-#define FRAME_death15         	45
-#define FRAME_death16         	46
-#define FRAME_death17         	47
-#define FRAME_death18         	48
-#define FRAME_death19         	49
-#define FRAME_death20         	50
-#define FRAME_death21         	51
-#define FRAME_death22         	52
-#define FRAME_death23         	53
-#define FRAME_death24         	54
-#define FRAME_death25         	55
-#define FRAME_death26         	56
-#define FRAME_death27         	57
-#define FRAME_death28         	58
-#define FRAME_death29         	59
-#define FRAME_death30         	60
-#define FRAME_death31         	61
-#define FRAME_death32         	62
-#define FRAME_death33         	63
-#define FRAME_death34         	64
-#define FRAME_death35         	65
-#define FRAME_death36         	66
-#define FRAME_death37         	67
-#define FRAME_death38         	68
-#define FRAME_death39         	69
-#define FRAME_death40         	70
-#define FRAME_death41         	71
-#define FRAME_death42         	72
-#define FRAME_death43         	73
-#define FRAME_death44         	74
-#define FRAME_death45         	75
-#define FRAME_death46         	76
-#define FRAME_death47         	77
-#define FRAME_death48         	78
-#define FRAME_death49         	79
-#define FRAME_death50         	80
-#define FRAME_pain101         	81
-#define FRAME_pain102         	82
-#define FRAME_pain103         	83
-#define FRAME_pain201         	84
-#define FRAME_pain202         	85
-#define FRAME_pain203         	86
-#define FRAME_pain301         	87
-#define FRAME_pain302         	88
-#define FRAME_pain303         	89
-#define FRAME_pain304         	90
-#define FRAME_pain305         	91
-#define FRAME_pain306         	92
-#define FRAME_pain307         	93
-#define FRAME_pain308         	94
-#define FRAME_pain309         	95
-#define FRAME_pain310         	96
-#define FRAME_pain311         	97
-#define FRAME_pain312         	98
-#define FRAME_pain313         	99
-#define FRAME_pain314         	100
-#define FRAME_pain315         	101
-#define FRAME_pain316         	102
-#define FRAME_pain317         	103
-#define FRAME_pain318         	104
-#define FRAME_pain319         	105
-#define FRAME_pain320         	106
-#define FRAME_pain321         	107
-#define FRAME_pain322         	108
-#define FRAME_pain323         	109
-#define FRAME_pain324         	110
-#define FRAME_pain325         	111
-#define FRAME_stand01         	112
-#define FRAME_stand02         	113
-#define FRAME_stand03         	114
-#define FRAME_stand04         	115
-#define FRAME_stand05         	116
-#define FRAME_stand06         	117
-#define FRAME_stand07         	118
-#define FRAME_stand08         	119
-#define FRAME_stand09         	120
-#define FRAME_stand10         	121
-#define FRAME_stand11         	122
-#define FRAME_stand12         	123
-#define FRAME_stand13         	124
-#define FRAME_stand14         	125
-#define FRAME_stand15         	126
-#define FRAME_stand16         	127
-#define FRAME_stand17         	128
-#define FRAME_stand18         	129
-#define FRAME_stand19         	130
-#define FRAME_stand20         	131
-#define FRAME_stand21         	132
-#define FRAME_stand22         	133
-#define FRAME_stand23         	134
-#define FRAME_stand24         	135
-#define FRAME_stand25         	136
-#define FRAME_stand26         	137
-#define FRAME_stand27         	138
-#define FRAME_stand28         	139
-#define FRAME_stand29         	140
-#define FRAME_stand30         	141
-#define FRAME_stand31         	142
-#define FRAME_stand32         	143
-#define FRAME_stand33         	144
-#define FRAME_stand34         	145
-#define FRAME_stand35         	146
-#define FRAME_stand36         	147
-#define FRAME_stand37         	148
-#define FRAME_stand38         	149
-#define FRAME_stand39         	150
-#define FRAME_stand40         	151
-#define FRAME_stand41         	152
-#define FRAME_stand42         	153
-#define FRAME_stand43         	154
-#define FRAME_stand44         	155
-#define FRAME_stand45         	156
-#define FRAME_stand46         	157
-#define FRAME_stand47         	158
-#define FRAME_stand48         	159
-#define FRAME_stand49         	160
-#define FRAME_stand50         	161
-#define FRAME_stand51         	162
-#define FRAME_walk01          	163
-#define FRAME_walk02          	164
-#define FRAME_walk03          	165
-#define FRAME_walk04          	166
-#define FRAME_walk05          	167
-#define FRAME_walk06          	168
-#define FRAME_walk07          	169
-#define FRAME_walk08          	170
-#define FRAME_walk09          	171
-#define FRAME_walk10          	172
-#define FRAME_walk11          	173
-#define FRAME_walk12          	174
-#define FRAME_walk13          	175
-#define FRAME_walk14          	176
-#define FRAME_walk15          	177
-#define FRAME_walk16          	178
-#define FRAME_walk17          	179
-#define FRAME_walk18          	180
-#define FRAME_walk19          	181
-#define FRAME_walk20          	182
-#define FRAME_walk21          	183
-#define FRAME_walk22          	184
-#define FRAME_walk23          	185
-#define FRAME_walk24          	186
-#define FRAME_walk25          	187
 
 #define MODEL_SCALE		1.000000
 
@@ -47525,7 +45420,7 @@ static mframe_t jorg_frames_stand[] = {
 	{ai_stand, -12, NULL},		// 50
 	{ai_stand, -14, jorg_step_right},	// 51
 };
-mmove_t	jorg_move_stand = {FRAME_stand01, FRAME_stand51, jorg_frames_stand, NULL};
+mmove_t	jorg_move_stand = {112, 162, jorg_frames_stand, NULL};
 
 void jorg_idle (edict_t* self)
 {
@@ -47571,7 +45466,7 @@ mframe_t jorg_frames_run [] =
 	{ai_run, 9,	NULL},
 	{ai_run, 9,	NULL},
 };
-mmove_t	jorg_move_run = {FRAME_walk06, FRAME_walk19, jorg_frames_run, NULL};
+mmove_t	jorg_move_run = {168, 181, jorg_frames_run, NULL};
 
 //
 // walk
@@ -47585,7 +45480,7 @@ mframe_t jorg_frames_start_walk [] =
 	{ai_walk,	9,	NULL},
 	{ai_walk,	15,	NULL},
 };
-mmove_t jorg_move_start_walk = {FRAME_walk01, FRAME_walk05, jorg_frames_start_walk, NULL};
+mmove_t jorg_move_start_walk = {163, 167, jorg_frames_start_walk, NULL};
 
 mframe_t jorg_frames_walk [] =
 {
@@ -47604,7 +45499,7 @@ mframe_t jorg_frames_walk [] =
 	{ai_walk, 9,	NULL},
 	{ai_walk, 9,	NULL},
 };
-mmove_t	jorg_move_walk = {FRAME_walk06, FRAME_walk19, jorg_frames_walk, NULL};
+mmove_t	jorg_move_walk = {168, 181, jorg_frames_walk, NULL};
 
 mframe_t jorg_frames_end_walk [] =
 {
@@ -47615,7 +45510,7 @@ mframe_t jorg_frames_end_walk [] =
 	{ai_walk,	8,	NULL},
 	{ai_walk,	-8,	NULL},
 };
-mmove_t jorg_move_end_walk = {FRAME_walk20, FRAME_walk25, jorg_frames_end_walk, NULL};
+mmove_t jorg_move_end_walk = {182, 187, jorg_frames_end_walk, NULL};
 
 void jorg_walk (edict_t* self)
 {
@@ -47658,7 +45553,7 @@ mframe_t jorg_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	jorg_step_right},
 };
-mmove_t jorg_move_pain3 = {FRAME_pain301, FRAME_pain325, jorg_frames_pain3, jorg_run};
+mmove_t jorg_move_pain3 = {87, 111, jorg_frames_pain3, jorg_run};
 
 mframe_t jorg_frames_pain2 [] =
 {
@@ -47666,7 +45561,7 @@ mframe_t jorg_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_pain2 = {FRAME_pain201, FRAME_pain203, jorg_frames_pain2, jorg_run};
+mmove_t jorg_move_pain2 = {84, 86, jorg_frames_pain2, jorg_run};
 
 mframe_t jorg_frames_pain1 [] =
 {
@@ -47674,7 +45569,7 @@ mframe_t jorg_frames_pain1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_pain1 = {FRAME_pain101, FRAME_pain103, jorg_frames_pain1, jorg_run};
+mmove_t jorg_move_pain1 = {81, 83, jorg_frames_pain1, jorg_run};
 
 mframe_t jorg_frames_death1[] = {
 	{ai_move,	0,	NULL},
@@ -47728,7 +45623,7 @@ mframe_t jorg_frames_death1[] = {
 	{ai_move,	0,	MakronToss},
 	{ai_move,	0,	BossExplode},		// 50
 };
-mmove_t jorg_move_death = {FRAME_death01, FRAME_death50, jorg_frames_death1, jorg_dead};
+mmove_t jorg_move_death = {31, 80, jorg_frames_death1, jorg_dead};
 
 mframe_t jorg_frames_attack2 []=
 {
@@ -47746,7 +45641,7 @@ mframe_t jorg_frames_attack2 []=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_attack2 = {FRAME_attak201, FRAME_attak213, jorg_frames_attack2, jorg_run};
+mmove_t jorg_move_attack2 = {18, 30, jorg_frames_attack2, jorg_run};
 
 mframe_t jorg_frames_start_attack1 [] =
 {
@@ -47759,7 +45654,7 @@ mframe_t jorg_frames_start_attack1 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t jorg_move_start_attack1 = {FRAME_attak101, FRAME_attak108, jorg_frames_start_attack1, jorg_attack1};
+mmove_t jorg_move_start_attack1 = {0, 7, jorg_frames_start_attack1, jorg_attack1};
 
 mframe_t jorg_frames_attack1[]=
 {
@@ -47770,7 +45665,7 @@ mframe_t jorg_frames_attack1[]=
 	{ai_charge,	0,	jorg_firebullet},
 	{ai_charge,	0,	jorg_firebullet},
 };
-mmove_t jorg_move_attack1 = {FRAME_attak109, FRAME_attak114, jorg_frames_attack1, jorg_reattack1};
+mmove_t jorg_move_attack1 = {8, 13, jorg_frames_attack1, jorg_reattack1};
 
 mframe_t jorg_frames_end_attack1[]=
 {
@@ -47779,7 +45674,7 @@ mframe_t jorg_frames_end_attack1[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_end_attack1 = {FRAME_attak115, FRAME_attak118, jorg_frames_end_attack1, jorg_run};
+mmove_t jorg_move_end_attack1 = {14, 17, jorg_frames_end_attack1, jorg_run};
 
 void jorg_reattack1(edict_t* self)
 {
@@ -47824,16 +45719,16 @@ static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	going into pain
 	*/
 
-	if ( (self->s.frame >= FRAME_attak101) && (self->s.frame <= FRAME_attak108) )
+	if ( (self->s.frame >= 0) && (self->s.frame <= 7) )
 		if (random() <= 0.005)
 			return;
 
-	if ( (self->s.frame >= FRAME_attak109) && (self->s.frame <= FRAME_attak114) )
+	if ( (self->s.frame >= 8) && (self->s.frame <= 13) )
 		if (random() <= 0.00005)
 			return;
 
 
-	if ( (self->s.frame >= FRAME_attak201) && (self->s.frame <= FRAME_attak208) )
+	if ( (self->s.frame >= 18) && (self->s.frame <= 25) )
 		if (random() <= 0.005)
 			return;
 
@@ -48211,7 +46106,7 @@ static mframe_t makron_frames_stand[]= {
 	{ai_stand, 0, NULL},		// 60
 };
 
-static mmove_t makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
+static mmove_t makron_move_stand = {414, 473, makron_frames_stand, NULL};
 
 void makron_stand (edict_t* self)
 {
@@ -48231,7 +46126,7 @@ mframe_t makron_frames_run [] =
 	{ai_run, 6,	NULL},
 	{ai_run, 12,	NULL},
 };
-mmove_t	makron_move_run = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
+mmove_t	makron_move_run = {477, 486, makron_frames_run, NULL};
 
 void makron_hit (edict_t* self)
 {
@@ -48277,7 +46172,7 @@ mframe_t makron_frames_walk [] =
 	{ai_walk, 6,	NULL},
 	{ai_walk, 12,	NULL},
 };
-mmove_t	makron_move_walk = {FRAME_walk204, FRAME_walk213, makron_frames_run, NULL};
+mmove_t	makron_move_walk = {477, 486, makron_frames_run, NULL};
 
 void makron_walk (edict_t* self)
 {
@@ -48322,7 +46217,7 @@ mframe_t makron_frames_pain6 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain6 = {FRAME_pain601, FRAME_pain627, makron_frames_pain6, makron_run};
+mmove_t makron_move_pain6 = {387, 413, makron_frames_pain6, makron_run};
 
 mframe_t makron_frames_pain5 [] =
 {
@@ -48331,7 +46226,7 @@ mframe_t makron_frames_pain5 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain5 = {FRAME_pain501, FRAME_pain504, makron_frames_pain5, makron_run};
+mmove_t makron_move_pain5 = {383, 386, makron_frames_pain5, makron_run};
 
 mframe_t makron_frames_pain4 [] =
 {
@@ -48340,7 +46235,7 @@ mframe_t makron_frames_pain4 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain4 = {FRAME_pain401, FRAME_pain404, makron_frames_pain4, makron_run};
+mmove_t makron_move_pain4 = {379, 382, makron_frames_pain4, makron_run};
 
 mframe_t makron_frames_death2[] = {
 	{ai_move,	-15,	NULL},
@@ -48440,7 +46335,7 @@ mframe_t makron_frames_death2[] = {
 	{ai_move,	0,	NULL},			// 95
 };
 
-mmove_t makron_move_death2 = {FRAME_death201, FRAME_death295, makron_frames_death2, makron_dead};
+mmove_t makron_move_death2 = {251, 345, makron_frames_death2, makron_dead};
 
 mframe_t makron_frames_death3 [] =
 {
@@ -48465,7 +46360,7 @@ mframe_t makron_frames_death3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_death3 = {FRAME_death301, FRAME_death320, makron_frames_death3, NULL};
+mmove_t makron_move_death3 = {346, 365, makron_frames_death3, NULL};
 
 mframe_t makron_frames_sight [] =
 {
@@ -48483,7 +46378,7 @@ mframe_t makron_frames_sight [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_sight= {FRAME_active01, FRAME_active13, makron_frames_sight, makron_run};
+mmove_t makron_move_sight= {188, 200, makron_frames_sight, makron_run};
 
 void makronBFG (edict_t* self)
 {
@@ -48515,7 +46410,7 @@ mframe_t makron_frames_attack3 []=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack3 = {FRAME_attak301, FRAME_attak308, makron_frames_attack3, makron_run};
+mmove_t makron_move_attack3 = {201, 208, makron_frames_attack3, makron_run};
 
 mframe_t makron_frames_attack4[]=
 {
@@ -48546,7 +46441,7 @@ mframe_t makron_frames_attack4[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack4 = {FRAME_attak401, FRAME_attak426, makron_frames_attack4, makron_run};
+mmove_t makron_move_attack4 = {209, 234, makron_frames_attack4, makron_run};
 
 mframe_t makron_frames_attack5[]=
 {
@@ -48567,7 +46462,7 @@ mframe_t makron_frames_attack5[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack5 = {FRAME_attak501, FRAME_attak516, makron_frames_attack5, makron_run};
+mmove_t makron_move_attack5 = {235, 250, makron_frames_attack5, makron_run};
 
 void MakronSaveloc (edict_t* self)
 {
@@ -48601,7 +46496,7 @@ void MakronHyperblaster (edict_t* self)
 	vec3_t	forward, right;
 	int		flash_number;
 
-	flash_number = MZ2_MAKRON_BLASTER_1 + (self->s.frame - FRAME_attak405);
+	flash_number = MZ2_MAKRON_BLASTER_1 + (self->s.frame - 213);
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
@@ -48618,10 +46513,10 @@ void MakronHyperblaster (edict_t* self)
 	{
 		dir[0] = 0;
 	}
-	if (self->s.frame <= FRAME_attak413)
-		dir[1] = self->s.angles[1] - 10 * (self->s.frame - FRAME_attak413);
+	if (self->s.frame <= 221)
+		dir[1] = self->s.angles[1] - 10 * (self->s.frame - 221);
 	else
-		dir[1] = self->s.angles[1] + 10 * (self->s.frame - FRAME_attak421);
+		dir[1] = self->s.angles[1] + 10 * (self->s.frame - 229);
 	dir[2] = 0;
 
 	AngleVectors (dir, forward, NULL, NULL);
@@ -48987,353 +46882,6 @@ brain
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_walk101         	0
-#define FRAME_walk102         	1
-#define FRAME_walk103         	2
-#define FRAME_walk104         	3
-#define FRAME_walk105         	4
-#define FRAME_walk106         	5
-#define FRAME_walk107         	6
-#define FRAME_walk108         	7
-#define FRAME_walk109         	8
-#define FRAME_walk110         	9
-#define FRAME_walk111         	10
-#define FRAME_walk112         	11
-#define FRAME_walk113         	12
-#undef FRAME_walk201
-#define FRAME_walk201         	13
-#undef FRAME_walk202
-#define FRAME_walk202         	14
-#undef FRAME_walk203
-#define FRAME_walk203         	15
-#undef FRAME_walk204
-#define FRAME_walk204         	16
-#undef FRAME_walk205
-#define FRAME_walk205         	17
-#undef FRAME_walk206
-#define FRAME_walk206         	18
-#undef FRAME_walk207
-#define FRAME_walk207         	19
-#undef FRAME_walk208
-#define FRAME_walk208         	20
-#undef FRAME_walk209
-#define FRAME_walk209         	21
-#undef FRAME_walk210
-#define FRAME_walk210         	22
-#undef FRAME_walk211
-#define FRAME_walk211         	23
-#undef FRAME_walk212
-#define FRAME_walk212         	24
-#undef FRAME_walk213
-#define FRAME_walk213         	25
-#undef FRAME_walk214
-#define FRAME_walk214         	26
-#undef FRAME_walk215
-#define FRAME_walk215         	27
-#undef FRAME_walk216
-#define FRAME_walk216         	28
-#undef FRAME_walk217
-#define FRAME_walk217         	29
-#define FRAME_walk218         	30
-#define FRAME_walk219         	31
-#define FRAME_walk220         	32
-#define FRAME_walk221         	33
-#define FRAME_walk222         	34
-#define FRAME_walk223         	35
-#define FRAME_walk224         	36
-#define FRAME_walk225         	37
-#define FRAME_walk226         	38
-#define FRAME_walk227         	39
-#define FRAME_walk228         	40
-#define FRAME_walk229         	41
-#define FRAME_walk230         	42
-#define FRAME_walk231         	43
-#define FRAME_walk232         	44
-#define FRAME_walk233         	45
-#define FRAME_walk234         	46
-#define FRAME_walk235         	47
-#define FRAME_walk236         	48
-#define FRAME_walk237         	49
-#define FRAME_walk238         	50
-#define FRAME_walk239         	51
-#define FRAME_walk240         	52
-#undef FRAME_attak101
-#define FRAME_attak101        	53
-#undef FRAME_attak102
-#define FRAME_attak102        	54
-#undef FRAME_attak103
-#define FRAME_attak103        	55
-#undef FRAME_attak104
-#define FRAME_attak104        	56
-#undef FRAME_attak105
-#define FRAME_attak105        	57
-#undef FRAME_attak106
-#define FRAME_attak106        	58
-#undef FRAME_attak107
-#define FRAME_attak107        	59
-#undef FRAME_attak108
-#define FRAME_attak108        	60
-#undef FRAME_attak109
-#define FRAME_attak109        	61
-#undef FRAME_attak110
-#define FRAME_attak110        	62
-#undef FRAME_attak111
-#define FRAME_attak111        	63
-#undef FRAME_attak112
-#define FRAME_attak112        	64
-#undef FRAME_attak113
-#define FRAME_attak113        	65
-#undef FRAME_attak114
-#define FRAME_attak114        	66
-#undef FRAME_attak115
-#define FRAME_attak115        	67
-#undef FRAME_attak116
-#define FRAME_attak116        	68
-#undef FRAME_attak117
-#define FRAME_attak117        	69
-#undef FRAME_attak118
-#define FRAME_attak118        	70
-#undef FRAME_attak201
-#define FRAME_attak201        	71
-#undef FRAME_attak202
-#define FRAME_attak202        	72
-#undef FRAME_attak203
-#define FRAME_attak203        	73
-#undef FRAME_attak204
-#define FRAME_attak204        	74
-#undef FRAME_attak205
-#define FRAME_attak205        	75
-#undef FRAME_attak206
-#define FRAME_attak206        	76
-#undef FRAME_attak207
-#define FRAME_attak207        	77
-#undef FRAME_attak208
-#define FRAME_attak208        	78
-#undef FRAME_attak209
-#define FRAME_attak209        	79
-#undef FRAME_attak210
-#define FRAME_attak210        	80
-#undef FRAME_attak211
-#define FRAME_attak211        	81
-#undef FRAME_attak212
-#define FRAME_attak212        	82
-#undef FRAME_attak213
-#define FRAME_attak213        	83
-#define FRAME_attak214        	84
-#define FRAME_attak215        	85
-#define FRAME_attak216        	86
-#define FRAME_attak217        	87
-#undef FRAME_pain101
-#define FRAME_pain101         	88
-#undef FRAME_pain102
-#define FRAME_pain102         	89
-#undef FRAME_pain103
-#define FRAME_pain103         	90
-#undef FRAME_pain104
-#define FRAME_pain104         	91
-#define FRAME_pain105         	92
-#define FRAME_pain106         	93
-#define FRAME_pain107         	94
-#define FRAME_pain108         	95
-#define FRAME_pain109         	96
-#define FRAME_pain110         	97
-#define FRAME_pain111         	98
-#define FRAME_pain112         	99
-#define FRAME_pain113         	100
-#define FRAME_pain114         	101
-#define FRAME_pain115         	102
-#define FRAME_pain116         	103
-#define FRAME_pain117         	104
-#define FRAME_pain118         	105
-#define FRAME_pain119         	106
-#define FRAME_pain120         	107
-#define FRAME_pain121         	108
-#undef FRAME_pain201
-#define FRAME_pain201         	109
-#undef FRAME_pain202
-#define FRAME_pain202         	110
-#undef FRAME_pain203
-#define FRAME_pain203         	111
-#undef FRAME_pain204
-#define FRAME_pain204         	112
-#define FRAME_pain205         	113
-#define FRAME_pain206         	114
-#define FRAME_pain207         	115
-#define FRAME_pain208         	116
-#undef FRAME_pain301
-#define FRAME_pain301         	117
-#undef FRAME_pain302
-#define FRAME_pain302         	118
-#undef FRAME_pain303
-#define FRAME_pain303         	119
-#undef FRAME_pain304
-#define FRAME_pain304         	120
-#undef FRAME_pain305
-#define FRAME_pain305         	121
-#undef FRAME_pain306
-#define FRAME_pain306         	122
-#undef FRAME_death101
-#define FRAME_death101        	123
-#undef FRAME_death102
-#define FRAME_death102        	124
-#undef FRAME_death103
-#define FRAME_death103        	125
-#undef FRAME_death104
-#define FRAME_death104        	126
-#undef FRAME_death105
-#define FRAME_death105        	127
-#undef FRAME_death106
-#define FRAME_death106        	128
-#undef FRAME_death107
-#define FRAME_death107        	129
-#define FRAME_death108        	130
-#define FRAME_death109        	131
-#define FRAME_death110        	132
-#define FRAME_death111        	133
-#define FRAME_death112        	134
-#define FRAME_death113        	135
-#define FRAME_death114        	136
-#define FRAME_death115        	137
-#define FRAME_death116        	138
-#define FRAME_death117        	139
-#define FRAME_death118        	140
-#undef FRAME_death201
-#define FRAME_death201        	141
-#undef FRAME_death202
-#define FRAME_death202        	142
-#undef FRAME_death203
-#define FRAME_death203        	143
-#undef FRAME_death204
-#define FRAME_death204        	144
-#undef FRAME_death205
-#define FRAME_death205        	145
-#define FRAME_duck01          	146
-#define FRAME_duck02          	147
-#define FRAME_duck03          	148
-#define FRAME_duck04          	149
-#define FRAME_duck05          	150
-#define FRAME_duck06          	151
-#define FRAME_duck07          	152
-#define FRAME_duck08          	153
-#define FRAME_defens01        	154
-#define FRAME_defens02        	155
-#define FRAME_defens03        	156
-#define FRAME_defens04        	157
-#define FRAME_defens05        	158
-#define FRAME_defens06        	159
-#define FRAME_defens07        	160
-#define FRAME_defens08        	161
-#undef FRAME_stand01
-#define FRAME_stand01         	162
-#undef FRAME_stand02
-#define FRAME_stand02         	163
-#undef FRAME_stand03
-#define FRAME_stand03         	164
-#undef FRAME_stand04
-#define FRAME_stand04         	165
-#undef FRAME_stand05
-#define FRAME_stand05         	166
-#undef FRAME_stand06
-#define FRAME_stand06         	167
-#undef FRAME_stand07
-#define FRAME_stand07         	168
-#undef FRAME_stand08
-#define FRAME_stand08         	169
-#undef FRAME_stand09
-#define FRAME_stand09         	170
-#undef FRAME_stand10
-#define FRAME_stand10         	171
-#undef FRAME_stand11
-#define FRAME_stand11         	172
-#undef FRAME_stand12
-#define FRAME_stand12         	173
-#undef FRAME_stand13
-#define FRAME_stand13         	174
-#undef FRAME_stand14
-#define FRAME_stand14         	175
-#undef FRAME_stand15
-#define FRAME_stand15         	176
-#undef FRAME_stand16
-#define FRAME_stand16         	177
-#undef FRAME_stand17
-#define FRAME_stand17         	178
-#undef FRAME_stand18
-#define FRAME_stand18         	179
-#undef FRAME_stand19
-#define FRAME_stand19         	180
-#undef FRAME_stand20
-#define FRAME_stand20         	181
-#undef FRAME_stand21
-#define FRAME_stand21         	182
-#undef FRAME_stand22
-#define FRAME_stand22         	183
-#undef FRAME_stand23
-#define FRAME_stand23         	184
-#undef FRAME_stand24
-#define FRAME_stand24         	185
-#undef FRAME_stand25
-#define FRAME_stand25         	186
-#undef FRAME_stand26
-#define FRAME_stand26         	187
-#undef FRAME_stand27
-#define FRAME_stand27         	188
-#undef FRAME_stand28
-#define FRAME_stand28         	189
-#undef FRAME_stand29
-#define FRAME_stand29         	190
-#undef FRAME_stand30
-#define FRAME_stand30         	191
-#undef FRAME_stand31
-#define FRAME_stand31         	192
-#undef FRAME_stand32
-#define FRAME_stand32         	193
-#undef FRAME_stand33
-#define FRAME_stand33         	194
-#undef FRAME_stand34
-#define FRAME_stand34         	195
-#undef FRAME_stand35
-#define FRAME_stand35         	196
-#undef FRAME_stand36
-#define FRAME_stand36         	197
-#undef FRAME_stand37
-#define FRAME_stand37         	198
-#undef FRAME_stand38
-#define FRAME_stand38         	199
-#undef FRAME_stand39
-#define FRAME_stand39         	200
-#undef FRAME_stand40
-#define FRAME_stand40         	201
-#undef FRAME_stand41
-#define FRAME_stand41         	202
-#undef FRAME_stand42
-#define FRAME_stand42         	203
-#undef FRAME_stand43
-#define FRAME_stand43         	204
-#undef FRAME_stand44
-#define FRAME_stand44         	205
-#undef FRAME_stand45
-#define FRAME_stand45         	206
-#undef FRAME_stand46
-#define FRAME_stand46         	207
-#undef FRAME_stand47
-#define FRAME_stand47         	208
-#undef FRAME_stand48
-#define FRAME_stand48         	209
-#undef FRAME_stand49
-#define FRAME_stand49         	210
-#undef FRAME_stand50
-#define FRAME_stand50         	211
-#undef FRAME_stand51
-#define FRAME_stand51         	212
-#define FRAME_stand52         	213
-#define FRAME_stand53         	214
-#define FRAME_stand54         	215
-#define FRAME_stand55         	216
-#define FRAME_stand56         	217
-#define FRAME_stand57         	218
-#define FRAME_stand58         	219
-#define FRAME_stand59         	220
-#define FRAME_stand60         	221
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_brain.h ============ */
@@ -49409,7 +46957,7 @@ mframe_t brain_frames_stand [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
 };
-mmove_t brain_move_stand = {FRAME_stand01, FRAME_stand30, brain_frames_stand, NULL};
+mmove_t brain_move_stand = {162, 191, brain_frames_stand, NULL};
 
 void brain_stand (edict_t* self)
 {
@@ -49456,7 +47004,7 @@ mframe_t brain_frames_idle [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
 };
-mmove_t brain_move_idle = {FRAME_stand31, FRAME_stand60, brain_frames_idle, brain_stand};
+mmove_t brain_move_idle = {192, 221, brain_frames_idle, brain_stand};
 
 void brain_idle (edict_t* self)
 {
@@ -49482,7 +47030,7 @@ mframe_t brain_frames_walk1 [] =
 	{ai_walk,	-1,	NULL},
 	{ai_walk,	2,	NULL},
 };
-mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NULL};
+mmove_t brain_move_walk1 = {0, 10, brain_frames_walk1, NULL};
 
 void brain_walk (edict_t* self)
 {
@@ -49501,7 +47049,7 @@ mframe_t brain_frames_defense [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t brain_move_defense = {FRAME_defens01, FRAME_defens08, brain_frames_defense, NULL};
+mmove_t brain_move_defense = {154, 161, brain_frames_defense, NULL};
 
 mframe_t brain_frames_pain3 [] =
 {
@@ -49512,7 +47060,7 @@ mframe_t brain_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	-4,	NULL},
 };
-mmove_t brain_move_pain3 = {FRAME_pain301, FRAME_pain306, brain_frames_pain3, brain_run};
+mmove_t brain_move_pain3 = {117, 122, brain_frames_pain3, brain_run};
 
 mframe_t brain_frames_pain2 [] =
 {
@@ -49525,7 +47073,7 @@ mframe_t brain_frames_pain2 [] =
 	{ai_move,	1,	NULL},
 	{ai_move,	-2,	NULL},
 };
-mmove_t brain_move_pain2 = {FRAME_pain201, FRAME_pain208, brain_frames_pain2, brain_run};
+mmove_t brain_move_pain2 = {109, 116, brain_frames_pain2, brain_run};
 
 mframe_t brain_frames_pain1 [] =
 {
@@ -49551,7 +47099,7 @@ mframe_t brain_frames_pain1 [] =
 	{ai_move,	3,	NULL},
 	{ai_move,	-1,	NULL},
 };
-mmove_t brain_move_pain1 = {FRAME_pain101, FRAME_pain121, brain_frames_pain1, brain_run};
+mmove_t brain_move_pain1 = {88, 108, brain_frames_pain1, brain_run};
 
 
 //
@@ -49595,7 +47143,7 @@ mframe_t brain_frames_duck [] =
 	{ai_move,	-6,	NULL},
 	{ai_move,	-6,	NULL},
 };
-mmove_t brain_move_duck = {FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run};
+mmove_t brain_move_duck = {146, 153, brain_frames_duck, brain_run};
 
 void brain_dodge (edict_t* self, edict_t* attacker, float eta)
 {
@@ -49618,7 +47166,7 @@ mframe_t brain_frames_death2 [] =
 	{ai_move,	9,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t brain_move_death2 = {FRAME_death201, FRAME_death205, brain_frames_death2, brain_dead};
+mmove_t brain_move_death2 = {141, 145, brain_frames_death2, brain_dead};
 
 mframe_t brain_frames_death1 [] =
 {
@@ -49641,7 +47189,7 @@ mframe_t brain_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t brain_move_death1 = {FRAME_death101, FRAME_death118, brain_frames_death1, brain_dead};
+mmove_t brain_move_death1 = {123, 140, brain_frames_death1, brain_dead};
 
 
 //
@@ -49697,7 +47245,7 @@ mframe_t brain_frames_attack1 [] =
 	{ai_charge,	2,	NULL},
 	{ai_charge,	-11,NULL},
 };
-mmove_t brain_move_attack1 = {FRAME_attak101, FRAME_attak118, brain_frames_attack1, brain_run};
+mmove_t brain_move_attack1 = {53, 70, brain_frames_attack1, brain_run};
 
 void brain_chest_open (edict_t* self)
 {
@@ -49746,7 +47294,7 @@ mframe_t brain_frames_attack2 [] =
 	{ai_charge,	-3,	NULL},
 	{ai_charge,	-6,	NULL},
 };
-mmove_t brain_move_attack2 = {FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run};
+mmove_t brain_move_attack2 = {71, 87, brain_frames_attack2, brain_run};
 
 void brain_melee(edict_t* self)
 {
@@ -49775,7 +47323,7 @@ mframe_t brain_frames_run [] =
 	{ai_run,	-1,	NULL},
 	{ai_run,	2,	NULL},
 };
-mmove_t brain_move_run = {FRAME_walk101, FRAME_walk111, brain_frames_run, NULL};
+mmove_t brain_move_run = {0, 10, brain_frames_run, NULL};
 
 void brain_run (edict_t* self)
 {
@@ -49936,486 +47484,6 @@ chick
 
 // This file generated by qdata - Do NOT Modify
 
-#undef FRAME_attak101
-#define FRAME_attak101        	0
-#undef FRAME_attak102
-#define FRAME_attak102        	1
-#undef FRAME_attak103
-#define FRAME_attak103        	2
-#undef FRAME_attak104
-#define FRAME_attak104        	3
-#undef FRAME_attak105
-#define FRAME_attak105        	4
-#undef FRAME_attak106
-#define FRAME_attak106        	5
-#undef FRAME_attak107
-#define FRAME_attak107        	6
-#undef FRAME_attak108
-#define FRAME_attak108        	7
-#undef FRAME_attak109
-#define FRAME_attak109        	8
-#undef FRAME_attak110
-#define FRAME_attak110        	9
-#undef FRAME_attak111
-#define FRAME_attak111        	10
-#undef FRAME_attak112
-#define FRAME_attak112        	11
-#undef FRAME_attak113
-#define FRAME_attak113        	12
-#undef FRAME_attak114
-#define FRAME_attak114        	13
-#undef FRAME_attak115
-#define FRAME_attak115        	14
-#undef FRAME_attak116
-#define FRAME_attak116        	15
-#undef FRAME_attak117
-#define FRAME_attak117        	16
-#undef FRAME_attak118
-#define FRAME_attak118        	17
-#define FRAME_attak119        	18
-#define FRAME_attak120        	19
-#define FRAME_attak121        	20
-#define FRAME_attak122        	21
-#define FRAME_attak123        	22
-#define FRAME_attak124        	23
-#define FRAME_attak125        	24
-#define FRAME_attak126        	25
-#define FRAME_attak127        	26
-#define FRAME_attak128        	27
-#define FRAME_attak129        	28
-#define FRAME_attak130        	29
-#define FRAME_attak131        	30
-#define FRAME_attak132        	31
-#undef FRAME_attak201
-#define FRAME_attak201        	32
-#undef FRAME_attak202
-#define FRAME_attak202        	33
-#undef FRAME_attak203
-#define FRAME_attak203        	34
-#undef FRAME_attak204
-#define FRAME_attak204        	35
-#undef FRAME_attak205
-#define FRAME_attak205        	36
-#undef FRAME_attak206
-#define FRAME_attak206        	37
-#undef FRAME_attak207
-#define FRAME_attak207        	38
-#undef FRAME_attak208
-#define FRAME_attak208        	39
-#undef FRAME_attak209
-#define FRAME_attak209        	40
-#undef FRAME_attak210
-#define FRAME_attak210        	41
-#undef FRAME_attak211
-#define FRAME_attak211        	42
-#undef FRAME_attak212
-#define FRAME_attak212        	43
-#undef FRAME_attak213
-#define FRAME_attak213        	44
-#undef FRAME_attak214
-#define FRAME_attak214        	45
-#undef FRAME_attak215
-#define FRAME_attak215        	46
-#undef FRAME_attak216
-#define FRAME_attak216        	47
-#undef FRAME_death101
-#define FRAME_death101        	48
-#undef FRAME_death102
-#define FRAME_death102        	49
-#undef FRAME_death103
-#define FRAME_death103        	50
-#undef FRAME_death104
-#define FRAME_death104        	51
-#undef FRAME_death105
-#define FRAME_death105        	52
-#undef FRAME_death106
-#define FRAME_death106        	53
-#undef FRAME_death107
-#define FRAME_death107        	54
-#undef FRAME_death108
-#define FRAME_death108        	55
-#undef FRAME_death109
-#define FRAME_death109        	56
-#undef FRAME_death110
-#define FRAME_death110        	57
-#undef FRAME_death111
-#define FRAME_death111        	58
-#undef FRAME_death112
-#define FRAME_death112        	59
-#undef FRAME_death201
-#define FRAME_death201        	60
-#undef FRAME_death202
-#define FRAME_death202        	61
-#undef FRAME_death203
-#define FRAME_death203        	62
-#undef FRAME_death204
-#define FRAME_death204        	63
-#undef FRAME_death205
-#define FRAME_death205        	64
-#undef FRAME_death206
-#define FRAME_death206        	65
-#undef FRAME_death207
-#define FRAME_death207        	66
-#undef FRAME_death208
-#define FRAME_death208        	67
-#undef FRAME_death209
-#define FRAME_death209        	68
-#undef FRAME_death210
-#define FRAME_death210        	69
-#undef FRAME_death211
-#define FRAME_death211        	70
-#undef FRAME_death212
-#define FRAME_death212        	71
-#undef FRAME_death213
-#define FRAME_death213        	72
-#undef FRAME_death214
-#define FRAME_death214        	73
-#undef FRAME_death215
-#define FRAME_death215        	74
-#undef FRAME_death216
-#define FRAME_death216        	75
-#undef FRAME_death217
-#define FRAME_death217        	76
-#undef FRAME_death218
-#define FRAME_death218        	77
-#undef FRAME_death219
-#define FRAME_death219        	78
-#undef FRAME_death220
-#define FRAME_death220        	79
-#undef FRAME_death221
-#define FRAME_death221        	80
-#undef FRAME_death222
-#define FRAME_death222        	81
-#undef FRAME_death223
-#define FRAME_death223        	82
-#undef FRAME_duck01
-#define FRAME_duck01          	83
-#undef FRAME_duck02
-#define FRAME_duck02          	84
-#undef FRAME_duck03
-#define FRAME_duck03          	85
-#undef FRAME_duck04
-#define FRAME_duck04          	86
-#undef FRAME_duck05
-#define FRAME_duck05          	87
-#undef FRAME_duck06
-#define FRAME_duck06          	88
-#undef FRAME_duck07
-#define FRAME_duck07          	89
-#undef FRAME_pain101
-#define FRAME_pain101         	90
-#undef FRAME_pain102
-#define FRAME_pain102         	91
-#undef FRAME_pain103
-#define FRAME_pain103         	92
-#undef FRAME_pain104
-#define FRAME_pain104         	93
-#undef FRAME_pain105
-#define FRAME_pain105         	94
-#undef FRAME_pain201
-#define FRAME_pain201         	95
-#undef FRAME_pain202
-#define FRAME_pain202         	96
-#undef FRAME_pain203
-#define FRAME_pain203         	97
-#undef FRAME_pain204
-#define FRAME_pain204         	98
-#undef FRAME_pain205
-#define FRAME_pain205         	99
-#undef FRAME_pain301
-#define FRAME_pain301         	100
-#undef FRAME_pain302
-#define FRAME_pain302         	101
-#undef FRAME_pain303
-#define FRAME_pain303         	102
-#undef FRAME_pain304
-#define FRAME_pain304         	103
-#undef FRAME_pain305
-#define FRAME_pain305         	104
-#undef FRAME_pain306
-#define FRAME_pain306         	105
-#undef FRAME_pain307
-#define FRAME_pain307         	106
-#undef FRAME_pain308
-#define FRAME_pain308         	107
-#undef FRAME_pain309
-#define FRAME_pain309         	108
-#undef FRAME_pain310
-#define FRAME_pain310         	109
-#undef FRAME_pain311
-#define FRAME_pain311         	110
-#undef FRAME_pain312
-#define FRAME_pain312         	111
-#undef FRAME_pain313
-#define FRAME_pain313         	112
-#undef FRAME_pain314
-#define FRAME_pain314         	113
-#undef FRAME_pain315
-#define FRAME_pain315         	114
-#undef FRAME_pain316
-#define FRAME_pain316         	115
-#undef FRAME_pain317
-#define FRAME_pain317         	116
-#undef FRAME_pain318
-#define FRAME_pain318         	117
-#undef FRAME_pain319
-#define FRAME_pain319         	118
-#undef FRAME_pain320
-#define FRAME_pain320         	119
-#undef FRAME_pain321
-#define FRAME_pain321         	120
-#undef FRAME_stand101
-#define FRAME_stand101        	121
-#undef FRAME_stand102
-#define FRAME_stand102        	122
-#undef FRAME_stand103
-#define FRAME_stand103        	123
-#undef FRAME_stand104
-#define FRAME_stand104        	124
-#undef FRAME_stand105
-#define FRAME_stand105        	125
-#undef FRAME_stand106
-#define FRAME_stand106        	126
-#undef FRAME_stand107
-#define FRAME_stand107        	127
-#undef FRAME_stand108
-#define FRAME_stand108        	128
-#undef FRAME_stand109
-#define FRAME_stand109        	129
-#undef FRAME_stand110
-#define FRAME_stand110        	130
-#undef FRAME_stand111
-#define FRAME_stand111        	131
-#undef FRAME_stand112
-#define FRAME_stand112        	132
-#undef FRAME_stand113
-#define FRAME_stand113        	133
-#undef FRAME_stand114
-#define FRAME_stand114        	134
-#undef FRAME_stand115
-#define FRAME_stand115        	135
-#undef FRAME_stand116
-#define FRAME_stand116        	136
-#undef FRAME_stand117
-#define FRAME_stand117        	137
-#undef FRAME_stand118
-#define FRAME_stand118        	138
-#undef FRAME_stand119
-#define FRAME_stand119        	139
-#undef FRAME_stand120
-#define FRAME_stand120        	140
-#undef FRAME_stand121
-#define FRAME_stand121        	141
-#undef FRAME_stand122
-#define FRAME_stand122        	142
-#undef FRAME_stand123
-#define FRAME_stand123        	143
-#undef FRAME_stand124
-#define FRAME_stand124        	144
-#undef FRAME_stand125
-#define FRAME_stand125        	145
-#undef FRAME_stand126
-#define FRAME_stand126        	146
-#undef FRAME_stand127
-#define FRAME_stand127        	147
-#undef FRAME_stand128
-#define FRAME_stand128        	148
-#undef FRAME_stand129
-#define FRAME_stand129        	149
-#undef FRAME_stand130
-#define FRAME_stand130        	150
-#undef FRAME_stand201
-#define FRAME_stand201        	151
-#undef FRAME_stand202
-#define FRAME_stand202        	152
-#undef FRAME_stand203
-#define FRAME_stand203        	153
-#undef FRAME_stand204
-#define FRAME_stand204        	154
-#undef FRAME_stand205
-#define FRAME_stand205        	155
-#undef FRAME_stand206
-#define FRAME_stand206        	156
-#undef FRAME_stand207
-#define FRAME_stand207        	157
-#undef FRAME_stand208
-#define FRAME_stand208        	158
-#undef FRAME_stand209
-#define FRAME_stand209        	159
-#undef FRAME_stand210
-#define FRAME_stand210        	160
-#undef FRAME_stand211
-#define FRAME_stand211        	161
-#undef FRAME_stand212
-#define FRAME_stand212        	162
-#undef FRAME_stand213
-#define FRAME_stand213        	163
-#undef FRAME_stand214
-#define FRAME_stand214        	164
-#undef FRAME_stand215
-#define FRAME_stand215        	165
-#undef FRAME_stand216
-#define FRAME_stand216        	166
-#undef FRAME_stand217
-#define FRAME_stand217        	167
-#undef FRAME_stand218
-#define FRAME_stand218        	168
-#undef FRAME_stand219
-#define FRAME_stand219        	169
-#undef FRAME_stand220
-#define FRAME_stand220        	170
-#undef FRAME_stand221
-#define FRAME_stand221        	171
-#undef FRAME_stand222
-#define FRAME_stand222        	172
-#undef FRAME_stand223
-#define FRAME_stand223        	173
-#undef FRAME_stand224
-#define FRAME_stand224        	174
-#undef FRAME_stand225
-#define FRAME_stand225        	175
-#undef FRAME_stand226
-#define FRAME_stand226        	176
-#undef FRAME_stand227
-#define FRAME_stand227        	177
-#undef FRAME_stand228
-#define FRAME_stand228        	178
-#undef FRAME_stand229
-#define FRAME_stand229        	179
-#undef FRAME_stand230
-#define FRAME_stand230        	180
-#undef FRAME_walk01
-#define FRAME_walk01          	181
-#undef FRAME_walk02
-#define FRAME_walk02          	182
-#undef FRAME_walk03
-#define FRAME_walk03          	183
-#undef FRAME_walk04
-#define FRAME_walk04          	184
-#undef FRAME_walk05
-#define FRAME_walk05          	185
-#undef FRAME_walk06
-#define FRAME_walk06          	186
-#undef FRAME_walk07
-#define FRAME_walk07          	187
-#undef FRAME_walk08
-#define FRAME_walk08          	188
-#undef FRAME_walk09
-#define FRAME_walk09          	189
-#undef FRAME_walk10
-#define FRAME_walk10          	190
-#undef FRAME_walk11
-#define FRAME_walk11          	191
-#undef FRAME_walk12
-#define FRAME_walk12          	192
-#undef FRAME_walk13
-#define FRAME_walk13          	193
-#undef FRAME_walk14
-#define FRAME_walk14          	194
-#undef FRAME_walk15
-#define FRAME_walk15          	195
-#undef FRAME_walk16
-#define FRAME_walk16          	196
-#undef FRAME_walk17
-#define FRAME_walk17          	197
-#undef FRAME_walk18
-#define FRAME_walk18          	198
-#undef FRAME_walk19
-#define FRAME_walk19          	199
-#undef FRAME_walk20
-#define FRAME_walk20          	200
-#undef FRAME_walk21
-#define FRAME_walk21          	201
-#undef FRAME_walk22
-#define FRAME_walk22          	202
-#undef FRAME_walk23
-#define FRAME_walk23          	203
-#undef FRAME_walk24
-#define FRAME_walk24          	204
-#undef FRAME_walk25
-#define FRAME_walk25          	205
-#define FRAME_walk26          	206
-#define FRAME_walk27          	207
-#define FRAME_recln201        	208
-#define FRAME_recln202        	209
-#define FRAME_recln203        	210
-#define FRAME_recln204        	211
-#define FRAME_recln205        	212
-#define FRAME_recln206        	213
-#define FRAME_recln207        	214
-#define FRAME_recln208        	215
-#define FRAME_recln209        	216
-#define FRAME_recln210        	217
-#define FRAME_recln211        	218
-#define FRAME_recln212        	219
-#define FRAME_recln213        	220
-#define FRAME_recln214        	221
-#define FRAME_recln215        	222
-#define FRAME_recln216        	223
-#define FRAME_recln217        	224
-#define FRAME_recln218        	225
-#define FRAME_recln219        	226
-#define FRAME_recln220        	227
-#define FRAME_recln221        	228
-#define FRAME_recln222        	229
-#define FRAME_recln223        	230
-#define FRAME_recln224        	231
-#define FRAME_recln225        	232
-#define FRAME_recln226        	233
-#define FRAME_recln227        	234
-#define FRAME_recln228        	235
-#define FRAME_recln229        	236
-#define FRAME_recln230        	237
-#define FRAME_recln231        	238
-#define FRAME_recln232        	239
-#define FRAME_recln233        	240
-#define FRAME_recln234        	241
-#define FRAME_recln235        	242
-#define FRAME_recln236        	243
-#define FRAME_recln237        	244
-#define FRAME_recln238        	245
-#define FRAME_recln239        	246
-#define FRAME_recln240        	247
-#define FRAME_recln101        	248
-#define FRAME_recln102        	249
-#define FRAME_recln103        	250
-#define FRAME_recln104        	251
-#define FRAME_recln105        	252
-#define FRAME_recln106        	253
-#define FRAME_recln107        	254
-#define FRAME_recln108        	255
-#define FRAME_recln109        	256
-#define FRAME_recln110        	257
-#define FRAME_recln111        	258
-#define FRAME_recln112        	259
-#define FRAME_recln113        	260
-#define FRAME_recln114        	261
-#define FRAME_recln115        	262
-#define FRAME_recln116        	263
-#define FRAME_recln117        	264
-#define FRAME_recln118        	265
-#define FRAME_recln119        	266
-#define FRAME_recln120        	267
-#define FRAME_recln121        	268
-#define FRAME_recln122        	269
-#define FRAME_recln123        	270
-#define FRAME_recln124        	271
-#define FRAME_recln125        	272
-#define FRAME_recln126        	273
-#define FRAME_recln127        	274
-#define FRAME_recln128        	275
-#define FRAME_recln129        	276
-#define FRAME_recln130        	277
-#define FRAME_recln131        	278
-#define FRAME_recln132        	279
-#define FRAME_recln133        	280
-#define FRAME_recln134        	281
-#define FRAME_recln135        	282
-#define FRAME_recln136        	283
-#define FRAME_recln137        	284
-#define FRAME_recln138        	285
-#define FRAME_recln139        	286
-#define FRAME_recln140        	287
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_chick.h ============ */
@@ -50486,7 +47554,7 @@ mframe_t chick_frames_fidget [] =
 	{ai_stand, 0,  NULL},
 	{ai_stand, 0,  NULL},
 };
-mmove_t chick_move_fidget = {FRAME_stand201, FRAME_stand230, chick_frames_fidget, chick_stand};
+mmove_t chick_move_fidget = {151, 180, chick_frames_fidget, chick_stand};
 
 void chick_fidget (edict_t* self)
 {
@@ -50530,7 +47598,7 @@ mframe_t chick_frames_stand [] =
 	{ai_stand, 0, chick_fidget},
 
 };
-mmove_t chick_move_stand = {FRAME_stand101, FRAME_stand130, chick_frames_stand, NULL};
+mmove_t chick_move_stand = {121, 150, chick_frames_stand, NULL};
 
 void chick_stand (edict_t* self)
 {
@@ -50550,7 +47618,7 @@ mframe_t chick_frames_start_run [] =
 	{ai_run, 6,	 NULL},
 	{ai_run, 3,	 NULL},
 };
-mmove_t chick_move_start_run = {FRAME_walk01, FRAME_walk10, chick_frames_start_run, chick_run};
+mmove_t chick_move_start_run = {181, 190, chick_frames_start_run, chick_run};
 
 mframe_t chick_frames_run [] =
 {
@@ -50567,7 +47635,7 @@ mframe_t chick_frames_run [] =
 
 };
 
-mmove_t chick_move_run = {FRAME_walk11, FRAME_walk20, chick_frames_run, NULL};
+mmove_t chick_move_run = {191, 200, chick_frames_run, NULL};
 
 mframe_t chick_frames_walk [] =
 {
@@ -50583,7 +47651,7 @@ mframe_t chick_frames_walk [] =
 	{ai_walk, 7,  NULL},
 };
 
-mmove_t chick_move_walk = {FRAME_walk11, FRAME_walk20, chick_frames_walk, NULL};
+mmove_t chick_move_walk = {191, 200, chick_frames_walk, NULL};
 
 void chick_walk (edict_t* self)
 {
@@ -50617,7 +47685,7 @@ mframe_t chick_frames_pain1 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t chick_move_pain1 = {FRAME_pain101, FRAME_pain105, chick_frames_pain1, chick_run};
+mmove_t chick_move_pain1 = {90, 94, chick_frames_pain1, chick_run};
 
 mframe_t chick_frames_pain2 [] =
 {
@@ -50627,7 +47695,7 @@ mframe_t chick_frames_pain2 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t chick_move_pain2 = {FRAME_pain201, FRAME_pain205, chick_frames_pain2, chick_run};
+mmove_t chick_move_pain2 = {95, 99, chick_frames_pain2, chick_run};
 
 mframe_t chick_frames_pain3 [] =
 {
@@ -50653,7 +47721,7 @@ mframe_t chick_frames_pain3 [] =
 	{ai_move, -8,	NULL},
 	{ai_move, 2,		NULL},
 };
-mmove_t chick_move_pain3 = {FRAME_pain301, FRAME_pain321, chick_frames_pain3, chick_run};
+mmove_t chick_move_pain3 = {100, 120, chick_frames_pain3, chick_run};
 
 static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -50724,7 +47792,7 @@ mframe_t chick_frames_death2 [] =
 	{ai_move, 14, NULL},
 	{ai_move, 1, NULL},
 };
-mmove_t chick_move_death2 = {FRAME_death201, FRAME_death223, chick_frames_death2, chick_dead};
+mmove_t chick_move_death2 = {60, 82, chick_frames_death2, chick_dead};
 
 static mframe_t chick_frames_death1 [] =
 {
@@ -50742,7 +47810,7 @@ static mframe_t chick_frames_death1 [] =
 	{ai_move, 0,  NULL},
 
 };
-static mmove_t chick_move_death1 = {FRAME_death101, FRAME_death112, chick_frames_death1, chick_dead};
+static mmove_t chick_move_death1 = {48, 59, chick_frames_death1, chick_dead};
 
 static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -50821,7 +47889,7 @@ static mframe_t chick_frames_duck[] = {
 	{ai_move, 1, NULL},
 };
 
-static mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_run};
+static mmove_t chick_move_duck = {83, 89, chick_frames_duck, chick_run};
 
 static void chick_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
@@ -50891,7 +47959,7 @@ mframe_t chick_frames_start_attack1 [] =
 	{ai_charge, 0,	chick_attack1},
 };
 
-mmove_t chick_move_start_attack1 = {FRAME_attak101, FRAME_attak113, chick_frames_start_attack1, NULL};
+mmove_t chick_move_start_attack1 = {0, 12, chick_frames_start_attack1, NULL};
 
 
 mframe_t chick_frames_attack1 [] =
@@ -50912,7 +47980,7 @@ mframe_t chick_frames_attack1 [] =
 	{ai_charge, 3,	chick_rerocket},
 };
 
-mmove_t chick_move_attack1 = {FRAME_attak114, FRAME_attak127, chick_frames_attack1, NULL};
+mmove_t chick_move_attack1 = {13, 26, chick_frames_attack1, NULL};
 
 mframe_t chick_frames_end_attack1 [] =
 {
@@ -50922,7 +47990,7 @@ mframe_t chick_frames_end_attack1 [] =
 	{ai_charge, -4,	NULL},
 	{ai_charge, -2,  NULL},
 };
-mmove_t chick_move_end_attack1 = {FRAME_attak128, FRAME_attak132, chick_frames_end_attack1, chick_run};
+mmove_t chick_move_end_attack1 = {27, 31, chick_frames_end_attack1, chick_run};
 
 void chick_rerocket(edict_t* self)
 {
@@ -50957,7 +48025,7 @@ mframe_t chick_frames_slash [] =
 	{ai_charge, -2,	chick_reslash},
 };
 
-mmove_t chick_move_slash = {FRAME_attak204, FRAME_attak212, chick_frames_slash, NULL};
+mmove_t chick_move_slash = {35, 43, chick_frames_slash, NULL};
 
 mframe_t chick_frames_end_slash [] =
 {
@@ -50966,7 +48034,7 @@ mframe_t chick_frames_end_slash [] =
 	{ai_charge, -6,	NULL},
 	{ai_charge, 0,	NULL},
 };
-mmove_t chick_move_end_slash = {FRAME_attak213, FRAME_attak216, chick_frames_end_slash, chick_run};
+mmove_t chick_move_end_slash = {44, 47, chick_frames_end_slash, chick_run};
 
 
 void chick_reslash(edict_t* self)
@@ -51002,7 +48070,7 @@ mframe_t chick_frames_start_slash [] =
 	{ai_charge, 8,	NULL},
 	{ai_charge, 3,	NULL},
 };
-mmove_t chick_move_start_slash = {FRAME_attak201, FRAME_attak203, chick_frames_start_slash, chick_slash};
+mmove_t chick_move_start_slash = {32, 34, chick_frames_start_slash, chick_slash};
 
 
 
@@ -51087,166 +48155,6 @@ FLIPPER
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_flpbit01        	0
-#define FRAME_flpbit02        	1
-#define FRAME_flpbit03        	2
-#define FRAME_flpbit04        	3
-#define FRAME_flpbit05        	4
-#define FRAME_flpbit06        	5
-#define FRAME_flpbit07        	6
-#define FRAME_flpbit08        	7
-#define FRAME_flpbit09        	8
-#define FRAME_flpbit10        	9
-#define FRAME_flpbit11        	10
-#define FRAME_flpbit12        	11
-#define FRAME_flpbit13        	12
-#define FRAME_flpbit14        	13
-#define FRAME_flpbit15        	14
-#define FRAME_flpbit16        	15
-#define FRAME_flpbit17        	16
-#define FRAME_flpbit18        	17
-#define FRAME_flpbit19        	18
-#define FRAME_flpbit20        	19
-#define FRAME_flptal01        	20
-#define FRAME_flptal02        	21
-#define FRAME_flptal03        	22
-#define FRAME_flptal04        	23
-#define FRAME_flptal05        	24
-#define FRAME_flptal06        	25
-#define FRAME_flptal07        	26
-#define FRAME_flptal08        	27
-#define FRAME_flptal09        	28
-#define FRAME_flptal10        	29
-#define FRAME_flptal11        	30
-#define FRAME_flptal12        	31
-#define FRAME_flptal13        	32
-#define FRAME_flptal14        	33
-#define FRAME_flptal15        	34
-#define FRAME_flptal16        	35
-#define FRAME_flptal17        	36
-#define FRAME_flptal18        	37
-#define FRAME_flptal19        	38
-#define FRAME_flptal20        	39
-#define FRAME_flptal21        	40
-#define FRAME_flphor01        	41
-#define FRAME_flphor02        	42
-#define FRAME_flphor03        	43
-#define FRAME_flphor04        	44
-#define FRAME_flphor05        	45
-#define FRAME_flphor06        	46
-#define FRAME_flphor07        	47
-#define FRAME_flphor08        	48
-#define FRAME_flphor09        	49
-#define FRAME_flphor10        	50
-#define FRAME_flphor11        	51
-#define FRAME_flphor12        	52
-#define FRAME_flphor13        	53
-#define FRAME_flphor14        	54
-#define FRAME_flphor15        	55
-#define FRAME_flphor16        	56
-#define FRAME_flphor17        	57
-#define FRAME_flphor18        	58
-#define FRAME_flphor19        	59
-#define FRAME_flphor20        	60
-#define FRAME_flphor21        	61
-#define FRAME_flphor22        	62
-#define FRAME_flphor23        	63
-#define FRAME_flphor24        	64
-#define FRAME_flpver01        	65
-#define FRAME_flpver02        	66
-#define FRAME_flpver03        	67
-#define FRAME_flpver04        	68
-#define FRAME_flpver05        	69
-#define FRAME_flpver06        	70
-#define FRAME_flpver07        	71
-#define FRAME_flpver08        	72
-#define FRAME_flpver09        	73
-#define FRAME_flpver10        	74
-#define FRAME_flpver11        	75
-#define FRAME_flpver12        	76
-#define FRAME_flpver13        	77
-#define FRAME_flpver14        	78
-#define FRAME_flpver15        	79
-#define FRAME_flpver16        	80
-#define FRAME_flpver17        	81
-#define FRAME_flpver18        	82
-#define FRAME_flpver19        	83
-#define FRAME_flpver20        	84
-#define FRAME_flpver21        	85
-#define FRAME_flpver22        	86
-#define FRAME_flpver23        	87
-#define FRAME_flpver24        	88
-#define FRAME_flpver25        	89
-#define FRAME_flpver26        	90
-#define FRAME_flpver27        	91
-#define FRAME_flpver28        	92
-#define FRAME_flpver29        	93
-#define FRAME_flppn101        	94
-#define FRAME_flppn102        	95
-#define FRAME_flppn103        	96
-#define FRAME_flppn104        	97
-#define FRAME_flppn105        	98
-#define FRAME_flppn201        	99
-#define FRAME_flppn202        	100
-#define FRAME_flppn203        	101
-#define FRAME_flppn204        	102
-#define FRAME_flppn205        	103
-#define FRAME_flpdth01        	104
-#define FRAME_flpdth02        	105
-#define FRAME_flpdth03        	106
-#define FRAME_flpdth04        	107
-#define FRAME_flpdth05        	108
-#define FRAME_flpdth06        	109
-#define FRAME_flpdth07        	110
-#define FRAME_flpdth08        	111
-#define FRAME_flpdth09        	112
-#define FRAME_flpdth10        	113
-#define FRAME_flpdth11        	114
-#define FRAME_flpdth12        	115
-#define FRAME_flpdth13        	116
-#define FRAME_flpdth14        	117
-#define FRAME_flpdth15        	118
-#define FRAME_flpdth16        	119
-#define FRAME_flpdth17        	120
-#define FRAME_flpdth18        	121
-#define FRAME_flpdth19        	122
-#define FRAME_flpdth20        	123
-#define FRAME_flpdth21        	124
-#define FRAME_flpdth22        	125
-#define FRAME_flpdth23        	126
-#define FRAME_flpdth24        	127
-#define FRAME_flpdth25        	128
-#define FRAME_flpdth26        	129
-#define FRAME_flpdth27        	130
-#define FRAME_flpdth28        	131
-#define FRAME_flpdth29        	132
-#define FRAME_flpdth30        	133
-#define FRAME_flpdth31        	134
-#define FRAME_flpdth32        	135
-#define FRAME_flpdth33        	136
-#define FRAME_flpdth34        	137
-#define FRAME_flpdth35        	138
-#define FRAME_flpdth36        	139
-#define FRAME_flpdth37        	140
-#define FRAME_flpdth38        	141
-#define FRAME_flpdth39        	142
-#define FRAME_flpdth40        	143
-#define FRAME_flpdth41        	144
-#define FRAME_flpdth42        	145
-#define FRAME_flpdth43        	146
-#define FRAME_flpdth44        	147
-#define FRAME_flpdth45        	148
-#define FRAME_flpdth46        	149
-#define FRAME_flpdth47        	150
-#define FRAME_flpdth48        	151
-#define FRAME_flpdth49        	152
-#define FRAME_flpdth50        	153
-#define FRAME_flpdth51        	154
-#define FRAME_flpdth52        	155
-#define FRAME_flpdth53        	156
-#define FRAME_flpdth54        	157
-#define FRAME_flpdth55        	158
-#define FRAME_flpdth56        	159
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flipper.h ============ */
@@ -51269,7 +48177,7 @@ mframe_t flipper_frames_stand [] =
 	{ai_stand, 0, NULL},
 };
 
-mmove_t	flipper_move_stand = {FRAME_flphor01, FRAME_flphor01, flipper_frames_stand, NULL};
+mmove_t	flipper_move_stand = {41, 41, flipper_frames_stand, NULL};
 
 void flipper_stand (edict_t* self)
 {
@@ -51307,7 +48215,7 @@ mframe_t flipper_frames_run [] =
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},		// 29
 };
-mmove_t flipper_move_run_loop = {FRAME_flpver06, FRAME_flpver29, flipper_frames_run, NULL};
+mmove_t flipper_move_run_loop = {70, 93, flipper_frames_run, NULL};
 
 void flipper_run_loop (edict_t* self)
 {
@@ -51323,7 +48231,7 @@ mframe_t flipper_frames_run_start [] =
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
 };
-mmove_t flipper_move_run_start = {FRAME_flpver01, FRAME_flpver06, flipper_frames_run_start, flipper_run_loop};
+mmove_t flipper_move_run_start = {65, 70, flipper_frames_run_start, flipper_run_loop};
 
 void flipper_run (edict_t* self)
 {
@@ -51358,7 +48266,7 @@ mframe_t flipper_frames_walk [] =
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 };
-mmove_t flipper_move_walk = {FRAME_flphor01, FRAME_flphor24, flipper_frames_walk, NULL};
+mmove_t flipper_move_walk = {41, 64, flipper_frames_walk, NULL};
 
 void flipper_walk (edict_t* self)
 {
@@ -51373,7 +48281,7 @@ mframe_t flipper_frames_start_run [] =
 	{ai_run, 8, NULL},
 	{ai_run, 8, flipper_run},
 };
-mmove_t flipper_move_start_run = {FRAME_flphor01, FRAME_flphor05, flipper_frames_start_run, NULL};
+mmove_t flipper_move_start_run = {41, 45, flipper_frames_start_run, NULL};
 
 void flipper_start_run (edict_t* self)
 {
@@ -51388,7 +48296,7 @@ mframe_t flipper_frames_pain2 [] =
 	{ai_move, 0,	NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t flipper_move_pain2 = {FRAME_flppn101, FRAME_flppn105, flipper_frames_pain2, flipper_run};
+mmove_t flipper_move_pain2 = {94, 98, flipper_frames_pain2, flipper_run};
 
 mframe_t flipper_frames_pain1 [] =
 {
@@ -51398,7 +48306,7 @@ mframe_t flipper_frames_pain1 [] =
 	{ai_move, 0,	NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t flipper_move_pain1 = {FRAME_flppn201, FRAME_flppn205, flipper_frames_pain1, flipper_run};
+mmove_t flipper_move_pain1 = {99, 103, flipper_frames_pain1, flipper_run};
 
 void flipper_bite (edict_t* self)
 {
@@ -51436,7 +48344,7 @@ mframe_t flipper_frames_attack [] =
 	{ai_charge, 0,	flipper_bite},
 	{ai_charge, 0,	NULL},
 };
-mmove_t flipper_move_attack = {FRAME_flpbit01, FRAME_flpbit20, flipper_frames_attack, flipper_run};
+mmove_t flipper_move_attack = {0, 19, flipper_frames_attack, flipper_run};
 
 void flipper_melee(edict_t* self)
 {
@@ -51548,7 +48456,7 @@ mframe_t flipper_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_death, flipper_dead};
+mmove_t flipper_move_death = {104, 159, flipper_frames_death, flipper_dead};
 
 static void flipper_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -51641,425 +48549,6 @@ floater
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_actvat01        	0
-#define FRAME_actvat02        	1
-#define FRAME_actvat03        	2
-#define FRAME_actvat04        	3
-#define FRAME_actvat05        	4
-#define FRAME_actvat06        	5
-#define FRAME_actvat07        	6
-#define FRAME_actvat08        	7
-#define FRAME_actvat09        	8
-#define FRAME_actvat10        	9
-#define FRAME_actvat11        	10
-#define FRAME_actvat12        	11
-#define FRAME_actvat13        	12
-#define FRAME_actvat14        	13
-#define FRAME_actvat15        	14
-#define FRAME_actvat16        	15
-#define FRAME_actvat17        	16
-#define FRAME_actvat18        	17
-#define FRAME_actvat19        	18
-#define FRAME_actvat20        	19
-#define FRAME_actvat21        	20
-#define FRAME_actvat22        	21
-#define FRAME_actvat23        	22
-#define FRAME_actvat24        	23
-#define FRAME_actvat25        	24
-#define FRAME_actvat26        	25
-#define FRAME_actvat27        	26
-#define FRAME_actvat28        	27
-#define FRAME_actvat29        	28
-#define FRAME_actvat30        	29
-#define FRAME_actvat31        	30
-#undef FRAME_attak101
-#define FRAME_attak101        	31
-#undef FRAME_attak102
-#define FRAME_attak102        	32
-#undef FRAME_attak103
-#define FRAME_attak103        	33
-#undef FRAME_attak104
-#define FRAME_attak104        	34
-#undef FRAME_attak105
-#define FRAME_attak105        	35
-#undef FRAME_attak106
-#define FRAME_attak106        	36
-#undef FRAME_attak107
-#define FRAME_attak107        	37
-#undef FRAME_attak108
-#define FRAME_attak108        	38
-#undef FRAME_attak109
-#define FRAME_attak109        	39
-#undef FRAME_attak110
-#define FRAME_attak110        	40
-#undef FRAME_attak111
-#define FRAME_attak111        	41
-#undef FRAME_attak112
-#define FRAME_attak112        	42
-#undef FRAME_attak113
-#define FRAME_attak113        	43
-#undef FRAME_attak114
-#define FRAME_attak114        	44
-#undef FRAME_attak201
-#define FRAME_attak201        	45
-#undef FRAME_attak202
-#define FRAME_attak202        	46
-#undef FRAME_attak203
-#define FRAME_attak203        	47
-#undef FRAME_attak204
-#define FRAME_attak204        	48
-#undef FRAME_attak205
-#define FRAME_attak205        	49
-#undef FRAME_attak206
-#define FRAME_attak206        	50
-#undef FRAME_attak207
-#define FRAME_attak207        	51
-#undef FRAME_attak208
-#define FRAME_attak208        	52
-#undef FRAME_attak209
-#define FRAME_attak209        	53
-#undef FRAME_attak210
-#define FRAME_attak210        	54
-#undef FRAME_attak211
-#define FRAME_attak211        	55
-#undef FRAME_attak212
-#define FRAME_attak212        	56
-#undef FRAME_attak213
-#define FRAME_attak213        	57
-#undef FRAME_attak214
-#define FRAME_attak214        	58
-#undef FRAME_attak215
-#define FRAME_attak215        	59
-#undef FRAME_attak216
-#define FRAME_attak216        	60
-#undef FRAME_attak217
-#define FRAME_attak217        	61
-#define FRAME_attak218        	62
-#define FRAME_attak219        	63
-#define FRAME_attak220        	64
-#define FRAME_attak221        	65
-#define FRAME_attak222        	66
-#define FRAME_attak223        	67
-#define FRAME_attak224        	68
-#define FRAME_attak225        	69
-#undef FRAME_attak301
-#define FRAME_attak301        	70
-#undef FRAME_attak302
-#define FRAME_attak302        	71
-#undef FRAME_attak303
-#define FRAME_attak303        	72
-#undef FRAME_attak304
-#define FRAME_attak304        	73
-#undef FRAME_attak305
-#define FRAME_attak305        	74
-#undef FRAME_attak306
-#define FRAME_attak306        	75
-#undef FRAME_attak307
-#define FRAME_attak307        	76
-#undef FRAME_attak308
-#define FRAME_attak308        	77
-#define FRAME_attak309        	78
-#define FRAME_attak310        	79
-#define FRAME_attak311        	80
-#define FRAME_attak312        	81
-#define FRAME_attak313        	82
-#define FRAME_attak314        	83
-#define FRAME_attak315        	84
-#define FRAME_attak316        	85
-#define FRAME_attak317        	86
-#define FRAME_attak318        	87
-#define FRAME_attak319        	88
-#define FRAME_attak320        	89
-#define FRAME_attak321        	90
-#define FRAME_attak322        	91
-#define FRAME_attak323        	92
-#define FRAME_attak324        	93
-#define FRAME_attak325        	94
-#define FRAME_attak326        	95
-#define FRAME_attak327        	96
-#define FRAME_attak328        	97
-#define FRAME_attak329        	98
-#define FRAME_attak330        	99
-#define FRAME_attak331        	100
-#define FRAME_attak332        	101
-#define FRAME_attak333        	102
-#define FRAME_attak334        	103
-#undef FRAME_death01
-#define FRAME_death01         	104
-#undef FRAME_death02
-#define FRAME_death02         	105
-#undef FRAME_death03
-#define FRAME_death03         	106
-#undef FRAME_death04
-#define FRAME_death04         	107
-#undef FRAME_death05
-#define FRAME_death05         	108
-#undef FRAME_death06
-#define FRAME_death06         	109
-#undef FRAME_death07
-#define FRAME_death07         	110
-#undef FRAME_death08
-#define FRAME_death08         	111
-#undef FRAME_death09
-#define FRAME_death09         	112
-#undef FRAME_death10
-#define FRAME_death10         	113
-#undef FRAME_death11
-#define FRAME_death11         	114
-#undef FRAME_death12
-#define FRAME_death12         	115
-#undef FRAME_death13
-#define FRAME_death13         	116
-#undef FRAME_pain101
-#define FRAME_pain101         	117
-#undef FRAME_pain102
-#define FRAME_pain102         	118
-#undef FRAME_pain103
-#define FRAME_pain103         	119
-#undef FRAME_pain104
-#define FRAME_pain104         	120
-#undef FRAME_pain105
-#define FRAME_pain105         	121
-#undef FRAME_pain106
-#define FRAME_pain106         	122
-#undef FRAME_pain107
-#define FRAME_pain107         	123
-#undef FRAME_pain201
-#define FRAME_pain201         	124
-#undef FRAME_pain202
-#define FRAME_pain202         	125
-#undef FRAME_pain203
-#define FRAME_pain203         	126
-#undef FRAME_pain204
-#define FRAME_pain204         	127
-#undef FRAME_pain205
-#define FRAME_pain205         	128
-#undef FRAME_pain206
-#define FRAME_pain206         	129
-#undef FRAME_pain207
-#define FRAME_pain207         	130
-#undef FRAME_pain208
-#define FRAME_pain208         	131
-#undef FRAME_pain301
-#define FRAME_pain301         	132
-#undef FRAME_pain302
-#define FRAME_pain302         	133
-#undef FRAME_pain303
-#define FRAME_pain303         	134
-#undef FRAME_pain304
-#define FRAME_pain304         	135
-#undef FRAME_pain305
-#define FRAME_pain305         	136
-#undef FRAME_pain306
-#define FRAME_pain306         	137
-#undef FRAME_pain307
-#define FRAME_pain307         	138
-#undef FRAME_pain308
-#define FRAME_pain308         	139
-#undef FRAME_pain309
-#define FRAME_pain309         	140
-#undef FRAME_pain310
-#define FRAME_pain310         	141
-#undef FRAME_pain311
-#define FRAME_pain311         	142
-#undef FRAME_pain312
-#define FRAME_pain312         	143
-#undef FRAME_stand101
-#define FRAME_stand101        	144
-#undef FRAME_stand102
-#define FRAME_stand102        	145
-#undef FRAME_stand103
-#define FRAME_stand103        	146
-#undef FRAME_stand104
-#define FRAME_stand104        	147
-#undef FRAME_stand105
-#define FRAME_stand105        	148
-#undef FRAME_stand106
-#define FRAME_stand106        	149
-#undef FRAME_stand107
-#define FRAME_stand107        	150
-#undef FRAME_stand108
-#define FRAME_stand108        	151
-#undef FRAME_stand109
-#define FRAME_stand109        	152
-#undef FRAME_stand110
-#define FRAME_stand110        	153
-#undef FRAME_stand111
-#define FRAME_stand111        	154
-#undef FRAME_stand112
-#define FRAME_stand112        	155
-#undef FRAME_stand113
-#define FRAME_stand113        	156
-#undef FRAME_stand114
-#define FRAME_stand114        	157
-#undef FRAME_stand115
-#define FRAME_stand115        	158
-#undef FRAME_stand116
-#define FRAME_stand116        	159
-#undef FRAME_stand117
-#define FRAME_stand117        	160
-#undef FRAME_stand118
-#define FRAME_stand118        	161
-#undef FRAME_stand119
-#define FRAME_stand119        	162
-#undef FRAME_stand120
-#define FRAME_stand120        	163
-#undef FRAME_stand121
-#define FRAME_stand121        	164
-#undef FRAME_stand122
-#define FRAME_stand122        	165
-#undef FRAME_stand123
-#define FRAME_stand123        	166
-#undef FRAME_stand124
-#define FRAME_stand124        	167
-#undef FRAME_stand125
-#define FRAME_stand125        	168
-#undef FRAME_stand126
-#define FRAME_stand126        	169
-#undef FRAME_stand127
-#define FRAME_stand127        	170
-#undef FRAME_stand128
-#define FRAME_stand128        	171
-#undef FRAME_stand129
-#define FRAME_stand129        	172
-#undef FRAME_stand130
-#define FRAME_stand130        	173
-#undef FRAME_stand131
-#define FRAME_stand131        	174
-#undef FRAME_stand132
-#define FRAME_stand132        	175
-#undef FRAME_stand133
-#define FRAME_stand133        	176
-#undef FRAME_stand134
-#define FRAME_stand134        	177
-#undef FRAME_stand135
-#define FRAME_stand135        	178
-#undef FRAME_stand136
-#define FRAME_stand136        	179
-#undef FRAME_stand137
-#define FRAME_stand137        	180
-#undef FRAME_stand138
-#define FRAME_stand138        	181
-#undef FRAME_stand139
-#define FRAME_stand139        	182
-#undef FRAME_stand140
-#define FRAME_stand140        	183
-#define FRAME_stand141        	184
-#define FRAME_stand142        	185
-#define FRAME_stand143        	186
-#define FRAME_stand144        	187
-#define FRAME_stand145        	188
-#define FRAME_stand146        	189
-#define FRAME_stand147        	190
-#define FRAME_stand148        	191
-#define FRAME_stand149        	192
-#define FRAME_stand150        	193
-#define FRAME_stand151        	194
-#define FRAME_stand152        	195
-#undef FRAME_stand201
-#define FRAME_stand201        	196
-#undef FRAME_stand202
-#define FRAME_stand202        	197
-#undef FRAME_stand203
-#define FRAME_stand203        	198
-#undef FRAME_stand204
-#define FRAME_stand204        	199
-#undef FRAME_stand205
-#define FRAME_stand205        	200
-#undef FRAME_stand206
-#define FRAME_stand206        	201
-#undef FRAME_stand207
-#define FRAME_stand207        	202
-#undef FRAME_stand208
-#define FRAME_stand208        	203
-#undef FRAME_stand209
-#define FRAME_stand209        	204
-#undef FRAME_stand210
-#define FRAME_stand210        	205
-#undef FRAME_stand211
-#define FRAME_stand211        	206
-#undef FRAME_stand212
-#define FRAME_stand212        	207
-#undef FRAME_stand213
-#define FRAME_stand213        	208
-#undef FRAME_stand214
-#define FRAME_stand214        	209
-#undef FRAME_stand215
-#define FRAME_stand215        	210
-#undef FRAME_stand216
-#define FRAME_stand216        	211
-#undef FRAME_stand217
-#define FRAME_stand217        	212
-#undef FRAME_stand218
-#define FRAME_stand218        	213
-#undef FRAME_stand219
-#define FRAME_stand219        	214
-#undef FRAME_stand220
-#define FRAME_stand220        	215
-#undef FRAME_stand221
-#define FRAME_stand221        	216
-#undef FRAME_stand222
-#define FRAME_stand222        	217
-#undef FRAME_stand223
-#define FRAME_stand223        	218
-#undef FRAME_stand224
-#define FRAME_stand224        	219
-#undef FRAME_stand225
-#define FRAME_stand225        	220
-#undef FRAME_stand226
-#define FRAME_stand226        	221
-#undef FRAME_stand227
-#define FRAME_stand227        	222
-#undef FRAME_stand228
-#define FRAME_stand228        	223
-#undef FRAME_stand229
-#define FRAME_stand229        	224
-#undef FRAME_stand230
-#define FRAME_stand230        	225
-#undef FRAME_stand231
-#define FRAME_stand231        	226
-#undef FRAME_stand232
-#define FRAME_stand232        	227
-#undef FRAME_stand233
-#define FRAME_stand233        	228
-#undef FRAME_stand234
-#define FRAME_stand234        	229
-#undef FRAME_stand235
-#define FRAME_stand235        	230
-#undef FRAME_stand236
-#define FRAME_stand236        	231
-#undef FRAME_stand237
-#define FRAME_stand237        	232
-#undef FRAME_stand238
-#define FRAME_stand238        	233
-#undef FRAME_stand239
-#define FRAME_stand239        	234
-#undef FRAME_stand240
-#define FRAME_stand240        	235
-#undef FRAME_stand241
-#define FRAME_stand241        	236
-#undef FRAME_stand242
-#define FRAME_stand242        	237
-#undef FRAME_stand243
-#define FRAME_stand243        	238
-#undef FRAME_stand244
-#define FRAME_stand244        	239
-#undef FRAME_stand245
-#define FRAME_stand245        	240
-#undef FRAME_stand246
-#define FRAME_stand246        	241
-#undef FRAME_stand247
-#define FRAME_stand247        	242
-#undef FRAME_stand248
-#define FRAME_stand248        	243
-#undef FRAME_stand249
-#define FRAME_stand249        	244
-#undef FRAME_stand250
-#define FRAME_stand250        	245
-#undef FRAME_stand251
-#define FRAME_stand251        	246
-#undef FRAME_stand252
-#define FRAME_stand252        	247
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_float.h ============ */
@@ -52100,7 +48589,7 @@ void floater_fire_blaster (edict_t* self)
 	vec3_t	dir;
 	int		effect;
 
-	if ((self->s.frame == FRAME_attak104) || (self->s.frame == FRAME_attak107))
+	if ((self->s.frame == 34) || (self->s.frame == 37))
 		effect = EF_HYPERBLASTER;
 	else
 		effect = 0;
@@ -52170,7 +48659,7 @@ mframe_t floater_frames_stand1 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	floater_move_stand1 = {FRAME_stand101, FRAME_stand152, floater_frames_stand1, NULL};
+mmove_t	floater_move_stand1 = {144, 195, floater_frames_stand1, NULL};
 
 mframe_t floater_frames_stand2 [] =
 {
@@ -52227,7 +48716,7 @@ mframe_t floater_frames_stand2 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_stand2, NULL};
+mmove_t	floater_move_stand2 = {196, 247, floater_frames_stand2, NULL};
 
 void floater_stand (edict_t* self)
 {
@@ -52270,7 +48759,7 @@ mframe_t floater_frames_activate [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_activate = {FRAME_actvat01, FRAME_actvat31, floater_frames_activate, NULL};
+mmove_t floater_move_activate = {0, 30, floater_frames_activate, NULL};
 
 mframe_t floater_frames_attack1 [] =
 {
@@ -52289,7 +48778,7 @@ mframe_t floater_frames_attack1 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},			//							-- LOOP Ends
 };
-mmove_t floater_move_attack1 = {FRAME_attak101, FRAME_attak114, floater_frames_attack1, floater_run};
+mmove_t floater_move_attack1 = {31, 44, floater_frames_attack1, floater_run};
 
 mframe_t floater_frames_attack2 [] =
 {
@@ -52319,7 +48808,7 @@ mframe_t floater_frames_attack2 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t floater_move_attack2 = {FRAME_attak201, FRAME_attak225, floater_frames_attack2, floater_run};
+mmove_t floater_move_attack2 = {45, 69, floater_frames_attack2, floater_run};
 
 mframe_t floater_frames_attack3 [] =
 {
@@ -52358,7 +48847,7 @@ mframe_t floater_frames_attack3 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t floater_move_attack3 = {FRAME_attak301, FRAME_attak334, floater_frames_attack3, floater_run};
+mmove_t floater_move_attack3 = {70, 103, floater_frames_attack3, floater_run};
 
 mframe_t floater_frames_death [] =
 {
@@ -52376,7 +48865,7 @@ mframe_t floater_frames_death [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_death = {FRAME_death01, FRAME_death13, floater_frames_death, floater_dead};
+mmove_t floater_move_death = {104, 116, floater_frames_death, floater_dead};
 
 mframe_t floater_frames_pain1 [] =
 {
@@ -52388,7 +48877,7 @@ mframe_t floater_frames_pain1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_pain1 = {FRAME_pain101, FRAME_pain107, floater_frames_pain1, floater_run};
+mmove_t floater_move_pain1 = {117, 123, floater_frames_pain1, floater_run};
 
 mframe_t floater_frames_pain2 [] =
 {
@@ -52401,7 +48890,7 @@ mframe_t floater_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_pain2 = {FRAME_pain201, FRAME_pain208, floater_frames_pain2, floater_run};
+mmove_t floater_move_pain2 = {124, 131, floater_frames_pain2, floater_run};
 
 mframe_t floater_frames_pain3 [] =
 {
@@ -52418,7 +48907,7 @@ mframe_t floater_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_pain3 = {FRAME_pain301, FRAME_pain312, floater_frames_pain3, floater_run};
+mmove_t floater_move_pain3 = {132, 143, floater_frames_pain3, floater_run};
 
 mframe_t floater_frames_walk [] =
 {
@@ -52475,7 +48964,7 @@ mframe_t floater_frames_walk [] =
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
 };
-mmove_t	floater_move_walk = {FRAME_stand101, FRAME_stand152, floater_frames_walk, NULL};
+mmove_t	floater_move_walk = {144, 195, floater_frames_walk, NULL};
 
 mframe_t floater_frames_run [] =
 {
@@ -52532,7 +49021,7 @@ mframe_t floater_frames_run [] =
 	{ai_run, 13, NULL},
 	{ai_run, 13, NULL},
 };
-mmove_t	floater_move_run = {FRAME_stand101, FRAME_stand152, floater_frames_run, NULL};
+mmove_t	floater_move_run = {144, 195, floater_frames_run, NULL};
 
 void floater_run (edict_t* self)
 {
@@ -52715,263 +49204,6 @@ flyer
 #define ACTION_run				3
 #define ACTION_walk				4
 
-#define FRAME_start01         	0
-#define FRAME_start02         	1
-#define FRAME_start03         	2
-#define FRAME_start04         	3
-#define FRAME_start05         	4
-#define FRAME_start06         	5
-#define FRAME_stop01          	6
-#define FRAME_stop02          	7
-#define FRAME_stop03          	8
-#define FRAME_stop04          	9
-#define FRAME_stop05          	10
-#define FRAME_stop06          	11
-#define FRAME_stop07          	12
-#undef FRAME_stand01
-#define FRAME_stand01         	13
-#undef FRAME_stand02
-#define FRAME_stand02         	14
-#undef FRAME_stand03
-#define FRAME_stand03         	15
-#undef FRAME_stand04
-#define FRAME_stand04         	16
-#undef FRAME_stand05
-#define FRAME_stand05         	17
-#undef FRAME_stand06
-#define FRAME_stand06         	18
-#undef FRAME_stand07
-#define FRAME_stand07         	19
-#undef FRAME_stand08
-#define FRAME_stand08         	20
-#undef FRAME_stand09
-#define FRAME_stand09         	21
-#undef FRAME_stand10
-#define FRAME_stand10         	22
-#undef FRAME_stand11
-#define FRAME_stand11         	23
-#undef FRAME_stand12
-#define FRAME_stand12         	24
-#undef FRAME_stand13
-#define FRAME_stand13         	25
-#undef FRAME_stand14
-#define FRAME_stand14         	26
-#undef FRAME_stand15
-#define FRAME_stand15         	27
-#undef FRAME_stand16
-#define FRAME_stand16         	28
-#undef FRAME_stand17
-#define FRAME_stand17         	29
-#undef FRAME_stand18
-#define FRAME_stand18         	30
-#undef FRAME_stand19
-#define FRAME_stand19         	31
-#undef FRAME_stand20
-#define FRAME_stand20         	32
-#undef FRAME_stand21
-#define FRAME_stand21         	33
-#undef FRAME_stand22
-#define FRAME_stand22         	34
-#undef FRAME_stand23
-#define FRAME_stand23         	35
-#undef FRAME_stand24
-#define FRAME_stand24         	36
-#undef FRAME_stand25
-#define FRAME_stand25         	37
-#undef FRAME_stand26
-#define FRAME_stand26         	38
-#undef FRAME_stand27
-#define FRAME_stand27         	39
-#undef FRAME_stand28
-#define FRAME_stand28         	40
-#undef FRAME_stand29
-#define FRAME_stand29         	41
-#undef FRAME_stand30
-#define FRAME_stand30         	42
-#undef FRAME_stand31
-#define FRAME_stand31         	43
-#undef FRAME_stand32
-#define FRAME_stand32         	44
-#undef FRAME_stand33
-#define FRAME_stand33         	45
-#undef FRAME_stand34
-#define FRAME_stand34         	46
-#undef FRAME_stand35
-#define FRAME_stand35         	47
-#undef FRAME_stand36
-#define FRAME_stand36         	48
-#undef FRAME_stand37
-#define FRAME_stand37         	49
-#undef FRAME_stand38
-#define FRAME_stand38         	50
-#undef FRAME_stand39
-#define FRAME_stand39         	51
-#undef FRAME_stand40
-#define FRAME_stand40         	52
-#undef FRAME_stand41
-#define FRAME_stand41         	53
-#undef FRAME_stand42
-#define FRAME_stand42         	54
-#undef FRAME_stand43
-#define FRAME_stand43         	55
-#undef FRAME_stand44
-#define FRAME_stand44         	56
-#undef FRAME_stand45
-#define FRAME_stand45         	57
-#undef FRAME_attak101
-#define FRAME_attak101        	58
-#undef FRAME_attak102
-#define FRAME_attak102        	59
-#undef FRAME_attak103
-#define FRAME_attak103        	60
-#undef FRAME_attak104
-#define FRAME_attak104        	61
-#undef FRAME_attak105
-#define FRAME_attak105        	62
-#undef FRAME_attak106
-#define FRAME_attak106        	63
-#undef FRAME_attak107
-#define FRAME_attak107        	64
-#undef FRAME_attak108
-#define FRAME_attak108        	65
-#undef FRAME_attak109
-#define FRAME_attak109        	66
-#undef FRAME_attak110
-#define FRAME_attak110        	67
-#undef FRAME_attak111
-#define FRAME_attak111        	68
-#undef FRAME_attak112
-#define FRAME_attak112        	69
-#undef FRAME_attak113
-#define FRAME_attak113        	70
-#undef FRAME_attak114
-#define FRAME_attak114        	71
-#undef FRAME_attak115
-#define FRAME_attak115        	72
-#undef FRAME_attak116
-#define FRAME_attak116        	73
-#undef FRAME_attak117
-#define FRAME_attak117        	74
-#undef FRAME_attak118
-#define FRAME_attak118        	75
-#undef FRAME_attak119
-#define FRAME_attak119        	76
-#undef FRAME_attak120
-#define FRAME_attak120        	77
-#undef FRAME_attak121
-#define FRAME_attak121        	78
-#undef FRAME_attak201
-#define FRAME_attak201        	79
-#undef FRAME_attak202
-#define FRAME_attak202        	80
-#undef FRAME_attak203
-#define FRAME_attak203        	81
-#undef FRAME_attak204
-#define FRAME_attak204        	82
-#undef FRAME_attak205
-#define FRAME_attak205        	83
-#undef FRAME_attak206
-#define FRAME_attak206        	84
-#undef FRAME_attak207
-#define FRAME_attak207        	85
-#undef FRAME_attak208
-#define FRAME_attak208        	86
-#undef FRAME_attak209
-#define FRAME_attak209        	87
-#undef FRAME_attak210
-#define FRAME_attak210        	88
-#undef FRAME_attak211
-#define FRAME_attak211        	89
-#undef FRAME_attak212
-#define FRAME_attak212        	90
-#undef FRAME_attak213
-#define FRAME_attak213        	91
-#undef FRAME_attak214
-#define FRAME_attak214        	92
-#undef FRAME_attak215
-#define FRAME_attak215        	93
-#undef FRAME_attak216
-#define FRAME_attak216        	94
-#undef FRAME_attak217
-#define FRAME_attak217        	95
-#define FRAME_bankl01         	96
-#define FRAME_bankl02         	97
-#define FRAME_bankl03         	98
-#define FRAME_bankl04         	99
-#define FRAME_bankl05         	100
-#define FRAME_bankl06         	101
-#define FRAME_bankl07         	102
-#define FRAME_bankr01         	103
-#define FRAME_bankr02         	104
-#define FRAME_bankr03         	105
-#define FRAME_bankr04         	106
-#define FRAME_bankr05         	107
-#define FRAME_bankr06         	108
-#define FRAME_bankr07         	109
-#define FRAME_rollf01         	110
-#define FRAME_rollf02         	111
-#define FRAME_rollf03         	112
-#define FRAME_rollf04         	113
-#define FRAME_rollf05         	114
-#define FRAME_rollf06         	115
-#define FRAME_rollf07         	116
-#define FRAME_rollf08         	117
-#define FRAME_rollf09         	118
-#define FRAME_rollr01         	119
-#define FRAME_rollr02         	120
-#define FRAME_rollr03         	121
-#define FRAME_rollr04         	122
-#define FRAME_rollr05         	123
-#define FRAME_rollr06         	124
-#define FRAME_rollr07         	125
-#define FRAME_rollr08         	126
-#define FRAME_rollr09         	127
-#undef FRAME_defens01
-#define FRAME_defens01        	128
-#undef FRAME_defens02
-#define FRAME_defens02        	129
-#undef FRAME_defens03
-#define FRAME_defens03        	130
-#undef FRAME_defens04
-#define FRAME_defens04        	131
-#undef FRAME_defens05
-#define FRAME_defens05        	132
-#undef FRAME_defens06
-#define FRAME_defens06        	133
-#undef FRAME_pain101
-#define FRAME_pain101         	134
-#undef FRAME_pain102
-#define FRAME_pain102         	135
-#undef FRAME_pain103
-#define FRAME_pain103         	136
-#undef FRAME_pain104
-#define FRAME_pain104         	137
-#undef FRAME_pain105
-#define FRAME_pain105         	138
-#undef FRAME_pain106
-#define FRAME_pain106         	139
-#undef FRAME_pain107
-#define FRAME_pain107         	140
-#undef FRAME_pain108
-#define FRAME_pain108         	141
-#undef FRAME_pain109
-#define FRAME_pain109         	142
-#undef FRAME_pain201
-#define FRAME_pain201         	143
-#undef FRAME_pain202
-#define FRAME_pain202         	144
-#undef FRAME_pain203
-#define FRAME_pain203         	145
-#undef FRAME_pain204
-#define FRAME_pain204         	146
-#undef FRAME_pain301
-#define FRAME_pain301         	147
-#undef FRAME_pain302
-#define FRAME_pain302         	148
-#undef FRAME_pain303
-#define FRAME_pain303         	149
-#undef FRAME_pain304
-#define FRAME_pain304         	150
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flyer.h ============ */
@@ -53060,7 +49292,7 @@ mframe_t flyer_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	flyer_move_stand = {FRAME_stand01, FRAME_stand45, flyer_frames_stand, NULL};
+mmove_t	flyer_move_stand = {13, 57, flyer_frames_stand, NULL};
 
 
 mframe_t flyer_frames_walk [] =
@@ -53111,7 +49343,7 @@ mframe_t flyer_frames_walk [] =
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
 };
-mmove_t	flyer_move_walk = {FRAME_stand01, FRAME_stand45, flyer_frames_walk, NULL};
+mmove_t	flyer_move_walk = {13, 57, flyer_frames_walk, NULL};
 
 mframe_t flyer_frames_run [] =
 {
@@ -53161,7 +49393,7 @@ mframe_t flyer_frames_run [] =
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
 };
-mmove_t	flyer_move_run = {FRAME_stand01, FRAME_stand45, flyer_frames_run, NULL};
+mmove_t	flyer_move_run = {13, 57, flyer_frames_run, NULL};
 
 void flyer_run (edict_t* self)
 {
@@ -53190,7 +49422,7 @@ mframe_t flyer_frames_start [] =
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	flyer_nextmove},
 };
-mmove_t flyer_move_start = {FRAME_start01, FRAME_start06, flyer_frames_start, NULL};
+mmove_t flyer_move_start = {0, 5, flyer_frames_start, NULL};
 
 mframe_t flyer_frames_stop [] =
 {
@@ -53202,7 +49434,7 @@ mframe_t flyer_frames_stop [] =
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	flyer_nextmove},
 };
-mmove_t flyer_move_stop = {FRAME_stop01, FRAME_stop07, flyer_frames_stop, NULL};
+mmove_t flyer_move_stop = {6, 12, flyer_frames_stop, NULL};
 
 void flyer_stop (edict_t* self)
 {
@@ -53227,7 +49459,7 @@ mframe_t flyer_frames_rollright [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_rollright = {FRAME_rollr01, FRAME_rollr09, flyer_frames_rollright, NULL};
+mmove_t flyer_move_rollright = {119, 127, flyer_frames_rollright, NULL};
 
 mframe_t flyer_frames_rollleft [] =
 {
@@ -53241,7 +49473,7 @@ mframe_t flyer_frames_rollleft [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_rollleft = {FRAME_rollf01, FRAME_rollf09, flyer_frames_rollleft, NULL};
+mmove_t flyer_move_rollleft = {110, 118, flyer_frames_rollleft, NULL};
 
 mframe_t flyer_frames_pain3 [] =
 {
@@ -53250,7 +49482,7 @@ mframe_t flyer_frames_pain3 [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_pain3 = {FRAME_pain301, FRAME_pain304, flyer_frames_pain3, flyer_run};
+mmove_t flyer_move_pain3 = {147, 150, flyer_frames_pain3, flyer_run};
 
 mframe_t flyer_frames_pain2 [] =
 {
@@ -53259,7 +49491,7 @@ mframe_t flyer_frames_pain2 [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_pain2 = {FRAME_pain201, FRAME_pain204, flyer_frames_pain2, flyer_run};
+mmove_t flyer_move_pain2 = {143, 146, flyer_frames_pain2, flyer_run};
 
 mframe_t flyer_frames_pain1 [] =
 {
@@ -53273,7 +49505,7 @@ mframe_t flyer_frames_pain1 [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_pain1 = {FRAME_pain101, FRAME_pain109, flyer_frames_pain1, flyer_run};
+mmove_t flyer_move_pain1 = {134, 142, flyer_frames_pain1, flyer_run};
 
 mframe_t flyer_frames_defense [] =
 {
@@ -53284,7 +49516,7 @@ mframe_t flyer_frames_defense [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_defense = {FRAME_defens01, FRAME_defens06, flyer_frames_defense, NULL};
+mmove_t flyer_move_defense = {128, 133, flyer_frames_defense, NULL};
 
 mframe_t flyer_frames_bankright [] =
 {
@@ -53296,7 +49528,7 @@ mframe_t flyer_frames_bankright [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_bankright = {FRAME_bankr01, FRAME_bankr07, flyer_frames_bankright, NULL};
+mmove_t flyer_move_bankright = {103, 109, flyer_frames_bankright, NULL};
 
 mframe_t flyer_frames_bankleft [] =
 {
@@ -53308,7 +49540,7 @@ mframe_t flyer_frames_bankleft [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_bankleft = {FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, NULL};
+mmove_t flyer_move_bankleft = {96, 102, flyer_frames_bankleft, NULL};
 
 
 void flyer_fire (edict_t* self, int flash_number)
@@ -53319,7 +49551,7 @@ void flyer_fire (edict_t* self, int flash_number)
 	vec3_t	dir;
 	int		effect;
 
-	if ((self->s.frame == FRAME_attak204) || (self->s.frame == FRAME_attak207) || (self->s.frame == FRAME_attak210))
+	if ((self->s.frame == 82) || (self->s.frame == 85) || (self->s.frame == 88))
 		effect = EF_HYPERBLASTER;
 	else
 		effect = 0;
@@ -53364,7 +49596,7 @@ mframe_t flyer_frames_attack2 [] =
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_attack2 = {FRAME_attak201, FRAME_attak217, flyer_frames_attack2, flyer_run};
+mmove_t flyer_move_attack2 = {79, 95, flyer_frames_attack2, flyer_run};
 
 
 void flyer_slash_left (edict_t* self)
@@ -53394,7 +49626,7 @@ mframe_t flyer_frames_start_melee [] =
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_start_melee = {FRAME_attak101, FRAME_attak106, flyer_frames_start_melee, flyer_loop_melee};
+mmove_t flyer_move_start_melee = {58, 63, flyer_frames_start_melee, flyer_loop_melee};
 
 mframe_t flyer_frames_end_melee [] =
 {
@@ -53402,7 +49634,7 @@ mframe_t flyer_frames_end_melee [] =
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_end_melee = {FRAME_attak119, FRAME_attak121, flyer_frames_end_melee, flyer_run};
+mmove_t flyer_move_end_melee = {76, 78, flyer_frames_end_melee, flyer_run};
 
 
 mframe_t flyer_frames_loop_melee [] =
@@ -53421,7 +49653,7 @@ mframe_t flyer_frames_loop_melee [] =
 		{ai_charge, 0, NULL}		// Loop Ends
 
 };
-mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_loop_melee, flyer_check_melee};
+mmove_t flyer_move_loop_melee = {64, 75, flyer_frames_loop_melee, flyer_check_melee};
 
 void flyer_loop_melee (edict_t* self)
 {
@@ -53586,161 +49818,6 @@ GLADIATOR
 
 // This file generated by ModelGen - Do NOT Modify
 
-#undef FRAME_stand1
-#define FRAME_stand1          	0
-#undef FRAME_stand2
-#define FRAME_stand2          	1
-#undef FRAME_stand3
-#define FRAME_stand3          	2
-#undef FRAME_stand4
-#define FRAME_stand4          	3
-#undef FRAME_stand5
-#define FRAME_stand5          	4
-#undef FRAME_stand6
-#define FRAME_stand6          	5
-#undef FRAME_stand7
-#define FRAME_stand7          	6
-#undef FRAME_walk1
-#define FRAME_walk1           	7
-#undef FRAME_walk2
-#define FRAME_walk2           	8
-#undef FRAME_walk3
-#define FRAME_walk3           	9
-#undef FRAME_walk4
-#define FRAME_walk4           	10
-#undef FRAME_walk5
-#define FRAME_walk5           	11
-#undef FRAME_walk6
-#define FRAME_walk6           	12
-#undef FRAME_walk7
-#define FRAME_walk7           	13
-#undef FRAME_walk8
-#define FRAME_walk8           	14
-#undef FRAME_walk9
-#define FRAME_walk9           	15
-#undef FRAME_walk10
-#define FRAME_walk10          	16
-#undef FRAME_walk11
-#define FRAME_walk11          	17
-#undef FRAME_walk12
-#define FRAME_walk12          	18
-#undef FRAME_walk13
-#define FRAME_walk13          	19
-#undef FRAME_walk14
-#define FRAME_walk14          	20
-#undef FRAME_walk15
-#define FRAME_walk15          	21
-#undef FRAME_walk16
-#define FRAME_walk16          	22
-#undef FRAME_run1
-#define FRAME_run1            	23
-#undef FRAME_run2
-#define FRAME_run2            	24
-#undef FRAME_run3
-#define FRAME_run3            	25
-#undef FRAME_run4
-#define FRAME_run4            	26
-#undef FRAME_run5
-#define FRAME_run5            	27
-#undef FRAME_run6
-#define FRAME_run6            	28
-#define FRAME_melee1          	29
-#define FRAME_melee2          	30
-#define FRAME_melee3          	31
-#define FRAME_melee4          	32
-#define FRAME_melee5          	33
-#define FRAME_melee6          	34
-#define FRAME_melee7          	35
-#define FRAME_melee8          	36
-#define FRAME_melee9          	37
-#define FRAME_melee10         	38
-#define FRAME_melee11         	39
-#define FRAME_melee12         	40
-#define FRAME_melee13         	41
-#define FRAME_melee14         	42
-#define FRAME_melee15         	43
-#define FRAME_melee16         	44
-#define FRAME_melee17         	45
-#undef FRAME_attack1
-#define FRAME_attack1         	46
-#undef FRAME_attack2
-#define FRAME_attack2         	47
-#undef FRAME_attack3
-#define FRAME_attack3         	48
-#undef FRAME_attack4
-#define FRAME_attack4         	49
-#undef FRAME_attack5
-#define FRAME_attack5         	50
-#undef FRAME_attack6
-#define FRAME_attack6         	51
-#undef FRAME_attack7
-#define FRAME_attack7         	52
-#undef FRAME_attack8
-#define FRAME_attack8         	53
-#undef FRAME_attack9
-#define FRAME_attack9         	54
-#define FRAME_pain1           	55
-#undef FRAME_pain2
-#define FRAME_pain2           	56
-#undef FRAME_pain3
-#define FRAME_pain3           	57
-#undef FRAME_pain4
-#define FRAME_pain4           	58
-#undef FRAME_pain5
-#define FRAME_pain5           	59
-#undef FRAME_pain6
-#define FRAME_pain6           	60
-#undef FRAME_death1
-#define FRAME_death1          	61
-#undef FRAME_death2
-#define FRAME_death2          	62
-#undef FRAME_death3
-#define FRAME_death3          	63
-#undef FRAME_death4
-#define FRAME_death4          	64
-#undef FRAME_death5
-#define FRAME_death5          	65
-#undef FRAME_death6
-#define FRAME_death6          	66
-#undef FRAME_death7
-#define FRAME_death7          	67
-#undef FRAME_death8
-#define FRAME_death8          	68
-#undef FRAME_death9
-#define FRAME_death9          	69
-#undef FRAME_death10
-#define FRAME_death10         	70
-#undef FRAME_death11
-#define FRAME_death11         	71
-#undef FRAME_death12
-#define FRAME_death12         	72
-#undef FRAME_death13
-#define FRAME_death13         	73
-#undef FRAME_death14
-#define FRAME_death14         	74
-#undef FRAME_death15
-#define FRAME_death15         	75
-#undef FRAME_death16
-#define FRAME_death16         	76
-#undef FRAME_death17
-#define FRAME_death17         	77
-#undef FRAME_death18
-#define FRAME_death18         	78
-#undef FRAME_death19
-#define FRAME_death19         	79
-#undef FRAME_death20
-#define FRAME_death20         	80
-#undef FRAME_death21
-#define FRAME_death21         	81
-#undef FRAME_death22
-#define FRAME_death22         	82
-#define FRAME_painup1         	83
-#define FRAME_painup2         	84
-#define FRAME_painup3         	85
-#define FRAME_painup4         	86
-#define FRAME_painup5         	87
-#define FRAME_painup6         	88
-#define FRAME_painup7         	89
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_gladiator.h ============ */
@@ -53789,7 +49866,7 @@ mframe_t gladiator_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t gladiator_move_stand = {FRAME_stand1, FRAME_stand7, gladiator_frames_stand, NULL};
+mmove_t gladiator_move_stand = {0, 6, gladiator_frames_stand, NULL};
 
 void gladiator_stand (edict_t* self)
 {
@@ -53816,7 +49893,7 @@ mframe_t gladiator_frames_walk [] =
 	{ai_walk, 1,  NULL},
 	{ai_walk, 8,  NULL},
 };
-mmove_t gladiator_move_walk = {FRAME_walk1, FRAME_walk16, gladiator_frames_walk, NULL};
+mmove_t gladiator_move_walk = {7, 22, gladiator_frames_walk, NULL};
 
 void gladiator_walk (edict_t* self)
 {
@@ -53833,7 +49910,7 @@ mframe_t gladiator_frames_run [] =
 	{ai_run, 12,	NULL},
 	{ai_run, 13,	NULL},
 };
-mmove_t gladiator_move_run = {FRAME_run1, FRAME_run6, gladiator_frames_run, NULL};
+mmove_t gladiator_move_run = {23, 28, gladiator_frames_run, NULL};
 
 void gladiator_run (edict_t* self)
 {
@@ -53875,7 +49952,7 @@ mframe_t gladiator_frames_attack_melee [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gladiator_move_attack_melee = {FRAME_melee1, FRAME_melee17, gladiator_frames_attack_melee, gladiator_run};
+mmove_t gladiator_move_attack_melee = {29, 45, gladiator_frames_attack_melee, gladiator_run};
 
 void gladiator_melee(edict_t* self)
 {
@@ -53911,7 +49988,7 @@ mframe_t gladiator_frames_attack_gun [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gladiator_move_attack_gun = {FRAME_attack1, FRAME_attack9, gladiator_frames_attack_gun, gladiator_run};
+mmove_t gladiator_move_attack_gun = {46, 54, gladiator_frames_attack_gun, gladiator_run};
 
 void gladiator_attack(edict_t* self)
 {
@@ -53941,7 +50018,7 @@ mframe_t gladiator_frames_pain [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_pain = {FRAME_pain1, FRAME_pain6, gladiator_frames_pain, gladiator_run};
+mmove_t gladiator_move_pain = {55, 60, gladiator_frames_pain, gladiator_run};
 
 mframe_t gladiator_frames_pain_air [] =
 {
@@ -53953,7 +50030,7 @@ mframe_t gladiator_frames_pain_air [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_pain_air = {FRAME_painup1, FRAME_painup7, gladiator_frames_pain_air, gladiator_run};
+mmove_t gladiator_move_pain_air = {83, 89, gladiator_frames_pain_air, gladiator_run};
 
 static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -54023,7 +50100,7 @@ mframe_t gladiator_frames_death [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_death = {FRAME_death1, FRAME_death22, gladiator_frames_death, gladiator_dead};
+mmove_t gladiator_move_death = {61, 82, gladiator_frames_death, gladiator_dead};
 
 static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -54116,409 +50193,6 @@ GUNNER
 
 // This file generated by ModelGen - Do NOT Modify
 
-#undef FRAME_stand01
-#define FRAME_stand01         	0
-#undef FRAME_stand02
-#define FRAME_stand02         	1
-#undef FRAME_stand03
-#define FRAME_stand03         	2
-#undef FRAME_stand04
-#define FRAME_stand04         	3
-#undef FRAME_stand05
-#define FRAME_stand05         	4
-#undef FRAME_stand06
-#define FRAME_stand06         	5
-#undef FRAME_stand07
-#define FRAME_stand07         	6
-#undef FRAME_stand08
-#define FRAME_stand08         	7
-#undef FRAME_stand09
-#define FRAME_stand09         	8
-#undef FRAME_stand10
-#define FRAME_stand10         	9
-#undef FRAME_stand11
-#define FRAME_stand11         	10
-#undef FRAME_stand12
-#define FRAME_stand12         	11
-#undef FRAME_stand13
-#define FRAME_stand13         	12
-#undef FRAME_stand14
-#define FRAME_stand14         	13
-#undef FRAME_stand15
-#define FRAME_stand15         	14
-#undef FRAME_stand16
-#define FRAME_stand16         	15
-#undef FRAME_stand17
-#define FRAME_stand17         	16
-#undef FRAME_stand18
-#define FRAME_stand18         	17
-#undef FRAME_stand19
-#define FRAME_stand19         	18
-#undef FRAME_stand20
-#define FRAME_stand20         	19
-#undef FRAME_stand21
-#define FRAME_stand21         	20
-#undef FRAME_stand22
-#define FRAME_stand22         	21
-#undef FRAME_stand23
-#define FRAME_stand23         	22
-#undef FRAME_stand24
-#define FRAME_stand24         	23
-#undef FRAME_stand25
-#define FRAME_stand25         	24
-#undef FRAME_stand26
-#define FRAME_stand26         	25
-#undef FRAME_stand27
-#define FRAME_stand27         	26
-#undef FRAME_stand28
-#define FRAME_stand28         	27
-#undef FRAME_stand29
-#define FRAME_stand29         	28
-#undef FRAME_stand30
-#define FRAME_stand30         	29
-#undef FRAME_stand31
-#define FRAME_stand31         	30
-#undef FRAME_stand32
-#define FRAME_stand32         	31
-#undef FRAME_stand33
-#define FRAME_stand33         	32
-#undef FRAME_stand34
-#define FRAME_stand34         	33
-#undef FRAME_stand35
-#define FRAME_stand35         	34
-#undef FRAME_stand36
-#define FRAME_stand36         	35
-#undef FRAME_stand37
-#define FRAME_stand37         	36
-#undef FRAME_stand38
-#define FRAME_stand38         	37
-#undef FRAME_stand39
-#define FRAME_stand39         	38
-#undef FRAME_stand40
-#define FRAME_stand40         	39
-#undef FRAME_stand41
-#define FRAME_stand41         	40
-#undef FRAME_stand42
-#define FRAME_stand42         	41
-#undef FRAME_stand43
-#define FRAME_stand43         	42
-#undef FRAME_stand44
-#define FRAME_stand44         	43
-#undef FRAME_stand45
-#define FRAME_stand45         	44
-#undef FRAME_stand46
-#define FRAME_stand46         	45
-#undef FRAME_stand47
-#define FRAME_stand47         	46
-#undef FRAME_stand48
-#define FRAME_stand48         	47
-#undef FRAME_stand49
-#define FRAME_stand49         	48
-#undef FRAME_stand50
-#define FRAME_stand50         	49
-#undef FRAME_stand51
-#define FRAME_stand51         	50
-#undef FRAME_stand52
-#define FRAME_stand52         	51
-#undef FRAME_stand53
-#define FRAME_stand53         	52
-#undef FRAME_stand54
-#define FRAME_stand54         	53
-#undef FRAME_stand55
-#define FRAME_stand55         	54
-#undef FRAME_stand56
-#define FRAME_stand56         	55
-#undef FRAME_stand57
-#define FRAME_stand57         	56
-#undef FRAME_stand58
-#define FRAME_stand58         	57
-#undef FRAME_stand59
-#define FRAME_stand59         	58
-#undef FRAME_stand60
-#define FRAME_stand60         	59
-#define FRAME_stand61         	60
-#define FRAME_stand62         	61
-#define FRAME_stand63         	62
-#define FRAME_stand64         	63
-#define FRAME_stand65         	64
-#define FRAME_stand66         	65
-#define FRAME_stand67         	66
-#define FRAME_stand68         	67
-#define FRAME_stand69         	68
-#define FRAME_stand70         	69
-#undef FRAME_walk01
-#define FRAME_walk01          	70
-#undef FRAME_walk02
-#define FRAME_walk02          	71
-#undef FRAME_walk03
-#define FRAME_walk03          	72
-#undef FRAME_walk04
-#define FRAME_walk04          	73
-#undef FRAME_walk05
-#define FRAME_walk05          	74
-#undef FRAME_walk06
-#define FRAME_walk06          	75
-#undef FRAME_walk07
-#define FRAME_walk07          	76
-#undef FRAME_walk08
-#define FRAME_walk08          	77
-#undef FRAME_walk09
-#define FRAME_walk09          	78
-#undef FRAME_walk10
-#define FRAME_walk10          	79
-#undef FRAME_walk11
-#define FRAME_walk11          	80
-#undef FRAME_walk12
-#define FRAME_walk12          	81
-#undef FRAME_walk13
-#define FRAME_walk13          	82
-#undef FRAME_walk14
-#define FRAME_walk14          	83
-#undef FRAME_walk15
-#define FRAME_walk15          	84
-#undef FRAME_walk16
-#define FRAME_walk16          	85
-#undef FRAME_walk17
-#define FRAME_walk17          	86
-#undef FRAME_walk18
-#define FRAME_walk18          	87
-#undef FRAME_walk19
-#define FRAME_walk19          	88
-#undef FRAME_walk20
-#define FRAME_walk20          	89
-#undef FRAME_walk21
-#define FRAME_walk21          	90
-#undef FRAME_walk22
-#define FRAME_walk22          	91
-#undef FRAME_walk23
-#define FRAME_walk23          	92
-#undef FRAME_walk24
-#define FRAME_walk24          	93
-#undef FRAME_run01
-#define FRAME_run01           	94
-#undef FRAME_run02
-#define FRAME_run02           	95
-#undef FRAME_run03
-#define FRAME_run03           	96
-#undef FRAME_run04
-#define FRAME_run04           	97
-#undef FRAME_run05
-#define FRAME_run05           	98
-#undef FRAME_run06
-#define FRAME_run06           	99
-#undef FRAME_run07
-#define FRAME_run07           	100
-#undef FRAME_run08
-#define FRAME_run08           	101
-#undef FRAME_runs01
-#define FRAME_runs01          	102
-#undef FRAME_runs02
-#define FRAME_runs02          	103
-#undef FRAME_runs03
-#define FRAME_runs03          	104
-#undef FRAME_runs04
-#define FRAME_runs04          	105
-#undef FRAME_runs05
-#define FRAME_runs05          	106
-#undef FRAME_runs06
-#define FRAME_runs06          	107
-#undef FRAME_attak101
-#define FRAME_attak101        	108
-#undef FRAME_attak102
-#define FRAME_attak102        	109
-#undef FRAME_attak103
-#define FRAME_attak103        	110
-#undef FRAME_attak104
-#define FRAME_attak104        	111
-#undef FRAME_attak105
-#define FRAME_attak105        	112
-#undef FRAME_attak106
-#define FRAME_attak106        	113
-#undef FRAME_attak107
-#define FRAME_attak107        	114
-#undef FRAME_attak108
-#define FRAME_attak108        	115
-#undef FRAME_attak109
-#define FRAME_attak109        	116
-#undef FRAME_attak110
-#define FRAME_attak110        	117
-#undef FRAME_attak111
-#define FRAME_attak111        	118
-#undef FRAME_attak112
-#define FRAME_attak112        	119
-#undef FRAME_attak113
-#define FRAME_attak113        	120
-#undef FRAME_attak114
-#define FRAME_attak114        	121
-#undef FRAME_attak115
-#define FRAME_attak115        	122
-#undef FRAME_attak116
-#define FRAME_attak116        	123
-#undef FRAME_attak117
-#define FRAME_attak117        	124
-#undef FRAME_attak118
-#define FRAME_attak118        	125
-#undef FRAME_attak119
-#define FRAME_attak119        	126
-#undef FRAME_attak120
-#define FRAME_attak120        	127
-#undef FRAME_attak121
-#define FRAME_attak121        	128
-#undef FRAME_attak201
-#define FRAME_attak201        	129
-#undef FRAME_attak202
-#define FRAME_attak202        	130
-#undef FRAME_attak203
-#define FRAME_attak203        	131
-#undef FRAME_attak204
-#define FRAME_attak204        	132
-#undef FRAME_attak205
-#define FRAME_attak205        	133
-#undef FRAME_attak206
-#define FRAME_attak206        	134
-#undef FRAME_attak207
-#define FRAME_attak207        	135
-#undef FRAME_attak208
-#define FRAME_attak208        	136
-#undef FRAME_attak209
-#define FRAME_attak209        	137
-#undef FRAME_attak210
-#define FRAME_attak210        	138
-#undef FRAME_attak211
-#define FRAME_attak211        	139
-#undef FRAME_attak212
-#define FRAME_attak212        	140
-#undef FRAME_attak213
-#define FRAME_attak213        	141
-#undef FRAME_attak214
-#define FRAME_attak214        	142
-#undef FRAME_attak215
-#define FRAME_attak215        	143
-#undef FRAME_attak216
-#define FRAME_attak216        	144
-#undef FRAME_attak217
-#define FRAME_attak217        	145
-#undef FRAME_attak218
-#define FRAME_attak218        	146
-#undef FRAME_attak219
-#define FRAME_attak219        	147
-#undef FRAME_attak220
-#define FRAME_attak220        	148
-#undef FRAME_attak221
-#define FRAME_attak221        	149
-#undef FRAME_attak222
-#define FRAME_attak222        	150
-#undef FRAME_attak223
-#define FRAME_attak223        	151
-#undef FRAME_attak224
-#define FRAME_attak224        	152
-#undef FRAME_attak225
-#define FRAME_attak225        	153
-#define FRAME_attak226        	154
-#define FRAME_attak227        	155
-#define FRAME_attak228        	156
-#define FRAME_attak229        	157
-#define FRAME_attak230        	158
-#undef FRAME_pain101
-#define FRAME_pain101         	159
-#undef FRAME_pain102
-#define FRAME_pain102         	160
-#undef FRAME_pain103
-#define FRAME_pain103         	161
-#undef FRAME_pain104
-#define FRAME_pain104         	162
-#undef FRAME_pain105
-#define FRAME_pain105         	163
-#undef FRAME_pain106
-#define FRAME_pain106         	164
-#undef FRAME_pain107
-#define FRAME_pain107         	165
-#undef FRAME_pain108
-#define FRAME_pain108         	166
-#undef FRAME_pain109
-#define FRAME_pain109         	167
-#undef FRAME_pain110
-#define FRAME_pain110         	168
-#undef FRAME_pain111
-#define FRAME_pain111         	169
-#undef FRAME_pain112
-#define FRAME_pain112         	170
-#undef FRAME_pain113
-#define FRAME_pain113         	171
-#undef FRAME_pain114
-#define FRAME_pain114         	172
-#undef FRAME_pain115
-#define FRAME_pain115         	173
-#undef FRAME_pain116
-#define FRAME_pain116         	174
-#undef FRAME_pain117
-#define FRAME_pain117         	175
-#undef FRAME_pain118
-#define FRAME_pain118         	176
-#undef FRAME_pain201
-#define FRAME_pain201         	177
-#undef FRAME_pain202
-#define FRAME_pain202         	178
-#undef FRAME_pain203
-#define FRAME_pain203         	179
-#undef FRAME_pain204
-#define FRAME_pain204         	180
-#undef FRAME_pain205
-#define FRAME_pain205         	181
-#undef FRAME_pain206
-#define FRAME_pain206         	182
-#undef FRAME_pain207
-#define FRAME_pain207         	183
-#undef FRAME_pain208
-#define FRAME_pain208         	184
-#undef FRAME_pain301
-#define FRAME_pain301         	185
-#undef FRAME_pain302
-#define FRAME_pain302         	186
-#undef FRAME_pain303
-#define FRAME_pain303         	187
-#undef FRAME_pain304
-#define FRAME_pain304         	188
-#undef FRAME_pain305
-#define FRAME_pain305         	189
-#undef FRAME_death01
-#define FRAME_death01         	190
-#undef FRAME_death02
-#define FRAME_death02         	191
-#undef FRAME_death03
-#define FRAME_death03         	192
-#undef FRAME_death04
-#define FRAME_death04         	193
-#undef FRAME_death05
-#define FRAME_death05         	194
-#undef FRAME_death06
-#define FRAME_death06         	195
-#undef FRAME_death07
-#define FRAME_death07         	196
-#undef FRAME_death08
-#define FRAME_death08         	197
-#undef FRAME_death09
-#define FRAME_death09         	198
-#undef FRAME_death10
-#define FRAME_death10         	199
-#undef FRAME_death11
-#define FRAME_death11         	200
-#undef FRAME_duck01
-#define FRAME_duck01          	201
-#undef FRAME_duck02
-#define FRAME_duck02          	202
-#undef FRAME_duck03
-#define FRAME_duck03          	203
-#undef FRAME_duck04
-#define FRAME_duck04          	204
-#undef FRAME_duck05
-#define FRAME_duck05          	205
-#undef FRAME_duck06
-#define FRAME_duck06          	206
-#undef FRAME_duck07
-#define FRAME_duck07          	207
-#undef FRAME_duck08
-#define FRAME_duck08          	208
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.150000
@@ -54616,7 +50290,7 @@ mframe_t gunner_frames_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	gunner_move_fidget = {FRAME_stand31, FRAME_stand70, gunner_frames_fidget, gunner_stand};
+mmove_t	gunner_move_fidget = {30, 69, gunner_frames_fidget, gunner_stand};
 
 void gunner_fidget (edict_t* self)
 {
@@ -54661,7 +50335,7 @@ mframe_t gunner_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, gunner_fidget},
 };
-mmove_t	gunner_move_stand = {FRAME_stand01, FRAME_stand30, gunner_frames_stand, NULL};
+mmove_t	gunner_move_stand = {0, 29, gunner_frames_stand, NULL};
 
 void gunner_stand (edict_t* self)
 {
@@ -54685,7 +50359,7 @@ mframe_t gunner_frames_walk [] =
 	{ai_walk, 7, NULL},
 	{ai_walk, 4, NULL},
 };
-mmove_t gunner_move_walk = {FRAME_walk07, FRAME_walk19, gunner_frames_walk, NULL};
+mmove_t gunner_move_walk = {76, 88, gunner_frames_walk, NULL};
 
 void gunner_walk (edict_t* self)
 {
@@ -54704,7 +50378,7 @@ mframe_t gunner_frames_run [] =
 	{ai_run, 6,  NULL},
 };
 
-mmove_t gunner_move_run = {FRAME_run01, FRAME_run08, gunner_frames_run, NULL};
+mmove_t gunner_move_run = {94, 101, gunner_frames_run, NULL};
 
 void gunner_run (edict_t* self)
 {
@@ -54724,7 +50398,7 @@ mframe_t gunner_frames_runandshoot [] =
 	{ai_run, 20, NULL},
 };
 
-mmove_t gunner_move_runandshoot = {FRAME_runs01, FRAME_runs06, gunner_frames_runandshoot, NULL};
+mmove_t gunner_move_runandshoot = {102, 107, gunner_frames_runandshoot, NULL};
 
 void gunner_runandshoot (edict_t* self)
 {
@@ -54739,7 +50413,7 @@ mframe_t gunner_frames_pain3 [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 1,	 NULL},
 };
-mmove_t gunner_move_pain3 = {FRAME_pain301, FRAME_pain305, gunner_frames_pain3, gunner_run};
+mmove_t gunner_move_pain3 = {185, 189, gunner_frames_pain3, gunner_run};
 
 mframe_t gunner_frames_pain2 [] =
 {
@@ -54752,7 +50426,7 @@ mframe_t gunner_frames_pain2 [] =
 	{ai_move, -2, NULL},
 	{ai_move, -7, NULL},
 };
-mmove_t gunner_move_pain2 = {FRAME_pain201, FRAME_pain208, gunner_frames_pain2, gunner_run};
+mmove_t gunner_move_pain2 = {177, 184, gunner_frames_pain2, gunner_run};
 
 mframe_t gunner_frames_pain1 [] =
 {
@@ -54775,7 +50449,7 @@ mframe_t gunner_frames_pain1 [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t gunner_move_pain1 = {FRAME_pain101, FRAME_pain118, gunner_frames_pain1, gunner_run};
+mmove_t gunner_move_pain1 = {159, 176, gunner_frames_pain1, gunner_run};
 
 static void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -54829,7 +50503,7 @@ mframe_t gunner_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t gunner_move_death = {FRAME_death01, FRAME_death11, gunner_frames_death, gunner_dead};
+mmove_t gunner_move_death = {190, 200, gunner_frames_death, gunner_dead};
 
 static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -54906,7 +50580,7 @@ static mframe_t gunner_frames_duck[] = {
 	{ai_move, -1, NULL},
 };
 
-static mmove_t gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunner_run};
+static mmove_t gunner_move_duck = {201, 208, gunner_frames_duck, gunner_run};
 
 static void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
@@ -54934,7 +50608,7 @@ void GunnerFire (edict_t* self)
 	vec3_t	aim;
 	int		flash_number;
 
-	flash_number = MZ2_GUNNER_MACHINEGUN_1 + (self->s.frame - FRAME_attak216);
+	flash_number = MZ2_GUNNER_MACHINEGUN_1 + (self->s.frame - 144);
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
@@ -54956,11 +50630,11 @@ void GunnerGrenade (edict_t* self)
 	vec3_t	aim;
 	int		flash_number;
 
-	if (self->s.frame == FRAME_attak105)
+	if (self->s.frame == 112)
 		flash_number = MZ2_GUNNER_GRENADE_1;
-	else if (self->s.frame == FRAME_attak108)
+	else if (self->s.frame == 115)
 		flash_number = MZ2_GUNNER_GRENADE_2;
-	else if (self->s.frame == FRAME_attak111)
+	else if (self->s.frame == 118)
 		flash_number = MZ2_GUNNER_GRENADE_3;
 	else // (self->s.frame == FRAME_attak114)
 		flash_number = MZ2_GUNNER_GRENADE_4;
@@ -54994,7 +50668,7 @@ mframe_t gunner_frames_attack_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_attack_chain = {FRAME_attak209, FRAME_attak215, gunner_frames_attack_chain, gunner_fire_chain};
+mmove_t gunner_move_attack_chain = {137, 143, gunner_frames_attack_chain, gunner_fire_chain};
 
 mframe_t gunner_frames_fire_chain [] =
 {
@@ -55007,7 +50681,7 @@ mframe_t gunner_frames_fire_chain [] =
 	{ai_charge,   0, GunnerFire},
 	{ai_charge,   0, GunnerFire},
 };
-mmove_t gunner_move_fire_chain = {FRAME_attak216, FRAME_attak223, gunner_frames_fire_chain, gunner_refire_chain};
+mmove_t gunner_move_fire_chain = {144, 151, gunner_frames_fire_chain, gunner_refire_chain};
 
 mframe_t gunner_frames_endfire_chain [] =
 {
@@ -55019,7 +50693,7 @@ mframe_t gunner_frames_endfire_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_endfire_chain = {FRAME_attak224, FRAME_attak230, gunner_frames_endfire_chain, gunner_run};
+mmove_t gunner_move_endfire_chain = {152, 158, gunner_frames_endfire_chain, gunner_run};
 
 mframe_t gunner_frames_attack_grenade [] =
 {
@@ -55045,7 +50719,7 @@ mframe_t gunner_frames_attack_grenade [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_attack_grenade = {FRAME_attak101, FRAME_attak121, gunner_frames_attack_grenade, gunner_run};
+mmove_t gunner_move_attack_grenade = {108, 128, gunner_frames_attack_grenade, gunner_run};
 
 void gunner_attack(edict_t* self)
 {
@@ -55139,268 +50813,6 @@ hover
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_stand01         	0
-#define FRAME_stand02         	1
-#define FRAME_stand03         	2
-#define FRAME_stand04         	3
-#define FRAME_stand05         	4
-#define FRAME_stand06         	5
-#define FRAME_stand07         	6
-#define FRAME_stand08         	7
-#define FRAME_stand09         	8
-#define FRAME_stand10         	9
-#define FRAME_stand11         	10
-#define FRAME_stand12         	11
-#define FRAME_stand13         	12
-#define FRAME_stand14         	13
-#define FRAME_stand15         	14
-#define FRAME_stand16         	15
-#define FRAME_stand17         	16
-#define FRAME_stand18         	17
-#define FRAME_stand19         	18
-#define FRAME_stand20         	19
-#define FRAME_stand21         	20
-#define FRAME_stand22         	21
-#define FRAME_stand23         	22
-#define FRAME_stand24         	23
-#define FRAME_stand25         	24
-#define FRAME_stand26         	25
-#define FRAME_stand27         	26
-#define FRAME_stand28         	27
-#define FRAME_stand29         	28
-#define FRAME_stand30         	29
-#define FRAME_forwrd01        	30
-#define FRAME_forwrd02        	31
-#define FRAME_forwrd03        	32
-#define FRAME_forwrd04        	33
-#define FRAME_forwrd05        	34
-#define FRAME_forwrd06        	35
-#define FRAME_forwrd07        	36
-#define FRAME_forwrd08        	37
-#define FRAME_forwrd09        	38
-#define FRAME_forwrd10        	39
-#define FRAME_forwrd11        	40
-#define FRAME_forwrd12        	41
-#define FRAME_forwrd13        	42
-#define FRAME_forwrd14        	43
-#define FRAME_forwrd15        	44
-#define FRAME_forwrd16        	45
-#define FRAME_forwrd17        	46
-#define FRAME_forwrd18        	47
-#define FRAME_forwrd19        	48
-#define FRAME_forwrd20        	49
-#define FRAME_forwrd21        	50
-#define FRAME_forwrd22        	51
-#define FRAME_forwrd23        	52
-#define FRAME_forwrd24        	53
-#define FRAME_forwrd25        	54
-#define FRAME_forwrd26        	55
-#define FRAME_forwrd27        	56
-#define FRAME_forwrd28        	57
-#define FRAME_forwrd29        	58
-#define FRAME_forwrd30        	59
-#define FRAME_forwrd31        	60
-#define FRAME_forwrd32        	61
-#define FRAME_forwrd33        	62
-#define FRAME_forwrd34        	63
-#define FRAME_forwrd35        	64
-#define FRAME_stop101         	65
-#define FRAME_stop102         	66
-#define FRAME_stop103         	67
-#define FRAME_stop104         	68
-#define FRAME_stop105         	69
-#define FRAME_stop106         	70
-#define FRAME_stop107         	71
-#define FRAME_stop108         	72
-#define FRAME_stop109         	73
-#define FRAME_stop201         	74
-#define FRAME_stop202         	75
-#define FRAME_stop203         	76
-#define FRAME_stop204         	77
-#define FRAME_stop205         	78
-#define FRAME_stop206         	79
-#define FRAME_stop207         	80
-#define FRAME_stop208         	81
-#define FRAME_takeof01        	82
-#define FRAME_takeof02        	83
-#define FRAME_takeof03        	84
-#define FRAME_takeof04        	85
-#define FRAME_takeof05        	86
-#define FRAME_takeof06        	87
-#define FRAME_takeof07        	88
-#define FRAME_takeof08        	89
-#define FRAME_takeof09        	90
-#define FRAME_takeof10        	91
-#define FRAME_takeof11        	92
-#define FRAME_takeof12        	93
-#define FRAME_takeof13        	94
-#define FRAME_takeof14        	95
-#define FRAME_takeof15        	96
-#define FRAME_takeof16        	97
-#define FRAME_takeof17        	98
-#define FRAME_takeof18        	99
-#define FRAME_takeof19        	100
-#define FRAME_takeof20        	101
-#define FRAME_takeof21        	102
-#define FRAME_takeof22        	103
-#define FRAME_takeof23        	104
-#define FRAME_takeof24        	105
-#define FRAME_takeof25        	106
-#define FRAME_takeof26        	107
-#define FRAME_takeof27        	108
-#define FRAME_takeof28        	109
-#define FRAME_takeof29        	110
-#define FRAME_takeof30        	111
-#define FRAME_land01          	112
-#undef FRAME_pain101
-#define FRAME_pain101         	113
-#undef FRAME_pain102
-#define FRAME_pain102         	114
-#undef FRAME_pain103
-#define FRAME_pain103         	115
-#undef FRAME_pain104
-#define FRAME_pain104         	116
-#undef FRAME_pain105
-#define FRAME_pain105         	117
-#undef FRAME_pain106
-#define FRAME_pain106         	118
-#undef FRAME_pain107
-#define FRAME_pain107         	119
-#undef FRAME_pain108
-#define FRAME_pain108         	120
-#undef FRAME_pain109
-#define FRAME_pain109         	121
-#undef FRAME_pain110
-#define FRAME_pain110         	122
-#undef FRAME_pain111
-#define FRAME_pain111         	123
-#undef FRAME_pain112
-#define FRAME_pain112         	124
-#undef FRAME_pain113
-#define FRAME_pain113         	125
-#undef FRAME_pain114
-#define FRAME_pain114         	126
-#undef FRAME_pain115
-#define FRAME_pain115         	127
-#undef FRAME_pain116
-#define FRAME_pain116         	128
-#undef FRAME_pain117
-#define FRAME_pain117         	129
-#undef FRAME_pain118
-#define FRAME_pain118         	130
-#undef FRAME_pain119
-#define FRAME_pain119         	131
-#undef FRAME_pain120
-#define FRAME_pain120         	132
-#undef FRAME_pain121
-#define FRAME_pain121         	133
-#define FRAME_pain122         	134
-#define FRAME_pain123         	135
-#define FRAME_pain124         	136
-#define FRAME_pain125         	137
-#define FRAME_pain126         	138
-#define FRAME_pain127         	139
-#define FRAME_pain128         	140
-#undef FRAME_pain201
-#define FRAME_pain201         	141
-#undef FRAME_pain202
-#define FRAME_pain202         	142
-#undef FRAME_pain203
-#define FRAME_pain203         	143
-#undef FRAME_pain204
-#define FRAME_pain204         	144
-#undef FRAME_pain205
-#define FRAME_pain205         	145
-#undef FRAME_pain206
-#define FRAME_pain206         	146
-#undef FRAME_pain207
-#define FRAME_pain207         	147
-#undef FRAME_pain208
-#define FRAME_pain208         	148
-#define FRAME_pain209         	149
-#define FRAME_pain210         	150
-#define FRAME_pain211         	151
-#define FRAME_pain212         	152
-#undef FRAME_pain301
-#define FRAME_pain301         	153
-#undef FRAME_pain302
-#define FRAME_pain302         	154
-#undef FRAME_pain303
-#define FRAME_pain303         	155
-#undef FRAME_pain304
-#define FRAME_pain304         	156
-#undef FRAME_pain305
-#define FRAME_pain305         	157
-#undef FRAME_pain306
-#define FRAME_pain306         	158
-#undef FRAME_pain307
-#define FRAME_pain307         	159
-#undef FRAME_pain308
-#define FRAME_pain308         	160
-#undef FRAME_pain309
-#define FRAME_pain309         	161
-#undef FRAME_death101
-#define FRAME_death101        	162
-#undef FRAME_death102
-#define FRAME_death102        	163
-#undef FRAME_death103
-#define FRAME_death103        	164
-#undef FRAME_death104
-#define FRAME_death104        	165
-#undef FRAME_death105
-#define FRAME_death105        	166
-#undef FRAME_death106
-#define FRAME_death106        	167
-#undef FRAME_death107
-#define FRAME_death107        	168
-#undef FRAME_death108
-#define FRAME_death108        	169
-#undef FRAME_death109
-#define FRAME_death109        	170
-#undef FRAME_death110
-#define FRAME_death110        	171
-#undef FRAME_death111
-#define FRAME_death111        	172
-#define FRAME_backwd01        	173
-#define FRAME_backwd02        	174
-#define FRAME_backwd03        	175
-#define FRAME_backwd04        	176
-#define FRAME_backwd05        	177
-#define FRAME_backwd06        	178
-#define FRAME_backwd07        	179
-#define FRAME_backwd08        	180
-#define FRAME_backwd09        	181
-#define FRAME_backwd10        	182
-#define FRAME_backwd11        	183
-#define FRAME_backwd12        	184
-#define FRAME_backwd13        	185
-#define FRAME_backwd14        	186
-#define FRAME_backwd15        	187
-#define FRAME_backwd16        	188
-#define FRAME_backwd17        	189
-#define FRAME_backwd18        	190
-#define FRAME_backwd19        	191
-#define FRAME_backwd20        	192
-#define FRAME_backwd21        	193
-#define FRAME_backwd22        	194
-#define FRAME_backwd23        	195
-#define FRAME_backwd24        	196
-#undef FRAME_attak101
-#define FRAME_attak101        	197
-#undef FRAME_attak102
-#define FRAME_attak102        	198
-#undef FRAME_attak103
-#define FRAME_attak103        	199
-#undef FRAME_attak104
-#define FRAME_attak104        	200
-#undef FRAME_attak105
-#define FRAME_attak105        	201
-#undef FRAME_attak106
-#define FRAME_attak106        	202
-#undef FRAME_attak107
-#define FRAME_attak107        	203
-#undef FRAME_attak108
-#define FRAME_attak108        	204
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
@@ -55473,7 +50885,7 @@ mframe_t hover_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	hover_move_stand = {FRAME_stand01, FRAME_stand30, hover_frames_stand, NULL};
+mmove_t	hover_move_stand = {0, 29, hover_frames_stand, NULL};
 
 mframe_t hover_frames_stop1 [] =
 {
@@ -55487,7 +50899,7 @@ mframe_t hover_frames_stop1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_stop1 = {FRAME_stop101, FRAME_stop109, hover_frames_stop1, NULL};
+mmove_t hover_move_stop1 = {65, 73, hover_frames_stop1, NULL};
 
 mframe_t hover_frames_stop2 [] =
 {
@@ -55500,7 +50912,7 @@ mframe_t hover_frames_stop2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_stop2 = {FRAME_stop201, FRAME_stop208, hover_frames_stop2, NULL};
+mmove_t hover_move_stop2 = {74, 81, hover_frames_stop2, NULL};
 
 mframe_t hover_frames_takeoff [] =
 {
@@ -55535,7 +50947,7 @@ mframe_t hover_frames_takeoff [] =
 	{ai_move,	2,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_takeoff = {FRAME_takeof01, FRAME_takeof30, hover_frames_takeoff, NULL};
+mmove_t hover_move_takeoff = {82, 111, hover_frames_takeoff, NULL};
 
 mframe_t hover_frames_pain3 [] =
 {
@@ -55549,7 +50961,7 @@ mframe_t hover_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_pain3 = {FRAME_pain301, FRAME_pain309, hover_frames_pain3, hover_run};
+mmove_t hover_move_pain3 = {153, 161, hover_frames_pain3, hover_run};
 
 mframe_t hover_frames_pain2 [] =
 {
@@ -55566,7 +50978,7 @@ mframe_t hover_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_pain2 = {FRAME_pain201, FRAME_pain212, hover_frames_pain2, hover_run};
+mmove_t hover_move_pain2 = {141, 152, hover_frames_pain2, hover_run};
 
 mframe_t hover_frames_pain1 [] =
 {
@@ -55599,13 +51011,13 @@ mframe_t hover_frames_pain1 [] =
 	{ai_move,	3,	NULL},
 	{ai_move,	4,	NULL},
 };
-mmove_t hover_move_pain1 = {FRAME_pain101, FRAME_pain128, hover_frames_pain1, hover_run};
+mmove_t hover_move_pain1 = {113, 140, hover_frames_pain1, hover_run};
 
 mframe_t hover_frames_land [] =
 {
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_land = {FRAME_land01, FRAME_land01, hover_frames_land, NULL};
+mmove_t hover_move_land = {112, 112, hover_frames_land, NULL};
 
 mframe_t hover_frames_forward [] =
 {
@@ -55645,7 +51057,7 @@ mframe_t hover_frames_forward [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_forward = {FRAME_forwrd01, FRAME_forwrd35, hover_frames_forward, NULL};
+mmove_t hover_move_forward = {30, 64, hover_frames_forward, NULL};
 
 mframe_t hover_frames_walk [] =
 {
@@ -55685,7 +51097,7 @@ mframe_t hover_frames_walk [] =
 	{ai_walk,	4,	NULL},
 	{ai_walk,	4,	NULL},
 };
-mmove_t hover_move_walk = {FRAME_forwrd01, FRAME_forwrd35, hover_frames_walk, NULL};
+mmove_t hover_move_walk = {30, 64, hover_frames_walk, NULL};
 
 mframe_t hover_frames_run [] =
 {
@@ -55725,7 +51137,7 @@ mframe_t hover_frames_run [] =
 	{ai_run,	10,	NULL},
 	{ai_run,	10,	NULL},
 };
-mmove_t hover_move_run = {FRAME_forwrd01, FRAME_forwrd35, hover_frames_run, NULL};
+mmove_t hover_move_run = {30, 64, hover_frames_run, NULL};
 
 mframe_t hover_frames_death1 [] =
 {
@@ -55741,7 +51153,7 @@ mframe_t hover_frames_death1 [] =
 	{ai_move,	4,	NULL},
 	{ai_move,	7,	NULL},
 };
-mmove_t hover_move_death1 = {FRAME_death101, FRAME_death111, hover_frames_death1, hover_dead};
+mmove_t hover_move_death1 = {162, 172, hover_frames_death1, hover_dead};
 
 mframe_t hover_frames_backward [] =
 {
@@ -55770,7 +51182,7 @@ mframe_t hover_frames_backward [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_backward = {FRAME_backwd01, FRAME_backwd24, hover_frames_backward, NULL};
+mmove_t hover_move_backward = {173, 196, hover_frames_backward, NULL};
 
 mframe_t hover_frames_start_attack [] =
 {
@@ -55778,7 +51190,7 @@ mframe_t hover_frames_start_attack [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t hover_move_start_attack = {FRAME_attak101, FRAME_attak103, hover_frames_start_attack, hover_attack};
+mmove_t hover_move_start_attack = {197, 199, hover_frames_start_attack, hover_attack};
 
 mframe_t hover_frames_attack1 [] =
 {
@@ -55786,7 +51198,7 @@ mframe_t hover_frames_attack1 [] =
 	{ai_charge,	-10,	hover_fire_blaster},
 	{ai_charge,	0,		hover_reattack},
 };
-mmove_t hover_move_attack1 = {FRAME_attak104, FRAME_attak106, hover_frames_attack1, NULL};
+mmove_t hover_move_attack1 = {200, 202, hover_frames_attack1, NULL};
 
 
 mframe_t hover_frames_end_attack [] =
@@ -55794,7 +51206,7 @@ mframe_t hover_frames_end_attack [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t hover_move_end_attack = {FRAME_attak107, FRAME_attak108, hover_frames_end_attack, hover_run};
+mmove_t hover_move_end_attack = {203, 204, hover_frames_end_attack, hover_run};
 
 void hover_reattack (edict_t* self)
 {
@@ -55817,7 +51229,7 @@ void hover_fire_blaster (edict_t* self)
 	vec3_t	dir;
 	int		effect;
 
-	if (self->s.frame == FRAME_attak104)
+	if (self->s.frame == 200)
 		effect = EF_HYPERBLASTER;
 	else
 		effect = 0;
@@ -56010,411 +51422,6 @@ INFANTRY
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_gun02           	0
-#undef FRAME_stand01
-#define FRAME_stand01         	1
-#undef FRAME_stand02
-#define FRAME_stand02         	2
-#undef FRAME_stand03
-#define FRAME_stand03         	3
-#undef FRAME_stand04
-#define FRAME_stand04         	4
-#undef FRAME_stand05
-#define FRAME_stand05         	5
-#undef FRAME_stand06
-#define FRAME_stand06         	6
-#undef FRAME_stand07
-#define FRAME_stand07         	7
-#undef FRAME_stand08
-#define FRAME_stand08         	8
-#undef FRAME_stand09
-#define FRAME_stand09         	9
-#undef FRAME_stand10
-#define FRAME_stand10         	10
-#undef FRAME_stand11
-#define FRAME_stand11         	11
-#undef FRAME_stand12
-#define FRAME_stand12         	12
-#undef FRAME_stand13
-#define FRAME_stand13         	13
-#undef FRAME_stand14
-#define FRAME_stand14         	14
-#undef FRAME_stand15
-#define FRAME_stand15         	15
-#undef FRAME_stand16
-#define FRAME_stand16         	16
-#undef FRAME_stand17
-#define FRAME_stand17         	17
-#undef FRAME_stand18
-#define FRAME_stand18         	18
-#undef FRAME_stand19
-#define FRAME_stand19         	19
-#undef FRAME_stand20
-#define FRAME_stand20         	20
-#undef FRAME_stand21
-#define FRAME_stand21         	21
-#undef FRAME_stand22
-#define FRAME_stand22         	22
-#undef FRAME_stand23
-#define FRAME_stand23         	23
-#undef FRAME_stand24
-#define FRAME_stand24         	24
-#undef FRAME_stand25
-#define FRAME_stand25         	25
-#undef FRAME_stand26
-#define FRAME_stand26         	26
-#undef FRAME_stand27
-#define FRAME_stand27         	27
-#undef FRAME_stand28
-#define FRAME_stand28         	28
-#undef FRAME_stand29
-#define FRAME_stand29         	29
-#undef FRAME_stand30
-#define FRAME_stand30         	30
-#undef FRAME_stand31
-#define FRAME_stand31         	31
-#undef FRAME_stand32
-#define FRAME_stand32         	32
-#undef FRAME_stand33
-#define FRAME_stand33         	33
-#undef FRAME_stand34
-#define FRAME_stand34         	34
-#undef FRAME_stand35
-#define FRAME_stand35         	35
-#undef FRAME_stand36
-#define FRAME_stand36         	36
-#undef FRAME_stand37
-#define FRAME_stand37         	37
-#undef FRAME_stand38
-#define FRAME_stand38         	38
-#undef FRAME_stand39
-#define FRAME_stand39         	39
-#undef FRAME_stand40
-#define FRAME_stand40         	40
-#undef FRAME_stand41
-#define FRAME_stand41         	41
-#undef FRAME_stand42
-#define FRAME_stand42         	42
-#undef FRAME_stand43
-#define FRAME_stand43         	43
-#undef FRAME_stand44
-#define FRAME_stand44         	44
-#undef FRAME_stand45
-#define FRAME_stand45         	45
-#undef FRAME_stand46
-#define FRAME_stand46         	46
-#undef FRAME_stand47
-#define FRAME_stand47         	47
-#undef FRAME_stand48
-#define FRAME_stand48         	48
-#undef FRAME_stand49
-#define FRAME_stand49         	49
-#undef FRAME_stand50
-#define FRAME_stand50         	50
-#undef FRAME_stand51
-#define FRAME_stand51         	51
-#undef FRAME_stand52
-#define FRAME_stand52         	52
-#undef FRAME_stand53
-#define FRAME_stand53         	53
-#undef FRAME_stand54
-#define FRAME_stand54         	54
-#undef FRAME_stand55
-#define FRAME_stand55         	55
-#undef FRAME_stand56
-#define FRAME_stand56         	56
-#undef FRAME_stand57
-#define FRAME_stand57         	57
-#undef FRAME_stand58
-#define FRAME_stand58         	58
-#undef FRAME_stand59
-#define FRAME_stand59         	59
-#undef FRAME_stand60
-#define FRAME_stand60         	60
-#undef FRAME_stand61
-#define FRAME_stand61         	61
-#undef FRAME_stand62
-#define FRAME_stand62         	62
-#undef FRAME_stand63
-#define FRAME_stand63         	63
-#undef FRAME_stand64
-#define FRAME_stand64         	64
-#undef FRAME_stand65
-#define FRAME_stand65         	65
-#undef FRAME_stand66
-#define FRAME_stand66         	66
-#undef FRAME_stand67
-#define FRAME_stand67         	67
-#undef FRAME_stand68
-#define FRAME_stand68         	68
-#undef FRAME_stand69
-#define FRAME_stand69         	69
-#undef FRAME_stand70
-#define FRAME_stand70         	70
-#define FRAME_stand71         	71
-#undef FRAME_walk01
-#define FRAME_walk01          	72
-#undef FRAME_walk02
-#define FRAME_walk02          	73
-#undef FRAME_walk03
-#define FRAME_walk03          	74
-#undef FRAME_walk04
-#define FRAME_walk04          	75
-#undef FRAME_walk05
-#define FRAME_walk05          	76
-#undef FRAME_walk06
-#define FRAME_walk06          	77
-#undef FRAME_walk07
-#define FRAME_walk07          	78
-#undef FRAME_walk08
-#define FRAME_walk08          	79
-#undef FRAME_walk09
-#define FRAME_walk09          	80
-#undef FRAME_walk10
-#define FRAME_walk10          	81
-#undef FRAME_walk11
-#define FRAME_walk11          	82
-#undef FRAME_walk12
-#define FRAME_walk12          	83
-#undef FRAME_walk13
-#define FRAME_walk13          	84
-#undef FRAME_walk14
-#define FRAME_walk14          	85
-#undef FRAME_walk15
-#define FRAME_walk15          	86
-#undef FRAME_walk16
-#define FRAME_walk16          	87
-#undef FRAME_walk17
-#define FRAME_walk17          	88
-#undef FRAME_walk18
-#define FRAME_walk18          	89
-#undef FRAME_walk19
-#define FRAME_walk19          	90
-#undef FRAME_walk20
-#define FRAME_walk20          	91
-#undef FRAME_run01
-#define FRAME_run01           	92
-#undef FRAME_run02
-#define FRAME_run02           	93
-#undef FRAME_run03
-#define FRAME_run03           	94
-#undef FRAME_run04
-#define FRAME_run04           	95
-#undef FRAME_run05
-#define FRAME_run05           	96
-#undef FRAME_run06
-#define FRAME_run06           	97
-#undef FRAME_run07
-#define FRAME_run07           	98
-#undef FRAME_run08
-#define FRAME_run08           	99
-#undef FRAME_pain101
-#define FRAME_pain101         	100
-#undef FRAME_pain102
-#define FRAME_pain102         	101
-#undef FRAME_pain103
-#define FRAME_pain103         	102
-#undef FRAME_pain104
-#define FRAME_pain104         	103
-#undef FRAME_pain105
-#define FRAME_pain105         	104
-#undef FRAME_pain106
-#define FRAME_pain106         	105
-#undef FRAME_pain107
-#define FRAME_pain107         	106
-#undef FRAME_pain108
-#define FRAME_pain108         	107
-#undef FRAME_pain109
-#define FRAME_pain109         	108
-#undef FRAME_pain110
-#define FRAME_pain110         	109
-#undef FRAME_pain201
-#define FRAME_pain201         	110
-#undef FRAME_pain202
-#define FRAME_pain202         	111
-#undef FRAME_pain203
-#define FRAME_pain203         	112
-#undef FRAME_pain204
-#define FRAME_pain204         	113
-#undef FRAME_pain205
-#define FRAME_pain205         	114
-#undef FRAME_pain206
-#define FRAME_pain206         	115
-#undef FRAME_pain207
-#define FRAME_pain207         	116
-#undef FRAME_pain208
-#define FRAME_pain208         	117
-#undef FRAME_pain209
-#define FRAME_pain209         	118
-#undef FRAME_pain210
-#define FRAME_pain210         	119
-#undef FRAME_duck01
-#define FRAME_duck01          	120
-#undef FRAME_duck02
-#define FRAME_duck02          	121
-#undef FRAME_duck03
-#define FRAME_duck03          	122
-#undef FRAME_duck04
-#define FRAME_duck04          	123
-#undef FRAME_duck05
-#define FRAME_duck05          	124
-#undef FRAME_death101
-#define FRAME_death101        	125
-#undef FRAME_death102
-#define FRAME_death102        	126
-#undef FRAME_death103
-#define FRAME_death103        	127
-#undef FRAME_death104
-#define FRAME_death104        	128
-#undef FRAME_death105
-#define FRAME_death105        	129
-#undef FRAME_death106
-#define FRAME_death106        	130
-#undef FRAME_death107
-#define FRAME_death107        	131
-#undef FRAME_death108
-#define FRAME_death108        	132
-#undef FRAME_death109
-#define FRAME_death109        	133
-#undef FRAME_death110
-#define FRAME_death110        	134
-#undef FRAME_death111
-#define FRAME_death111        	135
-#undef FRAME_death112
-#define FRAME_death112        	136
-#undef FRAME_death113
-#define FRAME_death113        	137
-#undef FRAME_death114
-#define FRAME_death114        	138
-#undef FRAME_death115
-#define FRAME_death115        	139
-#undef FRAME_death116
-#define FRAME_death116        	140
-#undef FRAME_death117
-#define FRAME_death117        	141
-#undef FRAME_death118
-#define FRAME_death118        	142
-#define FRAME_death119        	143
-#define FRAME_death120        	144
-#undef FRAME_death201
-#define FRAME_death201        	145
-#undef FRAME_death202
-#define FRAME_death202        	146
-#undef FRAME_death203
-#define FRAME_death203        	147
-#undef FRAME_death204
-#define FRAME_death204        	148
-#undef FRAME_death205
-#define FRAME_death205        	149
-#undef FRAME_death206
-#define FRAME_death206        	150
-#undef FRAME_death207
-#define FRAME_death207        	151
-#undef FRAME_death208
-#define FRAME_death208        	152
-#undef FRAME_death209
-#define FRAME_death209        	153
-#undef FRAME_death210
-#define FRAME_death210        	154
-#undef FRAME_death211
-#define FRAME_death211        	155
-#undef FRAME_death212
-#define FRAME_death212        	156
-#undef FRAME_death213
-#define FRAME_death213        	157
-#undef FRAME_death214
-#define FRAME_death214        	158
-#undef FRAME_death215
-#define FRAME_death215        	159
-#undef FRAME_death216
-#define FRAME_death216        	160
-#undef FRAME_death217
-#define FRAME_death217        	161
-#undef FRAME_death218
-#define FRAME_death218        	162
-#undef FRAME_death219
-#define FRAME_death219        	163
-#undef FRAME_death220
-#define FRAME_death220        	164
-#undef FRAME_death221
-#define FRAME_death221        	165
-#undef FRAME_death222
-#define FRAME_death222        	166
-#undef FRAME_death223
-#define FRAME_death223        	167
-#undef FRAME_death224
-#define FRAME_death224        	168
-#undef FRAME_death225
-#define FRAME_death225        	169
-#undef FRAME_death301
-#define FRAME_death301        	170
-#undef FRAME_death302
-#define FRAME_death302        	171
-#undef FRAME_death303
-#define FRAME_death303        	172
-#undef FRAME_death304
-#define FRAME_death304        	173
-#undef FRAME_death305
-#define FRAME_death305        	174
-#undef FRAME_death306
-#define FRAME_death306        	175
-#undef FRAME_death307
-#define FRAME_death307        	176
-#undef FRAME_death308
-#define FRAME_death308        	177
-#undef FRAME_death309
-#define FRAME_death309        	178
-#define FRAME_block01         	179
-#define FRAME_block02         	180
-#define FRAME_block03         	181
-#define FRAME_block04         	182
-#define FRAME_block05         	183
-#undef FRAME_attak101
-#define FRAME_attak101        	184
-#undef FRAME_attak102
-#define FRAME_attak102        	185
-#undef FRAME_attak103
-#define FRAME_attak103        	186
-#undef FRAME_attak104
-#define FRAME_attak104        	187
-#undef FRAME_attak105
-#define FRAME_attak105        	188
-#undef FRAME_attak106
-#define FRAME_attak106        	189
-#undef FRAME_attak107
-#define FRAME_attak107        	190
-#undef FRAME_attak108
-#define FRAME_attak108        	191
-#undef FRAME_attak109
-#define FRAME_attak109        	192
-#undef FRAME_attak110
-#define FRAME_attak110        	193
-#undef FRAME_attak111
-#define FRAME_attak111        	194
-#undef FRAME_attak112
-#define FRAME_attak112        	195
-#undef FRAME_attak113
-#define FRAME_attak113        	196
-#undef FRAME_attak114
-#define FRAME_attak114        	197
-#undef FRAME_attak115
-#define FRAME_attak115        	198
-#undef FRAME_attak201
-#define FRAME_attak201        	199
-#undef FRAME_attak202
-#define FRAME_attak202        	200
-#undef FRAME_attak203
-#define FRAME_attak203        	201
-#undef FRAME_attak204
-#define FRAME_attak204        	202
-#undef FRAME_attak205
-#define FRAME_attak205        	203
-#undef FRAME_attak206
-#define FRAME_attak206        	204
-#undef FRAME_attak207
-#define FRAME_attak207        	205
-#undef FRAME_attak208
-#define FRAME_attak208        	206
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_infantry.h ============ */
@@ -56461,7 +51468,7 @@ mframe_t infantry_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t infantry_move_stand = {FRAME_stand50, FRAME_stand71, infantry_frames_stand, NULL};
+mmove_t infantry_move_stand = {50, 71, infantry_frames_stand, NULL};
 
 void infantry_stand (edict_t* self)
 {
@@ -56521,7 +51528,7 @@ mframe_t infantry_frames_fidget [] =
 	{ai_stand, -3, NULL},
 	{ai_stand, -2, NULL},
 };
-mmove_t infantry_move_fidget = {FRAME_stand01, FRAME_stand49, infantry_frames_fidget, infantry_stand};
+mmove_t infantry_move_fidget = {1, 49, infantry_frames_fidget, infantry_stand};
 
 void infantry_fidget (edict_t* self)
 {
@@ -56544,7 +51551,7 @@ mframe_t infantry_frames_walk [] =
 	{ai_walk, 4,  NULL},
 	{ai_walk, 5,  NULL},
 };
-mmove_t infantry_move_walk = {FRAME_walk03, FRAME_walk14, infantry_frames_walk, NULL};
+mmove_t infantry_move_walk = {74, 85, infantry_frames_walk, NULL};
 
 void infantry_walk (edict_t* self)
 {
@@ -56562,7 +51569,7 @@ mframe_t infantry_frames_run [] =
 	{ai_run, 2,  NULL},
 	{ai_run, 6,  NULL},
 };
-mmove_t infantry_move_run = {FRAME_run01, FRAME_run08, infantry_frames_run, NULL};
+mmove_t infantry_move_run = {92, 99, infantry_frames_run, NULL};
 
 void infantry_run (edict_t* self)
 {
@@ -56586,7 +51593,7 @@ mframe_t infantry_frames_pain1 [] =
 	{ai_move, 6,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t infantry_move_pain1 = {FRAME_pain101, FRAME_pain110, infantry_frames_pain1, infantry_run};
+mmove_t infantry_move_pain1 = {100, 109, infantry_frames_pain1, infantry_run};
 
 mframe_t infantry_frames_pain2 [] =
 {
@@ -56601,7 +51608,7 @@ mframe_t infantry_frames_pain2 [] =
 	{ai_move, 5,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t infantry_move_pain2 = {FRAME_pain201, FRAME_pain210, infantry_frames_pain2, infantry_run};
+mmove_t infantry_move_pain2 = {110, 119, infantry_frames_pain2, infantry_run};
 
 static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -56656,7 +51663,7 @@ void InfantryMachineGun (edict_t* self)
 	vec3_t	vec;
 	int		flash_number;
 
-	if (self->s.frame == FRAME_attak111)
+	if (self->s.frame == 194)
 	{
 		flash_number = MZ2_INFANTRY_MACHINEGUN_1;
 		AngleVectors (self->s.angles, forward, right, NULL);
@@ -56676,7 +51683,7 @@ void InfantryMachineGun (edict_t* self)
 	}
 	else
 	{
-		flash_number = MZ2_INFANTRY_MACHINEGUN_2 + (self->s.frame - FRAME_death211);
+		flash_number = MZ2_INFANTRY_MACHINEGUN_2 + (self->s.frame - 155);
 
 		AngleVectors (self->s.angles, forward, right, NULL);
 		G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
@@ -56728,7 +51735,7 @@ mframe_t infantry_frames_death1 [] =
 	{ai_move, -3, NULL},
 	{ai_move, -3, NULL},
 };
-mmove_t infantry_move_death1 = {FRAME_death101, FRAME_death120, infantry_frames_death1, infantry_dead};
+mmove_t infantry_move_death1 = {125, 144, infantry_frames_death1, infantry_dead};
 
 // Off with his head
 mframe_t infantry_frames_death2 [] =
@@ -56759,7 +51766,7 @@ mframe_t infantry_frames_death2 [] =
 	{ai_move, 4,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t infantry_move_death2 = {FRAME_death201, FRAME_death225, infantry_frames_death2, infantry_dead};
+mmove_t infantry_move_death2 = {145, 169, infantry_frames_death2, infantry_dead};
 
 mframe_t infantry_frames_death3 [] =
 {
@@ -56773,7 +51780,7 @@ mframe_t infantry_frames_death3 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t infantry_move_death3 = {FRAME_death301, FRAME_death309, infantry_frames_death3, infantry_dead};
+mmove_t infantry_move_death3 = {170, 178, infantry_frames_death3, infantry_dead};
 
 static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -56856,7 +51863,7 @@ static mframe_t infantry_frames_duck[] = {
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, infantry_run};
+static mmove_t infantry_move_duck = {120, 124, infantry_frames_duck, infantry_run};
 
 static void infantry_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
@@ -56908,7 +51915,7 @@ mframe_t infantry_frames_attack1 [] =
 	{ai_charge, -2, NULL},
 	{ai_charge, -3, NULL},
 };
-mmove_t infantry_move_attack1 = {FRAME_attak101, FRAME_attak115, infantry_frames_attack1, infantry_run};
+mmove_t infantry_move_attack1 = {184, 198, infantry_frames_attack1, infantry_run};
 
 
 void infantry_swing (edict_t* self)
@@ -56936,7 +51943,7 @@ mframe_t infantry_frames_attack2 [] =
 	{ai_charge, 6, NULL},
 	{ai_charge, 3, NULL},
 };
-mmove_t infantry_move_attack2 = {FRAME_attak201, FRAME_attak208, infantry_frames_attack2, infantry_run};
+mmove_t infantry_move_attack2 = {199, 206, infantry_frames_attack2, infantry_run};
 
 void infantry_attack(edict_t* self)
 {
@@ -57010,431 +52017,6 @@ insane
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_stand1          	0
-#define FRAME_stand2          	1
-#define FRAME_stand3          	2
-#define FRAME_stand4          	3
-#define FRAME_stand5          	4
-#define FRAME_stand6          	5
-#define FRAME_stand7          	6
-#undef FRAME_stand8
-#define FRAME_stand8          	7
-#undef FRAME_stand9
-#define FRAME_stand9          	8
-#undef FRAME_stand10
-#define FRAME_stand10         	9
-#undef FRAME_stand11
-#define FRAME_stand11         	10
-#undef FRAME_stand12
-#define FRAME_stand12         	11
-#undef FRAME_stand13
-#define FRAME_stand13         	12
-#undef FRAME_stand14
-#define FRAME_stand14         	13
-#undef FRAME_stand15
-#define FRAME_stand15         	14
-#undef FRAME_stand16
-#define FRAME_stand16         	15
-#undef FRAME_stand17
-#define FRAME_stand17         	16
-#undef FRAME_stand18
-#define FRAME_stand18         	17
-#undef FRAME_stand19
-#define FRAME_stand19         	18
-#undef FRAME_stand20
-#define FRAME_stand20         	19
-#undef FRAME_stand21
-#define FRAME_stand21         	20
-#undef FRAME_stand22
-#define FRAME_stand22         	21
-#undef FRAME_stand23
-#define FRAME_stand23         	22
-#undef FRAME_stand24
-#define FRAME_stand24         	23
-#undef FRAME_stand25
-#define FRAME_stand25         	24
-#undef FRAME_stand26
-#define FRAME_stand26         	25
-#undef FRAME_stand27
-#define FRAME_stand27         	26
-#undef FRAME_stand28
-#define FRAME_stand28         	27
-#undef FRAME_stand29
-#define FRAME_stand29         	28
-#undef FRAME_stand30
-#define FRAME_stand30         	29
-#undef FRAME_stand31
-#define FRAME_stand31         	30
-#undef FRAME_stand32
-#define FRAME_stand32         	31
-#undef FRAME_stand33
-#define FRAME_stand33         	32
-#undef FRAME_stand34
-#define FRAME_stand34         	33
-#undef FRAME_stand35
-#define FRAME_stand35         	34
-#undef FRAME_stand36
-#define FRAME_stand36         	35
-#undef FRAME_stand37
-#define FRAME_stand37         	36
-#undef FRAME_stand38
-#define FRAME_stand38         	37
-#undef FRAME_stand39
-#define FRAME_stand39         	38
-#undef FRAME_stand40
-#define FRAME_stand40         	39
-#undef FRAME_stand41
-#define FRAME_stand41         	40
-#undef FRAME_stand42
-#define FRAME_stand42         	41
-#undef FRAME_stand43
-#define FRAME_stand43         	42
-#undef FRAME_stand44
-#define FRAME_stand44         	43
-#undef FRAME_stand45
-#define FRAME_stand45         	44
-#undef FRAME_stand46
-#define FRAME_stand46         	45
-#undef FRAME_stand47
-#define FRAME_stand47         	46
-#undef FRAME_stand48
-#define FRAME_stand48         	47
-#undef FRAME_stand49
-#define FRAME_stand49         	48
-#undef FRAME_stand50
-#define FRAME_stand50         	49
-#undef FRAME_stand51
-#define FRAME_stand51         	50
-#undef FRAME_stand52
-#define FRAME_stand52         	51
-#undef FRAME_stand53
-#define FRAME_stand53         	52
-#undef FRAME_stand54
-#define FRAME_stand54         	53
-#undef FRAME_stand55
-#define FRAME_stand55         	54
-#undef FRAME_stand56
-#define FRAME_stand56         	55
-#undef FRAME_stand57
-#define FRAME_stand57         	56
-#undef FRAME_stand58
-#define FRAME_stand58         	57
-#undef FRAME_stand59
-#define FRAME_stand59         	58
-#undef FRAME_stand60
-#define FRAME_stand60         	59
-#undef FRAME_stand61
-#define FRAME_stand61         	60
-#undef FRAME_stand62
-#define FRAME_stand62         	61
-#undef FRAME_stand63
-#define FRAME_stand63         	62
-#undef FRAME_stand64
-#define FRAME_stand64         	63
-#undef FRAME_stand65
-#define FRAME_stand65         	64
-#undef FRAME_stand66
-#define FRAME_stand66         	65
-#undef FRAME_stand67
-#define FRAME_stand67         	66
-#undef FRAME_stand68
-#define FRAME_stand68         	67
-#undef FRAME_stand69
-#define FRAME_stand69         	68
-#undef FRAME_stand70
-#define FRAME_stand70         	69
-#undef FRAME_stand71
-#define FRAME_stand71         	70
-#define FRAME_stand72         	71
-#define FRAME_stand73         	72
-#define FRAME_stand74         	73
-#define FRAME_stand75         	74
-#define FRAME_stand76         	75
-#define FRAME_stand77         	76
-#define FRAME_stand78         	77
-#define FRAME_stand79         	78
-#define FRAME_stand80         	79
-#define FRAME_stand81         	80
-#define FRAME_stand82         	81
-#define FRAME_stand83         	82
-#define FRAME_stand84         	83
-#define FRAME_stand85         	84
-#define FRAME_stand86         	85
-#define FRAME_stand87         	86
-#define FRAME_stand88         	87
-#define FRAME_stand89         	88
-#define FRAME_stand90         	89
-#define FRAME_stand91         	90
-#define FRAME_stand92         	91
-#define FRAME_stand93         	92
-#define FRAME_stand94         	93
-#define FRAME_stand95         	94
-#define FRAME_stand96         	95
-#define FRAME_stand97         	96
-#define FRAME_stand98         	97
-#define FRAME_stand99         	98
-#define FRAME_stand100        	99
-#undef FRAME_stand101
-#define FRAME_stand101        	100
-#undef FRAME_stand102
-#define FRAME_stand102        	101
-#undef FRAME_stand103
-#define FRAME_stand103        	102
-#undef FRAME_stand104
-#define FRAME_stand104        	103
-#undef FRAME_stand105
-#define FRAME_stand105        	104
-#undef FRAME_stand106
-#define FRAME_stand106        	105
-#undef FRAME_stand107
-#define FRAME_stand107        	106
-#undef FRAME_stand108
-#define FRAME_stand108        	107
-#undef FRAME_stand109
-#define FRAME_stand109        	108
-#undef FRAME_stand110
-#define FRAME_stand110        	109
-#undef FRAME_stand111
-#define FRAME_stand111        	110
-#undef FRAME_stand112
-#define FRAME_stand112        	111
-#undef FRAME_stand113
-#define FRAME_stand113        	112
-#undef FRAME_stand114
-#define FRAME_stand114        	113
-#undef FRAME_stand115
-#define FRAME_stand115        	114
-#undef FRAME_stand116
-#define FRAME_stand116        	115
-#undef FRAME_stand117
-#define FRAME_stand117        	116
-#undef FRAME_stand118
-#define FRAME_stand118        	117
-#undef FRAME_stand119
-#define FRAME_stand119        	118
-#undef FRAME_stand120
-#define FRAME_stand120        	119
-#undef FRAME_stand121
-#define FRAME_stand121        	120
-#undef FRAME_stand122
-#define FRAME_stand122        	121
-#undef FRAME_stand123
-#define FRAME_stand123        	122
-#undef FRAME_stand124
-#define FRAME_stand124        	123
-#undef FRAME_stand125
-#define FRAME_stand125        	124
-#undef FRAME_stand126
-#define FRAME_stand126        	125
-#undef FRAME_stand127
-#define FRAME_stand127        	126
-#undef FRAME_stand128
-#define FRAME_stand128        	127
-#undef FRAME_stand129
-#define FRAME_stand129        	128
-#undef FRAME_stand130
-#define FRAME_stand130        	129
-#undef FRAME_stand131
-#define FRAME_stand131        	130
-#undef FRAME_stand132
-#define FRAME_stand132        	131
-#undef FRAME_stand133
-#define FRAME_stand133        	132
-#undef FRAME_stand134
-#define FRAME_stand134        	133
-#undef FRAME_stand135
-#define FRAME_stand135        	134
-#undef FRAME_stand136
-#define FRAME_stand136        	135
-#undef FRAME_stand137
-#define FRAME_stand137        	136
-#undef FRAME_stand138
-#define FRAME_stand138        	137
-#undef FRAME_stand139
-#define FRAME_stand139        	138
-#undef FRAME_stand140
-#define FRAME_stand140        	139
-#undef FRAME_stand141
-#define FRAME_stand141        	140
-#undef FRAME_stand142
-#define FRAME_stand142        	141
-#undef FRAME_stand143
-#define FRAME_stand143        	142
-#undef FRAME_stand144
-#define FRAME_stand144        	143
-#undef FRAME_stand145
-#define FRAME_stand145        	144
-#undef FRAME_stand146
-#define FRAME_stand146        	145
-#undef FRAME_stand147
-#define FRAME_stand147        	146
-#undef FRAME_stand148
-#define FRAME_stand148        	147
-#undef FRAME_stand149
-#define FRAME_stand149        	148
-#undef FRAME_stand150
-#define FRAME_stand150        	149
-#undef FRAME_stand151
-#define FRAME_stand151        	150
-#undef FRAME_stand152
-#define FRAME_stand152        	151
-#define FRAME_stand153        	152
-#define FRAME_stand154        	153
-#define FRAME_stand155        	154
-#define FRAME_stand156        	155
-#define FRAME_stand157        	156
-#define FRAME_stand158        	157
-#define FRAME_stand159        	158
-#define FRAME_stand160        	159
-#undef FRAME_walk27
-#define FRAME_walk27          	160
-#define FRAME_walk28          	161
-#define FRAME_walk29          	162
-#define FRAME_walk30          	163
-#define FRAME_walk31          	164
-#define FRAME_walk32          	165
-#define FRAME_walk33          	166
-#define FRAME_walk34          	167
-#define FRAME_walk35          	168
-#define FRAME_walk36          	169
-#define FRAME_walk37          	170
-#define FRAME_walk38          	171
-#define FRAME_walk39          	172
-#undef FRAME_walk1
-#define FRAME_walk1           	173
-#undef FRAME_walk2
-#define FRAME_walk2           	174
-#undef FRAME_walk3
-#define FRAME_walk3           	175
-#undef FRAME_walk4
-#define FRAME_walk4           	176
-#undef FRAME_walk5
-#define FRAME_walk5           	177
-#undef FRAME_walk6
-#define FRAME_walk6           	178
-#undef FRAME_walk7
-#define FRAME_walk7           	179
-#undef FRAME_walk8
-#define FRAME_walk8           	180
-#undef FRAME_walk9
-#define FRAME_walk9           	181
-#undef FRAME_walk10
-#define FRAME_walk10          	182
-#undef FRAME_walk11
-#define FRAME_walk11          	183
-#undef FRAME_walk12
-#define FRAME_walk12          	184
-#undef FRAME_walk13
-#define FRAME_walk13          	185
-#undef FRAME_walk14
-#define FRAME_walk14          	186
-#undef FRAME_walk15
-#define FRAME_walk15          	187
-#undef FRAME_walk16
-#define FRAME_walk16          	188
-#undef FRAME_walk17
-#define FRAME_walk17          	189
-#undef FRAME_walk18
-#define FRAME_walk18          	190
-#undef FRAME_walk19
-#define FRAME_walk19          	191
-#undef FRAME_walk20
-#define FRAME_walk20          	192
-#undef FRAME_walk21
-#define FRAME_walk21          	193
-#undef FRAME_walk22
-#define FRAME_walk22          	194
-#undef FRAME_walk23
-#define FRAME_walk23          	195
-#undef FRAME_walk24
-#define FRAME_walk24          	196
-#undef FRAME_walk25
-#define FRAME_walk25          	197
-#undef FRAME_walk26
-#define FRAME_walk26          	198
-#define FRAME_st_pain2        	199
-#define FRAME_st_pain3        	200
-#define FRAME_st_pain4        	201
-#define FRAME_st_pain5        	202
-#define FRAME_st_pain6        	203
-#define FRAME_st_pain7        	204
-#define FRAME_st_pain8        	205
-#define FRAME_st_pain9        	206
-#define FRAME_st_pain10       	207
-#define FRAME_st_pain11       	208
-#define FRAME_st_pain12       	209
-#define FRAME_st_death2       	210
-#define FRAME_st_death3       	211
-#define FRAME_st_death4       	212
-#define FRAME_st_death5       	213
-#define FRAME_st_death6       	214
-#define FRAME_st_death7       	215
-#define FRAME_st_death8       	216
-#define FRAME_st_death9       	217
-#define FRAME_st_death10      	218
-#define FRAME_st_death11      	219
-#define FRAME_st_death12      	220
-#define FRAME_st_death13      	221
-#define FRAME_st_death14      	222
-#define FRAME_st_death15      	223
-#define FRAME_st_death16      	224
-#define FRAME_st_death17      	225
-#define FRAME_st_death18      	226
-#define FRAME_crawl1          	227
-#define FRAME_crawl2          	228
-#define FRAME_crawl3          	229
-#define FRAME_crawl4          	230
-#define FRAME_crawl5          	231
-#define FRAME_crawl6          	232
-#define FRAME_crawl7          	233
-#define FRAME_crawl8          	234
-#define FRAME_crawl9          	235
-#define FRAME_cr_pain2        	236
-#define FRAME_cr_pain3        	237
-#define FRAME_cr_pain4        	238
-#define FRAME_cr_pain5        	239
-#define FRAME_cr_pain6        	240
-#define FRAME_cr_pain7        	241
-#define FRAME_cr_pain8        	242
-#define FRAME_cr_pain9        	243
-#define FRAME_cr_pain10       	244
-#define FRAME_cr_death10      	245
-#define FRAME_cr_death11      	246
-#define FRAME_cr_death12      	247
-#define FRAME_cr_death13      	248
-#define FRAME_cr_death14      	249
-#define FRAME_cr_death15      	250
-#define FRAME_cr_death16      	251
-#define FRAME_cross1          	252
-#define FRAME_cross2          	253
-#define FRAME_cross3          	254
-#define FRAME_cross4          	255
-#define FRAME_cross5          	256
-#define FRAME_cross6          	257
-#define FRAME_cross7          	258
-#define FRAME_cross8          	259
-#define FRAME_cross9          	260
-#define FRAME_cross10         	261
-#define FRAME_cross11         	262
-#define FRAME_cross12         	263
-#define FRAME_cross13         	264
-#define FRAME_cross14         	265
-#define FRAME_cross15         	266
-#define FRAME_cross16         	267
-#define FRAME_cross17         	268
-#define FRAME_cross18         	269
-#define FRAME_cross19         	270
-#define FRAME_cross20         	271
-#define FRAME_cross21         	272
-#define FRAME_cross22         	273
-#define FRAME_cross23         	274
-#define FRAME_cross24         	275
-#define FRAME_cross25         	276
-#define FRAME_cross26         	277
-#define FRAME_cross27         	278
-#define FRAME_cross28         	279
-#define FRAME_cross29         	280
-#define FRAME_cross30         	281
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_insane.h ============ */
@@ -57485,7 +52067,7 @@ mframe_t insane_frames_stand_normal [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, insane_checkdown},
 };
-mmove_t insane_move_stand_normal = {FRAME_stand60, FRAME_stand65, insane_frames_stand_normal, insane_stand};
+mmove_t insane_move_stand_normal = {59, 64, insane_frames_stand_normal, insane_stand};
 
 mframe_t insane_frames_stand_insane [] =
 {
@@ -57520,7 +52102,7 @@ mframe_t insane_frames_stand_insane [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	insane_checkdown},
 };
-mmove_t insane_move_stand_insane = {FRAME_stand65, FRAME_stand94, insane_frames_stand_insane, insane_stand};
+mmove_t insane_move_stand_insane = {64, 93, insane_frames_stand_insane, insane_stand};
 
 mframe_t insane_frames_uptodown [] =
 {
@@ -57568,7 +52150,7 @@ mframe_t insane_frames_uptodown [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t insane_move_uptodown = {FRAME_stand1, FRAME_stand40, insane_frames_uptodown, insane_onground};
+mmove_t insane_move_uptodown = {0, 39, insane_frames_uptodown, insane_onground};
 
 
 mframe_t insane_frames_downtoup [] =
@@ -57593,7 +52175,7 @@ mframe_t insane_frames_downtoup [] =
 	{ai_move,	0,	NULL},				// 58
 	{ai_move,	0,	NULL},				// 59
 };
-mmove_t insane_move_downtoup = {FRAME_stand41, FRAME_stand59, insane_frames_downtoup, insane_stand};
+mmove_t insane_move_downtoup = {40, 58, insane_frames_downtoup, insane_stand};
 
 mframe_t insane_frames_jumpdown [] =
 {
@@ -57603,7 +52185,7 @@ mframe_t insane_frames_jumpdown [] =
 	{ai_move,	7.1,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t insane_move_jumpdown = {FRAME_stand96, FRAME_stand100, insane_frames_jumpdown, insane_onground};
+mmove_t insane_move_jumpdown = {95, 99, insane_frames_jumpdown, insane_onground};
 
 
 mframe_t insane_frames_down [] =
@@ -57670,7 +52252,7 @@ mframe_t insane_frames_down [] =
 	{ai_move,	0.7,		NULL},
 	{ai_move,	0,		insane_checkup},		// 160
 };
-mmove_t insane_move_down = {FRAME_stand100, FRAME_stand160, insane_frames_down, insane_onground};
+mmove_t insane_move_down = {99, 159, insane_frames_down, insane_onground};
 
 static mframe_t insane_frames_walk_normal [] =
 {
@@ -57689,8 +52271,8 @@ static mframe_t insane_frames_walk_normal [] =
 	{ai_walk,	0,		NULL},
 };
 
-static mmove_t insane_move_walk_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_walk};
-static mmove_t insane_move_run_normal = {FRAME_walk27, FRAME_walk39, insane_frames_walk_normal, insane_run};
+static mmove_t insane_move_walk_normal = {160, 172, insane_frames_walk_normal, insane_walk};
+static mmove_t insane_move_run_normal = {160, 172, insane_frames_walk_normal, insane_run};
 
 static mframe_t insane_frames_walk_insane[] = {
 	{ai_walk,	0,	insane_scream},		// walk 1
@@ -57720,8 +52302,8 @@ static mframe_t insane_frames_walk_insane[] = {
 	{ai_walk,	1.8,	NULL},		// 25
 	{ai_walk,	0,	NULL},		// 26
 };
-mmove_t insane_move_walk_insane = {FRAME_walk1, FRAME_walk26, insane_frames_walk_insane, insane_walk};
-mmove_t insane_move_run_insane = {FRAME_walk1, FRAME_walk26, insane_frames_walk_insane, insane_run};
+mmove_t insane_move_walk_insane = {173, 198, insane_frames_walk_insane, insane_walk};
+mmove_t insane_move_run_insane = {173, 198, insane_frames_walk_insane, insane_run};
 
 mframe_t insane_frames_stand_pain [] =
 {
@@ -57737,7 +52319,7 @@ mframe_t insane_frames_stand_pain [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_stand_pain = {FRAME_st_pain2, FRAME_st_pain12, insane_frames_stand_pain, insane_run};
+mmove_t insane_move_stand_pain = {199, 209, insane_frames_stand_pain, insane_run};
 
 mframe_t insane_frames_stand_death [] =
 {
@@ -57759,7 +52341,7 @@ mframe_t insane_frames_stand_death [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_stand_death = {FRAME_st_death2, FRAME_st_death18, insane_frames_stand_death, insane_dead};
+mmove_t insane_move_stand_death = {210, 226, insane_frames_stand_death, insane_dead};
 
 mframe_t insane_frames_crawl [] =
 {
@@ -57773,8 +52355,8 @@ mframe_t insane_frames_crawl [] =
 	{ai_walk,	3.4,	NULL},
 	{ai_walk,	2.4,	NULL},
 };
-mmove_t insane_move_crawl = {FRAME_crawl1, FRAME_crawl9, insane_frames_crawl, NULL};
-mmove_t insane_move_runcrawl = {FRAME_crawl1, FRAME_crawl9, insane_frames_crawl, NULL};
+mmove_t insane_move_crawl = {227, 235, insane_frames_crawl, NULL};
+mmove_t insane_move_runcrawl = {227, 235, insane_frames_crawl, NULL};
 
 mframe_t insane_frames_crawl_pain [] =
 {
@@ -57788,7 +52370,7 @@ mframe_t insane_frames_crawl_pain [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_crawl_pain = {FRAME_cr_pain2, FRAME_cr_pain10, insane_frames_crawl_pain, insane_run};
+mmove_t insane_move_crawl_pain = {236, 244, insane_frames_crawl_pain, insane_run};
 
 mframe_t insane_frames_crawl_death [] =
 {
@@ -57800,7 +52382,7 @@ mframe_t insane_frames_crawl_death [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_crawl_death = {FRAME_cr_death10, FRAME_cr_death16, insane_frames_crawl_death, insane_dead};
+mmove_t insane_move_crawl_death = {245, 251, insane_frames_crawl_death, insane_dead};
 
 mframe_t insane_frames_cross [] =
 {
@@ -57820,7 +52402,7 @@ mframe_t insane_frames_cross [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_cross = {FRAME_cross1, FRAME_cross15, insane_frames_cross, insane_cross};
+mmove_t insane_move_cross = {252, 266, insane_frames_cross, insane_cross};
 
 mframe_t insane_frames_struggle_cross [] =
 {
@@ -57840,7 +52422,7 @@ mframe_t insane_frames_struggle_cross [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_struggle_cross = {FRAME_cross16, FRAME_cross30, insane_frames_struggle_cross, insane_cross};
+mmove_t insane_move_struggle_cross = {267, 281, insane_frames_struggle_cross, insane_cross};
 
 void insane_cross (edict_t* self)
 {
@@ -57853,7 +52435,7 @@ void insane_cross (edict_t* self)
 void insane_walk (edict_t* self)
 {
 	if ( self->spawnflags & 16 )			// Hold Ground?
-		if (self->s.frame == FRAME_cr_pain10)
+		if (self->s.frame == 244)
 		{
 			self->monsterinfo.currentmove = &insane_move_down;
 			return;
@@ -57870,7 +52452,7 @@ void insane_walk (edict_t* self)
 void insane_run (edict_t* self)
 {
 	if ( self->spawnflags & 16 )			// Hold Ground?
-		if (self->s.frame == FRAME_cr_pain10)
+		if (self->s.frame == 244)
 		{
 			self->monsterinfo.currentmove = &insane_move_down;
 			return;
@@ -57920,7 +52502,7 @@ static void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		return;
 	}
 
-	if  ( ((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) )
+	if  ( ((self->s.frame >= 227) && (self->s.frame <= 235)) || ((self->s.frame >= 98) && (self->s.frame <= 159)) )
 	{
 		self->monsterinfo.currentmove = &insane_move_crawl_pain;
 	}
@@ -58025,7 +52607,7 @@ static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	}
 	else
 	{
-		if ( ((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) )
+		if ( ((self->s.frame >= 227) && (self->s.frame <= 235)) || ((self->s.frame >= 98) && (self->s.frame <= 159)) )
 			self->monsterinfo.currentmove = &insane_move_crawl_death;
 		else
 			self->monsterinfo.currentmove = &insane_move_stand_death;
@@ -58115,356 +52697,6 @@ MEDIC
 
 // This file generated by ModelGen - Do NOT Modify
 
-#undef FRAME_walk1
-#define FRAME_walk1           	0
-#undef FRAME_walk2
-#define FRAME_walk2           	1
-#undef FRAME_walk3
-#define FRAME_walk3           	2
-#undef FRAME_walk4
-#define FRAME_walk4           	3
-#undef FRAME_walk5
-#define FRAME_walk5           	4
-#undef FRAME_walk6
-#define FRAME_walk6           	5
-#undef FRAME_walk7
-#define FRAME_walk7           	6
-#undef FRAME_walk8
-#define FRAME_walk8           	7
-#undef FRAME_walk9
-#define FRAME_walk9           	8
-#undef FRAME_walk10
-#define FRAME_walk10          	9
-#undef FRAME_walk11
-#define FRAME_walk11          	10
-#undef FRAME_walk12
-#define FRAME_walk12          	11
-#define FRAME_wait1           	12
-#define FRAME_wait2           	13
-#define FRAME_wait3           	14
-#define FRAME_wait4           	15
-#define FRAME_wait5           	16
-#define FRAME_wait6           	17
-#define FRAME_wait7           	18
-#define FRAME_wait8           	19
-#define FRAME_wait9           	20
-#define FRAME_wait10          	21
-#define FRAME_wait11          	22
-#define FRAME_wait12          	23
-#define FRAME_wait13          	24
-#define FRAME_wait14          	25
-#define FRAME_wait15          	26
-#define FRAME_wait16          	27
-#define FRAME_wait17          	28
-#define FRAME_wait18          	29
-#define FRAME_wait19          	30
-#define FRAME_wait20          	31
-#define FRAME_wait21          	32
-#define FRAME_wait22          	33
-#define FRAME_wait23          	34
-#define FRAME_wait24          	35
-#define FRAME_wait25          	36
-#define FRAME_wait26          	37
-#define FRAME_wait27          	38
-#define FRAME_wait28          	39
-#define FRAME_wait29          	40
-#define FRAME_wait30          	41
-#define FRAME_wait31          	42
-#define FRAME_wait32          	43
-#define FRAME_wait33          	44
-#define FRAME_wait34          	45
-#define FRAME_wait35          	46
-#define FRAME_wait36          	47
-#define FRAME_wait37          	48
-#define FRAME_wait38          	49
-#define FRAME_wait39          	50
-#define FRAME_wait40          	51
-#define FRAME_wait41          	52
-#define FRAME_wait42          	53
-#define FRAME_wait43          	54
-#define FRAME_wait44          	55
-#define FRAME_wait45          	56
-#define FRAME_wait46          	57
-#define FRAME_wait47          	58
-#define FRAME_wait48          	59
-#define FRAME_wait49          	60
-#define FRAME_wait50          	61
-#define FRAME_wait51          	62
-#define FRAME_wait52          	63
-#define FRAME_wait53          	64
-#define FRAME_wait54          	65
-#define FRAME_wait55          	66
-#define FRAME_wait56          	67
-#define FRAME_wait57          	68
-#define FRAME_wait58          	69
-#define FRAME_wait59          	70
-#define FRAME_wait60          	71
-#define FRAME_wait61          	72
-#define FRAME_wait62          	73
-#define FRAME_wait63          	74
-#define FRAME_wait64          	75
-#define FRAME_wait65          	76
-#define FRAME_wait66          	77
-#define FRAME_wait67          	78
-#define FRAME_wait68          	79
-#define FRAME_wait69          	80
-#define FRAME_wait70          	81
-#define FRAME_wait71          	82
-#define FRAME_wait72          	83
-#define FRAME_wait73          	84
-#define FRAME_wait74          	85
-#define FRAME_wait75          	86
-#define FRAME_wait76          	87
-#define FRAME_wait77          	88
-#define FRAME_wait78          	89
-#define FRAME_wait79          	90
-#define FRAME_wait80          	91
-#define FRAME_wait81          	92
-#define FRAME_wait82          	93
-#define FRAME_wait83          	94
-#define FRAME_wait84          	95
-#define FRAME_wait85          	96
-#define FRAME_wait86          	97
-#define FRAME_wait87          	98
-#define FRAME_wait88          	99
-#define FRAME_wait89          	100
-#define FRAME_wait90          	101
-#undef FRAME_run1
-#define FRAME_run1            	102
-#undef FRAME_run2
-#define FRAME_run2            	103
-#undef FRAME_run3
-#define FRAME_run3            	104
-#undef FRAME_run4
-#define FRAME_run4            	105
-#undef FRAME_run5
-#define FRAME_run5            	106
-#undef FRAME_run6
-#define FRAME_run6            	107
-#define FRAME_paina1          	108
-#define FRAME_paina2          	109
-#define FRAME_paina3          	110
-#define FRAME_paina4          	111
-#define FRAME_paina5          	112
-#define FRAME_paina6          	113
-#define FRAME_paina7          	114
-#define FRAME_paina8          	115
-#undef FRAME_painb1
-#define FRAME_painb1          	116
-#undef FRAME_painb2
-#define FRAME_painb2          	117
-#undef FRAME_painb3
-#define FRAME_painb3          	118
-#undef FRAME_painb4
-#define FRAME_painb4          	119
-#undef FRAME_painb5
-#define FRAME_painb5          	120
-#undef FRAME_painb6
-#define FRAME_painb6          	121
-#undef FRAME_painb7
-#define FRAME_painb7          	122
-#undef FRAME_painb8
-#define FRAME_painb8          	123
-#undef FRAME_painb9
-#define FRAME_painb9          	124
-#undef FRAME_painb10
-#define FRAME_painb10         	125
-#undef FRAME_painb11
-#define FRAME_painb11         	126
-#undef FRAME_painb12
-#define FRAME_painb12         	127
-#undef FRAME_painb13
-#define FRAME_painb13         	128
-#undef FRAME_painb14
-#define FRAME_painb14         	129
-#undef FRAME_painb15
-#define FRAME_painb15         	130
-#undef FRAME_duck1
-#define FRAME_duck1           	131
-#undef FRAME_duck2
-#define FRAME_duck2           	132
-#undef FRAME_duck3
-#define FRAME_duck3           	133
-#undef FRAME_duck4
-#define FRAME_duck4           	134
-#undef FRAME_duck5
-#define FRAME_duck5           	135
-#undef FRAME_duck6
-#define FRAME_duck6           	136
-#undef FRAME_duck7
-#define FRAME_duck7           	137
-#undef FRAME_duck8
-#define FRAME_duck8           	138
-#undef FRAME_duck9
-#define FRAME_duck9           	139
-#undef FRAME_duck10
-#define FRAME_duck10          	140
-#define FRAME_duck11          	141
-#define FRAME_duck12          	142
-#define FRAME_duck13          	143
-#define FRAME_duck14          	144
-#define FRAME_duck15          	145
-#define FRAME_duck16          	146
-#undef FRAME_death1
-#define FRAME_death1          	147
-#undef FRAME_death2
-#define FRAME_death2          	148
-#undef FRAME_death3
-#define FRAME_death3          	149
-#undef FRAME_death4
-#define FRAME_death4          	150
-#undef FRAME_death5
-#define FRAME_death5          	151
-#undef FRAME_death6
-#define FRAME_death6          	152
-#undef FRAME_death7
-#define FRAME_death7          	153
-#undef FRAME_death8
-#define FRAME_death8          	154
-#undef FRAME_death9
-#define FRAME_death9          	155
-#undef FRAME_death10
-#define FRAME_death10         	156
-#undef FRAME_death11
-#define FRAME_death11         	157
-#undef FRAME_death12
-#define FRAME_death12         	158
-#undef FRAME_death13
-#define FRAME_death13         	159
-#undef FRAME_death14
-#define FRAME_death14         	160
-#undef FRAME_death15
-#define FRAME_death15         	161
-#undef FRAME_death16
-#define FRAME_death16         	162
-#undef FRAME_death17
-#define FRAME_death17         	163
-#undef FRAME_death18
-#define FRAME_death18         	164
-#undef FRAME_death19
-#define FRAME_death19         	165
-#undef FRAME_death20
-#define FRAME_death20         	166
-#undef FRAME_death21
-#define FRAME_death21         	167
-#undef FRAME_death22
-#define FRAME_death22         	168
-#undef FRAME_death23
-#define FRAME_death23         	169
-#undef FRAME_death24
-#define FRAME_death24         	170
-#undef FRAME_death25
-#define FRAME_death25         	171
-#undef FRAME_death26
-#define FRAME_death26         	172
-#undef FRAME_death27
-#define FRAME_death27         	173
-#undef FRAME_death28
-#define FRAME_death28         	174
-#undef FRAME_death29
-#define FRAME_death29         	175
-#undef FRAME_death30
-#define FRAME_death30         	176
-#undef FRAME_attack1
-#define FRAME_attack1         	177
-#undef FRAME_attack2
-#define FRAME_attack2         	178
-#undef FRAME_attack3
-#define FRAME_attack3         	179
-#undef FRAME_attack4
-#define FRAME_attack4         	180
-#undef FRAME_attack5
-#define FRAME_attack5         	181
-#undef FRAME_attack6
-#define FRAME_attack6         	182
-#undef FRAME_attack7
-#define FRAME_attack7         	183
-#undef FRAME_attack8
-#define FRAME_attack8         	184
-#undef FRAME_attack9
-#define FRAME_attack9         	185
-#undef FRAME_attack10
-#define FRAME_attack10        	186
-#undef FRAME_attack11
-#define FRAME_attack11        	187
-#undef FRAME_attack12
-#define FRAME_attack12        	188
-#undef FRAME_attack13
-#define FRAME_attack13        	189
-#undef FRAME_attack14
-#define FRAME_attack14        	190
-#undef FRAME_attack15
-#define FRAME_attack15        	191
-#undef FRAME_attack16
-#define FRAME_attack16        	192
-#undef FRAME_attack17
-#define FRAME_attack17        	193
-#undef FRAME_attack18
-#define FRAME_attack18        	194
-#undef FRAME_attack19
-#define FRAME_attack19        	195
-#undef FRAME_attack20
-#define FRAME_attack20        	196
-#undef FRAME_attack21
-#define FRAME_attack21        	197
-#undef FRAME_attack22
-#define FRAME_attack22        	198
-#undef FRAME_attack23
-#define FRAME_attack23        	199
-#undef FRAME_attack24
-#define FRAME_attack24        	200
-#undef FRAME_attack25
-#define FRAME_attack25        	201
-#undef FRAME_attack26
-#define FRAME_attack26        	202
-#undef FRAME_attack27
-#define FRAME_attack27        	203
-#undef FRAME_attack28
-#define FRAME_attack28        	204
-#undef FRAME_attack29
-#define FRAME_attack29        	205
-#undef FRAME_attack30
-#define FRAME_attack30        	206
-#undef FRAME_attack31
-#define FRAME_attack31        	207
-#undef FRAME_attack32
-#define FRAME_attack32        	208
-#undef FRAME_attack33
-#define FRAME_attack33        	209
-#undef FRAME_attack34
-#define FRAME_attack34        	210
-#undef FRAME_attack35
-#define FRAME_attack35        	211
-#undef FRAME_attack36
-#define FRAME_attack36        	212
-#undef FRAME_attack37
-#define FRAME_attack37        	213
-#undef FRAME_attack38
-#define FRAME_attack38        	214
-#undef FRAME_attack39
-#define FRAME_attack39        	215
-#undef FRAME_attack40
-#define FRAME_attack40        	216
-#define FRAME_attack41        	217
-#define FRAME_attack42        	218
-#define FRAME_attack43        	219
-#define FRAME_attack44        	220
-#define FRAME_attack45        	221
-#define FRAME_attack46        	222
-#define FRAME_attack47        	223
-#define FRAME_attack48        	224
-#define FRAME_attack49        	225
-#define FRAME_attack50        	226
-#define FRAME_attack51        	227
-#define FRAME_attack52        	228
-#define FRAME_attack53        	229
-#define FRAME_attack54        	230
-#define FRAME_attack55        	231
-#define FRAME_attack56        	232
-#define FRAME_attack57        	233
-#define FRAME_attack58        	234
-#define FRAME_attack59        	235
-#define FRAME_attack60        	236
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_medic.h ============ */
@@ -58655,7 +52887,7 @@ mframe_t medic_frames_stand [] =
 	{ai_stand, 0, NULL},
 
 };
-mmove_t medic_move_stand = {FRAME_wait1, FRAME_wait90, medic_frames_stand, NULL};
+mmove_t medic_move_stand = {12, 101, medic_frames_stand, NULL};
 
 void medic_stand (edict_t* self)
 {
@@ -58678,7 +52910,7 @@ mframe_t medic_frames_walk [] =
 	{ai_walk, 14,	NULL},
 	{ai_walk, 9.3,	NULL},
 };
-mmove_t medic_move_walk = {FRAME_walk1, FRAME_walk12, medic_frames_walk, NULL};
+mmove_t medic_move_walk = {0, 11, medic_frames_walk, NULL};
 
 void medic_walk (edict_t* self)
 {
@@ -58696,7 +52928,7 @@ mframe_t medic_frames_run [] =
 	{ai_run, 35.6,	NULL},
 
 };
-mmove_t medic_move_run = {FRAME_run1, FRAME_run6, medic_frames_run, NULL};
+mmove_t medic_move_run = {102, 107, medic_frames_run, NULL};
 
 void medic_run (edict_t* self)
 {
@@ -58734,7 +52966,7 @@ mframe_t medic_frames_pain1 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t medic_move_pain1 = {FRAME_paina1, FRAME_paina8, medic_frames_pain1, medic_run};
+mmove_t medic_move_pain1 = {108, 115, medic_frames_pain1, medic_run};
 
 static mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
@@ -58754,7 +52986,7 @@ static mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t medic_move_pain2 = {FRAME_painb1, FRAME_painb15, medic_frames_pain2, medic_run};
+static mmove_t medic_move_pain2 = {116, 130, medic_frames_pain2, medic_run};
 
 static void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -58792,9 +53024,9 @@ void medic_fire_blaster (edict_t* self)
 	vec3_t	dir;
 	int		effect;
 
-	if ((self->s.frame == FRAME_attack9) || (self->s.frame == FRAME_attack12))
+	if ((self->s.frame == 185) || (self->s.frame == 188))
 		effect = EF_BLASTER;
-	else if ((self->s.frame == FRAME_attack19) || (self->s.frame == FRAME_attack22) || (self->s.frame == FRAME_attack25) || (self->s.frame == FRAME_attack28))
+	else if ((self->s.frame == 195) || (self->s.frame == 198) || (self->s.frame == 201) || (self->s.frame == 204))
 		effect = EF_HYPERBLASTER;
 	else
 		effect = 0;
@@ -58853,7 +53085,7 @@ mframe_t medic_frames_death [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t medic_move_death = {FRAME_death1, FRAME_death30, medic_frames_death, medic_dead};
+mmove_t medic_move_death = {147, 176, medic_frames_death, medic_dead};
 
 static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -58937,7 +53169,7 @@ mframe_t medic_frames_duck [] =
 	{ai_move, -1,	NULL},
 	{ai_move, -1,	NULL},
 };
-mmove_t medic_move_duck = {FRAME_duck1, FRAME_duck16, medic_frames_duck, medic_run};
+mmove_t medic_move_duck = {131, 146, medic_frames_duck, medic_run};
 
 static void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
@@ -58970,7 +53202,7 @@ mframe_t medic_frames_attackHyperBlaster [] =
 	{ai_charge, 0,	medic_fire_blaster},
 	{ai_charge, 0,	medic_fire_blaster},
 };
-mmove_t medic_move_attackHyperBlaster = {FRAME_attack15, FRAME_attack30, medic_frames_attackHyperBlaster, medic_run};
+mmove_t medic_move_attackHyperBlaster = {191, 206, medic_frames_attackHyperBlaster, medic_run};
 
 
 void medic_continue (edict_t* self)
@@ -58998,7 +53230,7 @@ mframe_t medic_frames_attackBlaster [] =
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	medic_continue},	// Change to medic_continue... Else, go to frame 32
 };
-mmove_t medic_move_attackBlaster = {FRAME_attack1, FRAME_attack14, medic_frames_attackBlaster, medic_run};
+mmove_t medic_move_attackBlaster = {177, 190, medic_frames_attackBlaster, medic_run};
 
 
 void medic_hook_launch (edict_t* self)
@@ -59032,7 +53264,7 @@ void medic_cable_attack (edict_t* self)
 		return;
 
 	AngleVectors (self->s.angles, f, r, NULL);
-	VectorCopy (medic_cable_offsets[self->s.frame - FRAME_attack42], offset);
+	VectorCopy (medic_cable_offsets[self->s.frame - 218], offset);
 	G_ProjectSource (self->s.origin, offset, f, r, start);
 
 	// check for max distance
@@ -59052,12 +53284,12 @@ void medic_cable_attack (edict_t* self)
 	if (tr.fraction != 1.0 && tr.ent != self->enemy)
 		return;
 
-	if (self->s.frame == FRAME_attack43)
+	if (self->s.frame == 219)
 	{
 		PF_StartSound (self->enemy, CHAN_AUTO, sound_hook_hit, 1, ATTN_NORM, 0);
 		self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;
 	}
-	else if (self->s.frame == FRAME_attack50)
+	else if (self->s.frame == 226)
 	{
 		self->enemy->spawnflags = 0;
 		self->enemy->monsterinfo.aiflags = 0;
@@ -59082,7 +53314,7 @@ void medic_cable_attack (edict_t* self)
 	}
 	else
 	{
-		if (self->s.frame == FRAME_attack44)
+		if (self->s.frame == 220)
 			PF_StartSound (self, CHAN_WEAPON, sound_hook_heal, 1, ATTN_NORM, 0);
 	}
 
@@ -59138,7 +53370,7 @@ mframe_t medic_frames_attackCable [] =
 	{ai_move, 1.2,	NULL},
 	{ai_move, 1.3,	NULL},
 };
-mmove_t medic_move_attackCable = {FRAME_attack33, FRAME_attack60, medic_frames_attackCable, medic_run};
+mmove_t medic_move_attackCable = {209, 236, medic_frames_attackCable, medic_run};
 
 
 void medic_attack(edict_t* self)
@@ -59764,291 +53996,6 @@ mutant
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_attack01        	0
-#define FRAME_attack02        	1
-#define FRAME_attack03        	2
-#define FRAME_attack04        	3
-#define FRAME_attack05        	4
-#define FRAME_attack06        	5
-#define FRAME_attack07        	6
-#define FRAME_attack08        	7
-#define FRAME_attack09        	8
-#undef FRAME_attack10
-#define FRAME_attack10        	9
-#undef FRAME_attack11
-#define FRAME_attack11        	10
-#undef FRAME_attack12
-#define FRAME_attack12        	11
-#undef FRAME_attack13
-#define FRAME_attack13        	12
-#undef FRAME_attack14
-#define FRAME_attack14        	13
-#undef FRAME_attack15
-#define FRAME_attack15        	14
-#undef FRAME_death101
-#define FRAME_death101        	15
-#undef FRAME_death102
-#define FRAME_death102        	16
-#undef FRAME_death103
-#define FRAME_death103        	17
-#undef FRAME_death104
-#define FRAME_death104        	18
-#undef FRAME_death105
-#define FRAME_death105        	19
-#undef FRAME_death106
-#define FRAME_death106        	20
-#undef FRAME_death107
-#define FRAME_death107        	21
-#undef FRAME_death108
-#define FRAME_death108        	22
-#undef FRAME_death109
-#define FRAME_death109        	23
-#undef FRAME_death201
-#define FRAME_death201        	24
-#undef FRAME_death202
-#define FRAME_death202        	25
-#undef FRAME_death203
-#define FRAME_death203        	26
-#undef FRAME_death204
-#define FRAME_death204        	27
-#undef FRAME_death205
-#define FRAME_death205        	28
-#undef FRAME_death206
-#define FRAME_death206        	29
-#undef FRAME_death207
-#define FRAME_death207        	30
-#undef FRAME_death208
-#define FRAME_death208        	31
-#undef FRAME_death209
-#define FRAME_death209        	32
-#undef FRAME_death210
-#define FRAME_death210        	33
-#undef FRAME_pain101
-#define FRAME_pain101         	34
-#undef FRAME_pain102
-#define FRAME_pain102         	35
-#undef FRAME_pain103
-#define FRAME_pain103         	36
-#undef FRAME_pain104
-#define FRAME_pain104         	37
-#undef FRAME_pain105
-#define FRAME_pain105         	38
-#undef FRAME_pain201
-#define FRAME_pain201         	39
-#undef FRAME_pain202
-#define FRAME_pain202         	40
-#undef FRAME_pain203
-#define FRAME_pain203         	41
-#undef FRAME_pain204
-#define FRAME_pain204         	42
-#undef FRAME_pain205
-#define FRAME_pain205         	43
-#undef FRAME_pain206
-#define FRAME_pain206         	44
-#undef FRAME_pain301
-#define FRAME_pain301         	45
-#undef FRAME_pain302
-#define FRAME_pain302         	46
-#undef FRAME_pain303
-#define FRAME_pain303         	47
-#undef FRAME_pain304
-#define FRAME_pain304         	48
-#undef FRAME_pain305
-#define FRAME_pain305         	49
-#undef FRAME_pain306
-#define FRAME_pain306         	50
-#undef FRAME_pain307
-#define FRAME_pain307         	51
-#undef FRAME_pain308
-#define FRAME_pain308         	52
-#undef FRAME_pain309
-#define FRAME_pain309         	53
-#undef FRAME_pain310
-#define FRAME_pain310         	54
-#undef FRAME_pain311
-#define FRAME_pain311         	55
-#undef FRAME_run03
-#define FRAME_run03           	56
-#undef FRAME_run04
-#define FRAME_run04           	57
-#undef FRAME_run05
-#define FRAME_run05           	58
-#undef FRAME_run06
-#define FRAME_run06           	59
-#undef FRAME_run07
-#define FRAME_run07           	60
-#undef FRAME_run08
-#define FRAME_run08           	61
-#undef FRAME_stand101
-#define FRAME_stand101        	62
-#undef FRAME_stand102
-#define FRAME_stand102        	63
-#undef FRAME_stand103
-#define FRAME_stand103        	64
-#undef FRAME_stand104
-#define FRAME_stand104        	65
-#undef FRAME_stand105
-#define FRAME_stand105        	66
-#undef FRAME_stand106
-#define FRAME_stand106        	67
-#undef FRAME_stand107
-#define FRAME_stand107        	68
-#undef FRAME_stand108
-#define FRAME_stand108        	69
-#undef FRAME_stand109
-#define FRAME_stand109        	70
-#undef FRAME_stand110
-#define FRAME_stand110        	71
-#undef FRAME_stand111
-#define FRAME_stand111        	72
-#undef FRAME_stand112
-#define FRAME_stand112        	73
-#undef FRAME_stand113
-#define FRAME_stand113        	74
-#undef FRAME_stand114
-#define FRAME_stand114        	75
-#undef FRAME_stand115
-#define FRAME_stand115        	76
-#undef FRAME_stand116
-#define FRAME_stand116        	77
-#undef FRAME_stand117
-#define FRAME_stand117        	78
-#undef FRAME_stand118
-#define FRAME_stand118        	79
-#undef FRAME_stand119
-#define FRAME_stand119        	80
-#undef FRAME_stand120
-#define FRAME_stand120        	81
-#undef FRAME_stand121
-#define FRAME_stand121        	82
-#undef FRAME_stand122
-#define FRAME_stand122        	83
-#undef FRAME_stand123
-#define FRAME_stand123        	84
-#undef FRAME_stand124
-#define FRAME_stand124        	85
-#undef FRAME_stand125
-#define FRAME_stand125        	86
-#undef FRAME_stand126
-#define FRAME_stand126        	87
-#undef FRAME_stand127
-#define FRAME_stand127        	88
-#undef FRAME_stand128
-#define FRAME_stand128        	89
-#undef FRAME_stand129
-#define FRAME_stand129        	90
-#undef FRAME_stand130
-#define FRAME_stand130        	91
-#undef FRAME_stand131
-#define FRAME_stand131        	92
-#undef FRAME_stand132
-#define FRAME_stand132        	93
-#undef FRAME_stand133
-#define FRAME_stand133        	94
-#undef FRAME_stand134
-#define FRAME_stand134        	95
-#undef FRAME_stand135
-#define FRAME_stand135        	96
-#undef FRAME_stand136
-#define FRAME_stand136        	97
-#undef FRAME_stand137
-#define FRAME_stand137        	98
-#undef FRAME_stand138
-#define FRAME_stand138        	99
-#undef FRAME_stand139
-#define FRAME_stand139        	100
-#undef FRAME_stand140
-#define FRAME_stand140        	101
-#undef FRAME_stand141
-#define FRAME_stand141        	102
-#undef FRAME_stand142
-#define FRAME_stand142        	103
-#undef FRAME_stand143
-#define FRAME_stand143        	104
-#undef FRAME_stand144
-#define FRAME_stand144        	105
-#undef FRAME_stand145
-#define FRAME_stand145        	106
-#undef FRAME_stand146
-#define FRAME_stand146        	107
-#undef FRAME_stand147
-#define FRAME_stand147        	108
-#undef FRAME_stand148
-#define FRAME_stand148        	109
-#undef FRAME_stand149
-#define FRAME_stand149        	110
-#undef FRAME_stand150
-#define FRAME_stand150        	111
-#undef FRAME_stand151
-#define FRAME_stand151        	112
-#undef FRAME_stand152
-#define FRAME_stand152        	113
-#undef FRAME_stand153
-#define FRAME_stand153        	114
-#undef FRAME_stand154
-#define FRAME_stand154        	115
-#undef FRAME_stand155
-#define FRAME_stand155        	116
-#undef FRAME_stand156
-#define FRAME_stand156        	117
-#undef FRAME_stand157
-#define FRAME_stand157        	118
-#undef FRAME_stand158
-#define FRAME_stand158        	119
-#undef FRAME_stand159
-#define FRAME_stand159        	120
-#undef FRAME_stand160
-#define FRAME_stand160        	121
-#define FRAME_stand161        	122
-#define FRAME_stand162        	123
-#define FRAME_stand163        	124
-#define FRAME_stand164        	125
-#undef FRAME_walk01
-#define FRAME_walk01          	126
-#undef FRAME_walk02
-#define FRAME_walk02          	127
-#undef FRAME_walk03
-#define FRAME_walk03          	128
-#undef FRAME_walk04
-#define FRAME_walk04          	129
-#undef FRAME_walk05
-#define FRAME_walk05          	130
-#undef FRAME_walk06
-#define FRAME_walk06          	131
-#undef FRAME_walk07
-#define FRAME_walk07          	132
-#undef FRAME_walk08
-#define FRAME_walk08          	133
-#undef FRAME_walk09
-#define FRAME_walk09          	134
-#undef FRAME_walk10
-#define FRAME_walk10          	135
-#undef FRAME_walk11
-#define FRAME_walk11          	136
-#undef FRAME_walk12
-#define FRAME_walk12          	137
-#undef FRAME_walk13
-#define FRAME_walk13          	138
-#undef FRAME_walk14
-#define FRAME_walk14          	139
-#undef FRAME_walk15
-#define FRAME_walk15          	140
-#undef FRAME_walk16
-#define FRAME_walk16          	141
-#undef FRAME_walk17
-#define FRAME_walk17          	142
-#undef FRAME_walk18
-#define FRAME_walk18          	143
-#undef FRAME_walk19
-#define FRAME_walk19          	144
-#undef FRAME_walk20
-#define FRAME_walk20          	145
-#undef FRAME_walk21
-#define FRAME_walk21          	146
-#undef FRAME_walk22
-#define FRAME_walk22          	147
-#undef FRAME_walk23
-#define FRAME_walk23          	148
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_mutant.h ============ */
@@ -60164,7 +54111,7 @@ mframe_t mutant_frames_stand [] =
 
 	{ai_stand, 0, NULL},
 };
-mmove_t mutant_move_stand = {FRAME_stand101, FRAME_stand151, mutant_frames_stand, NULL};
+mmove_t mutant_move_stand = {62, 112, mutant_frames_stand, NULL};
 
 void mutant_stand (edict_t* self)
 {
@@ -60179,7 +54126,7 @@ void mutant_stand (edict_t* self)
 void mutant_idle_loop (edict_t* self)
 {
 	if (random() < 0.75)
-		self->monsterinfo.nextframe = FRAME_stand155;
+		self->monsterinfo.nextframe = 116;
 }
 
 static mframe_t mutant_frames_idle[] = {
@@ -60198,7 +54145,7 @@ static mframe_t mutant_frames_idle[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t mutant_move_idle = {FRAME_stand152, FRAME_stand164, mutant_frames_idle, mutant_stand};
+static mmove_t mutant_move_idle = {113, 125, mutant_frames_idle, mutant_stand};
 
 void mutant_idle (edict_t* self)
 {
@@ -60228,7 +54175,7 @@ mframe_t mutant_frames_walk [] =
 	{ai_walk,	15,		NULL},
 	{ai_walk,	6,		NULL},
 };
-mmove_t mutant_move_walk = {FRAME_walk05, FRAME_walk16, mutant_frames_walk, NULL};
+mmove_t mutant_move_walk = {130, 141, mutant_frames_walk, NULL};
 
 void mutant_walk_loop (edict_t* self)
 {
@@ -60242,7 +54189,7 @@ mframe_t mutant_frames_start_walk [] =
 	{ai_walk,	-2,		NULL},
 	{ai_walk,	1,		NULL},
 };
-mmove_t mutant_move_start_walk = {FRAME_walk01, FRAME_walk04, mutant_frames_start_walk, mutant_walk_loop};
+mmove_t mutant_move_start_walk = {126, 129, mutant_frames_start_walk, mutant_walk_loop};
 
 void mutant_walk (edict_t* self)
 {
@@ -60263,7 +54210,7 @@ mframe_t mutant_frames_run [] =
 	{ai_run,	17,		NULL},
 	{ai_run,	10,		NULL},
 };
-mmove_t mutant_move_run = {FRAME_run03, FRAME_run08, mutant_frames_run, NULL};
+mmove_t mutant_move_run = {56, 61, mutant_frames_run, NULL};
 
 void mutant_run (edict_t* self)
 {
@@ -60306,7 +54253,7 @@ void mutant_check_refire (edict_t* self)
 		return;
 
 	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attack09;
+		self->monsterinfo.nextframe = 8;
 }
 
 mframe_t mutant_frames_attack [] =
@@ -60319,7 +54266,7 @@ mframe_t mutant_frames_attack [] =
 	{ai_charge,	0,	mutant_hit_right},
 	{ai_charge,	0,	mutant_check_refire},
 };
-mmove_t mutant_move_attack = {FRAME_attack09, FRAME_attack15, mutant_frames_attack, mutant_run};
+mmove_t mutant_move_attack = {8, 14, mutant_frames_attack, mutant_run};
 
 void mutant_melee (edict_t* self)
 {
@@ -60361,7 +54308,7 @@ static void mutant_jump_touch(edict_t* self, edict_t* other, cplane_t* plane, cs
 	{
 		if (self->groundentity)
 		{
-			self->monsterinfo.nextframe = FRAME_attack02;
+			self->monsterinfo.nextframe = 1;
 			self->touch = NULL;
 		}
 		return;
@@ -60396,9 +54343,9 @@ void mutant_check_landing (edict_t* self)
 	}
 
 	if (level.time > self->monsterinfo.attack_finished)
-		self->monsterinfo.nextframe = FRAME_attack02;
+		self->monsterinfo.nextframe = 1;
 	else
-		self->monsterinfo.nextframe = FRAME_attack05;
+		self->monsterinfo.nextframe = 4;
 }
 
 mframe_t mutant_frames_jump [] =
@@ -60412,7 +54359,7 @@ mframe_t mutant_frames_jump [] =
 	{ai_charge,	 3,	NULL},
 	{ai_charge,	 0,	NULL},
 };
-mmove_t mutant_move_jump = {FRAME_attack01, FRAME_attack08, mutant_frames_jump, mutant_run};
+mmove_t mutant_move_jump = {0, 7, mutant_frames_jump, mutant_run};
 
 void mutant_jump (edict_t* self)
 {
@@ -60492,7 +54439,7 @@ mframe_t mutant_frames_pain1 [] =
 	{ai_move,	2,	NULL},
 	{ai_move,	5,	NULL},
 };
-mmove_t mutant_move_pain1 = {FRAME_pain101, FRAME_pain105, mutant_frames_pain1, mutant_run};
+mmove_t mutant_move_pain1 = {34, 38, mutant_frames_pain1, mutant_run};
 
 mframe_t mutant_frames_pain2 [] =
 {
@@ -60503,7 +54450,7 @@ mframe_t mutant_frames_pain2 [] =
 	{ai_move,	6,	NULL},
 	{ai_move,	4,	NULL},
 };
-mmove_t mutant_move_pain2 = {FRAME_pain201, FRAME_pain206, mutant_frames_pain2, mutant_run};
+mmove_t mutant_move_pain2 = {39, 44, mutant_frames_pain2, mutant_run};
 
 mframe_t mutant_frames_pain3 [] =
 {
@@ -60519,7 +54466,7 @@ mframe_t mutant_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	1,	NULL},
 };
-mmove_t mutant_move_pain3 = {FRAME_pain301, FRAME_pain311, mutant_frames_pain3, mutant_run};
+mmove_t mutant_move_pain3 = {45, 55, mutant_frames_pain3, mutant_run};
 
 static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -60585,7 +54532,7 @@ mframe_t mutant_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t mutant_move_death1 = {FRAME_death101, FRAME_death109, mutant_frames_death1, mutant_dead};
+mmove_t mutant_move_death1 = {15, 23, mutant_frames_death1, mutant_dead};
 
 mframe_t mutant_frames_death2 [] =
 {
@@ -60600,7 +54547,7 @@ mframe_t mutant_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t mutant_move_death2 = {FRAME_death201, FRAME_death210, mutant_frames_death2, mutant_dead};
+mmove_t mutant_move_death2 = {24, 33, mutant_frames_death2, mutant_dead};
 
 static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -60700,189 +54647,6 @@ parasite
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_break01           0
-#define FRAME_break02           1
-#define FRAME_break03           2
-#define FRAME_break04           3
-#define FRAME_break05           4
-#define FRAME_break06           5
-#define FRAME_break07           6
-#define FRAME_break08           7
-#define FRAME_break09           8
-#define FRAME_break10           9
-#define FRAME_break11           10
-#define FRAME_break12           11
-#define FRAME_break13           12
-#define FRAME_break14           13
-#define FRAME_break15           14
-#define FRAME_break16           15
-#define FRAME_break17           16
-#define FRAME_break18           17
-#define FRAME_break19           18
-#define FRAME_break20           19
-#define FRAME_break21           20
-#define FRAME_break22           21
-#define FRAME_break23           22
-#define FRAME_break24           23
-#define FRAME_break25           24
-#define FRAME_break26           25
-#define FRAME_break27           26
-#define FRAME_break28           27
-#define FRAME_break29           28
-#define FRAME_break30           29
-#define FRAME_break31           30
-#define FRAME_break32           31
-#undef FRAME_death101
-#define FRAME_death101          32
-#undef FRAME_death102
-#define FRAME_death102          33
-#undef FRAME_death103
-#define FRAME_death103          34
-#undef FRAME_death104
-#define FRAME_death104          35
-#undef FRAME_death105
-#define FRAME_death105          36
-#undef FRAME_death106
-#define FRAME_death106          37
-#undef FRAME_death107
-#define FRAME_death107          38
-#define FRAME_drain01           39
-#define FRAME_drain02           40
-#define FRAME_drain03           41
-#define FRAME_drain04           42
-#define FRAME_drain05           43
-#define FRAME_drain06           44
-#define FRAME_drain07           45
-#define FRAME_drain08           46
-#define FRAME_drain09           47
-#define FRAME_drain10           48
-#define FRAME_drain11           49
-#define FRAME_drain12           50
-#define FRAME_drain13           51
-#define FRAME_drain14           52
-#define FRAME_drain15           53
-#define FRAME_drain16           54
-#define FRAME_drain17           55
-#define FRAME_drain18           56
-#undef FRAME_pain101
-#define FRAME_pain101           57
-#undef FRAME_pain102
-#define FRAME_pain102           58
-#undef FRAME_pain103
-#define FRAME_pain103           59
-#undef FRAME_pain104
-#define FRAME_pain104           60
-#undef FRAME_pain105
-#define FRAME_pain105           61
-#undef FRAME_pain106
-#define FRAME_pain106           62
-#undef FRAME_pain107
-#define FRAME_pain107           63
-#undef FRAME_pain108
-#define FRAME_pain108           64
-#undef FRAME_pain109
-#define FRAME_pain109           65
-#undef FRAME_pain110
-#define FRAME_pain110           66
-#undef FRAME_pain111
-#define FRAME_pain111           67
-#undef FRAME_run01
-#define FRAME_run01             68
-#undef FRAME_run02
-#define FRAME_run02             69
-#undef FRAME_run03
-#define FRAME_run03             70
-#undef FRAME_run04
-#define FRAME_run04             71
-#undef FRAME_run05
-#define FRAME_run05             72
-#undef FRAME_run06
-#define FRAME_run06             73
-#undef FRAME_run07
-#define FRAME_run07             74
-#undef FRAME_run08
-#define FRAME_run08             75
-#undef FRAME_run09
-#define FRAME_run09             76
-#undef FRAME_run10
-#define FRAME_run10             77
-#undef FRAME_run11
-#define FRAME_run11             78
-#undef FRAME_run12
-#define FRAME_run12             79
-#define FRAME_run13             80
-#define FRAME_run14             81
-#define FRAME_run15             82
-#undef FRAME_stand01
-#define FRAME_stand01           83
-#undef FRAME_stand02
-#define FRAME_stand02           84
-#undef FRAME_stand03
-#define FRAME_stand03           85
-#undef FRAME_stand04
-#define FRAME_stand04           86
-#undef FRAME_stand05
-#define FRAME_stand05           87
-#undef FRAME_stand06
-#define FRAME_stand06           88
-#undef FRAME_stand07
-#define FRAME_stand07           89
-#undef FRAME_stand08
-#define FRAME_stand08           90
-#undef FRAME_stand09
-#define FRAME_stand09           91
-#undef FRAME_stand10
-#define FRAME_stand10           92
-#undef FRAME_stand11
-#define FRAME_stand11           93
-#undef FRAME_stand12
-#define FRAME_stand12           94
-#undef FRAME_stand13
-#define FRAME_stand13           95
-#undef FRAME_stand14
-#define FRAME_stand14           96
-#undef FRAME_stand15
-#define FRAME_stand15           97
-#undef FRAME_stand16
-#define FRAME_stand16           98
-#undef FRAME_stand17
-#define FRAME_stand17           99
-#undef FRAME_stand18
-#define FRAME_stand18           100
-#undef FRAME_stand19
-#define FRAME_stand19           101
-#undef FRAME_stand20
-#define FRAME_stand20           102
-#undef FRAME_stand21
-#define FRAME_stand21           103
-#undef FRAME_stand22
-#define FRAME_stand22           104
-#undef FRAME_stand23
-#define FRAME_stand23           105
-#undef FRAME_stand24
-#define FRAME_stand24           106
-#undef FRAME_stand25
-#define FRAME_stand25           107
-#undef FRAME_stand26
-#define FRAME_stand26           108
-#undef FRAME_stand27
-#define FRAME_stand27           109
-#undef FRAME_stand28
-#define FRAME_stand28           110
-#undef FRAME_stand29
-#define FRAME_stand29           111
-#undef FRAME_stand30
-#define FRAME_stand30           112
-#undef FRAME_stand31
-#define FRAME_stand31           113
-#undef FRAME_stand32
-#define FRAME_stand32           114
-#undef FRAME_stand33
-#define FRAME_stand33           115
-#undef FRAME_stand34
-#define FRAME_stand34           116
-#undef FRAME_stand35
-#define FRAME_stand35           117
 
 #define MODEL_SCALE             1.000000
 /* ============ end inlined header: game/m_parasite.h ============ */
@@ -60950,7 +54714,7 @@ mframe_t parasite_frames_start_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_start_fidget = {FRAME_stand18, FRAME_stand21, parasite_frames_start_fidget, parasite_do_fidget};
+mmove_t parasite_move_start_fidget = {100, 103, parasite_frames_start_fidget, parasite_do_fidget};
 
 mframe_t parasite_frames_fidget [] =
 {
@@ -60961,7 +54725,7 @@ mframe_t parasite_frames_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_fidget = {FRAME_stand22, FRAME_stand27, parasite_frames_fidget, parasite_refidget};
+mmove_t parasite_move_fidget = {104, 109, parasite_frames_fidget, parasite_refidget};
 
 mframe_t parasite_frames_end_fidget [] =
 {
@@ -60974,7 +54738,7 @@ mframe_t parasite_frames_end_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_end_fidget = {FRAME_stand28, FRAME_stand35, parasite_frames_end_fidget, parasite_stand};
+mmove_t parasite_move_end_fidget = {110, 117, parasite_frames_end_fidget, parasite_stand};
 
 void parasite_end_fidget (edict_t* self)
 {
@@ -61020,7 +54784,7 @@ mframe_t parasite_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, parasite_tap},
 };
-mmove_t	parasite_move_stand = {FRAME_stand01, FRAME_stand17, parasite_frames_stand, parasite_stand};
+mmove_t	parasite_move_stand = {83, 99, parasite_frames_stand, parasite_stand};
 
 void parasite_stand (edict_t* self)
 {
@@ -61038,14 +54802,14 @@ mframe_t parasite_frames_run [] =
 	{ai_run, 28, NULL},
 	{ai_run, 25, NULL},
 };
-mmove_t parasite_move_run = {FRAME_run03, FRAME_run09, parasite_frames_run, NULL};
+mmove_t parasite_move_run = {70, 76, parasite_frames_run, NULL};
 
 mframe_t parasite_frames_start_run [] =
 {
 	{ai_run, 0,	NULL},
 	{ai_run, 30, NULL},
 };
-mmove_t parasite_move_start_run = {FRAME_run01, FRAME_run02, parasite_frames_start_run, parasite_run};
+mmove_t parasite_move_start_run = {68, 69, parasite_frames_start_run, parasite_run};
 
 mframe_t parasite_frames_stop_run [] =
 {
@@ -61056,7 +54820,7 @@ mframe_t parasite_frames_stop_run [] =
 	{ai_run, 0,  NULL},
 	{ai_run, 0,  NULL},
 };
-mmove_t parasite_move_stop_run = {FRAME_run10, FRAME_run15, parasite_frames_stop_run, NULL};
+mmove_t parasite_move_stop_run = {77, 82, parasite_frames_stop_run, NULL};
 
 void parasite_start_run (edict_t* self)
 {
@@ -61085,14 +54849,14 @@ mframe_t parasite_frames_walk [] =
 	{ai_walk, 28, NULL},
 	{ai_walk, 25, NULL},
 };
-mmove_t parasite_move_walk = {FRAME_run03, FRAME_run09, parasite_frames_walk, parasite_walk};
+mmove_t parasite_move_walk = {70, 76, parasite_frames_walk, parasite_walk};
 
 static mframe_t parasite_frames_start_walk[] = {
 	{ai_walk, 0,	NULL},
 	{ai_walk, 30, parasite_walk},
 };
 
-static mmove_t parasite_move_start_walk = {FRAME_run01, FRAME_run02, parasite_frames_start_walk, NULL};
+static mmove_t parasite_move_start_walk = {68, 69, parasite_frames_start_walk, NULL};
 
 mframe_t parasite_frames_stop_walk[] = {
 	{ai_walk, 20, NULL},
@@ -61102,7 +54866,7 @@ mframe_t parasite_frames_stop_walk[] = {
 	{ai_walk, 0,  NULL},
 	{ai_walk, 0,  NULL},
 };
-mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_stop_walk, NULL};
+mmove_t parasite_move_stop_walk = {77, 82, parasite_frames_stop_walk, NULL};
 
 void parasite_start_walk (edict_t* self)
 {
@@ -61127,7 +54891,7 @@ static mframe_t parasite_frames_pain1[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t parasite_move_pain1 = {FRAME_pain101, FRAME_pain111, parasite_frames_pain1, parasite_start_run};
+static mmove_t parasite_move_pain1 = {57, 67, parasite_frames_pain1, parasite_start_run};
 
 static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -61200,14 +54964,14 @@ void parasite_drain_attack (edict_t* self)
 	if (tr.ent != self->enemy)
 		return;
 
-	if (self->s.frame == FRAME_drain03)
+	if (self->s.frame == 41)
 	{
 		damage = 5;
 		PF_StartSound (self->enemy, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
 	}
 	else
 	{
-		if (self->s.frame == FRAME_drain04)
+		if (self->s.frame == 42)
 			PF_StartSound (self, CHAN_WEAPON, sound_suck, 1, ATTN_NORM, 0);
 		damage = 2;
 	}
@@ -61244,7 +55008,7 @@ mframe_t parasite_frames_drain [] =
 	{ai_charge, -3,	NULL},
 	{ai_charge, 0,	NULL},
 };
-mmove_t parasite_move_drain = {FRAME_drain01, FRAME_drain18, parasite_frames_drain, parasite_start_run};
+mmove_t parasite_move_drain = {39, 56, parasite_frames_drain, parasite_start_run};
 
 
 mframe_t parasite_frames_break [] =
@@ -61282,7 +55046,7 @@ mframe_t parasite_frames_break [] =
 	{ai_charge, -5,	NULL},
 	{ai_charge, 1,	NULL},
 };
-mmove_t parasite_move_break = {FRAME_break01, FRAME_break32, parasite_frames_break, parasite_start_run};
+mmove_t parasite_move_break = {0, 31, parasite_frames_break, parasite_start_run};
 
 /*
 ===
@@ -61326,7 +55090,7 @@ mframe_t parasite_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t parasite_move_death = {FRAME_death101, FRAME_death107, parasite_frames_death, parasite_dead};
+mmove_t parasite_move_death = {32, 38, parasite_frames_death, parasite_dead};
 
 static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
@@ -61417,731 +55181,6 @@ SOLDIER
 
 // This file generated by ModelGen - Do NOT Modify
 
-#undef FRAME_attak101
-#define FRAME_attak101        	0
-#undef FRAME_attak102
-#define FRAME_attak102        	1
-#undef FRAME_attak103
-#define FRAME_attak103        	2
-#undef FRAME_attak104
-#define FRAME_attak104        	3
-#undef FRAME_attak105
-#define FRAME_attak105        	4
-#undef FRAME_attak106
-#define FRAME_attak106        	5
-#undef FRAME_attak107
-#define FRAME_attak107        	6
-#undef FRAME_attak108
-#define FRAME_attak108        	7
-#undef FRAME_attak109
-#define FRAME_attak109        	8
-#undef FRAME_attak110
-#define FRAME_attak110        	9
-#undef FRAME_attak111
-#define FRAME_attak111        	10
-#undef FRAME_attak112
-#define FRAME_attak112        	11
-#undef FRAME_attak201
-#define FRAME_attak201        	12
-#undef FRAME_attak202
-#define FRAME_attak202        	13
-#undef FRAME_attak203
-#define FRAME_attak203        	14
-#undef FRAME_attak204
-#define FRAME_attak204        	15
-#undef FRAME_attak205
-#define FRAME_attak205        	16
-#undef FRAME_attak206
-#define FRAME_attak206        	17
-#undef FRAME_attak207
-#define FRAME_attak207        	18
-#undef FRAME_attak208
-#define FRAME_attak208        	19
-#undef FRAME_attak209
-#define FRAME_attak209        	20
-#undef FRAME_attak210
-#define FRAME_attak210        	21
-#undef FRAME_attak211
-#define FRAME_attak211        	22
-#undef FRAME_attak212
-#define FRAME_attak212        	23
-#undef FRAME_attak213
-#define FRAME_attak213        	24
-#undef FRAME_attak214
-#define FRAME_attak214        	25
-#undef FRAME_attak215
-#define FRAME_attak215        	26
-#undef FRAME_attak216
-#define FRAME_attak216        	27
-#undef FRAME_attak217
-#define FRAME_attak217        	28
-#undef FRAME_attak218
-#define FRAME_attak218        	29
-#undef FRAME_attak301
-#define FRAME_attak301        	30
-#undef FRAME_attak302
-#define FRAME_attak302        	31
-#undef FRAME_attak303
-#define FRAME_attak303        	32
-#undef FRAME_attak304
-#define FRAME_attak304        	33
-#undef FRAME_attak305
-#define FRAME_attak305        	34
-#undef FRAME_attak306
-#define FRAME_attak306        	35
-#undef FRAME_attak307
-#define FRAME_attak307        	36
-#undef FRAME_attak308
-#define FRAME_attak308        	37
-#undef FRAME_attak309
-#define FRAME_attak309        	38
-#undef FRAME_attak401
-#define FRAME_attak401        	39
-#undef FRAME_attak402
-#define FRAME_attak402        	40
-#undef FRAME_attak403
-#define FRAME_attak403        	41
-#undef FRAME_attak404
-#define FRAME_attak404        	42
-#undef FRAME_attak405
-#define FRAME_attak405        	43
-#undef FRAME_attak406
-#define FRAME_attak406        	44
-#undef FRAME_duck01
-#define FRAME_duck01          	45
-#undef FRAME_duck02
-#define FRAME_duck02          	46
-#undef FRAME_duck03
-#define FRAME_duck03          	47
-#undef FRAME_duck04
-#define FRAME_duck04          	48
-#undef FRAME_duck05
-#define FRAME_duck05          	49
-#undef FRAME_pain101
-#define FRAME_pain101         	50
-#undef FRAME_pain102
-#define FRAME_pain102         	51
-#undef FRAME_pain103
-#define FRAME_pain103         	52
-#undef FRAME_pain104
-#define FRAME_pain104         	53
-#undef FRAME_pain105
-#define FRAME_pain105         	54
-#undef FRAME_pain201
-#define FRAME_pain201         	55
-#undef FRAME_pain202
-#define FRAME_pain202         	56
-#undef FRAME_pain203
-#define FRAME_pain203         	57
-#undef FRAME_pain204
-#define FRAME_pain204         	58
-#undef FRAME_pain205
-#define FRAME_pain205         	59
-#undef FRAME_pain206
-#define FRAME_pain206         	60
-#undef FRAME_pain207
-#define FRAME_pain207         	61
-#undef FRAME_pain301
-#define FRAME_pain301         	62
-#undef FRAME_pain302
-#define FRAME_pain302         	63
-#undef FRAME_pain303
-#define FRAME_pain303         	64
-#undef FRAME_pain304
-#define FRAME_pain304         	65
-#undef FRAME_pain305
-#define FRAME_pain305         	66
-#undef FRAME_pain306
-#define FRAME_pain306         	67
-#undef FRAME_pain307
-#define FRAME_pain307         	68
-#undef FRAME_pain308
-#define FRAME_pain308         	69
-#undef FRAME_pain309
-#define FRAME_pain309         	70
-#undef FRAME_pain310
-#define FRAME_pain310         	71
-#undef FRAME_pain311
-#define FRAME_pain311         	72
-#undef FRAME_pain312
-#define FRAME_pain312         	73
-#undef FRAME_pain313
-#define FRAME_pain313         	74
-#undef FRAME_pain314
-#define FRAME_pain314         	75
-#undef FRAME_pain315
-#define FRAME_pain315         	76
-#undef FRAME_pain316
-#define FRAME_pain316         	77
-#undef FRAME_pain317
-#define FRAME_pain317         	78
-#undef FRAME_pain318
-#define FRAME_pain318         	79
-#undef FRAME_pain401
-#define FRAME_pain401         	80
-#undef FRAME_pain402
-#define FRAME_pain402         	81
-#undef FRAME_pain403
-#define FRAME_pain403         	82
-#undef FRAME_pain404
-#define FRAME_pain404         	83
-#define FRAME_pain405         	84
-#define FRAME_pain406         	85
-#define FRAME_pain407         	86
-#define FRAME_pain408         	87
-#define FRAME_pain409         	88
-#define FRAME_pain410         	89
-#define FRAME_pain411         	90
-#define FRAME_pain412         	91
-#define FRAME_pain413         	92
-#define FRAME_pain414         	93
-#define FRAME_pain415         	94
-#define FRAME_pain416         	95
-#define FRAME_pain417         	96
-#undef FRAME_run01
-#define FRAME_run01           	97
-#undef FRAME_run02
-#define FRAME_run02           	98
-#undef FRAME_run03
-#define FRAME_run03           	99
-#undef FRAME_run04
-#define FRAME_run04           	100
-#undef FRAME_run05
-#define FRAME_run05           	101
-#undef FRAME_run06
-#define FRAME_run06           	102
-#undef FRAME_run07
-#define FRAME_run07           	103
-#undef FRAME_run08
-#define FRAME_run08           	104
-#undef FRAME_run09
-#define FRAME_run09           	105
-#undef FRAME_run10
-#define FRAME_run10           	106
-#undef FRAME_run11
-#define FRAME_run11           	107
-#undef FRAME_run12
-#define FRAME_run12           	108
-#undef FRAME_runs01
-#define FRAME_runs01          	109
-#undef FRAME_runs02
-#define FRAME_runs02          	110
-#undef FRAME_runs03
-#define FRAME_runs03          	111
-#undef FRAME_runs04
-#define FRAME_runs04          	112
-#undef FRAME_runs05
-#define FRAME_runs05          	113
-#undef FRAME_runs06
-#define FRAME_runs06          	114
-#undef FRAME_runs07
-#define FRAME_runs07          	115
-#undef FRAME_runs08
-#define FRAME_runs08          	116
-#undef FRAME_runs09
-#define FRAME_runs09          	117
-#undef FRAME_runs10
-#define FRAME_runs10          	118
-#undef FRAME_runs11
-#define FRAME_runs11          	119
-#undef FRAME_runs12
-#define FRAME_runs12          	120
-#define FRAME_runs13          	121
-#define FRAME_runs14          	122
-#define FRAME_runs15          	123
-#define FRAME_runs16          	124
-#define FRAME_runs17          	125
-#define FRAME_runs18          	126
-#define FRAME_runt01          	127
-#define FRAME_runt02          	128
-#define FRAME_runt03          	129
-#define FRAME_runt04          	130
-#define FRAME_runt05          	131
-#define FRAME_runt06          	132
-#define FRAME_runt07          	133
-#define FRAME_runt08          	134
-#define FRAME_runt09          	135
-#define FRAME_runt10          	136
-#define FRAME_runt11          	137
-#define FRAME_runt12          	138
-#define FRAME_runt13          	139
-#define FRAME_runt14          	140
-#define FRAME_runt15          	141
-#define FRAME_runt16          	142
-#define FRAME_runt17          	143
-#define FRAME_runt18          	144
-#define FRAME_runt19          	145
-#undef FRAME_stand101
-#define FRAME_stand101        	146
-#undef FRAME_stand102
-#define FRAME_stand102        	147
-#undef FRAME_stand103
-#define FRAME_stand103        	148
-#undef FRAME_stand104
-#define FRAME_stand104        	149
-#undef FRAME_stand105
-#define FRAME_stand105        	150
-#undef FRAME_stand106
-#define FRAME_stand106        	151
-#undef FRAME_stand107
-#define FRAME_stand107        	152
-#undef FRAME_stand108
-#define FRAME_stand108        	153
-#undef FRAME_stand109
-#define FRAME_stand109        	154
-#undef FRAME_stand110
-#define FRAME_stand110        	155
-#undef FRAME_stand111
-#define FRAME_stand111        	156
-#undef FRAME_stand112
-#define FRAME_stand112        	157
-#undef FRAME_stand113
-#define FRAME_stand113        	158
-#undef FRAME_stand114
-#define FRAME_stand114        	159
-#undef FRAME_stand115
-#define FRAME_stand115        	160
-#undef FRAME_stand116
-#define FRAME_stand116        	161
-#undef FRAME_stand117
-#define FRAME_stand117        	162
-#undef FRAME_stand118
-#define FRAME_stand118        	163
-#undef FRAME_stand119
-#define FRAME_stand119        	164
-#undef FRAME_stand120
-#define FRAME_stand120        	165
-#undef FRAME_stand121
-#define FRAME_stand121        	166
-#undef FRAME_stand122
-#define FRAME_stand122        	167
-#undef FRAME_stand123
-#define FRAME_stand123        	168
-#undef FRAME_stand124
-#define FRAME_stand124        	169
-#undef FRAME_stand125
-#define FRAME_stand125        	170
-#undef FRAME_stand126
-#define FRAME_stand126        	171
-#undef FRAME_stand127
-#define FRAME_stand127        	172
-#undef FRAME_stand128
-#define FRAME_stand128        	173
-#undef FRAME_stand129
-#define FRAME_stand129        	174
-#undef FRAME_stand130
-#define FRAME_stand130        	175
-#define FRAME_stand301        	176
-#define FRAME_stand302        	177
-#define FRAME_stand303        	178
-#define FRAME_stand304        	179
-#define FRAME_stand305        	180
-#define FRAME_stand306        	181
-#define FRAME_stand307        	182
-#define FRAME_stand308        	183
-#define FRAME_stand309        	184
-#define FRAME_stand310        	185
-#define FRAME_stand311        	186
-#define FRAME_stand312        	187
-#define FRAME_stand313        	188
-#define FRAME_stand314        	189
-#define FRAME_stand315        	190
-#define FRAME_stand316        	191
-#define FRAME_stand317        	192
-#define FRAME_stand318        	193
-#define FRAME_stand319        	194
-#define FRAME_stand320        	195
-#define FRAME_stand321        	196
-#define FRAME_stand322        	197
-#define FRAME_stand323        	198
-#define FRAME_stand324        	199
-#define FRAME_stand325        	200
-#define FRAME_stand326        	201
-#define FRAME_stand327        	202
-#define FRAME_stand328        	203
-#define FRAME_stand329        	204
-#define FRAME_stand330        	205
-#define FRAME_stand331        	206
-#define FRAME_stand332        	207
-#define FRAME_stand333        	208
-#define FRAME_stand334        	209
-#define FRAME_stand335        	210
-#define FRAME_stand336        	211
-#define FRAME_stand337        	212
-#define FRAME_stand338        	213
-#define FRAME_stand339        	214
-#undef FRAME_walk101
-#define FRAME_walk101         	215
-#undef FRAME_walk102
-#define FRAME_walk102         	216
-#undef FRAME_walk103
-#define FRAME_walk103         	217
-#undef FRAME_walk104
-#define FRAME_walk104         	218
-#undef FRAME_walk105
-#define FRAME_walk105         	219
-#undef FRAME_walk106
-#define FRAME_walk106         	220
-#undef FRAME_walk107
-#define FRAME_walk107         	221
-#undef FRAME_walk108
-#define FRAME_walk108         	222
-#undef FRAME_walk109
-#define FRAME_walk109         	223
-#undef FRAME_walk110
-#define FRAME_walk110         	224
-#undef FRAME_walk111
-#define FRAME_walk111         	225
-#undef FRAME_walk112
-#define FRAME_walk112         	226
-#undef FRAME_walk113
-#define FRAME_walk113         	227
-#define FRAME_walk114         	228
-#define FRAME_walk115         	229
-#define FRAME_walk116         	230
-#define FRAME_walk117         	231
-#define FRAME_walk118         	232
-#define FRAME_walk119         	233
-#define FRAME_walk120         	234
-#define FRAME_walk121         	235
-#define FRAME_walk122         	236
-#define FRAME_walk123         	237
-#define FRAME_walk124         	238
-#define FRAME_walk125         	239
-#define FRAME_walk126         	240
-#define FRAME_walk127         	241
-#define FRAME_walk128         	242
-#define FRAME_walk129         	243
-#define FRAME_walk130         	244
-#define FRAME_walk131         	245
-#define FRAME_walk132         	246
-#define FRAME_walk133         	247
-#undef FRAME_walk201
-#define FRAME_walk201         	248
-#undef FRAME_walk202
-#define FRAME_walk202         	249
-#undef FRAME_walk203
-#define FRAME_walk203         	250
-#undef FRAME_walk204
-#define FRAME_walk204         	251
-#undef FRAME_walk205
-#define FRAME_walk205         	252
-#undef FRAME_walk206
-#define FRAME_walk206         	253
-#undef FRAME_walk207
-#define FRAME_walk207         	254
-#undef FRAME_walk208
-#define FRAME_walk208         	255
-#undef FRAME_walk209
-#define FRAME_walk209         	256
-#undef FRAME_walk210
-#define FRAME_walk210         	257
-#undef FRAME_walk211
-#define FRAME_walk211         	258
-#undef FRAME_walk212
-#define FRAME_walk212         	259
-#undef FRAME_walk213
-#define FRAME_walk213         	260
-#undef FRAME_walk214
-#define FRAME_walk214         	261
-#undef FRAME_walk215
-#define FRAME_walk215         	262
-#undef FRAME_walk216
-#define FRAME_walk216         	263
-#undef FRAME_walk217
-#define FRAME_walk217         	264
-#undef FRAME_walk218
-#define FRAME_walk218         	265
-#undef FRAME_walk219
-#define FRAME_walk219         	266
-#undef FRAME_walk220
-#define FRAME_walk220         	267
-#undef FRAME_walk221
-#define FRAME_walk221         	268
-#undef FRAME_walk222
-#define FRAME_walk222         	269
-#undef FRAME_walk223
-#define FRAME_walk223         	270
-#undef FRAME_walk224
-#define FRAME_walk224         	271
-#undef FRAME_death101
-#define FRAME_death101        	272
-#undef FRAME_death102
-#define FRAME_death102        	273
-#undef FRAME_death103
-#define FRAME_death103        	274
-#undef FRAME_death104
-#define FRAME_death104        	275
-#undef FRAME_death105
-#define FRAME_death105        	276
-#undef FRAME_death106
-#define FRAME_death106        	277
-#undef FRAME_death107
-#define FRAME_death107        	278
-#undef FRAME_death108
-#define FRAME_death108        	279
-#undef FRAME_death109
-#define FRAME_death109        	280
-#undef FRAME_death110
-#define FRAME_death110        	281
-#undef FRAME_death111
-#define FRAME_death111        	282
-#undef FRAME_death112
-#define FRAME_death112        	283
-#undef FRAME_death113
-#define FRAME_death113        	284
-#undef FRAME_death114
-#define FRAME_death114        	285
-#undef FRAME_death115
-#define FRAME_death115        	286
-#undef FRAME_death116
-#define FRAME_death116        	287
-#undef FRAME_death117
-#define FRAME_death117        	288
-#undef FRAME_death118
-#define FRAME_death118        	289
-#undef FRAME_death119
-#define FRAME_death119        	290
-#undef FRAME_death120
-#define FRAME_death120        	291
-#define FRAME_death121        	292
-#define FRAME_death122        	293
-#define FRAME_death123        	294
-#define FRAME_death124        	295
-#define FRAME_death125        	296
-#define FRAME_death126        	297
-#define FRAME_death127        	298
-#define FRAME_death128        	299
-#define FRAME_death129        	300
-#define FRAME_death130        	301
-#define FRAME_death131        	302
-#define FRAME_death132        	303
-#define FRAME_death133        	304
-#define FRAME_death134        	305
-#define FRAME_death135        	306
-#define FRAME_death136        	307
-#undef FRAME_death201
-#define FRAME_death201        	308
-#undef FRAME_death202
-#define FRAME_death202        	309
-#undef FRAME_death203
-#define FRAME_death203        	310
-#undef FRAME_death204
-#define FRAME_death204        	311
-#undef FRAME_death205
-#define FRAME_death205        	312
-#undef FRAME_death206
-#define FRAME_death206        	313
-#undef FRAME_death207
-#define FRAME_death207        	314
-#undef FRAME_death208
-#define FRAME_death208        	315
-#undef FRAME_death209
-#define FRAME_death209        	316
-#undef FRAME_death210
-#define FRAME_death210        	317
-#undef FRAME_death211
-#define FRAME_death211        	318
-#undef FRAME_death212
-#define FRAME_death212        	319
-#undef FRAME_death213
-#define FRAME_death213        	320
-#undef FRAME_death214
-#define FRAME_death214        	321
-#undef FRAME_death215
-#define FRAME_death215        	322
-#undef FRAME_death216
-#define FRAME_death216        	323
-#undef FRAME_death217
-#define FRAME_death217        	324
-#undef FRAME_death218
-#define FRAME_death218        	325
-#undef FRAME_death219
-#define FRAME_death219        	326
-#undef FRAME_death220
-#define FRAME_death220        	327
-#undef FRAME_death221
-#define FRAME_death221        	328
-#undef FRAME_death222
-#define FRAME_death222        	329
-#undef FRAME_death223
-#define FRAME_death223        	330
-#undef FRAME_death224
-#define FRAME_death224        	331
-#undef FRAME_death225
-#define FRAME_death225        	332
-#undef FRAME_death226
-#define FRAME_death226        	333
-#undef FRAME_death227
-#define FRAME_death227        	334
-#undef FRAME_death228
-#define FRAME_death228        	335
-#undef FRAME_death229
-#define FRAME_death229        	336
-#undef FRAME_death230
-#define FRAME_death230        	337
-#undef FRAME_death231
-#define FRAME_death231        	338
-#undef FRAME_death232
-#define FRAME_death232        	339
-#undef FRAME_death233
-#define FRAME_death233        	340
-#undef FRAME_death234
-#define FRAME_death234        	341
-#undef FRAME_death235
-#define FRAME_death235        	342
-#undef FRAME_death301
-#define FRAME_death301        	343
-#undef FRAME_death302
-#define FRAME_death302        	344
-#undef FRAME_death303
-#define FRAME_death303        	345
-#undef FRAME_death304
-#define FRAME_death304        	346
-#undef FRAME_death305
-#define FRAME_death305        	347
-#undef FRAME_death306
-#define FRAME_death306        	348
-#undef FRAME_death307
-#define FRAME_death307        	349
-#undef FRAME_death308
-#define FRAME_death308        	350
-#undef FRAME_death309
-#define FRAME_death309        	351
-#undef FRAME_death310
-#define FRAME_death310        	352
-#undef FRAME_death311
-#define FRAME_death311        	353
-#undef FRAME_death312
-#define FRAME_death312        	354
-#undef FRAME_death313
-#define FRAME_death313        	355
-#undef FRAME_death314
-#define FRAME_death314        	356
-#undef FRAME_death315
-#define FRAME_death315        	357
-#undef FRAME_death316
-#define FRAME_death316        	358
-#undef FRAME_death317
-#define FRAME_death317        	359
-#undef FRAME_death318
-#define FRAME_death318        	360
-#undef FRAME_death319
-#define FRAME_death319        	361
-#undef FRAME_death320
-#define FRAME_death320        	362
-#define FRAME_death321        	363
-#define FRAME_death322        	364
-#define FRAME_death323        	365
-#define FRAME_death324        	366
-#define FRAME_death325        	367
-#define FRAME_death326        	368
-#define FRAME_death327        	369
-#define FRAME_death328        	370
-#define FRAME_death329        	371
-#define FRAME_death330        	372
-#define FRAME_death331        	373
-#define FRAME_death332        	374
-#define FRAME_death333        	375
-#define FRAME_death334        	376
-#define FRAME_death335        	377
-#define FRAME_death336        	378
-#define FRAME_death337        	379
-#define FRAME_death338        	380
-#define FRAME_death339        	381
-#define FRAME_death340        	382
-#define FRAME_death341        	383
-#define FRAME_death342        	384
-#define FRAME_death343        	385
-#define FRAME_death344        	386
-#define FRAME_death345        	387
-#define FRAME_death401        	388
-#define FRAME_death402        	389
-#define FRAME_death403        	390
-#define FRAME_death404        	391
-#define FRAME_death405        	392
-#define FRAME_death406        	393
-#define FRAME_death407        	394
-#define FRAME_death408        	395
-#define FRAME_death409        	396
-#define FRAME_death410        	397
-#define FRAME_death411        	398
-#define FRAME_death412        	399
-#define FRAME_death413        	400
-#define FRAME_death414        	401
-#define FRAME_death415        	402
-#define FRAME_death416        	403
-#define FRAME_death417        	404
-#define FRAME_death418        	405
-#define FRAME_death419        	406
-#define FRAME_death420        	407
-#define FRAME_death421        	408
-#define FRAME_death422        	409
-#define FRAME_death423        	410
-#define FRAME_death424        	411
-#define FRAME_death425        	412
-#define FRAME_death426        	413
-#define FRAME_death427        	414
-#define FRAME_death428        	415
-#define FRAME_death429        	416
-#define FRAME_death430        	417
-#define FRAME_death431        	418
-#define FRAME_death432        	419
-#define FRAME_death433        	420
-#define FRAME_death434        	421
-#define FRAME_death435        	422
-#define FRAME_death436        	423
-#define FRAME_death437        	424
-#define FRAME_death438        	425
-#define FRAME_death439        	426
-#define FRAME_death440        	427
-#define FRAME_death441        	428
-#define FRAME_death442        	429
-#define FRAME_death443        	430
-#define FRAME_death444        	431
-#define FRAME_death445        	432
-#define FRAME_death446        	433
-#define FRAME_death447        	434
-#define FRAME_death448        	435
-#define FRAME_death449        	436
-#define FRAME_death450        	437
-#define FRAME_death451        	438
-#define FRAME_death452        	439
-#define FRAME_death453        	440
-#define FRAME_death501        	441
-#define FRAME_death502        	442
-#define FRAME_death503        	443
-#define FRAME_death504        	444
-#define FRAME_death505        	445
-#define FRAME_death506        	446
-#define FRAME_death507        	447
-#define FRAME_death508        	448
-#define FRAME_death509        	449
-#define FRAME_death510        	450
-#define FRAME_death511        	451
-#define FRAME_death512        	452
-#define FRAME_death513        	453
-#define FRAME_death514        	454
-#define FRAME_death515        	455
-#define FRAME_death516        	456
-#define FRAME_death517        	457
-#define FRAME_death518        	458
-#define FRAME_death519        	459
-#define FRAME_death520        	460
-#define FRAME_death521        	461
-#define FRAME_death522        	462
-#define FRAME_death523        	463
-#define FRAME_death524        	464
-#define FRAME_death601        	465
-#define FRAME_death602        	466
-#define FRAME_death603        	467
-#define FRAME_death604        	468
-#define FRAME_death605        	469
-#define FRAME_death606        	470
-#define FRAME_death607        	471
-#define FRAME_death608        	472
-#define FRAME_death609        	473
-#define FRAME_death610        	474
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.200000
@@ -62168,7 +55207,7 @@ void soldier_idle (edict_t* self)
 
 void soldier_cock (edict_t* self)
 {
-	if (self->s.frame == FRAME_stand322)
+	if (self->s.frame == 197)
 		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
 	else
 		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_NORM, 0);
@@ -62214,7 +55253,7 @@ mframe_t soldier_frames_stand1 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t soldier_move_stand1 = {FRAME_stand101, FRAME_stand130, soldier_frames_stand1, soldier_stand};
+mmove_t soldier_move_stand1 = {146, 175, soldier_frames_stand1, soldier_stand};
 
 mframe_t soldier_frames_stand3 [] =
 {
@@ -62261,7 +55300,7 @@ mframe_t soldier_frames_stand3 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
+mmove_t soldier_move_stand3 = {176, 214, soldier_frames_stand3, soldier_stand};
 
 
 void soldier_stand (edict_t* self)
@@ -62280,7 +55319,7 @@ void soldier_stand (edict_t* self)
 void soldier_walk1_random (edict_t* self)
 {
 	if (random() > 0.1)
-		self->monsterinfo.nextframe = FRAME_walk101;
+		self->monsterinfo.nextframe = 215;
 }
 
 mframe_t soldier_frames_walk1 [] =
@@ -62319,7 +55358,7 @@ mframe_t soldier_frames_walk1 [] =
 	{ai_walk, 0,  NULL},
 	{ai_walk, 0,  NULL},
 };
-mmove_t soldier_move_walk1 = {FRAME_walk101, FRAME_walk133, soldier_frames_walk1, NULL};
+mmove_t soldier_move_walk1 = {215, 247, soldier_frames_walk1, NULL};
 
 mframe_t soldier_frames_walk2 [] =
 {
@@ -62334,7 +55373,7 @@ mframe_t soldier_frames_walk2 [] =
 	{ai_walk, 6,  NULL},
 	{ai_walk, 7,  NULL},
 };
-mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2, NULL};
+mmove_t soldier_move_walk2 = {256, 265, soldier_frames_walk2, NULL};
 
 void soldier_walk (edict_t* self)
 {
@@ -62356,7 +55395,7 @@ mframe_t soldier_frames_start_run [] =
 	{ai_run, 7,  NULL},
 	{ai_run, 5,  NULL},
 };
-mmove_t soldier_move_start_run = {FRAME_run01, FRAME_run02, soldier_frames_start_run, soldier_run};
+mmove_t soldier_move_start_run = {97, 98, soldier_frames_start_run, soldier_run};
 
 mframe_t soldier_frames_run [] =
 {
@@ -62367,7 +55406,7 @@ mframe_t soldier_frames_run [] =
 	{ai_run, 10, NULL},
 	{ai_run, 15, NULL},
 };
-mmove_t soldier_move_run = {FRAME_run03, FRAME_run08, soldier_frames_run, NULL};
+mmove_t soldier_move_run = {99, 104, soldier_frames_run, NULL};
 
 void soldier_run (edict_t* self)
 {
@@ -62402,7 +55441,7 @@ mframe_t soldier_frames_pain1 [] =
 	{ai_move, 1,  NULL},
 	{ai_move, 0,  NULL},
 };
-mmove_t soldier_move_pain1 = {FRAME_pain101, FRAME_pain105, soldier_frames_pain1, soldier_run};
+mmove_t soldier_move_pain1 = {50, 54, soldier_frames_pain1, soldier_run};
 
 mframe_t soldier_frames_pain2 [] =
 {
@@ -62414,7 +55453,7 @@ mframe_t soldier_frames_pain2 [] =
 	{ai_move, 3,   NULL},
 	{ai_move, 2,   NULL},
 };
-mmove_t soldier_move_pain2 = {FRAME_pain201, FRAME_pain207, soldier_frames_pain2, soldier_run};
+mmove_t soldier_move_pain2 = {55, 61, soldier_frames_pain2, soldier_run};
 
 mframe_t soldier_frames_pain3 [] =
 {
@@ -62437,7 +55476,7 @@ mframe_t soldier_frames_pain3 [] =
 	{ai_move, 3,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t soldier_move_pain3 = {FRAME_pain301, FRAME_pain318, soldier_frames_pain3, soldier_run};
+mmove_t soldier_move_pain3 = {62, 79, soldier_frames_pain3, soldier_run};
 
 mframe_t soldier_frames_pain4 [] =
 {
@@ -62459,7 +55498,7 @@ mframe_t soldier_frames_pain4 [] =
 	{ai_move, 2,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_pain4 = {FRAME_pain401, FRAME_pain417, soldier_frames_pain4, soldier_run};
+mmove_t soldier_move_pain4 = {80, 96, soldier_frames_pain4, soldier_run};
 
 static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -62597,9 +55636,9 @@ void soldier_attack1_refire1 (edict_t* self)
 		return;
 
 	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attak102;
+		self->monsterinfo.nextframe = 1;
 	else
-		self->monsterinfo.nextframe = FRAME_attak110;
+		self->monsterinfo.nextframe = 9;
 }
 
 void soldier_attack1_refire2 (edict_t* self)
@@ -62611,7 +55650,7 @@ void soldier_attack1_refire2 (edict_t* self)
 		return;
 
 	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attak102;
+		self->monsterinfo.nextframe = 1;
 }
 
 mframe_t soldier_frames_attack1 [] =
@@ -62629,7 +55668,7 @@ mframe_t soldier_frames_attack1 [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
 };
-mmove_t soldier_move_attack1 = {FRAME_attak101, FRAME_attak112, soldier_frames_attack1, soldier_run};
+mmove_t soldier_move_attack1 = {0, 11, soldier_frames_attack1, soldier_run};
 
 // ATTACK2 (blaster/shotgun)
 
@@ -62647,9 +55686,9 @@ void soldier_attack2_refire1 (edict_t* self)
 		return;
 
 	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attak204;
+		self->monsterinfo.nextframe = 15;
 	else
-		self->monsterinfo.nextframe = FRAME_attak216;
+		self->monsterinfo.nextframe = 27;
 }
 
 void soldier_attack2_refire2 (edict_t* self)
@@ -62661,7 +55700,7 @@ void soldier_attack2_refire2 (edict_t* self)
 		return;
 
 	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-		self->monsterinfo.nextframe = FRAME_attak204;
+		self->monsterinfo.nextframe = 15;
 }
 
 mframe_t soldier_frames_attack2 [] =
@@ -62685,7 +55724,7 @@ mframe_t soldier_frames_attack2 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack2 = {FRAME_attak201, FRAME_attak218, soldier_frames_attack2, soldier_run};
+mmove_t soldier_move_attack2 = {12, 29, soldier_frames_attack2, soldier_run};
 
 // ATTACK3 (duck and shoot)
 
@@ -62717,7 +55756,7 @@ void soldier_fire3 (edict_t* self)
 void soldier_attack3_refire (edict_t* self)
 {
 	if ((level.time + 0.4) < self->monsterinfo.pausetime)
-		self->monsterinfo.nextframe = FRAME_attak303;
+		self->monsterinfo.nextframe = 32;
 }
 
 mframe_t soldier_frames_attack3 [] =
@@ -62732,7 +55771,7 @@ mframe_t soldier_frames_attack3 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack3 = {FRAME_attak301, FRAME_attak309, soldier_frames_attack3, soldier_run};
+mmove_t soldier_move_attack3 = {30, 38, soldier_frames_attack3, soldier_run};
 
 // ATTACK4 (machinegun)
 
@@ -62756,7 +55795,7 @@ mframe_t soldier_frames_attack4 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_attack4, soldier_run};
+mmove_t soldier_move_attack4 = {39, 44, soldier_frames_attack4, soldier_run};
 
 // ATTACK6 (run & shoot)
 
@@ -62774,7 +55813,7 @@ void soldier_attack6_refire (edict_t* self)
 		return;
 
 	if (skill->value == 3)
-		self->monsterinfo.nextframe = FRAME_runs03;
+		self->monsterinfo.nextframe = 111;
 }
 
 mframe_t soldier_frames_attack6 [] =
@@ -62794,7 +55833,7 @@ mframe_t soldier_frames_attack6 [] =
 	{ai_charge, 12, NULL},
 	{ai_charge, 17, soldier_attack6_refire},
 };
-mmove_t soldier_move_attack6 = {FRAME_runs01, FRAME_runs14, soldier_frames_attack6, soldier_run};
+mmove_t soldier_move_attack6 = {109, 122, soldier_frames_attack6, soldier_run};
 
 void soldier_attack(edict_t* self)
 {
@@ -62851,7 +55890,7 @@ mframe_t soldier_frames_duck [] =
 	{ai_move, 0,  soldier_duck_up},
 	{ai_move, 5,  NULL},
 };
-mmove_t soldier_move_duck = {FRAME_duck01, FRAME_duck05, soldier_frames_duck, soldier_run};
+mmove_t soldier_move_duck = {45, 49, soldier_frames_duck, soldier_run};
 
 void soldier_dodge (edict_t* self, edict_t* attacker, float eta)
 {
@@ -62961,7 +56000,7 @@ mframe_t soldier_frames_death1 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death1 = {FRAME_death101, FRAME_death136, soldier_frames_death1, soldier_dead};
+mmove_t soldier_move_death1 = {272, 307, soldier_frames_death1, soldier_dead};
 
 mframe_t soldier_frames_death2 [] =
 {
@@ -63004,7 +56043,7 @@ mframe_t soldier_frames_death2 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death2 = {FRAME_death201, FRAME_death235, soldier_frames_death2, soldier_dead};
+mmove_t soldier_move_death2 = {308, 342, soldier_frames_death2, soldier_dead};
 
 mframe_t soldier_frames_death3 [] =
 {
@@ -63058,7 +56097,7 @@ mframe_t soldier_frames_death3 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death3 = {FRAME_death301, FRAME_death345, soldier_frames_death3, soldier_dead};
+mmove_t soldier_move_death3 = {343, 387, soldier_frames_death3, soldier_dead};
 
 mframe_t soldier_frames_death4 [] =
 {
@@ -63121,7 +56160,7 @@ mframe_t soldier_frames_death4 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death4 = {FRAME_death401, FRAME_death453, soldier_frames_death4, soldier_dead};
+mmove_t soldier_move_death4 = {388, 440, soldier_frames_death4, soldier_dead};
 
 mframe_t soldier_frames_death5 [] =
 {
@@ -63152,7 +56191,7 @@ mframe_t soldier_frames_death5 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death5 = {FRAME_death501, FRAME_death524, soldier_frames_death5, soldier_dead};
+mmove_t soldier_move_death5 = {441, 464, soldier_frames_death5, soldier_dead};
 
 mframe_t soldier_frames_death6 [] =
 {
@@ -63167,7 +56206,7 @@ mframe_t soldier_frames_death6 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death6 = {FRAME_death601, FRAME_death610, soldier_frames_death6, soldier_dead};
+mmove_t soldier_move_death6 = {465, 474, soldier_frames_death6, soldier_dead};
 
 static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
@@ -63320,260 +56359,6 @@ SUPERTANK
 
 // This file generated by ModelGen - Do NOT Modify
 
-#define FRAME_attak1_1        	0
-#define FRAME_attak1_2        	1
-#define FRAME_attak1_3        	2
-#define FRAME_attak1_4        	3
-#define FRAME_attak1_5        	4
-#define FRAME_attak1_6        	5
-#define FRAME_attak1_7        	6
-#define FRAME_attak1_8        	7
-#define FRAME_attak1_9        	8
-#define FRAME_attak1_10       	9
-#define FRAME_attak1_11       	10
-#define FRAME_attak1_12       	11
-#define FRAME_attak1_13       	12
-#define FRAME_attak1_14       	13
-#define FRAME_attak1_15       	14
-#define FRAME_attak1_16       	15
-#define FRAME_attak1_17       	16
-#define FRAME_attak1_18       	17
-#define FRAME_attak1_19       	18
-#define FRAME_attak1_20       	19
-#define FRAME_attak2_1        	20
-#define FRAME_attak2_2        	21
-#define FRAME_attak2_3        	22
-#define FRAME_attak2_4        	23
-#define FRAME_attak2_5        	24
-#define FRAME_attak2_6        	25
-#define FRAME_attak2_7        	26
-#define FRAME_attak2_8        	27
-#define FRAME_attak2_9        	28
-#define FRAME_attak2_10       	29
-#define FRAME_attak2_11       	30
-#define FRAME_attak2_12       	31
-#define FRAME_attak2_13       	32
-#define FRAME_attak2_14       	33
-#define FRAME_attak2_15       	34
-#define FRAME_attak2_16       	35
-#define FRAME_attak2_17       	36
-#define FRAME_attak2_18       	37
-#define FRAME_attak2_19       	38
-#define FRAME_attak2_20       	39
-#define FRAME_attak2_21       	40
-#define FRAME_attak2_22       	41
-#define FRAME_attak2_23       	42
-#define FRAME_attak2_24       	43
-#define FRAME_attak2_25       	44
-#define FRAME_attak2_26       	45
-#define FRAME_attak2_27       	46
-#define FRAME_attak3_1        	47
-#define FRAME_attak3_2        	48
-#define FRAME_attak3_3        	49
-#define FRAME_attak3_4        	50
-#define FRAME_attak3_5        	51
-#define FRAME_attak3_6        	52
-#define FRAME_attak3_7        	53
-#define FRAME_attak3_8        	54
-#define FRAME_attak3_9        	55
-#define FRAME_attak3_10       	56
-#define FRAME_attak3_11       	57
-#define FRAME_attak3_12       	58
-#define FRAME_attak3_13       	59
-#define FRAME_attak3_14       	60
-#define FRAME_attak3_15       	61
-#define FRAME_attak3_16       	62
-#define FRAME_attak3_17       	63
-#define FRAME_attak3_18       	64
-#define FRAME_attak3_19       	65
-#define FRAME_attak3_20       	66
-#define FRAME_attak3_21       	67
-#define FRAME_attak3_22       	68
-#define FRAME_attak3_23       	69
-#define FRAME_attak3_24       	70
-#define FRAME_attak3_25       	71
-#define FRAME_attak3_26       	72
-#define FRAME_attak3_27       	73
-#define FRAME_attak4_1        	74
-#define FRAME_attak4_2        	75
-#define FRAME_attak4_3        	76
-#define FRAME_attak4_4        	77
-#define FRAME_attak4_5        	78
-#define FRAME_attak4_6        	79
-#define FRAME_backwd_1        	80
-#define FRAME_backwd_2        	81
-#define FRAME_backwd_3        	82
-#define FRAME_backwd_4        	83
-#define FRAME_backwd_5        	84
-#define FRAME_backwd_6        	85
-#define FRAME_backwd_7        	86
-#define FRAME_backwd_8        	87
-#define FRAME_backwd_9        	88
-#define FRAME_backwd_10       	89
-#define FRAME_backwd_11       	90
-#define FRAME_backwd_12       	91
-#define FRAME_backwd_13       	92
-#define FRAME_backwd_14       	93
-#define FRAME_backwd_15       	94
-#define FRAME_backwd_16       	95
-#define FRAME_backwd_17       	96
-#define FRAME_backwd_18       	97
-#define FRAME_death_1         	98
-#define FRAME_death_2         	99
-#define FRAME_death_3         	100
-#define FRAME_death_4         	101
-#define FRAME_death_5         	102
-#define FRAME_death_6         	103
-#define FRAME_death_7         	104
-#define FRAME_death_8         	105
-#define FRAME_death_9         	106
-#define FRAME_death_10        	107
-#define FRAME_death_11        	108
-#define FRAME_death_12        	109
-#define FRAME_death_13        	110
-#define FRAME_death_14        	111
-#define FRAME_death_15        	112
-#define FRAME_death_16        	113
-#define FRAME_death_17        	114
-#define FRAME_death_18        	115
-#define FRAME_death_19        	116
-#define FRAME_death_20        	117
-#define FRAME_death_21        	118
-#define FRAME_death_22        	119
-#define FRAME_death_23        	120
-#define FRAME_death_24        	121
-#define FRAME_death_31        	122
-#define FRAME_death_32        	123
-#define FRAME_death_33        	124
-#define FRAME_death_45        	125
-#define FRAME_death_46        	126
-#define FRAME_death_47        	127
-#define FRAME_forwrd_1        	128
-#define FRAME_forwrd_2        	129
-#define FRAME_forwrd_3        	130
-#define FRAME_forwrd_4        	131
-#define FRAME_forwrd_5        	132
-#define FRAME_forwrd_6        	133
-#define FRAME_forwrd_7        	134
-#define FRAME_forwrd_8        	135
-#define FRAME_forwrd_9        	136
-#define FRAME_forwrd_10       	137
-#define FRAME_forwrd_11       	138
-#define FRAME_forwrd_12       	139
-#define FRAME_forwrd_13       	140
-#define FRAME_forwrd_14       	141
-#define FRAME_forwrd_15       	142
-#define FRAME_forwrd_16       	143
-#define FRAME_forwrd_17       	144
-#define FRAME_forwrd_18       	145
-#define FRAME_left_1          	146
-#define FRAME_left_2          	147
-#define FRAME_left_3          	148
-#define FRAME_left_4          	149
-#define FRAME_left_5          	150
-#define FRAME_left_6          	151
-#define FRAME_left_7          	152
-#define FRAME_left_8          	153
-#define FRAME_left_9          	154
-#define FRAME_left_10         	155
-#define FRAME_left_11         	156
-#define FRAME_left_12         	157
-#define FRAME_left_13         	158
-#define FRAME_left_14         	159
-#define FRAME_left_15         	160
-#define FRAME_left_16         	161
-#define FRAME_left_17         	162
-#define FRAME_left_18         	163
-#define FRAME_pain1_1         	164
-#define FRAME_pain1_2         	165
-#define FRAME_pain1_3         	166
-#define FRAME_pain1_4         	167
-#define FRAME_pain2_5         	168
-#define FRAME_pain2_6         	169
-#define FRAME_pain2_7         	170
-#define FRAME_pain2_8         	171
-#define FRAME_pain3_9         	172
-#define FRAME_pain3_10        	173
-#define FRAME_pain3_11        	174
-#define FRAME_pain3_12        	175
-#define FRAME_right_1         	176
-#define FRAME_right_2         	177
-#define FRAME_right_3         	178
-#define FRAME_right_4         	179
-#define FRAME_right_5         	180
-#define FRAME_right_6         	181
-#define FRAME_right_7         	182
-#define FRAME_right_8         	183
-#define FRAME_right_9         	184
-#define FRAME_right_10        	185
-#define FRAME_right_11        	186
-#define FRAME_right_12        	187
-#define FRAME_right_13        	188
-#define FRAME_right_14        	189
-#define FRAME_right_15        	190
-#define FRAME_right_16        	191
-#define FRAME_right_17        	192
-#define FRAME_right_18        	193
-#define FRAME_stand_1         	194
-#define FRAME_stand_2         	195
-#define FRAME_stand_3         	196
-#define FRAME_stand_4         	197
-#define FRAME_stand_5         	198
-#define FRAME_stand_6         	199
-#define FRAME_stand_7         	200
-#define FRAME_stand_8         	201
-#define FRAME_stand_9         	202
-#define FRAME_stand_10        	203
-#define FRAME_stand_11        	204
-#define FRAME_stand_12        	205
-#define FRAME_stand_13        	206
-#define FRAME_stand_14        	207
-#define FRAME_stand_15        	208
-#define FRAME_stand_16        	209
-#define FRAME_stand_17        	210
-#define FRAME_stand_18        	211
-#define FRAME_stand_19        	212
-#define FRAME_stand_20        	213
-#define FRAME_stand_21        	214
-#define FRAME_stand_22        	215
-#define FRAME_stand_23        	216
-#define FRAME_stand_24        	217
-#define FRAME_stand_25        	218
-#define FRAME_stand_26        	219
-#define FRAME_stand_27        	220
-#define FRAME_stand_28        	221
-#define FRAME_stand_29        	222
-#define FRAME_stand_30        	223
-#define FRAME_stand_31        	224
-#define FRAME_stand_32        	225
-#define FRAME_stand_33        	226
-#define FRAME_stand_34        	227
-#define FRAME_stand_35        	228
-#define FRAME_stand_36        	229
-#define FRAME_stand_37        	230
-#define FRAME_stand_38        	231
-#define FRAME_stand_39        	232
-#define FRAME_stand_40        	233
-#define FRAME_stand_41        	234
-#define FRAME_stand_42        	235
-#define FRAME_stand_43        	236
-#define FRAME_stand_44        	237
-#define FRAME_stand_45        	238
-#define FRAME_stand_46        	239
-#define FRAME_stand_47        	240
-#define FRAME_stand_48        	241
-#define FRAME_stand_49        	242
-#define FRAME_stand_50        	243
-#define FRAME_stand_51        	244
-#define FRAME_stand_52        	245
-#define FRAME_stand_53        	246
-#define FRAME_stand_54        	247
-#define FRAME_stand_55        	248
-#define FRAME_stand_56        	249
-#define FRAME_stand_57        	250
-#define FRAME_stand_58        	251
-#define FRAME_stand_59        	252
-#define FRAME_stand_60        	253
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
@@ -63679,7 +56464,7 @@ mframe_t supertank_frames_stand []=
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_stand, NULL};
+mmove_t	supertank_move_stand = {194, 253, supertank_frames_stand, NULL};
 
 void supertank_stand (edict_t* self)
 {
@@ -63708,7 +56493,7 @@ mframe_t supertank_frames_run [] =
 	{ai_run, 12,	NULL},
 	{ai_run, 12,	NULL},
 };
-mmove_t	supertank_move_run = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_frames_run, NULL};
+mmove_t	supertank_move_run = {128, 145, supertank_frames_run, NULL};
 
 //
 // walk
@@ -63736,7 +56521,7 @@ mframe_t supertank_frames_forward [] =
 	{ai_walk, 4,	NULL},
 	{ai_walk, 4,	NULL},
 };
-mmove_t	supertank_move_forward = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_frames_forward, NULL};
+mmove_t	supertank_move_forward = {128, 145, supertank_frames_forward, NULL};
 
 void supertank_forward (edict_t* self)
 {
@@ -63777,7 +56562,7 @@ mframe_t supertank_frames_turn_right [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_turn_right = {FRAME_right_1, FRAME_right_18, supertank_frames_turn_right, supertank_run};
+mmove_t supertank_move_turn_right = {176, 193, supertank_frames_turn_right, supertank_run};
 
 mframe_t supertank_frames_turn_left [] =
 {
@@ -63800,7 +56585,7 @@ mframe_t supertank_frames_turn_left [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_turn_left = {FRAME_left_1, FRAME_left_18, supertank_frames_turn_left, supertank_run};
+mmove_t supertank_move_turn_left = {146, 163, supertank_frames_turn_left, supertank_run};
 
 
 mframe_t supertank_frames_pain3 [] =
@@ -63810,7 +56595,7 @@ mframe_t supertank_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain3 = {FRAME_pain3_9, FRAME_pain3_12, supertank_frames_pain3, supertank_run};
+mmove_t supertank_move_pain3 = {172, 175, supertank_frames_pain3, supertank_run};
 
 mframe_t supertank_frames_pain2 [] =
 {
@@ -63819,7 +56604,7 @@ mframe_t supertank_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain2 = {FRAME_pain2_5, FRAME_pain2_8, supertank_frames_pain2, supertank_run};
+mmove_t supertank_move_pain2 = {168, 171, supertank_frames_pain2, supertank_run};
 
 mframe_t supertank_frames_pain1 [] =
 {
@@ -63828,7 +56613,7 @@ mframe_t supertank_frames_pain1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain1 = {FRAME_pain1_1, FRAME_pain1_4, supertank_frames_pain1, supertank_run};
+mmove_t supertank_move_pain1 = {164, 167, supertank_frames_pain1, supertank_run};
 
 mframe_t supertank_frames_death1 [] =
 {
@@ -63857,7 +56642,7 @@ mframe_t supertank_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	BossExplode},
 };
-mmove_t supertank_move_death = {FRAME_death_1, FRAME_death_24, supertank_frames_death1, supertank_dead};
+mmove_t supertank_move_death = {98, 121, supertank_frames_death1, supertank_dead};
 
 mframe_t supertank_frames_backward[] =
 {
@@ -63880,7 +56665,7 @@ mframe_t supertank_frames_backward[] =
 	{ai_walk, 0,	NULL},
 	{ai_walk, 0,	NULL},
 };
-mmove_t	supertank_move_backward = {FRAME_backwd_1, FRAME_backwd_18, supertank_frames_backward, NULL};
+mmove_t	supertank_move_backward = {80, 97, supertank_frames_backward, NULL};
 
 mframe_t supertank_frames_attack4[]=
 {
@@ -63891,7 +56676,7 @@ mframe_t supertank_frames_attack4[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_attack4 = {FRAME_attak4_1, FRAME_attak4_6, supertank_frames_attack4, supertank_run};
+mmove_t supertank_move_attack4 = {74, 79, supertank_frames_attack4, supertank_run};
 
 mframe_t supertank_frames_attack3[]=
 {
@@ -63923,7 +56708,7 @@ mframe_t supertank_frames_attack3[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_attack3 = {FRAME_attak3_1, FRAME_attak3_27, supertank_frames_attack3, supertank_run};
+mmove_t supertank_move_attack3 = {47, 73, supertank_frames_attack3, supertank_run};
 
 mframe_t supertank_frames_attack2[]=
 {
@@ -63955,7 +56740,7 @@ mframe_t supertank_frames_attack2[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_attack2 = {FRAME_attak2_1, FRAME_attak2_27, supertank_frames_attack2, supertank_run};
+mmove_t supertank_move_attack2 = {20, 46, supertank_frames_attack2, supertank_run};
 
 mframe_t supertank_frames_attack1[]=
 {
@@ -63967,7 +56752,7 @@ mframe_t supertank_frames_attack1[]=
 	{ai_charge,	0,	supertankMachineGun},
 
 };
-mmove_t supertank_move_attack1 = {FRAME_attak1_1, FRAME_attak1_6, supertank_frames_attack1, supertank_reattack1};
+mmove_t supertank_move_attack1 = {0, 5, supertank_frames_attack1, supertank_reattack1};
 
 mframe_t supertank_frames_end_attack1[]=
 {
@@ -63986,7 +56771,7 @@ mframe_t supertank_frames_end_attack1[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_end_attack1 = {FRAME_attak1_7, FRAME_attak1_20, supertank_frames_end_attack1, supertank_run};
+mmove_t supertank_move_end_attack1 = {6, 19, supertank_frames_end_attack1, supertank_run};
 
 
 void supertank_reattack1(edict_t* self)
@@ -64017,7 +56802,7 @@ static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage
 
 	// Don't go into pain if he's firing his rockets
 	if (skill->value >= 2)
-		if ( (self->s.frame >= FRAME_attak2_1) && (self->s.frame <= FRAME_attak2_14) )
+		if ( (self->s.frame >= 20) && (self->s.frame <= 33) )
 			return;
 
 	self->pain_debounce_time = level.time + 3;
@@ -64051,9 +56836,9 @@ void supertankRocket (edict_t* self)
 	vec3_t	vec;
 	int		flash_number;
 
-	if (self->s.frame == FRAME_attak2_8)
+	if (self->s.frame == 27)
 		flash_number = MZ2_SUPERTANK_ROCKET_1;
-	else if (self->s.frame == FRAME_attak2_11)
+	else if (self->s.frame == 30)
 		flash_number = MZ2_SUPERTANK_ROCKET_2;
 	else // (self->s.frame == FRAME_attak2_14)
 		flash_number = MZ2_SUPERTANK_ROCKET_3;
@@ -64077,7 +56862,7 @@ void supertankMachineGun (edict_t* self)
 	vec3_t	forward, right;
 	int		flash_number;
 
-	flash_number = MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak1_1);
+	flash_number = MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - 0);
 
 	//FIXME!!!
 	dir[0] = 0;
@@ -64258,564 +57043,6 @@ void SP_monster_supertank (edict_t* self)
 	walkmonster_start(self);
 }
 
-#undef FRAME_stand01
-#define FRAME_stand01         	0
-#undef FRAME_stand02
-#define FRAME_stand02         	1
-#undef FRAME_stand03
-#define FRAME_stand03         	2
-#undef FRAME_stand04
-#define FRAME_stand04         	3
-#undef FRAME_stand05
-#define FRAME_stand05         	4
-#undef FRAME_stand06
-#define FRAME_stand06         	5
-#undef FRAME_stand07
-#define FRAME_stand07         	6
-#undef FRAME_stand08
-#define FRAME_stand08         	7
-#undef FRAME_stand09
-#define FRAME_stand09         	8
-#undef FRAME_stand10
-#define FRAME_stand10         	9
-#undef FRAME_stand11
-#define FRAME_stand11         	10
-#undef FRAME_stand12
-#define FRAME_stand12         	11
-#undef FRAME_stand13
-#define FRAME_stand13         	12
-#undef FRAME_stand14
-#define FRAME_stand14         	13
-#undef FRAME_stand15
-#define FRAME_stand15         	14
-#undef FRAME_stand16
-#define FRAME_stand16         	15
-#undef FRAME_stand17
-#define FRAME_stand17         	16
-#undef FRAME_stand18
-#define FRAME_stand18         	17
-#undef FRAME_stand19
-#define FRAME_stand19         	18
-#undef FRAME_stand20
-#define FRAME_stand20         	19
-#undef FRAME_stand21
-#define FRAME_stand21         	20
-#undef FRAME_stand22
-#define FRAME_stand22         	21
-#undef FRAME_stand23
-#define FRAME_stand23         	22
-#undef FRAME_stand24
-#define FRAME_stand24         	23
-#undef FRAME_stand25
-#define FRAME_stand25         	24
-#undef FRAME_stand26
-#define FRAME_stand26         	25
-#undef FRAME_stand27
-#define FRAME_stand27         	26
-#undef FRAME_stand28
-#define FRAME_stand28         	27
-#undef FRAME_stand29
-#define FRAME_stand29         	28
-#undef FRAME_stand30
-#define FRAME_stand30         	29
-#undef FRAME_walk01
-#define FRAME_walk01          	30
-#undef FRAME_walk02
-#define FRAME_walk02          	31
-#undef FRAME_walk03
-#define FRAME_walk03          	32
-#undef FRAME_walk04
-#define FRAME_walk04          	33
-#undef FRAME_walk05
-#define FRAME_walk05          	34
-#undef FRAME_walk06
-#define FRAME_walk06          	35
-#undef FRAME_walk07
-#define FRAME_walk07          	36
-#undef FRAME_walk08
-#define FRAME_walk08          	37
-#undef FRAME_walk09
-#define FRAME_walk09          	38
-#undef FRAME_walk10
-#define FRAME_walk10          	39
-#undef FRAME_walk11
-#define FRAME_walk11          	40
-#undef FRAME_walk12
-#define FRAME_walk12          	41
-#undef FRAME_walk13
-#define FRAME_walk13          	42
-#undef FRAME_walk14
-#define FRAME_walk14          	43
-#undef FRAME_walk15
-#define FRAME_walk15          	44
-#undef FRAME_walk16
-#define FRAME_walk16          	45
-#undef FRAME_walk17
-#define FRAME_walk17          	46
-#undef FRAME_walk18
-#define FRAME_walk18          	47
-#undef FRAME_walk19
-#define FRAME_walk19          	48
-#undef FRAME_walk20
-#define FRAME_walk20          	49
-#undef FRAME_walk21
-#define FRAME_walk21          	50
-#undef FRAME_walk22
-#define FRAME_walk22          	51
-#undef FRAME_walk23
-#define FRAME_walk23          	52
-#undef FRAME_walk24
-#define FRAME_walk24          	53
-#undef FRAME_walk25
-#define FRAME_walk25          	54
-#undef FRAME_attak101
-#define FRAME_attak101        	55
-#undef FRAME_attak102
-#define FRAME_attak102        	56
-#undef FRAME_attak103
-#define FRAME_attak103        	57
-#undef FRAME_attak104
-#define FRAME_attak104        	58
-#undef FRAME_attak105
-#define FRAME_attak105        	59
-#undef FRAME_attak106
-#define FRAME_attak106        	60
-#undef FRAME_attak107
-#define FRAME_attak107        	61
-#undef FRAME_attak108
-#define FRAME_attak108        	62
-#undef FRAME_attak109
-#define FRAME_attak109        	63
-#undef FRAME_attak110
-#define FRAME_attak110        	64
-#undef FRAME_attak111
-#define FRAME_attak111        	65
-#undef FRAME_attak112
-#define FRAME_attak112        	66
-#undef FRAME_attak113
-#define FRAME_attak113        	67
-#undef FRAME_attak114
-#define FRAME_attak114        	68
-#undef FRAME_attak115
-#define FRAME_attak115        	69
-#undef FRAME_attak116
-#define FRAME_attak116        	70
-#undef FRAME_attak117
-#define FRAME_attak117        	71
-#undef FRAME_attak118
-#define FRAME_attak118        	72
-#undef FRAME_attak119
-#define FRAME_attak119        	73
-#undef FRAME_attak120
-#define FRAME_attak120        	74
-#undef FRAME_attak121
-#define FRAME_attak121        	75
-#undef FRAME_attak122
-#define FRAME_attak122        	76
-#undef FRAME_attak201
-#define FRAME_attak201        	77
-#undef FRAME_attak202
-#define FRAME_attak202        	78
-#undef FRAME_attak203
-#define FRAME_attak203        	79
-#undef FRAME_attak204
-#define FRAME_attak204        	80
-#undef FRAME_attak205
-#define FRAME_attak205        	81
-#undef FRAME_attak206
-#define FRAME_attak206        	82
-#undef FRAME_attak207
-#define FRAME_attak207        	83
-#undef FRAME_attak208
-#define FRAME_attak208        	84
-#undef FRAME_attak209
-#define FRAME_attak209        	85
-#undef FRAME_attak210
-#define FRAME_attak210        	86
-#undef FRAME_attak211
-#define FRAME_attak211        	87
-#undef FRAME_attak212
-#define FRAME_attak212        	88
-#undef FRAME_attak213
-#define FRAME_attak213        	89
-#undef FRAME_attak214
-#define FRAME_attak214        	90
-#undef FRAME_attak215
-#define FRAME_attak215        	91
-#undef FRAME_attak216
-#define FRAME_attak216        	92
-#undef FRAME_attak217
-#define FRAME_attak217        	93
-#undef FRAME_attak218
-#define FRAME_attak218        	94
-#undef FRAME_attak219
-#define FRAME_attak219        	95
-#undef FRAME_attak220
-#define FRAME_attak220        	96
-#undef FRAME_attak221
-#define FRAME_attak221        	97
-#undef FRAME_attak222
-#define FRAME_attak222        	98
-#undef FRAME_attak223
-#define FRAME_attak223        	99
-#undef FRAME_attak224
-#define FRAME_attak224        	100
-#undef FRAME_attak225
-#define FRAME_attak225        	101
-#undef FRAME_attak226
-#define FRAME_attak226        	102
-#undef FRAME_attak227
-#define FRAME_attak227        	103
-#undef FRAME_attak228
-#define FRAME_attak228        	104
-#undef FRAME_attak229
-#define FRAME_attak229        	105
-#undef FRAME_attak230
-#define FRAME_attak230        	106
-#define FRAME_attak231        	107
-#define FRAME_attak232        	108
-#define FRAME_attak233        	109
-#define FRAME_attak234        	110
-#define FRAME_attak235        	111
-#define FRAME_attak236        	112
-#define FRAME_attak237        	113
-#define FRAME_attak238        	114
-#undef FRAME_attak301
-#define FRAME_attak301        	115
-#undef FRAME_attak302
-#define FRAME_attak302        	116
-#undef FRAME_attak303
-#define FRAME_attak303        	117
-#undef FRAME_attak304
-#define FRAME_attak304        	118
-#undef FRAME_attak305
-#define FRAME_attak305        	119
-#undef FRAME_attak306
-#define FRAME_attak306        	120
-#undef FRAME_attak307
-#define FRAME_attak307        	121
-#undef FRAME_attak308
-#define FRAME_attak308        	122
-#undef FRAME_attak309
-#define FRAME_attak309        	123
-#undef FRAME_attak310
-#define FRAME_attak310        	124
-#undef FRAME_attak311
-#define FRAME_attak311        	125
-#undef FRAME_attak312
-#define FRAME_attak312        	126
-#undef FRAME_attak313
-#define FRAME_attak313        	127
-#undef FRAME_attak314
-#define FRAME_attak314        	128
-#undef FRAME_attak315
-#define FRAME_attak315        	129
-#undef FRAME_attak316
-#define FRAME_attak316        	130
-#undef FRAME_attak317
-#define FRAME_attak317        	131
-#undef FRAME_attak318
-#define FRAME_attak318        	132
-#undef FRAME_attak319
-#define FRAME_attak319        	133
-#undef FRAME_attak320
-#define FRAME_attak320        	134
-#undef FRAME_attak321
-#define FRAME_attak321        	135
-#undef FRAME_attak322
-#define FRAME_attak322        	136
-#undef FRAME_attak323
-#define FRAME_attak323        	137
-#undef FRAME_attak324
-#define FRAME_attak324        	138
-#undef FRAME_attak325
-#define FRAME_attak325        	139
-#undef FRAME_attak326
-#define FRAME_attak326        	140
-#undef FRAME_attak327
-#define FRAME_attak327        	141
-#undef FRAME_attak328
-#define FRAME_attak328        	142
-#undef FRAME_attak329
-#define FRAME_attak329        	143
-#undef FRAME_attak330
-#define FRAME_attak330        	144
-#undef FRAME_attak331
-#define FRAME_attak331        	145
-#undef FRAME_attak332
-#define FRAME_attak332        	146
-#undef FRAME_attak333
-#define FRAME_attak333        	147
-#undef FRAME_attak334
-#define FRAME_attak334        	148
-#define FRAME_attak335        	149
-#define FRAME_attak336        	150
-#define FRAME_attak337        	151
-#define FRAME_attak338        	152
-#define FRAME_attak339        	153
-#define FRAME_attak340        	154
-#define FRAME_attak341        	155
-#define FRAME_attak342        	156
-#define FRAME_attak343        	157
-#define FRAME_attak344        	158
-#define FRAME_attak345        	159
-#define FRAME_attak346        	160
-#define FRAME_attak347        	161
-#define FRAME_attak348        	162
-#define FRAME_attak349        	163
-#define FRAME_attak350        	164
-#define FRAME_attak351        	165
-#define FRAME_attak352        	166
-#define FRAME_attak353        	167
-#undef FRAME_attak401
-#define FRAME_attak401        	168
-#undef FRAME_attak402
-#define FRAME_attak402        	169
-#undef FRAME_attak403
-#define FRAME_attak403        	170
-#undef FRAME_attak404
-#define FRAME_attak404        	171
-#undef FRAME_attak405
-#define FRAME_attak405        	172
-#undef FRAME_attak406
-#define FRAME_attak406        	173
-#undef FRAME_attak407
-#define FRAME_attak407        	174
-#undef FRAME_attak408
-#define FRAME_attak408        	175
-#undef FRAME_attak409
-#define FRAME_attak409        	176
-#undef FRAME_attak410
-#define FRAME_attak410        	177
-#undef FRAME_attak411
-#define FRAME_attak411        	178
-#undef FRAME_attak412
-#define FRAME_attak412        	179
-#undef FRAME_attak413
-#define FRAME_attak413        	180
-#undef FRAME_attak414
-#define FRAME_attak414        	181
-#undef FRAME_attak415
-#define FRAME_attak415        	182
-#undef FRAME_attak416
-#define FRAME_attak416        	183
-#undef FRAME_attak417
-#define FRAME_attak417        	184
-#undef FRAME_attak418
-#define FRAME_attak418        	185
-#undef FRAME_attak419
-#define FRAME_attak419        	186
-#undef FRAME_attak420
-#define FRAME_attak420        	187
-#undef FRAME_attak421
-#define FRAME_attak421        	188
-#undef FRAME_attak422
-#define FRAME_attak422        	189
-#undef FRAME_attak423
-#define FRAME_attak423        	190
-#undef FRAME_attak424
-#define FRAME_attak424        	191
-#undef FRAME_attak425
-#define FRAME_attak425        	192
-#undef FRAME_attak426
-#define FRAME_attak426        	193
-#define FRAME_attak427        	194
-#define FRAME_attak428        	195
-#define FRAME_attak429        	196
-#undef FRAME_pain101
-#define FRAME_pain101         	197
-#undef FRAME_pain102
-#define FRAME_pain102         	198
-#undef FRAME_pain103
-#define FRAME_pain103         	199
-#undef FRAME_pain104
-#define FRAME_pain104         	200
-#undef FRAME_pain201
-#define FRAME_pain201         	201
-#undef FRAME_pain202
-#define FRAME_pain202         	202
-#undef FRAME_pain203
-#define FRAME_pain203         	203
-#undef FRAME_pain204
-#define FRAME_pain204         	204
-#undef FRAME_pain205
-#define FRAME_pain205         	205
-#undef FRAME_pain301
-#define FRAME_pain301         	206
-#undef FRAME_pain302
-#define FRAME_pain302         	207
-#undef FRAME_pain303
-#define FRAME_pain303         	208
-#undef FRAME_pain304
-#define FRAME_pain304         	209
-#undef FRAME_pain305
-#define FRAME_pain305         	210
-#undef FRAME_pain306
-#define FRAME_pain306         	211
-#undef FRAME_pain307
-#define FRAME_pain307         	212
-#undef FRAME_pain308
-#define FRAME_pain308         	213
-#undef FRAME_pain309
-#define FRAME_pain309         	214
-#undef FRAME_pain310
-#define FRAME_pain310         	215
-#undef FRAME_pain311
-#define FRAME_pain311         	216
-#undef FRAME_pain312
-#define FRAME_pain312         	217
-#undef FRAME_pain313
-#define FRAME_pain313         	218
-#undef FRAME_pain314
-#define FRAME_pain314         	219
-#undef FRAME_pain315
-#define FRAME_pain315         	220
-#undef FRAME_pain316
-#define FRAME_pain316         	221
-#undef FRAME_death101
-#define FRAME_death101        	222
-#undef FRAME_death102
-#define FRAME_death102        	223
-#undef FRAME_death103
-#define FRAME_death103        	224
-#undef FRAME_death104
-#define FRAME_death104        	225
-#undef FRAME_death105
-#define FRAME_death105        	226
-#undef FRAME_death106
-#define FRAME_death106        	227
-#undef FRAME_death107
-#define FRAME_death107        	228
-#undef FRAME_death108
-#define FRAME_death108        	229
-#undef FRAME_death109
-#define FRAME_death109        	230
-#undef FRAME_death110
-#define FRAME_death110        	231
-#undef FRAME_death111
-#define FRAME_death111        	232
-#undef FRAME_death112
-#define FRAME_death112        	233
-#undef FRAME_death113
-#define FRAME_death113        	234
-#undef FRAME_death114
-#define FRAME_death114        	235
-#undef FRAME_death115
-#define FRAME_death115        	236
-#undef FRAME_death116
-#define FRAME_death116        	237
-#undef FRAME_death117
-#define FRAME_death117        	238
-#undef FRAME_death118
-#define FRAME_death118        	239
-#undef FRAME_death119
-#define FRAME_death119        	240
-#undef FRAME_death120
-#define FRAME_death120        	241
-#undef FRAME_death121
-#define FRAME_death121        	242
-#undef FRAME_death122
-#define FRAME_death122        	243
-#undef FRAME_death123
-#define FRAME_death123        	244
-#undef FRAME_death124
-#define FRAME_death124        	245
-#undef FRAME_death125
-#define FRAME_death125        	246
-#undef FRAME_death126
-#define FRAME_death126        	247
-#undef FRAME_death127
-#define FRAME_death127        	248
-#undef FRAME_death128
-#define FRAME_death128        	249
-#undef FRAME_death129
-#define FRAME_death129        	250
-#undef FRAME_death130
-#define FRAME_death130        	251
-#undef FRAME_death131
-#define FRAME_death131        	252
-#undef FRAME_death132
-#define FRAME_death132        	253
-#undef FRAME_recln101
-#define FRAME_recln101        	254
-#undef FRAME_recln102
-#define FRAME_recln102        	255
-#undef FRAME_recln103
-#define FRAME_recln103        	256
-#undef FRAME_recln104
-#define FRAME_recln104        	257
-#undef FRAME_recln105
-#define FRAME_recln105        	258
-#undef FRAME_recln106
-#define FRAME_recln106        	259
-#undef FRAME_recln107
-#define FRAME_recln107        	260
-#undef FRAME_recln108
-#define FRAME_recln108        	261
-#undef FRAME_recln109
-#define FRAME_recln109        	262
-#undef FRAME_recln110
-#define FRAME_recln110        	263
-#undef FRAME_recln111
-#define FRAME_recln111        	264
-#undef FRAME_recln112
-#define FRAME_recln112        	265
-#undef FRAME_recln113
-#define FRAME_recln113        	266
-#undef FRAME_recln114
-#define FRAME_recln114        	267
-#undef FRAME_recln115
-#define FRAME_recln115        	268
-#undef FRAME_recln116
-#define FRAME_recln116        	269
-#undef FRAME_recln117
-#define FRAME_recln117        	270
-#undef FRAME_recln118
-#define FRAME_recln118        	271
-#undef FRAME_recln119
-#define FRAME_recln119        	272
-#undef FRAME_recln120
-#define FRAME_recln120        	273
-#undef FRAME_recln121
-#define FRAME_recln121        	274
-#undef FRAME_recln122
-#define FRAME_recln122        	275
-#undef FRAME_recln123
-#define FRAME_recln123        	276
-#undef FRAME_recln124
-#define FRAME_recln124        	277
-#undef FRAME_recln125
-#define FRAME_recln125        	278
-#undef FRAME_recln126
-#define FRAME_recln126        	279
-#undef FRAME_recln127
-#define FRAME_recln127        	280
-#undef FRAME_recln128
-#define FRAME_recln128        	281
-#undef FRAME_recln129
-#define FRAME_recln129        	282
-#undef FRAME_recln130
-#define FRAME_recln130        	283
-#undef FRAME_recln131
-#define FRAME_recln131        	284
-#undef FRAME_recln132
-#define FRAME_recln132        	285
-#undef FRAME_recln133
-#define FRAME_recln133        	286
-#undef FRAME_recln134
-#define FRAME_recln134        	287
-#undef FRAME_recln135
-#define FRAME_recln135        	288
-#undef FRAME_recln136
-#define FRAME_recln136        	289
-#undef FRAME_recln137
-#define FRAME_recln137        	290
-#undef FRAME_recln138
-#define FRAME_recln138        	291
-#undef FRAME_recln139
-#define FRAME_recln139        	292
-#undef FRAME_recln140
-#define FRAME_recln140        	293
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_tank.h ============ */
@@ -64903,7 +57130,7 @@ mframe_t tank_frames_stand []=
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	tank_move_stand = {FRAME_stand01, FRAME_stand30, tank_frames_stand, NULL};
+mmove_t	tank_move_stand = {0, 29, tank_frames_stand, NULL};
 
 void tank_stand (edict_t* self)
 {
@@ -64924,7 +57151,7 @@ mframe_t tank_frames_start_walk [] =
 	{ai_walk,  6, NULL},
 	{ai_walk, 11, tank_footstep},
 };
-mmove_t	tank_move_start_walk = {FRAME_walk01, FRAME_walk04, tank_frames_start_walk, tank_walk};
+mmove_t	tank_move_start_walk = {30, 33, tank_frames_start_walk, tank_walk};
 
 mframe_t tank_frames_walk [] =
 {
@@ -64946,7 +57173,7 @@ mframe_t tank_frames_walk [] =
 	{ai_walk, 6,	tank_footstep},
 };
 
-mmove_t	tank_move_walk = {FRAME_walk05, FRAME_walk20, tank_frames_walk, NULL};
+mmove_t	tank_move_walk = {34, 49, tank_frames_walk, NULL};
 
 mframe_t tank_frames_stop_walk [] =
 {
@@ -64956,7 +57183,7 @@ mframe_t tank_frames_stop_walk [] =
 	{ai_walk,  2, NULL},
 	{ai_walk,  4, tank_footstep},
 };
-mmove_t	tank_move_stop_walk = {FRAME_walk21, FRAME_walk25, tank_frames_stop_walk, tank_stand};
+mmove_t	tank_move_stop_walk = {50, 54, tank_frames_stop_walk, tank_stand};
 
 void tank_walk (edict_t* self)
 {
@@ -64977,7 +57204,7 @@ mframe_t tank_frames_start_run [] =
 	{ai_run,  6, NULL},
 	{ai_run, 11, tank_footstep},
 };
-mmove_t	tank_move_start_run = {FRAME_walk01, FRAME_walk04, tank_frames_start_run, tank_run};
+mmove_t	tank_move_start_run = {30, 33, tank_frames_start_run, tank_run};
 
 mframe_t tank_frames_run [] =
 {
@@ -64998,7 +57225,7 @@ mframe_t tank_frames_run [] =
 	{ai_run, 6,	NULL},
 	{ai_run, 6,	tank_footstep},
 };
-mmove_t	tank_move_run = {FRAME_walk05, FRAME_walk20, tank_frames_run, NULL};
+mmove_t	tank_move_run = {34, 49, tank_frames_run, NULL};
 
 mframe_t tank_frames_stop_run [] =
 {
@@ -65008,7 +57235,7 @@ mframe_t tank_frames_stop_run [] =
 	{ai_run,  2, NULL},
 	{ai_run,  4, tank_footstep},
 };
-mmove_t	tank_move_stop_run = {FRAME_walk21, FRAME_walk25, tank_frames_stop_run, tank_walk};
+mmove_t	tank_move_stop_run = {50, 54, tank_frames_stop_run, tank_walk};
 
 void tank_run (edict_t* self)
 {
@@ -65045,7 +57272,7 @@ mframe_t tank_frames_pain1 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t tank_move_pain1 = {FRAME_pain101, FRAME_pain104, tank_frames_pain1, tank_run};
+mmove_t tank_move_pain1 = {197, 200, tank_frames_pain1, tank_run};
 
 mframe_t tank_frames_pain2 [] =
 {
@@ -65055,7 +57282,7 @@ mframe_t tank_frames_pain2 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t tank_move_pain2 = {FRAME_pain201, FRAME_pain205, tank_frames_pain2, tank_run};
+mmove_t tank_move_pain2 = {201, 205, tank_frames_pain2, tank_run};
 
 mframe_t tank_frames_pain3 [] =
 {
@@ -65076,7 +57303,7 @@ mframe_t tank_frames_pain3 [] =
 	{ai_move, 0,  NULL},
 	{ai_move, 0,  tank_footstep},
 };
-mmove_t	tank_move_pain3 = {FRAME_pain301, FRAME_pain316, tank_frames_pain3, tank_run};
+mmove_t	tank_move_pain3 = {206, 221, tank_frames_pain3, tank_run};
 
 static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -65097,9 +57324,9 @@ static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	// If hard or nightmare, don't go into pain while attacking
 	if ( skill->value >= 2)
 	{
-		if ( (self->s.frame >= FRAME_attak301) && (self->s.frame <= FRAME_attak330) )
+		if ( (self->s.frame >= 115) && (self->s.frame <= 144) )
 			return;
-		if ( (self->s.frame >= FRAME_attak101) && (self->s.frame <= FRAME_attak116) )
+		if ( (self->s.frame >= 55) && (self->s.frame <= 70) )
 			return;
 	}
 
@@ -65130,9 +57357,9 @@ void TankBlaster (edict_t* self)
 	vec3_t	dir;
 	int		flash_number;
 
-	if (self->s.frame == FRAME_attak110)
+	if (self->s.frame == 64)
 		flash_number = MZ2_TANK_BLASTER_1;
-	else if (self->s.frame == FRAME_attak113)
+	else if (self->s.frame == 67)
 		flash_number = MZ2_TANK_BLASTER_2;
 	else // (self->s.frame == FRAME_attak116)
 		flash_number = MZ2_TANK_BLASTER_3;
@@ -65160,9 +57387,9 @@ void TankRocket (edict_t* self)
 	vec3_t	vec;
 	int		flash_number;
 
-	if (self->s.frame == FRAME_attak324)
+	if (self->s.frame == 138)
 		flash_number = MZ2_TANK_ROCKET_1;
-	else if (self->s.frame == FRAME_attak327)
+	else if (self->s.frame == 141)
 		flash_number = MZ2_TANK_ROCKET_2;
 	else // (self->s.frame == FRAME_attak330)
 		flash_number = MZ2_TANK_ROCKET_3;
@@ -65186,7 +57413,7 @@ void TankMachineGun (edict_t* self)
 	vec3_t	forward, right;
 	int		flash_number;
 
-	flash_number = MZ2_TANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak406);
+	flash_number = MZ2_TANK_MACHINEGUN_1 + (self->s.frame - 173);
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
@@ -65203,10 +57430,10 @@ void TankMachineGun (edict_t* self)
 	{
 		dir[0] = 0;
 	}
-	if (self->s.frame <= FRAME_attak415)
-		dir[1] = self->s.angles[1] - 8 * (self->s.frame - FRAME_attak411);
+	if (self->s.frame <= 182)
+		dir[1] = self->s.angles[1] - 8 * (self->s.frame - 178);
 	else
-		dir[1] = self->s.angles[1] + 8 * (self->s.frame - FRAME_attak419);
+		dir[1] = self->s.angles[1] + 8 * (self->s.frame - 186);
 	dir[2] = 0;
 
 	AngleVectors (dir, forward, NULL, NULL);
@@ -65234,7 +57461,7 @@ mframe_t tank_frames_attack_blast [] =
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	TankBlaster}			// 16
 };
-mmove_t tank_move_attack_blast = {FRAME_attak101, FRAME_attak116, tank_frames_attack_blast, tank_reattack_blaster};
+mmove_t tank_move_attack_blast = {55, 70, tank_frames_attack_blast, tank_reattack_blaster};
 
 mframe_t tank_frames_reattack_blast [] =
 {
@@ -65245,7 +57472,7 @@ mframe_t tank_frames_reattack_blast [] =
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	TankBlaster}			// 16
 };
-mmove_t tank_move_reattack_blast = {FRAME_attak111, FRAME_attak116, tank_frames_reattack_blast, tank_reattack_blaster};
+mmove_t tank_move_reattack_blast = {65, 70, tank_frames_reattack_blast, tank_reattack_blaster};
 
 mframe_t tank_frames_attack_post_blast [] =
 {
@@ -65256,7 +57483,7 @@ mframe_t tank_frames_attack_post_blast [] =
 	{ai_move, 2,		NULL},
 	{ai_move, -2,	tank_footstep}		// 22
 };
-mmove_t tank_move_attack_post_blast = {FRAME_attak117, FRAME_attak122, tank_frames_attack_post_blast, tank_run};
+mmove_t tank_move_attack_post_blast = {71, 76, tank_frames_attack_post_blast, tank_run};
 
 void tank_reattack_blaster (edict_t* self)
 {
@@ -65319,7 +57546,7 @@ mframe_t tank_frames_attack_strike [] =
 	{ai_move, -3,  NULL},
 	{ai_move, -2,  tank_footstep},
 };
-mmove_t tank_move_attack_strike = {FRAME_attak201, FRAME_attak238, tank_frames_attack_strike, tank_poststrike};
+mmove_t tank_move_attack_strike = {77, 114, tank_frames_attack_strike, tank_poststrike};
 
 mframe_t tank_frames_attack_pre_rocket [] =
 {
@@ -65347,7 +57574,7 @@ mframe_t tank_frames_attack_pre_rocket [] =
 
 	{ai_charge, -3, NULL},
 };
-mmove_t tank_move_attack_pre_rocket = {FRAME_attak301, FRAME_attak321, tank_frames_attack_pre_rocket, tank_doattack_rocket};
+mmove_t tank_move_attack_pre_rocket = {115, 135, tank_frames_attack_pre_rocket, tank_doattack_rocket};
 
 mframe_t tank_frames_attack_fire_rocket [] =
 {
@@ -65361,7 +57588,7 @@ mframe_t tank_frames_attack_fire_rocket [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, -1, TankRocket}		// 30	Loop End,
 };
-mmove_t tank_move_attack_fire_rocket = {FRAME_attak322, FRAME_attak330, tank_frames_attack_fire_rocket, tank_refire_rocket};
+mmove_t tank_move_attack_fire_rocket = {136, 144, tank_frames_attack_fire_rocket, tank_refire_rocket};
 
 mframe_t tank_frames_attack_post_rocket [] =
 {
@@ -65391,7 +57618,7 @@ mframe_t tank_frames_attack_post_rocket [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
 };
-mmove_t tank_move_attack_post_rocket = {FRAME_attak331, FRAME_attak353, tank_frames_attack_post_rocket, tank_run};
+mmove_t tank_move_attack_post_rocket = {145, 167, tank_frames_attack_post_rocket, tank_run};
 
 mframe_t tank_frames_attack_chain [] =
 {
@@ -65425,7 +57652,7 @@ mframe_t tank_frames_attack_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t tank_move_attack_chain = {FRAME_attak401, FRAME_attak429, tank_frames_attack_chain, tank_run};
+mmove_t tank_move_attack_chain = {168, 196, tank_frames_attack_chain, tank_run};
 
 void tank_refire_rocket (edict_t* self)
 {
@@ -65542,7 +57769,7 @@ mframe_t tank_frames_death1 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t	tank_move_death = {FRAME_death101, FRAME_death132, tank_frames_death1, tank_dead};
+mmove_t	tank_move_death = {222, 253, tank_frames_death1, tank_dead};
 
 static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -65784,22 +58011,22 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 			self->client->anim_priority = ANIM_DEATH;
 			if (self->client->ps.pmove.pm_flags & PMF_DUCKED)
 			{
-				self->s.frame = FRAME_crdeath1-1;
-				self->client->anim_end = FRAME_crdeath5;
+				self->s.frame = 173-1;
+				self->client->anim_end = 177;
 			}
 			else switch (i)
 			{
 			case 0:
-				self->s.frame = FRAME_death101-1;
-				self->client->anim_end = FRAME_death106;
+				self->s.frame = 178-1;
+				self->client->anim_end = 183;
 				break;
 			case 1:
-				self->s.frame = FRAME_death201-1;
-				self->client->anim_end = FRAME_death206;
+				self->s.frame = 184-1;
+				self->client->anim_end = 189;
 				break;
 			case 2:
-				self->s.frame = FRAME_death301-1;
-				self->client->anim_end = FRAME_death308;
+				self->s.frame = 190-1;
+				self->client->anim_end = 197;
 				break;
 			}
 			PF_StartSound (self, CHAN_VOICE, SV_SoundIndex(va("*death%i.wav", (rand()%4)+1)), 1, ATTN_NORM, 0);
@@ -66895,8 +59122,8 @@ void P_DamageFeedback (edict_t *player)
 		client->anim_priority = ANIM_PAIN;
 		if (client->ps.pmove.pm_flags & PMF_DUCKED)
 		{
-			player->s.frame = FRAME_crpain1-1;
-			client->anim_end = FRAME_crpain4;
+			player->s.frame = 169-1;
+			client->anim_end = 172;
 		}
 		else
 		{
@@ -66904,16 +59131,16 @@ void P_DamageFeedback (edict_t *player)
 			switch (i)
 			{
 			case 0:
-				player->s.frame = FRAME_pain101-1;
-				client->anim_end = FRAME_pain104;
+				player->s.frame = 54-1;
+				client->anim_end = 57;
 				break;
 			case 1:
-				player->s.frame = FRAME_pain201-1;
-				client->anim_end = FRAME_pain204;
+				player->s.frame = 58-1;
+				client->anim_end = 61;
 				break;
 			case 2:
-				player->s.frame = FRAME_pain301-1;
-				client->anim_end = FRAME_pain304;
+				player->s.frame = 62-1;
+				client->anim_end = 65;
 				break;
 			}
 		}
@@ -67687,8 +59914,8 @@ void G_SetClientFrame (edict_t *ent)
 		if (!ent->groundentity)
 			return;		// stay there
 		ent->client->anim_priority = ANIM_WAVE;
-		ent->s.frame = FRAME_jump3;
-		ent->client->anim_end = FRAME_jump6;
+		ent->s.frame = 68;
+		ent->client->anim_end = 71;
 		return;
 	}
 
@@ -67701,34 +59928,34 @@ newanim:
 	if (!ent->groundentity)
 	{
 		client->anim_priority = ANIM_JUMP;
-		if (ent->s.frame != FRAME_jump2)
-			ent->s.frame = FRAME_jump1;
-		client->anim_end = FRAME_jump2;
+		if (ent->s.frame != 67)
+			ent->s.frame = 66;
+		client->anim_end = 67;
 	}
 	else if (run)
 	{	// running
 		if (duck)
 		{
-			ent->s.frame = FRAME_crwalk1;
-			client->anim_end = FRAME_crwalk6;
+			ent->s.frame = 154;
+			client->anim_end = 159;
 		}
 		else
 		{
-			ent->s.frame = FRAME_run1;
-			client->anim_end = FRAME_run6;
+			ent->s.frame = 40;
+			client->anim_end = 45;
 		}
 	}
 	else
 	{	// standing
 		if (duck)
 		{
-			ent->s.frame = FRAME_crstnd01;
-			client->anim_end = FRAME_crstnd19;
+			ent->s.frame = 135;
+			client->anim_end = 153;
 		}
 		else
 		{
-			ent->s.frame = FRAME_stand01;
-			client->anim_end = FRAME_stand40;
+			ent->s.frame = 0;
+			client->anim_end = 39;
 		}
 	}
 }
@@ -68026,13 +60253,13 @@ void ChangeWeapon (edict_t *ent)
 	ent->client->anim_priority = ANIM_PAIN;
 	if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
-			ent->s.frame = FRAME_crpain1;
-			ent->client->anim_end = FRAME_crpain4;
+			ent->s.frame = 169;
+			ent->client->anim_end = 172;
 	}
 	else
 	{
-			ent->s.frame = FRAME_pain301;
-			ent->client->anim_end = FRAME_pain304;
+			ent->s.frame = 62;
+			ent->client->anim_end = 65;
 
 	}
 }
@@ -68209,13 +60436,13 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			ent->client->anim_priority = ANIM_REVERSE;
 			if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 			{
-				ent->s.frame = FRAME_crpain4+1;
-				ent->client->anim_end = FRAME_crpain1;
+				ent->s.frame = 172+1;
+				ent->client->anim_end = 169;
 			}
 			else
 			{
-				ent->s.frame = FRAME_pain304+1;
-				ent->client->anim_end = FRAME_pain301;
+				ent->s.frame = 65+1;
+				ent->client->anim_end = 62;
 
 			}
 		}
@@ -68247,13 +60474,13 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			ent->client->anim_priority = ANIM_REVERSE;
 			if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 			{
-				ent->s.frame = FRAME_crpain4+1;
-				ent->client->anim_end = FRAME_crpain1;
+				ent->s.frame = 172+1;
+				ent->client->anim_end = 169;
 			}
 			else
 			{
-				ent->s.frame = FRAME_pain304+1;
-				ent->client->anim_end = FRAME_pain301;
+				ent->s.frame = 65+1;
+				ent->client->anim_end = 62;
 
 			}
 		}
@@ -68275,13 +60502,13 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 				ent->client->anim_priority = ANIM_ATTACK;
 				if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 				{
-					ent->s.frame = FRAME_crattak1-1;
-					ent->client->anim_end = FRAME_crattak9;
+					ent->s.frame = 160-1;
+					ent->client->anim_end = 168;
 				}
 				else
 				{
-					ent->s.frame = FRAME_attack1-1;
-					ent->client->anim_end = FRAME_attack8;
+					ent->s.frame = 46-1;
+					ent->client->anim_end = 53;
 				}
 			}
 			else
@@ -68392,14 +60619,14 @@ void weapon_grenade_fire (edict_t *ent, bool held)
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
 		ent->client->anim_priority = ANIM_ATTACK;
-		ent->s.frame = FRAME_crattak1-1;
-		ent->client->anim_end = FRAME_crattak3;
+		ent->s.frame = 160-1;
+		ent->client->anim_end = 162;
 	}
 	else
 	{
 		ent->client->anim_priority = ANIM_REVERSE;
-		ent->s.frame = FRAME_wave08;
-		ent->client->anim_end = FRAME_wave01;
+		ent->s.frame = 119;
+		ent->client->anim_end = 112;
 	}
 }
 
@@ -68704,13 +60931,13 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 			ent->client->anim_priority = ANIM_ATTACK;
 			if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 			{
-				ent->s.frame = FRAME_crattak1 - 1;
-				ent->client->anim_end = FRAME_crattak9;
+				ent->s.frame = 160 - 1;
+				ent->client->anim_end = 168;
 			}
 			else
 			{
-				ent->s.frame = FRAME_attack1 - 1;
-				ent->client->anim_end = FRAME_attack8;
+				ent->s.frame = 46 - 1;
+				ent->client->anim_end = 53;
 			}
 		}
 
@@ -68816,13 +61043,13 @@ void Machinegun_Fire (edict_t *ent)
 	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
-		ent->s.frame = FRAME_crattak1 - (int) (random()+0.25);
-		ent->client->anim_end = FRAME_crattak9;
+		ent->s.frame = 160 - (int) (random()+0.25);
+		ent->client->anim_end = 168;
 	}
 	else
 	{
-		ent->s.frame = FRAME_attack1 - (int) (random()+0.25);
-		ent->client->anim_end = FRAME_attack8;
+		ent->s.frame = 46 - (int) (random()+0.25);
+		ent->client->anim_end = 53;
 	}
 }
 
@@ -68879,13 +61106,13 @@ void Chaingun_Fire (edict_t *ent)
 	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
-		ent->s.frame = FRAME_crattak1 - (ent->client->ps.gunframe & 1);
-		ent->client->anim_end = FRAME_crattak9;
+		ent->s.frame = 160 - (ent->client->ps.gunframe & 1);
+		ent->client->anim_end = 168;
 	}
 	else
 	{
-		ent->s.frame = FRAME_attack1 - (ent->client->ps.gunframe & 1);
-		ent->client->anim_end = FRAME_attack8;
+		ent->s.frame = 46 - (ent->client->ps.gunframe & 1);
+		ent->client->anim_end = 53;
 	}
 
 	if (ent->client->ps.gunframe <= 9)
