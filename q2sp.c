@@ -57,7 +57,7 @@ typedef struct {
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String text);
-typedef Texture (*Load_Decompressed_PCX_Proc)(String name);
+typedef Texture (*Load_Texture_Proc)(String name);
 
 // Platform is responsible for initialising this
 static struct {
@@ -67,7 +67,7 @@ static struct {
 	Exit_Process_Proc exit_process;
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
-	Load_Decompressed_PCX_Proc load_decompressed_pcx;
+	Load_Texture_Proc load_texture;
 } context = {};
 
 //
@@ -2993,23 +2993,6 @@ typedef struct {
 	int			numframes;
 	dsprframe_t	frames[1];			// variable sized
 } dsprite_t;
-
-//
-// SECTION wal files
-//
-
-// .WAL texture file format
-
-#define	MIPLEVELS	4
-typedef struct miptex_s {
-	char		name[32];
-	unsigned	width, height;
-	unsigned	offsets[MIPLEVELS];		// four mip maps stored
-	char		animname[32];			// next frame in animation chain
-	int			flags;
-	int			contents;
-	int			value;
-} miptex_t;
 
 //
 // SECTION bsp files
@@ -61665,29 +61648,6 @@ void Draw_Char (int x, int y, int num)
 	glEnd ();
 }
 
-image_t *GL_LoadWal (char *name)
-{
-	miptex_t	*mt;
-	int			width, height, ofs;
-	image_t		*image;
-
-	FS_LoadFile (name, (void **)&mt);
-	if (!mt)
-	{
-		return r_notexture;
-	}
-
-	width = LittleLong (mt->width);
-	height = LittleLong (mt->height);
-	ofs = LittleLong (mt->offsets[0]);
-
-	image = GL_LoadPic (name, (u8 *)mt + ofs, width, height, it_wall, 8);
-
-	FS_FreeFile ((void *)mt);
-
-	return image;
-}
-
 typedef struct _TargaHeader {
 	unsigned char 	id_length, colormap_type, image_type;
 	unsigned short	colormap_index, colormap_length;
@@ -61892,15 +61852,12 @@ static image_t* GL_FindImage(char* name, imagetype_t type) {
 
 		// Then load
 		if (!target_image) {
-			if (string_ends_with(name_str, STR(".pcx"))) {
-
-				Texture texture = context.load_decompressed_pcx(name_str);
-				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, type, 8);
-
-			} else if (string_ends_with(name_str, STR(".wal"))) {
-
-				target_image = GL_LoadWal(name);
-
+			bool is_pcx = string_ends_with(name_str, STR(".pcx"));
+			bool is_wal = string_ends_with(name_str, STR(".wal"));
+			if (is_pcx || is_wal) {
+				Texture texture = context.load_texture(name_str);
+				imagetype_t actual_type = is_wal ? it_wall : type;
+				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, actual_type, 8);
 			} else if (string_ends_with(name_str, STR(".tga"))) {
 				int width = 0;
 				int height = 0;
@@ -69627,11 +69584,11 @@ static void CL_Frame (int msec) {
 typedef struct {
 	String name;
 	Texture texture;
-} Decompressed_PCX;
-typedef struct {Decompressed_PCX* ptr; i64 len;} Decompressed_PCXs;
+} Named_Texture;
+typedef struct {Named_Texture* ptr; i64 len;} Named_Textures;
 
 typedef struct {
-	Decompressed_PCXs decompressed_pcxs;
+	Named_Textures named_textures;
 } Windows_Platform_Data;
 
 static void windows_exit_process() {
@@ -69697,15 +69654,15 @@ static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	return result;
 }
 
-static Texture windows_load_decompressed_pcx(String name) {
-	Decompressed_PCXs pcxs = ((Windows_Platform_Data*)context.platform_data)->decompressed_pcxs;
+static Texture windows_load_texture(String name) {
+	Named_Textures named_textures = ((Windows_Platform_Data*)context.platform_data)->named_textures;
 
 	Texture result = {};
-	for (i64 ind = 0; ind < pcxs.len; ind++) {
-		Decompressed_PCX pcx = pcxs.ptr[ind];
+	for (i64 ind = 0; ind < named_textures.len; ind++) {
+		Named_Texture named_texture = named_textures.ptr[ind];
 
-		if (streq(pcx.name, name)) {
-			result = pcx.texture;
+		if (streq(named_texture.name, name)) {
+			result = named_texture.texture;
 			break;
 		}
 	}
@@ -69740,7 +69697,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	context.exit_process = windows_exit_process;
 	context.write_config_string = windows_write_config_string;
 	context.debug_log = windows_debug_log;
-	context.load_decompressed_pcx = windows_load_decompressed_pcx;
+	context.load_texture = windows_load_texture;
 
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
@@ -70091,7 +70048,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
 	// TODO: complete
 	temp_memory_block(&context.memory.temp) {
-		// TODO: Once all the files are processed, the raw paks/loose files can move to temp memory
 
 		typedef struct {
 			u8_Slice whole_file;
@@ -70101,12 +70057,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// NOTE: Load pre-existing pak files
 		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
-		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.perm, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
+		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.temp, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
 		for (i64 ind = 0; ind < preexisting_pak_paths.len; ind++) {
 			String file_path = preexisting_pak_paths.ptr[ind];
 			Windows_Pak_File_Entry* dest_entry = paks.ptr + ind;
 
-			dest_entry->whole_file = windows_read_entire_file(&context.memory.perm, file_path);
+			dest_entry->whole_file = windows_read_entire_file(&context.memory.temp, file_path);
 			Pak_File_Header* header = (Pak_File_Header*)dest_entry->whole_file.ptr;
 			assert(header->magic == id_pack_header_magic);
 
@@ -70130,7 +70086,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			STR("baseq2/players/zumlin/*"),
 		);
 		Windows_Pak_File_Entry* loose_files_pak = paks.ptr + paks.len - 1;
-		loose_files_pak->whole_file = (u8_Slice)arena_alloc_slice(&context.memory.perm, u8, 500 * Megabyte);
+		loose_files_pak->whole_file = (u8_Slice)arena_alloc_slice(&context.memory.temp, u8, 500 * Megabyte);
 		Pak_File_Header* loose_files_header = (Pak_File_Header*)loose_files_pak->whole_file.ptr;
 		*loose_files_header = (Pak_File_Header){id_pack_header_magic, 490 * Megabyte, 0};
 		assert(loose_files_header->info_section_offset < loose_files_pak->whole_file.len);
@@ -70167,8 +70123,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// NOTE: Process the files to get the data we actually want
-		typedef struct {Decompressed_PCX* ptr; i64 len; i64 cap;} Decompressed_PCXs_Fixed_Cap;
-		Decompressed_PCXs_Fixed_Cap temp_decompressed_pcxs = arena_alloc_fixed_cap(&context.memory.temp, Decompressed_PCX, 1024);
+		typedef struct {Named_Texture* ptr; i64 len; i64 cap;} Named_Textures_Fixed_Cap;
+		Named_Textures_Fixed_Cap temp_named_textures = arena_alloc_fixed_cap(&context.memory.temp, Named_Texture, 4096);
 		for (i64 pak_index = paks.len - 1; pak_index >= 0; pak_index--) {
 			Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
 
@@ -70215,7 +70171,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					pcx_t* pcx = (pcx_t*)file_content.ptr;
 					assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
 
-					Decompressed_PCX decomp = {
+					Named_Texture decomp = {
 						.name = copy_string(&context.memory.perm, info_name),
 						.texture = {
 							.width = pcx->xmax + 1,
@@ -70245,11 +70201,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						assert(raw - (u8*)pcx <= file_content.len);
 					}
 
-					append_fixed_cap(&temp_decompressed_pcxs, decomp);
-				} // file processing
+					append_fixed_cap(&temp_named_textures, decomp);
+				} else if (string_ends_with(info_name, STR(".wal"))) {
+					// NOTE: Unpack WAL
+
+					typedef struct {
+						char name[32];
+						u32	width, height;
+						u32	offsets_for_mips[4];
+						char animname[32]; // next frame in animation chain
+						i32 flags, contents, value;
+					} WAL;
+
+					WAL* wal = (WAL*)file_content.ptr;
+					assert(file_content.len > (i64)sizeof(WAL));
+					assert(wal->width > 0 && wal->height > 0);
+
+					i64 px_count = wal->width * wal->height;
+
+					Named_Texture decomp = {
+						.name = copy_string(&context.memory.perm, info_name),
+						.texture = {
+							.width = wal->width,
+							.height = wal->height,
+							.pixels = arena_alloc_bytes(&context.memory.perm, px_count),
+						},
+					};
+
+					i64 px_offset = wal->offsets_for_mips[0];
+					assert(px_offset >= (i64)sizeof(WAL) && px_offset + px_count < file_content.len);
+					u8* pixels_in_file = (u8*)wal + px_offset;
+					copy_bytes(decomp.texture.pixels, pixels_in_file, px_count);
+
+					append_fixed_cap(&temp_named_textures, decomp);
+				} // if-else chain file processing
 			} // for file
 		} // for pak
-		copy_slice(&context.memory.perm, &windows_platform_data.decompressed_pcxs, &temp_decompressed_pcxs, Decompressed_PCX);
+
+		copy_slice(&context.memory.perm, &windows_platform_data.named_textures, &temp_named_textures, Named_Texture);
 	} // load assets
 
 	// TODO: Remove
