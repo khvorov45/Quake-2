@@ -61528,7 +61528,6 @@ static cvar_t* gl_lightmap;
 static cvar_t* gl_shadows;
 static cvar_t* gl_dynamic;
 static cvar_t* gl_modulate;
-static cvar_t* gl_nobind;
 static cvar_t* gl_round_down;
 static cvar_t* gl_picmip;
 static cvar_t* gl_skymip;
@@ -61545,8 +61544,6 @@ static cvar_t* gl_texturesolidmode;
 static cvar_t* gl_lockpvs;
 
 void R_TranslatePlayerSkin (int playernum);
-void GL_Bind (int texnum);
-void GL_TexEnv( GLenum value );
 
 void R_LightPoint (vec3_t p, vec3_t color);
 
@@ -61588,29 +61585,29 @@ void	GL_ImageList_f (void);
 
 void	GL_FreeUnusedImages (void);
 
-typedef struct
-{
+static struct {
 	float inverse_intensity;
 	unsigned char *d_16to8table;
-
 	int lightmap_textures;
-
-	int	currenttextures[2];
-	int currenttmu;
-
+	int	currenttexture;
 	unsigned char originalRedGammaTable[256];
 	unsigned char originalGreenGammaTable[256];
 	unsigned char originalBlueGammaTable[256];
-} glstate_t;
-
-extern glstate_t   gl_state;
+} gl_state;
 
 void		GLimp_BeginFrame();
 
-image_t		*draw_chars;
+static image_t* draw_chars;
 
 extern	bool	scrap_dirty;
 void Scrap_Upload (void);
+
+static void GL_Bind(int texnum) {
+	if (gl_state.currenttexture != texnum) {
+		gl_state.currenttexture = texnum;
+		glBindTexture(GL_TEXTURE_2D, texnum);
+	}
+}
 
 // Draws one 8*8 graphics character with 0 being transparent.
 // It can be clipped to the top of the screen to allow the console to be smoothly scrolled off.
@@ -62031,27 +62028,12 @@ int		gl_tex_alpha_format = 4;
 int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
 int		gl_filter_max = GL_LINEAR;
 
-void GL_TexEnv( GLenum mode )
-{
-	static int lastmodes[2] = { -1, -1 };
-
-	if ( (int)mode != lastmodes[gl_state.currenttmu] )
-	{
-		glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode );
-		lastmodes[gl_state.currenttmu] = mode;
+static void GL_TexEnv(GLenum mode) {
+	static int lastmode = -1;
+	if ((int)mode != lastmode) {
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
+		lastmode = mode;
 	}
-}
-
-void GL_Bind (int texnum)
-{
-	extern	image_t	*draw_chars;
-
-	if (gl_nobind->value && draw_chars)		// performance evaluation option
-		texnum = draw_chars->texnum;
-	if ( gl_state.currenttextures[gl_state.currenttmu] == texnum)
-		return;
-	gl_state.currenttextures[gl_state.currenttmu] = texnum;
-	glBindTexture (GL_TEXTURE_2D, texnum);
 }
 
 typedef struct
@@ -65193,7 +65175,7 @@ void R_Clear (void);
 
 float		gldepthmin, gldepthmax;
 
-glstate_t  gl_state;
+
 
 image_t		*r_notexture;		// use for bad textures
 image_t		*r_particletexture;	// little dot for particles
@@ -66469,11 +66451,6 @@ void R_DrawInlineBModel (void)
 	}
 }
 
-/*
-=================
-R_DrawBrushModel
-=================
-*/
 void R_DrawBrushModel (Entity *e)
 {
 	vec3_t		mins, maxs;
@@ -66484,7 +66461,7 @@ void R_DrawBrushModel (Entity *e)
 		return;
 
 	currententity = e;
-	gl_state.currenttextures[0] = gl_state.currenttextures[1] = -1;
+	gl_state.currenttexture = -1;
 
 	if (e->angles[0] || e->angles[1] || e->angles[2])
 	{
@@ -66522,11 +66499,11 @@ void R_DrawBrushModel (Entity *e)
 	}
 
 	glPushMatrix ();
-e->angles[0] = -e->angles[0];	// stupid quake bug
-e->angles[2] = -e->angles[2];	// stupid quake bug
+	e->angles[0] = -e->angles[0];	// stupid quake bug
+	e->angles[2] = -e->angles[2];	// stupid quake bug
 	R_RotateForEntity (e);
-e->angles[0] = -e->angles[0];	// stupid quake bug
-e->angles[2] = -e->angles[2];	// stupid quake bug
+	e->angles[0] = -e->angles[0];	// stupid quake bug
+	e->angles[2] = -e->angles[2];	// stupid quake bug
 
 	GL_TexEnv( GL_REPLACE );
 	GL_TexEnv( GL_MODULATE );
@@ -66663,12 +66640,6 @@ void R_RecursiveWorldNode (mnode_t *node)
 	R_RecursiveWorldNode (node->children[!side]);
 }
 
-
-/*
-=============
-R_DrawWorld
-=============
-*/
 void R_DrawWorld (void)
 {
 	Entity	ent;
@@ -66688,7 +66659,7 @@ void R_DrawWorld (void)
 	ent.frame = (int)(r_newrefdef.time*2);
 	currententity = &ent;
 
-	gl_state.currenttextures[0] = gl_state.currenttextures[1] = -1;
+	gl_state.currenttexture = -1;
 
 	glColor3f (1,1,1);
 	memset (gl_lms.lightmap_surfaces, 0, sizeof(gl_lms.lightmap_surfaces));
@@ -69941,7 +69912,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
 		gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
 		gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
-		gl_nobind = COM_GetCvar ("gl_nobind", "0", 0);
 		gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
 		gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
 		gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
