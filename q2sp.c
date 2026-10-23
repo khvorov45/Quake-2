@@ -255,10 +255,6 @@ typedef struct {
 } Pak_File_Info;
 typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 
-//
-// SECTION Byte order
-//
-
 static short BigShort(short l){
 	u8 b1 = l&255;
 	u8 b2 = (l>>8)&255;
@@ -268,10 +264,6 @@ static short BigShort(short l){
 static short LittleShort(short l) {return l;}
 static int LittleLong(int l) {return l;}
 static float LittleFloat(float l) {return l;}
-
-//
-// SECTION Math
-//
 
 // angle indexes
 #define	PITCH				0		// up / down
@@ -511,10 +503,6 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 	}
 }
 
-//
-// SECTION Random numbers
-//
-
 static float frand() {
 	return (rand()&32767)* (1.0/32767);
 }
@@ -522,10 +510,6 @@ static float frand() {
 static float crand() {
 	return (rand()&32767)* (2.0/32767) - 1;
 }
-
-//
-// SECTION CRC
-//
 
 static unsigned short crctable[256] = {
 	0x0000,	0x1021,	0x2042,	0x3063,	0x4084,	0x50a5,	0x60c6,	0x70e7,
@@ -569,10 +553,6 @@ static unsigned short CRC_Block(u8* start, int count) {
 	}
 	return crc;
 }
-
-//
-// SECTION Memory OG
-//
 
 #define	Z_MAGIC 0x1d1d
 
@@ -631,10 +611,6 @@ static void* Z_TagMalloc(int size, int tag) {
 
 static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
 
-//
-// SECTION Sizebuf
-//
-
 typedef struct sizebuf_s {
 	bool	allowoverflow;
 	bool	overflowed;		// set to true if the buffer size failed
@@ -685,10 +661,6 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 		memcpy((u8*)SZ_GetSpace(buf, len), data, len);
 	}
 }
-
-//
-// SECTION Strings OG
-//
 
 static char* CopyString(char *in) {
 	int in_len = strlen(in);
@@ -743,20 +715,12 @@ static char* va(char *format, ...) {
 	return string;
 }
 
-//
-// SECTION Input
-//
-
 typedef enum {
 	key_game,
 	key_console,
 	key_message,
 	key_menu
 } keydest_t;
-
-//
-// SECTION CLC (client to server)
-//
 
 enum clc_ops_e {
 	clc_bad,
@@ -765,10 +729,6 @@ enum clc_ops_e {
 	clc_userinfo,	// [[userinfo string]
 	clc_stringcmd	// [string] message
 };
-
-//
-// SECTION Entity
-//
 
 // entity_state_t->renderfx flags
 #define	RF_MINLIGHT			1		// allways have some light (viewmodel)
@@ -815,10 +775,6 @@ typedef struct entity_state_s {
 	int		sound;
 	int		event;
 } entity_state_t;
-
-//
-// SECTION MSG (messages)
-//
 
 #define	ANGLE2SHORT(x)	((int)((x)*65536/360) & 65535)
 #define	SHORT2ANGLE(x)	((x)*(360.0/65536))
@@ -1546,10 +1502,6 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 	VectorCopy(bytedirs[b], dir);
 }
 
-//
-// SECTION System
-//
-
 // directory searching
 #define SFF_ARCH    0x01
 #define SFF_HIDDEN  0x02
@@ -1574,10 +1526,6 @@ static int FS_FOpenFile(char* filename, FILE** file);
 static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
-
-//
-// SECTION Cvar (console variables)
-//
 
 // cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
 // The user can access cvars from the console in three ways:
@@ -1647,10 +1595,6 @@ static char* Cvar_VariableString(char* var_name) {
 	return var->string;
 }
 
-//
-// SECTION Network
-//
-
 #define	MAX_MSGLEN	1400
 #define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
 #define	MAX_LATENT	32
@@ -1718,10 +1662,6 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg);
 
 bool Netchan_CanReliable (netchan_t *chan);
 
-//
-// SECTION User
-//
-
 #define	MAX_OSPATH 128 // max length of a filesystem pathname
 
 // Persistant through an arbitrary number of server connections
@@ -1762,10 +1702,6 @@ static struct {
 	} downloadtype;
 	int downloadpercent;
 } cls;
-
-//
-// SECTION Con (console)
-//
 
 #define	PRINT_MEDIUM	1	// death messages
 #define	PRINT_HIGH		2	// critical messages
@@ -1861,10 +1797,6 @@ static void Con_Print(char *txt) {
 		}
 	}
 }
-
-//
-// SECTION COM (commands)
-//
 
 #define	MAXPRINTMSG		4096
 #define	MAX_TOKEN_CHARS	128		// max length of an individual token
@@ -2134,10 +2066,6 @@ static void COM_SetValueCvar(char *var_name, float value) {
 unsigned	Com_BlockChecksum (void *buffer, int length);
 u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
 
-//
-// SECTION Cbuf (command buffer)
-//
-
 // Any number of commands can be added in a frame, from several different sources.
 // Most commands come from either keybindings or console line input, but remote
 // servers can also send across commands and entire text files can be execed.
@@ -2185,10 +2113,6 @@ static void Cbuf_InsertText(char* text) {
 		Z_Free(temp);
 	}
 }
-
-//
-// SECTION Cmd (command execution)
-//
 
 // Command execution takes a null terminated string, breaks it into tokens,
 // then searches for a command or variable that matches the first token.
@@ -2480,20 +2404,17 @@ static void Cmd_ExecuteCbuf() {
 	}
 }
 
-// called by the init functions of other parts of the program to register commands and functions to call for them.
-// The cmd_name is referenced later, so it should not be in temp memory
-// if function is NULL, the command will be forwarded to the server as a clc_stringcmd instead of executed locally
 static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 	// fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0]) {
-		Com_Printf ("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
+		Com_Printf("already defined as a var\n");
 		return;
 	}
 
 	// fail if the command already exists
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
-		if (!strcmp (cmd_name, cmd->name)) {
-			Com_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
+		if (!strcmp(cmd_name, cmd->name)) {
+			Com_Printf("already defined\n");
 			return;
 		}
 	}
@@ -2503,25 +2424,6 @@ static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 	cmd->function = function;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
-}
-
-static void Cmd_RemoveCommand(char* cmd_name) {
-	cmd_function_t** back = &cmd_functions;
-	for (;;) {
-		cmd_function_t* cmd = *back;
-		if (!cmd) {
-			Com_Printf("Cmd_RemoveCommand: %s not added\n", cmd_name);
-			return;
-		}
-
-		if (!strcmp (cmd_name, cmd->name)) {
-			*back = cmd->next;
-			Z_Free(cmd);
-			return;
-		}
-
-		back = &cmd->next;
-	}
 }
 
 static void Cmd_List_f() {
@@ -2671,10 +2573,6 @@ static void Cmd_Cvar_List_f() {
 
 	Com_Printf ("%i cvars\n", i);
 }
-
-//
-// SECTION Info strings
-//
 
 #define	MAX_INFO_KEY	64
 #define	MAX_INFO_VALUE	64
@@ -2878,10 +2776,6 @@ static char* Info_Cvar_Bit(int bit) {
 static char* Info_Cvar_User()	{return Info_Cvar_Bit(CVAR_USERINFO);}		// returns an info string containing all the CVAR_USERINFO cvars
 static char* Info_Cvar_Server()	{return Info_Cvar_Bit(CVAR_SERVERINFO);}	// returns an info string containing all the CVAR_SERVERINFO cvars
 
-//
-// SECTION pcx files
-//
-
 // PCX files are used for as many images as possible
 
 typedef struct {
@@ -2900,10 +2794,6 @@ typedef struct {
 	unsigned char	data; // unbounded
 } pcx_t;
 
-
-//
-// SECTION md2 files
-//
 
 // .MD2 triangle model file format
 // the glcmd format:
@@ -2974,10 +2864,6 @@ typedef struct {
 	int			ofs_end;		// end of file
 } dmdl_t;
 
-//
-// SECTION sp2 files
-//
-
 // .SP2 sprite file format
 
 #define IDSPRITEHEADER	(('2'<<24)+('S'<<16)+('D'<<8)+'I') // little-endian "IDS2"
@@ -2995,10 +2881,6 @@ typedef struct {
 	int			numframes;
 	dsprframe_t	frames[1];			// variable sized
 } dsprite_t;
-
-//
-// SECTION bsp files
-//
 
 #define IDBSPHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I') // little-endian "IBSP"
 #define BSPVERSION	38
@@ -3239,10 +3121,6 @@ typedef struct {
 	int		numareaportals;
 	int		firstareaportal;
 } darea_t;
-
-//
-// SECTION MZ2 (monster muzzle flashes)
-//
 
 #define MZ2_TANK_BLASTER_1				1
 #define MZ2_TANK_BLASTER_2				2
@@ -3916,10 +3794,6 @@ static vec3_t monster_flash_offset[] = {
 	// end of table
 	{0.0, 0.0, 0.0},
 };
-
-//
-// SECTION CM (collision model)
-//
 
 #define	MAX_ENT_CLUSTERS	16
 
@@ -4787,10 +4661,6 @@ bool	CM_HeadnodeVisible (int headnode, u8 *visbits);
 
 void		CM_WritePortalState (FILE *f);
 
-//
-// SECTION pm (player movement)
-//
-
 #define	MAXTOUCH	32
 
 // pmove_state_t is the information necessary for client side movement
@@ -4858,10 +4728,6 @@ static float pm_waterfriction = 1;
 static float pm_waterspeed = 400;
 
 void Pmove (pmove_t *pmove);
-
-//
-// SECTION Mess
-//
 
 //
 // per-level limits
@@ -5293,10 +5159,6 @@ char* Sys_GetClipboardData( void );
 void SCR_BeginLoadingPlaque (void);
 
 void SV_Shutdown (char *finalmsg, bool reconnect);
-
-//
-// SECTION ???
-//
 
 // client data that stays across multiple level loads
 typedef struct {
@@ -13261,8 +13123,6 @@ extern	int			crosshair_width, crosshair_height;
 
 
 struct sfx_s;
-
-void S_Shutdown (void);
 
 // if origin is NULL, the sound will be dynamically sourced from the entity
 void S_StartSound (vec3_t origin, int entnum, int entchannel, struct sfx_s *sfx, float fvol,  float attenuation, float timeofs);
@@ -27058,9 +26918,6 @@ typedef struct
 // gets the current DMA position
 int		SNDDMA_GetDMAPos(void);
 
-// shutdown the DMA xfer.
-void	SNDDMA_Shutdown(void);
-
 void	SNDDMA_BeginPainting (void);
 
 void	SNDDMA_Submit(void);
@@ -27173,41 +27030,6 @@ void S_SoundInfo_f(void)
 	Com_Printf("%5d speed\n", dma.speed);
 	Com_Printf("0x%x dma buffer\n", dma.buffer);
 }
-
-void S_Shutdown(void)
-{
-	int		i;
-	sfx_t	*sfx;
-
-	if (!sound_started)
-		return;
-
-	SNDDMA_Shutdown();
-
-	sound_started = 0;
-
-	Cmd_RemoveCommand("play");
-	Cmd_RemoveCommand("stopsound");
-	Cmd_RemoveCommand("soundlist");
-	Cmd_RemoveCommand("soundinfo");
-
-	// free all sounds
-	for (i=0, sfx=known_sfx ; i < num_sfx ; i++,sfx++)
-	{
-		if (!sfx->name[0])
-			continue;
-		if (sfx->cache)
-			Z_Free (sfx->cache);
-		memset (sfx, 0, sizeof(*sfx));
-	}
-
-	num_sfx = 0;
-}
-
-
-// =======================================================================
-// Load a sound
-// =======================================================================
 
 sfx_t *S_FindName (char *name, bool create)
 {
@@ -67989,74 +67811,34 @@ HINSTANCE hInstDS;
 
 void FreeSound( void );
 
-static const char *DSoundError( int error )
-{
-	switch ( error )
-	{
-	case DSERR_BUFFERLOST:
-		return "DSERR_BUFFERLOST";
-	case DSERR_INVALIDCALL:
-		return "DSERR_INVALIDCALLS";
-	case DSERR_INVALIDPARAM:
-		return "DSERR_INVALIDPARAM";
-	case DSERR_PRIOLEVELNEEDED:
-		return "DSERR_PRIOLEVELNEEDED";
-	}
+static bool DS_CreateBuffers() {
+	WAVEFORMATEX format = {
+		.wFormatTag = WAVE_FORMAT_PCM,
+		.nChannels = dma.channels,
+		.wBitsPerSample = dma.samplebits,
+		.nSamplesPerSec = dma.speed,
+		.nBlockAlign = dma.channels * dma.samplebits / 8,
+		.cbSize = 0,
+	};
+	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
-	return "unknown";
-}
+	HRESULT set_cooperative_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_EXCLUSIVE);
+	assert(set_cooperative_level_result == DS_OK);
 
-/*
-** DS_CreateBuffers
-*/
-static bool DS_CreateBuffers( void )
-{
-	DSBUFFERDESC	dsbuf;
-	DSBCAPS			dsbcaps;
-	WAVEFORMATEX	pformat, format;
-	DWORD			dwWrite;
+	DSBUFFERDESC dsbuf = {
+		.dwSize = sizeof(DSBUFFERDESC),
+		.dwFlags = DSBCAPS_PRIMARYBUFFER,
+	};
 
-	memset (&format, 0, sizeof(format));
-	format.wFormatTag = WAVE_FORMAT_PCM;
-	format.nChannels = dma.channels;
-	format.wBitsPerSample = dma.samplebits;
-	format.nSamplesPerSec = dma.speed;
-	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-	format.cbSize = 0;
-	format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
+	DSBCAPS dsbcaps = {.dwSize = sizeof(dsbcaps)};
 
-	Com_Printf( "Creating DS buffers\n" );
+	HRESULT create_sound_buffer_result = pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL);
+	assert(create_sound_buffer_result == DS_OK);
 
-	if ( DS_OK != pDS->lpVtbl->SetCooperativeLevel( pDS, cl_hwnd, DSSCL_EXCLUSIVE ) )
-	{
-		Com_Printf ("failed\n");
-		FreeSound ();
-		return false;
-	}
-
-// get access to the primary buffer, if possible, so we can set the
-// sound hardware format
-	memset (&dsbuf, 0, sizeof(dsbuf));
-	dsbuf.dwSize = sizeof(DSBUFFERDESC);
-	dsbuf.dwFlags = DSBCAPS_PRIMARYBUFFER;
-	dsbuf.dwBufferBytes = 0;
-	dsbuf.lpwfxFormat = NULL;
-
-	memset(&dsbcaps, 0, sizeof(dsbcaps));
-	dsbcaps.dwSize = sizeof(dsbcaps);
-	primary_format_set = false;
-
-	if (DS_OK == pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL))
-	{
-		pformat = format;
-
-		if (DS_OK == pDSPBuf->lpVtbl->SetFormat (pDSPBuf, &pformat))
-		{
-			primary_format_set = true;
-		}
-	}
-	else
-		Com_Printf( "failed\n" );
+	WAVEFORMATEX primary_format = format;
+	HRESULT set_format_result = pDSPBuf->lpVtbl->SetFormat(pDSPBuf, &primary_format);
+	assert(set_format_result == DS_OK);
+	primary_format_set = true;
 
 	if ( !primary_format_set || !s_primary->value)
 	{
@@ -68117,6 +67899,7 @@ static bool DS_CreateBuffers( void )
 
 	/* we don't want anyone to access the buffer directly w/o locking it first. */
 	lpData = NULL;
+	DWORD dwWrite = 0;
 
 	pDSBuf->lpVtbl->Stop(pDSBuf);
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
@@ -68280,51 +68063,29 @@ int SNDDMA_GetDMAPos(void)
 
 DWORD locksize;
 
-// Makes sure dma.buffer is valid
-void SNDDMA_BeginPainting (void)
-{
-	int		reps;
-	DWORD	dwSize2;
-	DWORD	*pbuf, *pbuf2;
-	HRESULT	hresult;
-	DWORD	dwStatus;
+void SNDDMA_BeginPainting() {
+	if (pDSBuf) {
 
-	if (!pDSBuf)
-		return;
+		DWORD dwStatus = 0;
+		HRESULT get_status_result = pDSBuf->lpVtbl->GetStatus(pDSBuf, &dwStatus);
+		assert(get_status_result == DS_OK);
 
-	// if the buffer was lost or stopped, restore it and/or restart it
-	if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
-		Com_Printf ("Couldn't get sound buffer status\n");
-
-	if (dwStatus & DSBSTATUS_BUFFERLOST)
-		pDSBuf->lpVtbl->Restore (pDSBuf);
-
-	if (!(dwStatus & DSBSTATUS_PLAYING))
-		pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
-
-	// lock the dsound buffer
-
-	reps = 0;
-	dma.buffer = NULL;
-
-	while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (void**)&pbuf, &locksize,
-								   (void**)&pbuf2, &dwSize2, 0)) != DS_OK)
-	{
-		if (hresult != DSERR_BUFFERLOST)
-		{
-			Com_Printf( "S_TransferStereo16: Lock failed with error '%s'\n", DSoundError( hresult ) );
-			S_Shutdown ();
-			return;
-		}
-		else
-		{
-			pDSBuf->lpVtbl->Restore( pDSBuf );
+		if (dwStatus & DSBSTATUS_BUFFERLOST) {
+			pDSBuf->lpVtbl->Restore(pDSBuf);
 		}
 
-		if (++reps > 2)
-			return;
+		if (!(dwStatus & DSBSTATUS_PLAYING)) {
+			pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
+		}
+
+		DWORD* pbuf = 0;
+		DWORD* pbuf2 = 0;
+		DWORD	dwSize2 = 0;
+		HRESULT lock_result = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (void**)&pbuf, &locksize, (void**)&pbuf2, &dwSize2, 0);
+		assert(lock_result == DS_OK);
+
+		dma.buffer = (unsigned char *)pbuf;
 	}
-	dma.buffer = (unsigned char *)pbuf;
 }
 
 void SNDDMA_Submit() {
@@ -68332,19 +68093,6 @@ void SNDDMA_Submit() {
 		pDSBuf->lpVtbl->Unlock(pDSBuf, dma.buffer, locksize, NULL, 0);
 	}
 }
-
-/*
-==============
-SNDDMA_Shutdown
-
-Reset the sound device for exiting
-===============
-*/
-void SNDDMA_Shutdown(void)
-{
-	FreeSound ();
-}
-
 
 /*
 ===========
@@ -69319,7 +69067,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
 		s_show = COM_GetCvar("s_show", "0", 0);
 		s_testsound = COM_GetCvar("s_testsound", "0", 0);
-		s_primary = COM_GetCvar("s_primary", "0", CVAR_ARCHIVE);	// win32 specific
+		s_primary = COM_GetCvar("s_primary", "1", CVAR_ARCHIVE);	// win32 specific
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
