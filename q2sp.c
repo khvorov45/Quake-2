@@ -61646,107 +61646,6 @@ void Draw_Char (int x, int y, int num)
 	glEnd ();
 }
 
-static void LoadTGA(char* name, u8** pic, int* width, int* height) {
-	u8* buffer = 0;
-	FS_LoadFile(name, (void **)&buffer);
-	assert(buffer);
-
-	typedef struct __attribute__((packed)) {
-		u8 id_length, colormap_type, image_type;
-		u16 colormap_index, colormap_length;
-		u8	colormap_size;
-		u16	x_origin, y_origin, width, height;
-		u8	pixel_size, attributes;
-	} TGA_Header;
-	static_assert(sizeof(TGA_Header) == 18);
-
-	TGA_Header* targa_header = (TGA_Header*)buffer;
-
-	assert(targa_header->image_type == 2 || targa_header->image_type == 10);
-	assert(targa_header->colormap_type == 0 || (targa_header->pixel_size == 32 || targa_header->pixel_size == 24));
-
-	i32 columns = targa_header->width;
-	i32 rows = targa_header->height;
-	i32 numPixels = columns * rows;
-
-	*width = columns;
-	*height = rows;
-
-	u8* targa_rgba = malloc(numPixels*4);
-	*pic = targa_rgba;
-
-	u8* buf_p = buffer + sizeof(TGA_Header) + targa_header->id_length;
-
-	switch(targa_header->image_type) {
-
-		// Uncompressed, RGB images
-		case 2 : {
-			for(i64 row = rows - 1; row >= 0; row--) {
-				u8* pixbuf = targa_rgba + row * columns * 4;
-
-				for(i64 column = 0; column < columns; column++) {
-					u8 blue = *buf_p++;
-					u8 green = *buf_p++;
-					u8 red = *buf_p++;
-					u8 alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
-
-					*pixbuf++ = red;
-					*pixbuf++ = green;
-					*pixbuf++ = blue;
-					*pixbuf++ = alpha;
-
-				} // for column
-			} // for row
-		} break; // case uncompressed
-
-		// Runlength encoded RGB images
-		case 10: {
-			for(i64 row = rows - 1; row >= 0; row--) {
-				u8* pixbuf = targa_rgba + row * columns * 4;
-
-				for (i64 column = 0; column < columns;) {
-					u8 packet_header = *buf_p++;
-					u8 packet_size = 1 + (packet_header & 0x7f);
-					bool is_rle_packet = packet_header & 0x80;
-
-					u8 blue = *buf_p++;
-					u8 green = *buf_p++;
-					u8 red = *buf_p++;
-					u8 alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
-
-					for(i64 j = 0; j < packet_size; j++) {
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = alpha;
-
-						column++;
-
-						// run spans across rows
-						if (column == columns && row > 0) {
-							column = 0;
-							row -= 1;
-							pixbuf = targa_rgba + row * columns * 4;
-						}
-
-						// NOTE: Pixels shouldn't keep going if we've run out of image
-						assert(column < columns || j == packet_size - 1);
-
-						if (!is_rle_packet && j < packet_size - 1) {
-							blue = *buf_p++;
-							green = *buf_p++;
-							red = *buf_p++;
-							alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
-						}
-					} // for packet size
-				} // for column
-			} // for row
-		} break; // case rle
-	} // switch image type
-
-	FS_FreeFile(buffer);
-}
-
 // Finds or loads the given image
 static image_t* GL_FindImage(char* name, imagetype_t type) {
 	image_t* target_image = 0;
@@ -61767,18 +61666,12 @@ static image_t* GL_FindImage(char* name, imagetype_t type) {
 		if (!target_image) {
 			bool is_pcx = string_ends_with(name_str, STR(".pcx"));
 			bool is_wal = string_ends_with(name_str, STR(".wal"));
-			if (is_pcx || is_wal) {
+			bool is_tga = string_ends_with(name_str, STR(".tga"));
+			if (is_pcx || is_wal || is_tga) {
 				Texture texture = context.load_texture(name_str);
 				imagetype_t actual_type = is_wal ? it_wall : type;
-				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, actual_type, 8);
-			} else if (string_ends_with(name_str, STR(".tga"))) {
-				int width = 0;
-				int height = 0;
-				u8* pic = 0;
-
-				LoadTGA(name, &pic, &width, &height);
-				target_image = GL_LoadPic(name, pic, width, height, type, 32);
-				free(pic);
+				int bits = is_tga ? 32 : 8;
+				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, actual_type, bits);
 			}
 		}
 	}
@@ -70096,10 +69989,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						u32	offsets_for_mips[4];
 						char animname[32]; // next frame in animation chain
 						i32 flags, contents, value;
-					} WAL;
+					} WAL_Header;
 
-					WAL* wal = (WAL*)file_content.ptr;
-					assert(file_content.len > (i64)sizeof(WAL));
+					WAL_Header* wal = (WAL_Header*)file_content.ptr;
+					assert(file_content.len > (i64)sizeof(WAL_Header));
 					assert(wal->width > 0 && wal->height > 0);
 
 					i64 px_count = wal->width * wal->height;
@@ -70114,10 +70007,111 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					};
 
 					i64 px_offset = wal->offsets_for_mips[0];
-					assert(px_offset >= (i64)sizeof(WAL) && px_offset + px_count < file_content.len);
+					assert(px_offset >= (i64)sizeof(WAL_Header) && px_offset + px_count < file_content.len);
 					u8* pixels_in_file = (u8*)wal + px_offset;
 					copy_bytes(decomp.texture.pixels, pixels_in_file, px_count);
 
+					append_fixed_cap(&temp_named_textures, decomp);
+				} else if (string_ends_with(info_name, STR(".tga"))) {
+					// NOTE: Unpack TGA
+
+					typedef struct __attribute__((packed)) {
+						u8 id_length, colormap_type, image_type;
+						u16 colormap_index, colormap_length;
+						u8	colormap_size;
+						u16	x_origin, y_origin, width, height;
+						u8	pixel_size, attributes;
+					} TGA_Header;
+					static_assert(sizeof(TGA_Header) == 18);
+
+					assert(file_content.len > (i64)sizeof(TGA_Header));
+					TGA_Header* tga = (TGA_Header*)file_content.ptr;
+
+					assert(tga->image_type == 2 || tga->image_type == 10);
+					assert(tga->colormap_type == 0 || (tga->pixel_size == 32 || tga->pixel_size == 24));
+
+					i64 px_count = tga->width * tga->height;
+
+					Named_Texture decomp = {
+						.name = copy_string(&context.memory.perm, info_name),
+						.texture = {
+							.width = tga->width,
+							.height = tga->height,
+							.pixels = arena_alloc_bytes(&context.memory.perm, px_count * 4),
+						},
+					};
+
+					u8* buf_p = file_content.ptr + sizeof(TGA_Header) + tga->id_length;
+					assert(buf_p <= file_content.ptr + file_content.len);
+
+					switch(tga->image_type) {
+
+						// Uncompressed, RGB images
+						case 2 : {
+							for(i64 row = tga->height - 1; row >= 0; row--) {
+								u8* pixbuf = decomp.texture.pixels + row * tga->width * 4;
+
+								for(i64 column = 0; column < tga->width; column++) {
+									u8 blue = *buf_p++;
+									u8 green = *buf_p++;
+									u8 red = *buf_p++;
+									u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
+
+									*pixbuf++ = red;
+									*pixbuf++ = green;
+									*pixbuf++ = blue;
+									*pixbuf++ = alpha;
+
+								} // for column
+							} // for row
+						} break; // case uncompressed
+
+						// Runlength encoded RGB images
+						case 10: {
+							for(i64 row = tga->height - 1; row >= 0; row--) {
+								u8* pixbuf = decomp.texture.pixels + row * tga->width * 4;
+
+								for (i64 column = 0; column < tga->width;) {
+									u8 packet_header = *buf_p++;
+									u8 packet_size = 1 + (packet_header & 0x7f);
+									bool is_rle_packet = packet_header & 0x80;
+
+									u8 blue = *buf_p++;
+									u8 green = *buf_p++;
+									u8 red = *buf_p++;
+									u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
+
+									for(i64 j = 0; j < packet_size; j++) {
+										*pixbuf++ = red;
+										*pixbuf++ = green;
+										*pixbuf++ = blue;
+										*pixbuf++ = alpha;
+
+										column++;
+
+										// run spans across rows
+										if (column == tga->width && row > 0) {
+											column = 0;
+											row -= 1;
+											pixbuf = decomp.texture.pixels + row * tga->width * 4;
+										}
+
+										// NOTE: Pixels shouldn't keep going if we've run out of image
+										assert(column < tga->width || j == packet_size - 1);
+
+										if (!is_rle_packet && j < packet_size - 1) {
+											blue = *buf_p++;
+											green = *buf_p++;
+											red = *buf_p++;
+											alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
+										}
+									} // for packet size
+								} // for column
+							} // for row
+						} break; // case rle
+					} // tga switch image type
+
+					assert(buf_p <= file_content.ptr + file_content.len);
 					append_fixed_cap(&temp_named_textures, decomp);
 				} // if-else chain file processing
 			} // for file
