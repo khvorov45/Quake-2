@@ -26,6 +26,7 @@
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef int8_t i8;
 typedef int32_t i32;
 typedef int64_t i64;
 
@@ -27054,15 +27055,6 @@ typedef struct
 	int			dataofs;		// chunk starts this many bytes from file start
 } wavinfo_t;
 
-
-/*
-====================================================================
-
-  SYSTEM SPECIFIC FUNCTIONS
-
-====================================================================
-*/
-
 // initializes cycling through a DMA buffer and returns information on it
 bool SNDDMA_Init(void);
 
@@ -27075,8 +27067,6 @@ void	SNDDMA_Shutdown(void);
 void	SNDDMA_BeginPainting (void);
 
 void	SNDDMA_Submit(void);
-
-//====================================================================
 
 #define	MAX_CHANNELS			32
 extern	channel_t   channels[MAX_CHANNELS];
@@ -27099,8 +27089,6 @@ extern cvar_t	*s_primary;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
-void S_InitScaletable (void);
-
 sfxcache_t *S_LoadSound (sfx_t *s);
 
 void S_IssuePlaysound (playsound_t *ps);
@@ -27114,7 +27102,6 @@ channel_t *S_PickChannel(int entnum, int entchannel);
 void S_Spatialize(channel_t *ch);
 
 #endif	// SND_LOC_H
-/* ============ end inlined header: client/snd_loc.h ============ */
 
 void S_Play(void);
 void S_SoundList(void);
@@ -27912,10 +27899,6 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 		return;
 	}
 
-	// rebuild scale tables if volume is modified
-	if (s_volume->modified)
-		S_InitScaletable ();
-
 	VectorCopy(origin, listener_origin);
 	VectorCopy(forward, listener_forward);
 	VectorCopy(right, listener_right);
@@ -28424,7 +28407,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 
 #define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
-int		snd_scaletable[32][256];
+
 int 	*snd_p, snd_linear_count, snd_vol;
 short	*snd_out;
 
@@ -28667,46 +28650,17 @@ void S_PaintChannels(int endtime)
 	}
 }
 
-void S_InitScaletable (void)
-{
-	int		i, j;
-	int		scale;
-
-	s_volume->modified = false;
-	for (i=0 ; i<32 ; i++)
-	{
-		scale = i * 8 * 256 * s_volume->value;
-		for (j=0 ; j<256 ; j++)
-			snd_scaletable[i][j] = ((signed char)j) * scale;
+void S_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset) {
+	ch->leftvol = clamp(ch->leftvol, 0, 255);
+	ch->rightvol = clamp(ch->rightvol, 0, 255);
+	u8* samples = (u8*)sc->data + ch->pos;
+	portable_samplepair_t* samp = paintbuffer + offset;
+	i64 master_volume_0_256 = (i64)(s_volume->value * 256.0f);
+	for (i64 ind = 0; ind < count; ind++, samp++) {
+		i8 sample = (i8)samples[ind];
+		samp->left += ch->leftvol * sample * master_volume_0_256;
+		samp->right += ch->rightvol * sample * master_volume_0_256;
 	}
-}
-
-void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int offset)
-{
-	int 	data;
-	int		*lscale, *rscale;
-	unsigned char *sfx;
-	int		i;
-	portable_samplepair_t	*samp;
-
-	if (ch->leftvol > 255)
-		ch->leftvol = 255;
-	if (ch->rightvol > 255)
-		ch->rightvol = 255;
-
-	lscale = snd_scaletable[ ch->leftvol >> 3];
-	rscale = snd_scaletable[ ch->rightvol >> 3];
-	sfx = (unsigned char *)sc->data + ch->pos;
-
-	samp = &paintbuffer[offset];
-
-	for (i=0 ; i<count ; i++, samp++)
-	{
-		data = sfx[i];
-		samp->left += lscale[data];
-		samp->right += rscale[data];
-	}
-
 	ch->pos += count;
 }
 
@@ -70338,7 +70292,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		bool SNDDMA_Init_result = SNDDMA_Init();
 		assert(SNDDMA_Init_result);
-		S_InitScaletable();
 		sound_started = 1;
 		num_sfx = 0;
 		soundtime = 0;
