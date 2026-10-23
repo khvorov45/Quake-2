@@ -67963,8 +67963,6 @@ void Sys_FindClose (void)
 	findhandle = 0;
 }
 
-#include <float.h>
-
 #define iDirectSoundCreate(a,b,c)	pDirectSoundCreate(a,b,c)
 
 HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS, IUnknown FAR *pUnkOuter);
