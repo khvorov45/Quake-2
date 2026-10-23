@@ -61709,64 +61709,39 @@ static void LoadTGA(char* name, u8** pic, int* width, int* height) {
 					u8 packet_size = 1 + (packet_header & 0x7f);
 					bool is_rle_packet = packet_header & 0x80;
 
-					if (is_rle_packet) {
+					u8 blue = *buf_p++;
+					u8 green = *buf_p++;
+					u8 red = *buf_p++;
+					u8 alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
 
-						u8 blue = *buf_p++;
-						u8 green = *buf_p++;
-						u8 red = *buf_p++;
-						u8 alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
+					for(i64 j = 0; j < packet_size; j++) {
+						*pixbuf++ = red;
+						*pixbuf++ = green;
+						*pixbuf++ = blue;
+						*pixbuf++ = alpha;
 
-						for(i64 j = 0; j < packet_size; j++) {
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alpha;
+						column++;
 
-							column++;
+						// run spans across rows
+						if (column == columns) {
+							column = 0;
 
-							// run spans across rows
-							if (column == columns) {
-								column = 0;
-
-								if (row > 0) {
-									row--;
-								} else {
-									goto breakOut;
-								}
-
-								pixbuf = targa_rgba + row * columns * 4;
+							if (row > 0) {
+								row--;
+							} else {
+								goto breakOut;
 							}
+
+							pixbuf = targa_rgba + row * columns * 4;
 						}
-					} else {
 
-						for(i64 j = 0; j < packet_size; j++) {
-
-							u8 blue = *buf_p++;
-							u8 green = *buf_p++;
-							u8 red = *buf_p++;
-							u8 alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
-
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alpha;
-
-							column++;
-
-							// run spans across rows
-							if (column == columns) {
-								column = 0;
-
-								if (row > 0) {
-									row--;
-								} else {
-									goto breakOut;
-								}
-
-								pixbuf = targa_rgba + row * columns * 4;
-							}
-						} // for packet size
-					} // if-else RLE
+						if (!is_rle_packet && j < packet_size - 1) {
+							blue = *buf_p++;
+							green = *buf_p++;
+							red = *buf_p++;
+							alpha = targa_header->pixel_size == 32 ? *buf_p++ : 255;
+						}
+					} // for packet size
 				} // for column
 				breakOut:;
 			} // for row
