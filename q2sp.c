@@ -13692,7 +13692,6 @@ void CL_ParseLayout (void);
 void CL_FixUpGender(void);
 
 void CL_GetChallengePacket (void);
-void CL_Snd_Restart_f (void);
 void CL_RequestNextDownload (void);
 
 //
@@ -18377,14 +18376,6 @@ void CL_Userinfo_f (void)
 {
 	Com_Printf ("User info settings:\n");
 	Info_Print (Info_Cvar_User());
-}
-
-static void S_Init();
-// Restart the sound subsystem so it can pick up new parameters and flush all sounds
-static void CL_Snd_Restart_f() {
-	S_Shutdown();
-	S_Init();
-	CL_RegisterSounds();
 }
 
 int precache_check; // for autodownload of precache items
@@ -27198,53 +27189,6 @@ void S_SoundInfo_f(void)
 	Com_Printf("%5d speed\n", dma.speed);
 	Com_Printf("0x%x dma buffer\n", dma.buffer);
 }
-
-static void S_Init() {
-	cvar_t	*cv;
-
-	Com_Printf("\n------- sound initialization -------\n");
-
-	cv = COM_GetCvar ("s_initsound", "1", 0);
-	if (!cv->value)
-		Com_Printf ("not initializing.\n");
-	else
-	{
-		s_volume = COM_GetCvar ("s_volume", "0.7", CVAR_ARCHIVE);
-		s_khz = COM_GetCvar ("s_khz", "11", CVAR_ARCHIVE);
-		s_loadas8bit = COM_GetCvar ("s_loadas8bit", "1", CVAR_ARCHIVE);
-		s_mixahead = COM_GetCvar ("s_mixahead", "0.2", CVAR_ARCHIVE);
-		s_show = COM_GetCvar ("s_show", "0", 0);
-		s_testsound = COM_GetCvar ("s_testsound", "0", 0);
-		s_primary = COM_GetCvar ("s_primary", "0", CVAR_ARCHIVE);	// win32 specific
-
-		Cmd_AddCommand("play", S_Play);
-		Cmd_AddCommand("stopsound", S_StopAllSounds);
-		Cmd_AddCommand("soundlist", S_SoundList);
-		Cmd_AddCommand("soundinfo", S_SoundInfo_f);
-
-		if (!SNDDMA_Init())
-			return;
-
-		S_InitScaletable ();
-
-		sound_started = 1;
-		num_sfx = 0;
-
-		soundtime = 0;
-		paintedtime = 0;
-
-		Com_Printf ("sound sampling rate: %i\n", dma.speed);
-
-		S_StopAllSounds ();
-	}
-
-	Com_Printf("------------------------------------\n");
-}
-
-
-// =======================================================================
-// Shutdown sound engine
-// =======================================================================
 
 void S_Shutdown(void)
 {
@@ -69615,7 +69559,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("pause", CL_Pause_f);
 		Cmd_AddCommand("skins", CL_Skins_f);
 		Cmd_AddCommand("userinfo", CL_Userinfo_f);
-		Cmd_AddCommand("snd_restart", CL_Snd_Restart_f);
 		Cmd_AddCommand("changing", CL_Changing_f);
 		Cmd_AddCommand("write_config", write_config);
 		Cmd_AddCommand("quit", context.exit_process);
@@ -69677,6 +69620,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("-klook", IN_KLookUp);
 		Cmd_AddCommand("+mlook", IN_MLookDown);
 		Cmd_AddCommand("-mlook", IN_MLookUp);
+		Cmd_AddCommand("play", S_Play);
+		Cmd_AddCommand("stopsound", S_StopAllSounds);
+		Cmd_AddCommand("soundlist", S_SoundList);
+		Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
@@ -69802,6 +69749,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
 		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
 		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
+		s_volume = COM_GetCvar("s_volume", "0.7", CVAR_ARCHIVE);
+		s_khz = COM_GetCvar("s_khz", "11", CVAR_ARCHIVE);
+		s_loadas8bit = COM_GetCvar("s_loadas8bit", "1", CVAR_ARCHIVE);
+		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
+		s_show = COM_GetCvar("s_show", "0", 0);
+		s_testsound = COM_GetCvar("s_testsound", "0", 0);
+		s_primary = COM_GetCvar("s_primary", "0", CVAR_ARCHIVE);	// win32 specific
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
@@ -70381,8 +70335,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: sound must be initialized after window is created
-	// TODO: inline
-	S_Init();
+	{
+		bool SNDDMA_Init_result = SNDDMA_Init();
+		assert(SNDDMA_Init_result);
+		S_InitScaletable();
+		sound_started = 1;
+		num_sfx = 0;
+		soundtime = 0;
+		paintedtime = 0;
+		S_StopAllSounds();
+	}
 
 	// NOTE: Net message
 	// TODO: remove
