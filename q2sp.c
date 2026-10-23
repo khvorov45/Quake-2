@@ -61723,17 +61723,14 @@ static void LoadTGA(char* name, u8** pic, int* width, int* height) {
 						column++;
 
 						// run spans across rows
-						if (column == columns) {
+						if (column == columns && row > 0) {
 							column = 0;
-
-							if (row > 0) {
-								row--;
-							} else {
-								goto breakOut;
-							}
-
+							row -= 1;
 							pixbuf = targa_rgba + row * columns * 4;
 						}
+
+						// NOTE: Pixels shouldn't keep going if we've run out of image
+						assert(column < columns || j == packet_size - 1);
 
 						if (!is_rle_packet && j < packet_size - 1) {
 							blue = *buf_p++;
@@ -61743,7 +61740,6 @@ static void LoadTGA(char* name, u8** pic, int* width, int* height) {
 						}
 					} // for packet size
 				} // for column
-				breakOut:;
 			} // for row
 		} break; // case rle
 	} // switch image type
