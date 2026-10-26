@@ -67792,33 +67792,6 @@ static void DS_CreateBuffers() {
 	sample16 = (dma.samplebits / 8) - 1;
 }
 
-/*
-** DS_DestroyBuffers
-*/
-static void DS_DestroyBuffers( void )
-{
-	if ( pDS )
-	{
-		pDS->lpVtbl->SetCooperativeLevel( pDS, cl_hwnd, DSSCL_NORMAL );
-	}
-
-	if ( pDSBuf )
-	{
-		pDSBuf->lpVtbl->Stop( pDSBuf );
-		pDSBuf->lpVtbl->Release( pDSBuf );
-	}
-
-	// only release primary buffer if it's not also the mixing buffer we just released
-	if ( pDSPBuf && ( pDSBuf != pDSPBuf ) )
-	{
-		pDSPBuf->lpVtbl->Release( pDSPBuf );
-	}
-	pDSBuf = NULL;
-	pDSPBuf = NULL;
-
-	dma.buffer = NULL;
-}
-
 // return the current sample position (in mono samples read) inside the recirculating dma buffer, so the mixing code will know how many sample are required to fill it up.
 int SNDDMA_GetDMAPos(void)
 {
@@ -67870,24 +67843,6 @@ void SNDDMA_BeginPainting() {
 void SNDDMA_Submit() {
 	if (dma.buffer && pDSBuf) {
 		pDSBuf->lpVtbl->Unlock(pDSBuf, dma.buffer, locksize, NULL, 0);
-	}
-}
-
-static void S_Activate (bool active)
-{
-	if ( active )
-	{
-		if (pDS && cl_hwnd)
-		{
-			DS_CreateBuffers();
-		}
-	}
-	else
-	{
-		if (pDS && cl_hwnd)
-		{
-			DS_DestroyBuffers();
-		}
 	}
 }
 
@@ -68051,7 +68006,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			Key_ClearStates();
 			ActiveApp = fActive && !Minimized;
 			IN_Activate(ActiveApp);
-			S_Activate(ActiveApp);
 
 			if (fActive) {
 				SetForegroundWindow(hWnd);
