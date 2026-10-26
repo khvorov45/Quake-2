@@ -26957,7 +26957,6 @@ void S_Spatialize(channel_t *ch);
 
 void S_Play(void);
 void S_SoundList(void);
-void S_Update_();
 
 
 // =======================================================================
@@ -27626,6 +27625,54 @@ void S_AddLoopSounds (void)
 	}
 }
 
+static void S_Update_() {
+	SNDDMA_BeginPainting();
+
+	if (dma.buffer) {
+
+		// Updates DMA time
+		{
+			static i32 buffers = 0;
+			static i32 oldsamplepos = 0;
+
+			i32 fullsamples = dma.samples / dma.channels;
+
+			// it is possible to miscount buffers if it has wrapped twice between calls to S_Update.  Oh well.
+			i32 samplepos = SNDDMA_GetDMAPos();
+
+			if (samplepos < oldsamplepos) {
+				buffers++; // buffer wrapped
+
+				if (paintedtime > 0x40000000) {
+					// time to chop things off to avoid 32 bit limits
+					buffers = 0;
+					paintedtime = fullsamples;
+					S_StopAllSounds();
+				}
+			}
+			oldsamplepos = samplepos;
+
+			soundtime = buffers * fullsamples + samplepos / dma.channels;
+		}
+
+		// check to make sure that we haven't overshot
+		if (paintedtime < soundtime) {
+			paintedtime = soundtime;
+		}
+
+		// mix ahead of current position and to an even submission block size
+		u32 endtime = ((i32)(soundtime + s_mixahead->value * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
+		i32 samps = dma.samples >> (dma.channels-1);
+		if ((i32)(endtime - soundtime) > samps) {
+			endtime = soundtime + samps;
+		}
+
+		S_PaintChannels(endtime);
+
+		SNDDMA_Submit();
+	}
+}
+
 // Called once each time through the main loop
 void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 {
@@ -27685,7 +27732,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 		Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
 	}
 
-// mix some sound
+	// mix some sound
 	S_Update_();
 }
 
@@ -27706,68 +27753,6 @@ static void S_StopAllSounds() {
 	zero_memory(channels, sizeof(channels));
 
 	S_ClearBuffer();
-}
-
-void GetSoundtime(void)
-{
-	int		samplepos;
-	static	int		buffers;
-	static	int		oldsamplepos;
-	int		fullsamples;
-
-	fullsamples = dma.samples / dma.channels;
-
-	// it is possible to miscount buffers if it has wrapped twice between
-	// calls to S_Update.  Oh well.
-	samplepos = SNDDMA_GetDMAPos();
-
-	if (samplepos < oldsamplepos)
-	{
-		buffers++;					// buffer wrapped
-
-		if (paintedtime > 0x40000000)
-		{	// time to chop things off to avoid 32 bit limits
-			buffers = 0;
-			paintedtime = fullsamples;
-			S_StopAllSounds ();
-		}
-	}
-	oldsamplepos = samplepos;
-
-	soundtime = buffers*fullsamples + samplepos/dma.channels;
-}
-
-void S_Update_(void)
-{
-	unsigned        endtime;
-	int				samps;
-
-	SNDDMA_BeginPainting ();
-
-	if (!dma.buffer)
-		return;
-
-	// Updates DMA time
-	GetSoundtime();
-
-	// check to make sure that we haven't overshot
-	if (paintedtime < soundtime)
-	{
-		paintedtime = soundtime;
-	}
-
-	// mix ahead of current position
-	endtime = soundtime + s_mixahead->value * dma.speed;
-
-	// mix to an even submission block size
-	endtime = (endtime + dma.submission_chunk-1) & ~(dma.submission_chunk-1);
-	samps = dma.samples >> (dma.channels-1);
-	if ((int)(endtime - soundtime) > samps)
-		endtime = soundtime + samps;
-
-	S_PaintChannels (endtime);
-
-	SNDDMA_Submit ();
 }
 
 /*
@@ -67599,12 +67584,6 @@ void Sys_FindClose (void)
 	findhandle = 0;
 }
 
-#define SECONDARY_BUFFER_SIZE	0x10000
-
-static bool	dsound_init;
-
-static int	sample16;
-
 DWORD	gSndBufSize;
 
 MMTIME		mmstarttime;
@@ -67619,14 +67598,13 @@ int SNDDMA_GetDMAPos(void)
 	int		s = 0;
 	DWORD	dwWrite;
 
-	if (dsound_init)
 	{
 		mmtime.wType = TIME_SAMPLES;
 		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
 		s = mmtime.u.sample - mmstarttime.u.sample;
 	}
 
-	s >>= sample16;
+	s >>= 1;
 
 	s &= (dma.samples-1);
 
@@ -69188,6 +69166,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: Sound init. Must be after window is created
+	// TODO: unglobal
 	{
 		dma.channels = 2;
 		dma.samplebits = 16;
@@ -69252,9 +69231,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		dma.samplepos = 0;
 		dma.submission_chunk = 1;
 		dma.buffer = 0;
-		sample16 = (dma.samplebits / 8) - 1;
-
-		dsound_init = true;
 
 		num_sfx = 0;
 		soundtime = 0;
