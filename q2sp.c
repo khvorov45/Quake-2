@@ -26941,7 +26941,6 @@ extern cvar_t	*s_loadas8bit;
 extern cvar_t	*s_show;
 extern cvar_t	*s_mixahead;
 extern cvar_t	*s_testsound;
-extern cvar_t	*s_primary;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
@@ -27005,7 +27004,6 @@ cvar_t		*s_testsound;
 cvar_t		*s_loadas8bit;
 cvar_t		*s_show;
 cvar_t		*s_mixahead;
-cvar_t		*s_primary;
 
 void S_SoundInfo_f(void)
 {
@@ -67732,11 +67730,8 @@ void Sys_FindClose (void)
 #define SECONDARY_BUFFER_SIZE	0x10000
 
 static bool	dsound_init;
-static bool	primary_format_set;
 
 static int	sample16;
-
-HPSTR lpData;
 
 DWORD	gSndBufSize;
 
@@ -67745,9 +67740,7 @@ MMTIME		mmstarttime;
 LPDIRECTSOUND pDS;
 LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 
-void FreeSound( void );
-
-static bool DS_CreateBuffers() {
+static void DS_CreateBuffers() {
 	WAVEFORMATEX format = {
 		.wFormatTag = WAVE_FORMAT_PCM,
 		.nChannels = dma.channels,
@@ -67766,88 +67759,37 @@ static bool DS_CreateBuffers() {
 		.dwFlags = DSBCAPS_PRIMARYBUFFER,
 	};
 
-	DSBCAPS dsbcaps = {.dwSize = sizeof(dsbcaps)};
-
 	HRESULT create_sound_buffer_result = pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL);
 	assert(create_sound_buffer_result == DS_OK);
 
 	WAVEFORMATEX primary_format = format;
 	HRESULT set_format_result = pDSPBuf->lpVtbl->SetFormat(pDSPBuf, &primary_format);
 	assert(set_format_result == DS_OK);
-	primary_format_set = true;
 
-	if ( !primary_format_set || !s_primary->value)
-	{
-	// create the secondary buffer we'll actually work with
-		memset (&dsbuf, 0, sizeof(dsbuf));
-		dsbuf.dwSize = sizeof(DSBUFFERDESC);
-		dsbuf.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCSOFTWARE;
-		dsbuf.dwBufferBytes = SECONDARY_BUFFER_SIZE;
-		dsbuf.lpwfxFormat = &format;
+	HRESULT set_coop_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_WRITEPRIMARY);
+	assert(set_coop_level_result == DS_OK);
 
-		memset(&dsbcaps, 0, sizeof(dsbcaps));
-		dsbcaps.dwSize = sizeof(dsbcaps);
+	DSBCAPS dsbcaps = {.dwSize = sizeof(dsbcaps)};
+	HRESULT get_caps_result = pDSPBuf->lpVtbl->GetCaps(pDSPBuf, &dsbcaps);
+	assert(get_caps_result == DS_OK);
 
-		if (DS_OK != pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL))
-		{
-			Com_Printf( "failed\n" );
-			FreeSound ();
-			return false;
-		}
-
-		dma.channels = format.nChannels;
-		dma.samplebits = format.wBitsPerSample;
-		dma.speed = format.nSamplesPerSec;
-
-		if (DS_OK != pDSBuf->lpVtbl->GetCaps (pDSBuf, &dsbcaps))
-		{
-			Com_Printf ("*** GetCaps failed ***\n");
-			FreeSound ();
-			return false;
-		}
-
-		Com_Printf ("...using secondary sound buffer\n");
-	}
-	else
-	{
-		Com_Printf( "...using primary buffer\n" );
-
-		if (DS_OK != pDS->lpVtbl->SetCooperativeLevel (pDS, cl_hwnd, DSSCL_WRITEPRIMARY))
-		{
-			Com_Printf( "failed\n" );
-			FreeSound ();
-			return false;
-		}
-
-		if (DS_OK != pDSPBuf->lpVtbl->GetCaps (pDSPBuf, &dsbcaps))
-		{
-			Com_Printf ("*** GetCaps failed ***\n");
-			return false;
-		}
-
-		pDSBuf = pDSPBuf;
-	}
+	pDSBuf = pDSPBuf;
 
 	// Make sure mixer is active
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
-	/* we don't want anyone to access the buffer directly w/o locking it first. */
-	lpData = NULL;
 	DWORD dwWrite = 0;
-
 	pDSBuf->lpVtbl->Stop(pDSBuf);
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-	dma.samples = gSndBufSize/(dma.samplebits/8);
+	dma.samples = gSndBufSize / (dma.samplebits / 8);
 	dma.samplepos = 0;
 	dma.submission_chunk = 1;
-	dma.buffer = (unsigned char *) lpData;
-	sample16 = (dma.samplebits/8) - 1;
-
-	return true;
+	dma.buffer = 0;
+	sample16 = (dma.samplebits / 8) - 1;
 }
 
 /*
@@ -67875,22 +67817,6 @@ static void DS_DestroyBuffers( void )
 	pDSPBuf = NULL;
 
 	dma.buffer = NULL;
-}
-
-void FreeSound() {
-	if (pDS) {
-		DS_DestroyBuffers();
-	}
-
-	if (pDS) {
-		pDS->lpVtbl->Release( pDS );
-	}
-
-	pDS = NULL;
-	pDSBuf = NULL;
-	pDSPBuf = NULL;
-	lpData = NULL;
-	dsound_init = false;
 }
 
 // return the current sample position (in mono samples read) inside the recirculating dma buffer, so the mixing code will know how many sample are required to fill it up.
@@ -68910,7 +68836,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
 		s_show = COM_GetCvar("s_show", "0", 0);
 		s_testsound = COM_GetCvar("s_testsound", "0", 0);
-		s_primary = COM_GetCvar("s_primary", "1", CVAR_ARCHIVE);	// win32 specific
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
@@ -69503,8 +69428,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		assert(get_caps_result == DS_OK);
 		assert(!(dscaps.dwFlags & DSCAPS_EMULDRIVER));
 
-		bool create_buffers_result = DS_CreateBuffers();
-		assert(create_buffers_result);
+		DS_CreateBuffers();
 
 		dsound_init = true;
 
