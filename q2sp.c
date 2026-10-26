@@ -28,6 +28,7 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int8_t i8;
+typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
@@ -26940,7 +26941,6 @@ extern cvar_t	*s_nosound;
 extern cvar_t	*s_loadas8bit;
 extern cvar_t	*s_show;
 extern cvar_t	*s_mixahead;
-extern cvar_t	*s_testsound;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
@@ -27000,7 +27000,6 @@ playsound_t	s_pendingplays;
 int			s_beginofs;
 
 cvar_t		*s_volume;
-cvar_t		*s_testsound;
 cvar_t		*s_loadas8bit;
 cvar_t		*s_show;
 cvar_t		*s_mixahead;
@@ -27529,9 +27528,6 @@ void S_StartLocalSound (char *sound)
 
 static void S_ClearBuffer() {
 	i32 clear = 0;
-	if (dma.samplebits == 8) {
-		clear = 0x80;
-	}
 
 	SNDDMA_BeginPainting();
 	if (dma.buffer) {
@@ -27721,8 +27717,8 @@ void GetSoundtime(void)
 
 	fullsamples = dma.samples / dma.channels;
 
-// it is possible to miscount buffers if it has wrapped twice between
-// calls to S_Update.  Oh well.
+	// it is possible to miscount buffers if it has wrapped twice between
+	// calls to S_Update.  Oh well.
 	samplepos = SNDDMA_GetDMAPos();
 
 	if (samplepos < oldsamplepos)
@@ -27741,7 +27737,6 @@ void GetSoundtime(void)
 	soundtime = buffers*fullsamples + samplepos/dma.channels;
 }
 
-
 void S_Update_(void)
 {
 	unsigned        endtime;
@@ -27752,22 +27747,20 @@ void S_Update_(void)
 	if (!dma.buffer)
 		return;
 
-// Updates DMA time
+	// Updates DMA time
 	GetSoundtime();
 
-// check to make sure that we haven't overshot
+	// check to make sure that we haven't overshot
 	if (paintedtime < soundtime)
 	{
 		paintedtime = soundtime;
 	}
 
-// mix ahead of current position
+	// mix ahead of current position
 	endtime = soundtime + s_mixahead->value * dma.speed;
-//endtime = (soundtime + 4096) & ~4095;
 
 	// mix to an even submission block size
-	endtime = (endtime + dma.submission_chunk-1)
-		& ~(dma.submission_chunk-1);
+	endtime = (endtime + dma.submission_chunk-1) & ~(dma.submission_chunk-1);
 	samps = dma.samples >> (dma.channels-1);
 	if ((int)(endtime - soundtime) > samps)
 		endtime = soundtime + samps;
@@ -28170,146 +28163,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 #define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
-int 	*snd_p, snd_linear_count, snd_vol;
-short	*snd_out;
-
-void S_WriteLinearBlastStereo16 (void)
-{
-	int		i;
-	int		val;
-
-	for (i=0 ; i<snd_linear_count ; i+=2)
-	{
-		val = snd_p[i]>>8;
-		if (val > 0x7fff)
-			snd_out[i] = 0x7fff;
-		else if (val < (short)0x8000)
-			snd_out[i] = (short)0x8000;
-		else
-			snd_out[i] = val;
-
-		val = snd_p[i+1]>>8;
-		if (val > 0x7fff)
-			snd_out[i+1] = 0x7fff;
-		else if (val < (short)0x8000)
-			snd_out[i+1] = (short)0x8000;
-		else
-			snd_out[i+1] = val;
-	}
-}
-
-void S_TransferStereo16 (unsigned long *pbuf, int endtime)
-{
-	int		lpos;
-	int		lpaintedtime;
-
-	snd_p = (int *) paintbuffer;
-	lpaintedtime = paintedtime;
-
-	while (lpaintedtime < endtime)
-	{
-	// handle recirculating buffer issues
-		lpos = lpaintedtime & ((dma.samples>>1)-1);
-
-		snd_out = (short *) pbuf + (lpos<<1);
-
-		snd_linear_count = (dma.samples>>1) - lpos;
-		if (lpaintedtime + snd_linear_count > endtime)
-			snd_linear_count = endtime - lpaintedtime;
-
-		snd_linear_count <<= 1;
-
-	// write a linear blast of samples
-		S_WriteLinearBlastStereo16 ();
-
-		snd_p += snd_linear_count;
-		lpaintedtime += (snd_linear_count>>1);
-	}
-}
-
-/*
-===================
-S_TransferPaintBuffer
-
-===================
-*/
-void S_TransferPaintBuffer(int endtime)
-{
-	int 	out_idx;
-	int 	count;
-	int 	out_mask;
-	int 	*p;
-	int 	step;
-	int		val;
-	unsigned long *pbuf;
-
-	pbuf = (unsigned long *)dma.buffer;
-
-	if (s_testsound->value)
-	{
-		int		i;
-		int		count;
-
-		// write a fixed sine wave
-		count = (endtime - paintedtime);
-		for (i=0 ; i<count ; i++)
-			paintbuffer[i].left = paintbuffer[i].right = sin((paintedtime+i)*0.1)*20000*256;
-	}
-
-
-	if (dma.samplebits == 16 && dma.channels == 2)
-	{	// optimized case
-		S_TransferStereo16 (pbuf, endtime);
-	}
-	else
-	{	// general case
-		p = (int *) paintbuffer;
-		count = (endtime - paintedtime) * dma.channels;
-		out_mask = dma.samples - 1;
-		out_idx = paintedtime * dma.channels & out_mask;
-		step = 3 - dma.channels;
-
-		if (dma.samplebits == 16)
-		{
-			short *out = (short *) pbuf;
-			while (count--)
-			{
-				val = *p >> 8;
-				p+= step;
-				if (val > 0x7fff)
-					val = 0x7fff;
-				else if (val < (short)0x8000)
-					val = (short)0x8000;
-				out[out_idx] = val;
-				out_idx = (out_idx + 1) & out_mask;
-			}
-		}
-		else if (dma.samplebits == 8)
-		{
-			unsigned char *out = (unsigned char *) pbuf;
-			while (count--)
-			{
-				val = *p >> 8;
-				p+= step;
-				if (val > 0x7fff)
-					val = 0x7fff;
-				else if (val < (short)0x8000)
-					val = (short)0x8000;
-				out[out_idx] = (val>>8) + 128;
-				out_idx = (out_idx + 1) & out_mask;
-			}
-		}
-	}
-}
-
-
-/*
-===============================================================================
-
-CHANNEL MIXING
-
-===============================================================================
-*/
+static i32 snd_vol;
 
 void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int endtime, int offset);
 void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int endtime, int offset);
@@ -28322,11 +28176,11 @@ void S_PaintChannels(int endtime)
 	int		ltime, count;
 	playsound_t	*ps;
 
-	snd_vol = s_volume->value*256;
+	snd_vol = s_volume->value * 256;
 
 	while (paintedtime < endtime)
 	{
-	// if paintbuffer is smaller than DMA buffer
+		// if paintbuffer is smaller than DMA buffer
 		end = endtime;
 		if (endtime - paintedtime > PAINTBUFFER_SIZE)
 			end = paintedtime + PAINTBUFFER_SIZE;
@@ -28375,7 +28229,7 @@ void S_PaintChannels(int endtime)
 
 				if (count > 0 && ch->sfx)
 				{
-					if (sc->width == 1)// FIXME; 8 bit asm is wrong now
+					if (sc->width == 1)
 						S_PaintChannelFrom8(ch, sc, count,  ltime - paintedtime);
 					else
 						S_PaintChannelFrom16(ch, sc, count, ltime - paintedtime);
@@ -28405,8 +28259,35 @@ void S_PaintChannels(int endtime)
 
 		}
 
-	// transfer out according to DMA format
-		S_TransferPaintBuffer(end);
+		// transfer out according to DMA format
+		{
+			i32* snd_p = (i32*)paintbuffer;
+			i32 lpaintedtime = paintedtime;
+			while (lpaintedtime < end) {
+				// handle recirculating buffer issues
+				i32 lpos = lpaintedtime & ((dma.samples >> 1) - 1);
+
+				i16* snd_out = (i16*)dma.buffer + (lpos << 1);
+
+				i32 snd_linear_count = (dma.samples >> 1) - lpos;
+				if (lpaintedtime + snd_linear_count > end) {
+					snd_linear_count = end - lpaintedtime;
+				}
+
+				snd_linear_count <<= 1;
+
+				for (i64 ind = 0; ind < snd_linear_count; ind += 2) {
+					i32 val1 = clamp(snd_p[ind] >> 8, (i16)0x8000, 0x7fff);
+					snd_out[ind] = val1;
+					i32 val2 = clamp(snd_p[ind + 1] >> 8, (i16)0x8000, 0x7fff);
+					snd_out[ind + 1] = val2;
+				}
+
+				snd_p += snd_linear_count;
+				lpaintedtime += (snd_linear_count>>1);
+			}
+		}
+
 		paintedtime = end;
 	}
 }
@@ -28425,25 +28306,16 @@ void S_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset) {
 	ch->pos += count;
 }
 
-void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int offset)
-{
-	int data;
-	int left, right;
-	int leftvol, rightvol;
-	signed short *sfx;
-	int	i;
-	portable_samplepair_t	*samp;
+void S_PaintChannelFrom16(channel_t *ch, sfxcache_t *sc, int count, int offset) {
+	i32 leftvol = ch->leftvol * snd_vol;
+	i32 rightvol = ch->rightvol * snd_vol;
+	i16* sfx = (i16*)sc->data + ch->pos;
 
-	leftvol = ch->leftvol*snd_vol;
-	rightvol = ch->rightvol*snd_vol;
-	sfx = (signed short *)sc->data + ch->pos;
-
-	samp = &paintbuffer[offset];
-	for (i=0 ; i<count ; i++, samp++)
-	{
-		data = sfx[i];
-		left = (data * leftvol)>>8;
-		right = (data * rightvol)>>8;
+	portable_samplepair_t* samp = paintbuffer + offset;
+	for (i64 ind=0 ; ind<count ; ind++, samp++) {
+		i32 data = sfx[ind];
+		i32 left = (data * leftvol)>>8;
+		i32 right = (data * rightvol)>>8;
 		samp->left += left;
 		samp->right += right;
 	}
@@ -67740,58 +67612,6 @@ MMTIME		mmstarttime;
 LPDIRECTSOUND pDS;
 LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 
-static void DS_CreateBuffers() {
-	WAVEFORMATEX format = {
-		.wFormatTag = WAVE_FORMAT_PCM,
-		.nChannels = dma.channels,
-		.wBitsPerSample = dma.samplebits,
-		.nSamplesPerSec = dma.speed,
-		.nBlockAlign = dma.channels * dma.samplebits / 8,
-		.cbSize = 0,
-	};
-	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-
-	HRESULT set_cooperative_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_EXCLUSIVE);
-	assert(set_cooperative_level_result == DS_OK);
-
-	DSBUFFERDESC dsbuf = {
-		.dwSize = sizeof(DSBUFFERDESC),
-		.dwFlags = DSBCAPS_PRIMARYBUFFER,
-	};
-
-	HRESULT create_sound_buffer_result = pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL);
-	assert(create_sound_buffer_result == DS_OK);
-
-	WAVEFORMATEX primary_format = format;
-	HRESULT set_format_result = pDSPBuf->lpVtbl->SetFormat(pDSPBuf, &primary_format);
-	assert(set_format_result == DS_OK);
-
-	HRESULT set_coop_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_WRITEPRIMARY);
-	assert(set_coop_level_result == DS_OK);
-
-	DSBCAPS dsbcaps = {.dwSize = sizeof(dsbcaps)};
-	HRESULT get_caps_result = pDSPBuf->lpVtbl->GetCaps(pDSPBuf, &dsbcaps);
-	assert(get_caps_result == DS_OK);
-
-	pDSBuf = pDSPBuf;
-
-	// Make sure mixer is active
-	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
-
-	gSndBufSize = dsbcaps.dwBufferBytes;
-
-	DWORD dwWrite = 0;
-	pDSBuf->lpVtbl->Stop(pDSBuf);
-	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
-	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
-
-	dma.samples = gSndBufSize / (dma.samplebits / 8);
-	dma.samplepos = 0;
-	dma.submission_chunk = 1;
-	dma.buffer = 0;
-	sample16 = (dma.samplebits / 8) - 1;
-}
-
 // return the current sample position (in mono samples read) inside the recirculating dma buffer, so the mixing code will know how many sample are required to fill it up.
 int SNDDMA_GetDMAPos(void)
 {
@@ -68789,7 +68609,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		s_loadas8bit = COM_GetCvar("s_loadas8bit", "1", CVAR_ARCHIVE);
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
 		s_show = COM_GetCvar("s_show", "0", 0);
-		s_testsound = COM_GetCvar("s_testsound", "0", 0);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
@@ -69377,12 +69196,63 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		HRESULT direct_sound_create_result = DirectSoundCreate(NULL, &pDS, NULL);
 		assert(direct_sound_create_result == DS_OK);
 
-		DSCAPS dscaps = {.dwSize = sizeof(dscaps)};
-		HRESULT get_caps_result = pDS->lpVtbl->GetCaps(pDS, &dscaps);
-		assert(get_caps_result == DS_OK);
-		assert(!(dscaps.dwFlags & DSCAPS_EMULDRIVER));
+		{
+			DSCAPS dscaps = {.dwSize = sizeof(dscaps)};
+			HRESULT get_caps_result = pDS->lpVtbl->GetCaps(pDS, &dscaps);
+			assert(get_caps_result == DS_OK);
+			assert(!(dscaps.dwFlags & DSCAPS_EMULDRIVER));
+		}
 
-		DS_CreateBuffers();
+		WAVEFORMATEX format = {
+			.wFormatTag = WAVE_FORMAT_PCM,
+			.nChannels = dma.channels,
+			.wBitsPerSample = dma.samplebits,
+			.nSamplesPerSec = dma.speed,
+			.nBlockAlign = dma.channels * dma.samplebits / 8,
+			.cbSize = 0,
+		};
+		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+
+		HRESULT set_cooperative_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_EXCLUSIVE);
+		assert(set_cooperative_level_result == DS_OK);
+
+		DSBUFFERDESC dsbuf = {
+			.dwSize = sizeof(DSBUFFERDESC),
+			.dwFlags = DSBCAPS_PRIMARYBUFFER,
+		};
+
+		HRESULT create_sound_buffer_result = pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL);
+		assert(create_sound_buffer_result == DS_OK);
+
+		WAVEFORMATEX primary_format = format;
+		HRESULT set_format_result = pDSPBuf->lpVtbl->SetFormat(pDSPBuf, &primary_format);
+		assert(set_format_result == DS_OK);
+
+		HRESULT set_coop_level_result = pDS->lpVtbl->SetCooperativeLevel(pDS, cl_hwnd, DSSCL_WRITEPRIMARY);
+		assert(set_coop_level_result == DS_OK);
+
+		DSBCAPS dsbcaps = {.dwSize = sizeof(dsbcaps)};
+		{
+			HRESULT get_caps_result = pDSPBuf->lpVtbl->GetCaps(pDSPBuf, &dsbcaps);
+			assert(get_caps_result == DS_OK);
+		}
+
+		pDSBuf = pDSPBuf;
+
+		// Make sure mixer is active
+		pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
+		pDSBuf->lpVtbl->Stop(pDSBuf);
+
+		DWORD dwWrite = 0;
+		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
+		pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
+
+		gSndBufSize = dsbcaps.dwBufferBytes;
+		dma.samples = gSndBufSize / (dma.samplebits / 8);
+		dma.samplepos = 0;
+		dma.submission_chunk = 1;
+		dma.buffer = 0;
+		sample16 = (dma.samplebits / 8) - 1;
 
 		dsound_init = true;
 
