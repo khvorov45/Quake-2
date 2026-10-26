@@ -13134,8 +13134,6 @@ struct sfx_s;
 void S_StartSound (vec3_t origin, int entnum, int entchannel, struct sfx_s *sfx, float fvol,  float attenuation, float timeofs);
 void S_StartLocalSound (char *s);
 
-void S_Update (vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up);
-
 void S_BeginRegistration (void);
 struct sfx_s *S_RegisterSound (char *sample);
 void S_EndRegistration (void);
@@ -26939,7 +26937,6 @@ extern	playsound_t	s_pendingplays;
 extern cvar_t	*s_volume;
 extern cvar_t	*s_nosound;
 extern cvar_t	*s_loadas8bit;
-extern cvar_t	*s_show;
 extern cvar_t	*s_mixahead;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
@@ -27000,7 +26997,6 @@ int			s_beginofs;
 
 cvar_t		*s_volume;
 cvar_t		*s_loadas8bit;
-cvar_t		*s_show;
 cvar_t		*s_mixahead;
 
 void S_SoundInfo_f(void)
@@ -27338,8 +27334,6 @@ void S_IssuePlaysound (playsound_t *ps)
 	channel_t	*ch;
 	sfxcache_t	*sc;
 
-	if (s_show->value)
-		Com_Printf ("Issue %i\n", ps->begin);
 	// pick a channel to play on
 	ch = S_PickChannel(ps->entnum, ps->entchannel);
 	if (!ch)
@@ -27535,15 +27529,7 @@ static void S_ClearBuffer() {
 	SNDDMA_Submit();
 }
 
-/*
-==================
-S_AddLoopSounds
-
-Entities with a ->sound field will generated looped sounds
-that are automatically started, stopped, and merged together
-as the entities are sent to the client
-==================
-*/
+// Entities with a ->sound field will generated looped sounds that are automatically started, stopped, and merged together as the entities are sent to the client
 void S_AddLoopSounds (void)
 {
 	int			i, j;
@@ -27623,117 +27609,6 @@ void S_AddLoopSounds (void)
 		ch->pos = paintedtime % sc->length;
 		ch->end = paintedtime + sc->length - ch->pos;
 	}
-}
-
-static void S_Update_() {
-	SNDDMA_BeginPainting();
-
-	if (dma.buffer) {
-
-		// Updates DMA time
-		{
-			static i32 buffers = 0;
-			static i32 oldsamplepos = 0;
-
-			i32 fullsamples = dma.samples / dma.channels;
-
-			// it is possible to miscount buffers if it has wrapped twice between calls to S_Update.  Oh well.
-			i32 samplepos = SNDDMA_GetDMAPos();
-
-			if (samplepos < oldsamplepos) {
-				buffers++; // buffer wrapped
-
-				if (paintedtime > 0x40000000) {
-					// time to chop things off to avoid 32 bit limits
-					buffers = 0;
-					paintedtime = fullsamples;
-					S_StopAllSounds();
-				}
-			}
-			oldsamplepos = samplepos;
-
-			soundtime = buffers * fullsamples + samplepos / dma.channels;
-		}
-
-		// check to make sure that we haven't overshot
-		if (paintedtime < soundtime) {
-			paintedtime = soundtime;
-		}
-
-		// mix ahead of current position and to an even submission block size
-		u32 endtime = ((i32)(soundtime + s_mixahead->value * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
-		i32 samps = dma.samples >> (dma.channels-1);
-		if ((i32)(endtime - soundtime) > samps) {
-			endtime = soundtime + samps;
-		}
-
-		S_PaintChannels(endtime);
-
-		SNDDMA_Submit();
-	}
-}
-
-// Called once each time through the main loop
-void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
-{
-	int			total;
-	channel_t	*ch;
-
-	// if the laoding plaque is up, clear everything
-	// out to make sure we aren't looping a dirty
-	// dma buffer while loading
-	if (cls.disable_screen)
-	{
-		S_ClearBuffer ();
-		return;
-	}
-
-	VectorCopy(origin, listener_origin);
-	VectorCopy(forward, listener_forward);
-	VectorCopy(right, listener_right);
-	VectorCopy(up, listener_up);
-
-	// update spatialization for dynamic sounds
-	ch = channels;
-	for (i64 i = 0; i < (i64)carray_count(channels); i++, ch++)
-	{
-		if (!ch->sfx)
-			continue;
-		if (ch->autosound)
-		{	// autosounds are regenerated fresh each frame
-			memset (ch, 0, sizeof(*ch));
-			continue;
-		}
-		S_Spatialize(ch);         // respatialize channel
-		if (!ch->leftvol && !ch->rightvol)
-		{
-			memset (ch, 0, sizeof(*ch));
-			continue;
-		}
-	}
-
-	// add loopsounds
-	S_AddLoopSounds ();
-
-	//
-	// debugging output
-	//
-	if (s_show->value)
-	{
-		total = 0;
-		ch = channels;
-		for (i64 i = 0; i < (i64)carray_count(channels); i++, ch++)
-			if (ch->sfx && (ch->leftvol || ch->rightvol) )
-			{
-				Com_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
-				total++;
-			}
-
-		Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
-	}
-
-	// mix some sound
-	S_Update_();
 }
 
 static void S_StopAllSounds() {
@@ -68123,8 +67998,84 @@ static void CL_Frame (int msec) {
 	// update the screen
 	SCR_UpdateScreen();
 
-	// update audio
-	S_Update(cl.refdef.vieworg, cl.v_forward, cl.v_right, cl.v_up);
+	// NOTE: Sound update
+	if (!cls.disable_screen) {
+		VectorCopy(cl.refdef.vieworg, listener_origin);
+		VectorCopy(cl.v_forward, listener_forward);
+		VectorCopy(cl.v_right, listener_right);
+		VectorCopy(cl.v_up, listener_up);
+
+		// update spatialization for dynamic sounds
+		channel_t* ch = channels;
+		for (i64 ind = 0; ind < (i64)carray_count(channels); ind++, ch++) {
+			if (ch->sfx) {
+				if (ch->autosound) {
+					// autosounds are regenerated fresh each frame
+					*ch = (channel_t){};
+				} else {
+					S_Spatialize(ch); // respatialize channel
+					if (!ch->leftvol && !ch->rightvol) {
+						*ch = (channel_t){};
+					}
+				} // if-else autosound
+			} // if sfx
+		} // for channel
+
+		// add loopsounds
+		S_AddLoopSounds();
+
+		// mix some sound
+
+		SNDDMA_BeginPainting();
+		if (dma.buffer) {
+
+			// Updates DMA time
+			{
+				static i32 buffers = 0;
+				static i32 oldsamplepos = 0;
+
+				i32 fullsamples = dma.samples / dma.channels;
+
+				// it is possible to miscount buffers if it has wrapped twice.  Oh well.
+				i32 samplepos = SNDDMA_GetDMAPos();
+
+				if (samplepos < oldsamplepos) {
+					buffers++; // buffer wrapped
+
+					if (paintedtime > 0x40000000) {
+						// time to chop things off to avoid 32 bit limits
+						buffers = 0;
+						paintedtime = fullsamples;
+						S_StopAllSounds();
+					}
+				}
+				oldsamplepos = samplepos;
+
+				soundtime = buffers * fullsamples + samplepos / dma.channels;
+			}
+
+			// check to make sure that we haven't overshot
+			if (paintedtime < soundtime) {
+				paintedtime = soundtime;
+			}
+
+			// mix ahead of current position and to an even submission block size
+			u32 endtime = ((i32)(soundtime + s_mixahead->value * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
+			i32 samps = dma.samples >> (dma.channels-1);
+			if ((i32)(endtime - soundtime) > samps) {
+				endtime = soundtime + samps;
+			}
+
+			S_PaintChannels(endtime);
+
+			SNDDMA_Submit();
+		}
+	} else {
+
+		// if the loading plaque is up, clear everything out to make sure we aren't looping a dirty dma buffer while loading
+		S_ClearBuffer();
+
+	} // sound update
 
 	// advance local effects for next frame
 	CL_RunDLights();
@@ -68586,7 +68537,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		s_volume = COM_GetCvar("s_volume", "0.7", CVAR_ARCHIVE);
 		s_loadas8bit = COM_GetCvar("s_loadas8bit", "1", CVAR_ARCHIVE);
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
-		s_show = COM_GetCvar("s_show", "0", 0);
 
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
