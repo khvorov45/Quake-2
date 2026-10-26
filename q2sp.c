@@ -10934,27 +10934,17 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-
 cvar_t	*sv_paused;
-cvar_t	*sv_timedemo;
-
 cvar_t	*sv_enforcetime;
-
 cvar_t	*timeout;				// seconds without any message
 cvar_t	*zombietime;			// seconds to sink messages after disconnect
-
 cvar_t	*allow_download;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
 cvar_t *allow_download_sounds;
 cvar_t *allow_download_maps;
-
 cvar_t	*sv_noreload;			// don't reload level state when reentering
-
-cvar_t	*sv_showclamp;
-
 cvar_t	*public_server;			// should heartbeats be sent
-
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
@@ -11432,15 +11422,11 @@ void SV_RunGameFrame() {
 	sv.time = sv.framenum*100;
 
 	// don't run if paused
-	if (!sv_paused->value)
-	{
-		G_RunFrame ();
+	if (!sv_paused->value) {
+		G_RunFrame();
 
 		// never get more than one tic behind
-		if ((int)sv.time < svs.realtime)
-		{
-			if (sv_showclamp->value)
-				Com_Printf ("sv highclamp\n");
+		if ((i32)sv.time < svs.realtime) {
 			svs.realtime = sv.time;
 		}
 	}
@@ -13293,9 +13279,6 @@ typedef struct
 {
 	int			timeoutcount;
 
-	int			timedemo_frames;
-	int			timedemo_start;
-
 	bool	refresh_prepped;	// false if on new level or new ref dll
 	bool	sound_prepped;		// ambient sounds can start
 
@@ -13409,7 +13392,6 @@ extern	cvar_t	*m_side;
 extern	cvar_t	*cl_lightlevel;	// FIXME HACK
 
 extern	cvar_t	*cl_paused;
-extern	cvar_t	*cl_timedemo;
 
 extern	cvar_t	*cl_vwep;
 
@@ -14880,9 +14862,6 @@ void CL_AddEntities (void)
 	}
 	else
 		cl.lerpfrac = 1.0 - (cl.frame.servertime - cl.time) * 0.01;
-
-	if (cl_timedemo->value)
-		cl.lerpfrac = 1.0;
 
 	CL_CalcViewValues ();
 	// PMM - moved this here so the heat beam has the right values for the vieworg, and can lock the beam to the gun
@@ -17661,7 +17640,6 @@ cvar_t	*cl_showmiss;
 cvar_t	*cl_showclamp;
 
 cvar_t	*cl_paused;
-cvar_t	*cl_timedemo;
 
 cvar_t	*lookspring;
 cvar_t	*lookstrafe;
@@ -17882,12 +17860,6 @@ static void M_ForceMenuOff();
 // Sends a disconnect message to the server
 void CL_Disconnect() {
 	if (cls.state != ca_disconnected) {
-		if (cl_timedemo && cl_timedemo->value) {
-			int time = Sys_Milliseconds() - cl.timedemo_start;
-			if (time > 0)
-			Com_Printf ("%i frames, %3.1f seconds: %3.1f fps\n", cl.timedemo_frames,
-			time/1000.0, cl.timedemo_frames*1000.0 / time);
-		}
 
 		VectorClear(cl.refdef.blend);
 
@@ -18569,7 +18541,6 @@ typedef struct {
 } cheatvar_t;
 
 static cheatvar_t cheatvars[] = {
-	{"timedemo", "0", 0},
 	{"r_drawworld", "1", 0},
 	{"cl_testlights", "0", 0},
 	{"r_fullbright", "0", 0},
@@ -23754,13 +23725,6 @@ void V_RenderView()
 
 	if (!cl.refresh_prepped)
 		return;			// still loading
-
-	if (cl_timedemo->value)
-	{
-		if (!cl.timedemo_start)
-			cl.timedemo_start = Sys_Milliseconds ();
-		cl.timedemo_frames++;
-	}
 
 	// an invalid frame will just use the exact previous refdef
 	// we can't use the old frame if the video mode has changed, though...
@@ -67902,63 +67866,16 @@ static void GLimp_EndFrame() {
 	}
 }
 
-static void SV_Frame(int msec) {
-	// if server is not active, do nothing
-	if (!svs.initialized)
-		return;
-
-	svs.realtime += msec;
-
-	// keep the random time dependent
-	rand();
-
-	// check timeouts
-	SV_CheckTimeouts ();
-
-	// get packets from clients
-	SV_ReadPackets ();
-
-	// move autonomous things around if enough time has passed
-	if (!sv_timedemo->value && svs.realtime < (int)sv.time)
-	{
-		// never let the time get too far off
-		if (sv.time - svs.realtime > 100)
-		{
-			if (sv_showclamp->value)
-				Com_Printf ("sv lowclamp\n");
-			svs.realtime = sv.time - 100;
-		}
-		return;
-	}
-
-	// update ping based on the last known frame from all clients
-	SV_CalcPings ();
-
-	// give the clients some timeslices
-	SV_GiveMsec ();
-
-	// let everything in the world think and move
-	SV_RunGameFrame ();
-
-	// send messages back to the clients that had packets read this frame
-	SV_SendClientMessages ();
-
-	// clear teleport flags, etc for next frame
-	SV_PrepWorldFrame ();
-
-}
-
-static void CL_Frame (int msec) {
+static void CL_Frame(int msec) {
 	static i64 extratime = 0;
 	extratime += msec;
 
-	if (!cl_timedemo->value) {
-		if (cls.state == ca_connected && extratime < 100) {
-			return;			// don't flood packets out while connecting
-		}
-		if (extratime < 1000/cl_maxfps->value) {
-			return;			// framerate is too high
-		}
+	if (cls.state == ca_connected && extratime < 100) {
+		return;			// don't flood packets out while connecting
+	}
+
+	if (extratime < 1000 / cl_maxfps->value) {
+		return;			// framerate is too high
 	}
 
 	// let the mouse activate or deactivate
@@ -68419,9 +68336,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		timeout = COM_GetCvar("timeout", "125", 0);
 		zombietime = COM_GetCvar("zombietime", "2", 0);
-		sv_showclamp = COM_GetCvar("showclamp", "0", 0);
 		sv_paused = COM_GetCvar("paused", "0", 0);
-		sv_timedemo = COM_GetCvar("timedemo", "0", 0);
 		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
 		allow_download = COM_GetCvar("allow_download", "0", CVAR_ARCHIVE);
 		allow_download_players = COM_GetCvar("allow_download_players", "0", CVAR_ARCHIVE);
@@ -68516,7 +68431,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
 		cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
 		cl_paused = COM_GetCvar ("paused", "0", 0);
-		cl_timedemo = COM_GetCvar ("timedemo", "0", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
@@ -69241,9 +69155,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		assert(delta_time_msec >= 1);
 		Cmd_ExecuteCbuf();
-		SV_Frame(delta_time_msec);
+
+		if (svs.initialized) {
+			svs.realtime += delta_time_msec;
+
+			// keep the random time dependent
+			rand();
+
+			// check timeouts
+			SV_CheckTimeouts();
+
+			// get packets from clients
+			SV_ReadPackets();
+
+			// move autonomous things around if enough time has passed
+			if (svs.realtime < (i32)sv.time) {
+				// never let the time get too far off
+				svs.realtime = max(svs.realtime, (i32)sv.time - 100);
+			} else {
+				// update ping based on the last known frame from all clients
+				SV_CalcPings();
+
+				// give the clients some timeslices
+				SV_GiveMsec();
+
+				// let everything in the world think and move
+				SV_RunGameFrame();
+
+				// send messages back to the clients that had packets read this frame
+				SV_SendClientMessages();
+
+				// clear teleport flags, etc for next frame
+				SV_PrepWorldFrame();
+
+			}
+		}
+
 		CL_Frame(delta_time_msec);
-	}}
+	}} // mainloop
 
 	// NOTE: never gets here
 	return 0;
