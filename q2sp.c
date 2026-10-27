@@ -560,62 +560,55 @@ static unsigned short CRC_Block(u8* start, int count) {
 	return crc;
 }
 
-#define	Z_MAGIC 0x1d1d
+#define	TAGGED_MALLOC_MAGIC 0x1d1d
 
-typedef struct zhead_s {
-	struct zhead_s* prev;
-	struct zhead_s* next;
-	short	magic;
-	short	tag;	// for group free
-	int		size;
-} zhead_t;
+typedef struct Tagged_Malloc_Entry {
+	struct Tagged_Malloc_Entry* prev;
+	struct Tagged_Malloc_Entry* next;
+	i16 magic;
+	i16 tag; // for group free
+} Tagged_Malloc_Entry;
 
-static zhead_t z_chain;
-static int z_count;
-static int z_bytes;
+static Tagged_Malloc_Entry tagged_malloc_head;
 
-static void Z_Free(void *ptr) {
-	zhead_t* z = ((zhead_t*)ptr) - 1;
-	assert(z->magic == Z_MAGIC);
+static void tml_free(void* ptr) {
+	Tagged_Malloc_Entry* entry = ((Tagged_Malloc_Entry*)ptr) - 1;
+	assert(entry->magic == TAGGED_MALLOC_MAGIC);
 
-	z->prev->next = z->next;
-	z->next->prev = z->prev;
+	entry->prev->next = entry->next;
+	entry->next->prev = entry->prev;
 
-	z_count--;
-	z_bytes -= z->size;
-	free(z);
+	free(entry);
 }
 
-static void Z_FreeTags(int tag) {
-	for (zhead_t* z = z_chain.next; z != &z_chain;) {
-		zhead_t* next = z->next;
-		if (z->tag == tag) {
-			Z_Free((void *)(z+1));
+static void tml_free_all(i16 tag) {
+	for (Tagged_Malloc_Entry* entry = tagged_malloc_head.next; entry != &tagged_malloc_head;) {
+		Tagged_Malloc_Entry* next = entry->next;
+		if (entry->tag == tag) {
+			tml_free((void*)(entry + 1));
 		}
-		z = next;
+		entry = next;
 	}
 }
 
-static void* Z_TagMalloc(int size, int tag) {
-	size = size + sizeof(zhead_t);
-	zhead_t* z = malloc(size);
-	assert(z);
-	memset (z, 0, size);
-	z_count++;
-	z_bytes += size;
-	z->magic = Z_MAGIC;
-	z->tag = tag;
-	z->size = size;
+static void* tml_alloc_with_tag(i32 size, i32 tag) {
+	size = size + sizeof(Tagged_Malloc_Entry);
+	Tagged_Malloc_Entry* entry = malloc(size);
+	assert(entry);
+	memset(entry, 0, size);
+	entry->magic = TAGGED_MALLOC_MAGIC;
+	entry->tag = tag;
 
-	z->next = z_chain.next;
-	z->prev = &z_chain;
-	z_chain.next->prev = z;
-	z_chain.next = z;
+	entry->next = tagged_malloc_head.next;
+	entry->prev = &tagged_malloc_head;
+	tagged_malloc_head.next->prev = entry;
+	tagged_malloc_head.next = entry;
 
-	return (void *)(z+1);
+	void* result = entry + 1;
+	return result;
 }
 
-static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
+static void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
 
 typedef struct {
 	bool allowoverflow;
@@ -670,7 +663,7 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 
 static char* CopyString(char *in) {
 	int in_len = strlen(in);
-	char* out = Z_Malloc(in_len + 1);
+	char* out = tml_alloc(in_len + 1);
 	strcpy(out, in);
 	return out;
 }
@@ -1945,7 +1938,7 @@ static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
 		}
 	}
 
-	var = Z_Malloc(sizeof(*var));
+	var = tml_alloc(sizeof(*var));
 	var->name = CopyString(var_name);
 	var->string = CopyString(var_value);
 	var->modified = true;
@@ -1986,7 +1979,7 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 				if (strcmp(value, var->latched_string) == 0) {
 					return var;
 				}
-				Z_Free (var->latched_string);
+				tml_free (var->latched_string);
 			} else {
 				if (strcmp(value, var->string) == 0) {
 					return var;
@@ -2004,7 +1997,7 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 		}
 	} else {
 		if (var->latched_string) {
-			Z_Free (var->latched_string);
+			tml_free (var->latched_string);
 			var->latched_string = NULL;
 		}
 	}
@@ -2022,7 +2015,7 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 	}
 
 	// free the old value string
-	Z_Free (var->string);
+	tml_free (var->string);
 
 	var->string = CopyString(value);
 	var->value = atof (var->string);
@@ -2048,7 +2041,7 @@ static cvar_t* COM_FullSetCvar(char* var_name, char* value, int flags) {
 	}
 
 	// free the old value string
-	Z_Free (var->string);
+	tml_free (var->string);
 
 	var->string = CopyString(value);
 	var->value = atof (var->string);
@@ -2104,7 +2097,7 @@ static void Cbuf_InsertText(char* text) {
 	// copy off any commands still remaining in the exec buffer
 	int templen = cmd_text.cursize;
 	if (templen) {
-		temp = Z_Malloc(templen);
+		temp = tml_alloc(templen);
 		memcpy(temp, cmd_text.data, templen);
 		SZ_Clear(&cmd_text);
 	}
@@ -2115,7 +2108,7 @@ static void Cbuf_InsertText(char* text) {
 	// add the copied off data
 	if (templen) {
 		SZ_Write(&cmd_text, temp, templen);
-		Z_Free(temp);
+		tml_free(temp);
 	}
 }
 
@@ -2172,7 +2165,7 @@ static char* Cmd_Args() {return cmd_args;}
 static void Cmd_TokenizeString(char* text, bool macroExpand) {
 	// clear the args from the last string
 	for (int i = 0; i < cmd_argc; i++) {
-		Z_Free (cmd_argv[i]);
+		tml_free (cmd_argv[i]);
 	}
 
 	cmd_argc = 0;
@@ -2280,7 +2273,7 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 		}
 
 		if (cmd_argc < MAX_STRING_TOKENS) {
-			cmd_argv[cmd_argc] = Z_Malloc(strlen(com_token) + 1);
+			cmd_argv[cmd_argc] = tml_alloc(strlen(com_token) + 1);
 			strcpy(cmd_argv[cmd_argc], com_token);
 			cmd_argc++;
 		}
@@ -2424,7 +2417,7 @@ static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 		}
 	}
 
-	cmd_function_t* cmd = Z_Malloc(sizeof(cmd_function_t));
+	cmd_function_t* cmd = tml_alloc(sizeof(cmd_function_t));
 	cmd->name = cmd_name;
 	cmd->function = function;
 	cmd->next = cmd_functions;
@@ -2454,13 +2447,13 @@ static void Cmd_Exec_f() {
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
 
 	// the file doesn't have a trailing 0, so we need to copy it off
-	char* f2 = Z_Malloc(len + 1);
+	char* f2 = tml_alloc(len + 1);
 	memcpy(f2, f, len);
 	f2[len] = 0;
 
 	Cbuf_InsertText(f2);
 
-	Z_Free(f2);
+	tml_free(f2);
 	FS_FreeFile(f);
 }
 
@@ -2494,13 +2487,13 @@ static void Cmd_Alias_f() {
 	cmdalias_t* a = cmd_alias;
 	for (; a; a = a->next) {
 		if (!strcmp(s, a->name)) {
-			Z_Free (a->value);
+			tml_free (a->value);
 			break;
 		}
 	}
 
 	if (!a) {
-		a = Z_Malloc (sizeof(cmdalias_t));
+		a = tml_alloc (sizeof(cmdalias_t));
 		a->next = cmd_alias;
 		cmd_alias = a;
 	}
@@ -7206,7 +7199,7 @@ int FS_LoadFile(char *path, void **buffer) {
 	int result = len;
 	if (h) {
 		if (buffer) {
-			u8* buf = Z_Malloc(len);
+			u8* buf = tml_alloc(len);
 			*buffer = buf;
 			FS_Read(buf, len, h);
 		}
@@ -7222,7 +7215,7 @@ int FS_LoadFile(char *path, void **buffer) {
 }
 
 void FS_FreeFile(void* buffer) {
-	Z_Free(buffer);
+	tml_free(buffer);
 }
 
 /* POINTER defines a generic pointer type */
@@ -10487,8 +10480,8 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 
 // Called when either the entire server is being killed, or it is changing to a different game directory.
 static void SV_ShutdownGameProgs() {
-	Z_FreeTags(TAG_LEVEL);
-	Z_FreeTags(TAG_GAME);
+	tml_free_all(TAG_LEVEL);
+	tml_free_all(TAG_GAME);
 }
 
 // Init the game subsystem for a new map
@@ -10748,7 +10741,7 @@ void SV_InitGame(void) {
 		if (!var->latched_string) {
 			continue;
 		}
-		Z_Free(var->string);
+		tml_free(var->string);
 		var->string = var->latched_string;
 		var->latched_string = NULL;
 		var->value = atof(var->string);
@@ -10758,7 +10751,7 @@ void SV_InitGame(void) {
 
 	svs.spawncount = rand();
 	svs.num_client_entities = UPDATE_BACKUP * 64;
-	svs.client_entities = Z_Malloc(sizeof(entity_state_t) * svs.num_client_entities);
+	svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
 
 	// init game
 	SV_InitGameProgs ();
@@ -11328,7 +11321,7 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 
 	// free server static data
 	if (svs.client_entities)
-		Z_Free(svs.client_entities);
+		tml_free(svs.client_entities);
 	memset (&svs, 0, sizeof(svs));
 }
 
@@ -24375,13 +24368,13 @@ void Key_SetBinding (int keynum, char *binding)
 // free old bindings
 	if (keybindings[keynum])
 	{
-		Z_Free (keybindings[keynum]);
+		tml_free (keybindings[keynum]);
 		keybindings[keynum] = NULL;
 	}
 
 // allocate memory for new binding
 	l = strlen (binding);
-	new = Z_Malloc (l+1);
+	new = tml_alloc (l+1);
 	strcpy (new, binding);
 	new[l] = 0;
 	keybindings[keynum] = new;
@@ -26709,7 +26702,7 @@ sfx_t *S_AliasName (char *aliasname, char *truename)
 	char	*s;
 	int		i;
 
-	s = Z_Malloc (MAX_QPATH);
+	s = tml_alloc (MAX_QPATH);
 	strcpy (s, truename);
 
 	// find a free sfx
@@ -26789,7 +26782,7 @@ void S_EndRegistration (void)
 		if (sfx->registration_sequence != s_registration_sequence)
 		{	// don't need this sound
 			if (sfx->cache)	// it is possible to have a leftover
-				Z_Free (sfx->cache);	// from a server that didn't finish loading
+				tml_free (sfx->cache);	// from a server that didn't finish loading
 			memset (sfx, 0, sizeof(*sfx));
 		}
 		else
@@ -27470,7 +27463,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	len = len * info.width * info.channels;
 
-	sc = s->cache = Z_Malloc (len + sizeof(sfxcache_t));
+	sc = s->cache = tml_alloc (len + sizeof(sfxcache_t));
 	if (!sc)
 	{
 		FS_FreeFile (data);
@@ -36026,7 +36019,7 @@ void SP_func_clock (edict_t* self)
 
 	func_clock_reset (self);
 
-	self->message = Z_TagMalloc (CLOCK_MESSAGE_SIZE, TAG_LEVEL);
+	self->message = tml_alloc_with_tag (CLOCK_MESSAGE_SIZE, TAG_LEVEL);
 
 	self->think = func_clock_think;
 
@@ -37931,7 +37924,7 @@ static void InitGame() {
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->value;
-	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
 	// initialize all clients for this game
 	global_num_edicts = 2;
@@ -38058,7 +38051,7 @@ void ReadField (FILE *f, field_t *field, u8 *base)
 			*(char **)p = NULL;
 		else
 		{
-			*(char **)p = Z_TagMalloc (len, TAG_LEVEL);
+			*(char **)p = tml_alloc_with_tag (len, TAG_LEVEL);
 			fread (*(char **)p, len, 1, f);
 		}
 		break;
@@ -38190,7 +38183,7 @@ void ReadGame (char *filename)
 	FILE	*f;
 	char	str[16];
 
-	Z_FreeTags (TAG_GAME);
+	tml_free_all (TAG_GAME);
 
 	f = fopen (filename, "rb");
 	assert(f);
@@ -38198,7 +38191,7 @@ void ReadGame (char *filename)
 	fread (str, sizeof(str), 1, f);
 	assert(!strcmp(str, __DATE__));
 
-	g_edicts =  Z_TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
 	fread (&game, sizeof(game), 1, f);
 	ReadClient(f, &game.client);
@@ -38355,7 +38348,7 @@ void ReadLevel (char *filename)
 
 	// free any dynamic memory allocated by loading the level
 	// base state
-	Z_FreeTags (TAG_LEVEL);
+	tml_free_all (TAG_LEVEL);
 
 	// wipe all the entities
 	memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));
@@ -38723,7 +38716,7 @@ char *ED_NewString (char *string)
 
 	l = strlen(string) + 1;
 
-	newb = Z_TagMalloc (l, TAG_LEVEL);
+	newb = tml_alloc_with_tag (l, TAG_LEVEL);
 
 	new_p = newb;
 
@@ -38919,7 +38912,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 	SaveClientData ();
 
-	Z_FreeTags (TAG_LEVEL);
+	tml_free_all (TAG_LEVEL);
 
 	memset (&level, 0, sizeof(level));
 	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
@@ -67736,29 +67729,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Timer resolution
 	timeBeginPeriod(1);
 
-	Windows_Platform_Data windows_platform_data = {};
-	context.platform_data = &windows_platform_data;
-
-	// NOTE: Memory
+	// NOTE: Context init
+	Windows_Platform_Data windows_platform_data = {}; // NOTE: Needs to survive forever
 	{
-		i64 total_size = (i64)4 * Gigabyte;
-		void* base = VirtualAlloc(0, (SIZE_T)total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-		assert(base);
+		context.platform_data = &windows_platform_data;
 
-		i64 perm_size = total_size / 4;
-		context.memory.perm = (Arena){.base = base, .size = perm_size};
-		context.memory.temp = (Arena){.base = (u8*)base + perm_size, .size = total_size - perm_size};
+		// NOTE: Memory
+		{
+			i64 total_size = (i64)4 * Gigabyte;
+			void* base = VirtualAlloc(0, (SIZE_T)total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+			assert(base);
+
+			i64 perm_size = total_size / 4;
+			context.memory.perm = (Arena){.base = base, .size = perm_size};
+			context.memory.temp = (Arena){.base = (u8*)base + perm_size, .size = total_size - perm_size};
+		}
+
+		// NOTE: Platform procs
+		context.exit_process = windows_exit_process;
+		context.write_config_string = windows_write_config_string;
+		context.debug_log = windows_debug_log;
+		context.load_texture = windows_load_texture;
 	}
-
-	// NOTE: Platform procs
-	context.exit_process = windows_exit_process;
-	context.write_config_string = windows_write_config_string;
-	context.debug_log = windows_debug_log;
-	context.load_texture = windows_load_texture;
 
 	// NOTE: Z chain (tagged malloc)
 	// TODO: Remove
-	z_chain.next = z_chain.prev = &z_chain;
+	tagged_malloc_head.next = tagged_malloc_head.prev = &tagged_malloc_head;
 
 	// NOTE: Key Init
 	// TODO: unglobal
@@ -68401,7 +68397,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	#if 1
 	{
 		// add the directory to the search path
-		searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
+		searchpath_t* search = tml_alloc(sizeof(searchpath_t));
 		strcpy(search->filename, "baseq2");
 		search->next = fs_searchpaths;
 		fs_searchpaths = search;
@@ -68422,7 +68418,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			i64 numpackfiles = header.info_section_len_bytes / sizeof(Pak_File_Info);
 			assert(numpackfiles <= max_files_in_pack);
 
-			packfile_t* newfiles = Z_Malloc(numpackfiles * sizeof(packfile_t));
+			packfile_t* newfiles = tml_alloc(numpackfiles * sizeof(packfile_t));
 			fseek(packhandle, header.info_section_offset, SEEK_SET);
 
 			Pak_File_Info info[max_files_in_pack] = {};
@@ -68437,13 +68433,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				new_file->filelen = file_info->filelen;
 			}
 
-			pack_t* pak = Z_Malloc(sizeof(pack_t));
+			pack_t* pak = tml_alloc(sizeof(pack_t));
 			strcpy(pak->filename, pakfile);
 			pak->handle = packhandle;
 			pak->numfiles = numpackfiles;
 			pak->files = newfiles;
 
-			search = Z_Malloc(sizeof(searchpath_t));
+			search = tml_alloc(sizeof(searchpath_t));
 			search->pack = pak;
 			search->next = fs_searchpaths;
 			fs_searchpaths = search;
