@@ -717,7 +717,6 @@ static char* va(char *format, ...) {
 typedef enum {
 	key_game,
 	key_console,
-	key_message,
 	key_menu
 } keydest_t;
 
@@ -20635,7 +20634,7 @@ void SCR_DrawConsole (void)
 	}
 	else
 	{
-		if (cls.key_dest == key_game || cls.key_dest == key_message)
+		if (cls.key_dest == key_game)
 			Con_DrawNotify ();	// only draw notify in game
 	}
 }
@@ -23526,13 +23525,6 @@ void V_Viewpos_f (void)
 
 cvar_t		*con_notifytime;
 
-
-#define		MAXCMDLINE	256
-extern	char	key_lines[32][MAXCMDLINE];
-extern	int		edit_line;
-extern	int		key_linepos;
-
-
 void DrawString (int x, int y, char *s)
 {
 	while (*s)
@@ -23553,11 +23545,18 @@ void DrawAltString (int x, int y, char *s)
 	}
 }
 
+static struct {
+	String_Slice lines;
+	struct {
+		i64 line;
+		i64 column;
+	} cursor;
+} console_input;
 
-void Key_ClearTyping (void)
-{
-	key_lines[edit_line][1] = 0;	// clear any typing
-	key_linepos = 1;
+static void Key_ClearTyping() {
+	console_input.cursor.column = 1;
+	assert(console_input.cursor.line >= 0 && console_input.cursor.line < console_input.lines.len);
+	console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
 }
 
 static void Con_ToggleConsole_f() {
@@ -23667,51 +23666,31 @@ void Con_CenteredPrint (char *text)
 	Con_Print (buffer);
 }
 
-/*
-==============================================================================
+// The input line scrolls horizontally if typing goes beyond the right edge
+static void Con_DrawInput() {
+	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
+		char* text = console_input.lines.ptr[console_input.cursor.line].ptr;
 
-DRAWING
+		// add the cursor frame
+		text[console_input.cursor.column] = 10 + ((i32)(cls.realtime >> 8) & 1);
 
-==============================================================================
-*/
+		// fill out remainder with spaces
+		for (i64 i = console_input.cursor.column + 1; i < con.linewidth; i++) {
+			text[i] = ' ';
+		}
 
+		// prestep if horizontally scrolling
+		if (console_input.cursor.column >= con.linewidth)
+			text += 1 + console_input.cursor.column - con.linewidth;
 
-/*
-================
-Con_DrawInput
+		// draw it
+		for (i64 i = 0; i < con.linewidth; i++) {
+			Draw_Char((i + 1) << 3, con.vislines - 22, text[i]);
+		}
 
-The input line scrolls horizontally if typing goes beyond the right edge
-================
-*/
-void Con_DrawInput (void)
-{
-	int		i;
-	char	*text;
-
-	if (cls.key_dest == key_menu)
-		return;
-	if (cls.key_dest != key_console && cls.state == ca_active)
-		return;		// don't draw anything (always draw if not active)
-
-	text = key_lines[edit_line];
-
-// add the cursor frame
-	text[key_linepos] = 10+((int)(cls.realtime>>8)&1);
-
-// fill out remainder with spaces
-	for (i=key_linepos+1 ; i< con.linewidth ; i++)
-		text[i] = ' ';
-
-//	prestep if horizontally scrolling
-	if (key_linepos >= con.linewidth)
-		text += 1 + key_linepos - con.linewidth;
-
-// draw it
-	for (i=0 ; i<con.linewidth ; i++)
-		Draw_Char ( (i+1)<<3, con.vislines - 22, text[i]);
-
-// remove cursor
-	key_lines[edit_line][key_linepos] = 0;
+		// remove cursor
+		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
+	}
 }
 
 
@@ -23728,8 +23707,6 @@ void Con_DrawNotify (void)
 	char	*text;
 	int		i;
 	int		time;
-	char	*s;
-	int		skip;
 
 	v = 0;
 	for (i= con.current-(int)carray_count(con.line_timestamps)+1 ; i<=con.current ; i++)
@@ -23747,33 +23724,6 @@ void Con_DrawNotify (void)
 		for (x = 0 ; x < con.linewidth ; x++)
 			Draw_Char ( (x+1)<<3, v, text[x]);
 
-		v += 8;
-	}
-
-
-	if (cls.key_dest == key_message)
-	{
-		if (chat_team)
-		{
-			DrawString (8, v, "say_team:");
-			skip = 11;
-		}
-		else
-		{
-			DrawString (8, v, "say:");
-			skip = 5;
-		}
-
-		s = chat_buffer;
-		if (chat_bufferlen > (viddef.width>>3)-(skip+1))
-			s += chat_bufferlen - ((viddef.width>>3)-(skip+1));
-		x = 0;
-		while(s[x])
-		{
-			Draw_Char ( (x+skip)<<3, v, s[x]);
-			x++;
-		}
-		Draw_Char ( (x+skip)<<3, v, 10+((cls.realtime>>8)&1));
 		v += 8;
 	}
 }
@@ -23883,14 +23833,13 @@ void Con_DrawConsole (float frac)
 	Con_DrawInput ();
 }
 
-#define		MAXCMDLINE	256
-char	key_lines[32][MAXCMDLINE];
-int		key_linepos;
+
+
 int		shift_down=false;
 int	anykeydown;
 
-int		edit_line=0;
-int		history_line=0;
+
+static i32 history_line;
 
 int		key_waiting;
 char	*keybindings[256];
@@ -24048,14 +23997,14 @@ void Key_Console (int key)
 			strtok( cbd, "\n\r\b" );
 
 			i = strlen( cbd );
-			if ( i + key_linepos >= MAXCMDLINE)
-				i= MAXCMDLINE - key_linepos;
+			if (i + console_input.cursor.column >= console_input.lines.ptr[0].len)
+				i = console_input.lines.ptr[0].len - console_input.cursor.column;
 
 			if ( i > 0 )
 			{
 				cbd[i]=0;
-				strcat( key_lines[edit_line], cbd );
-				key_linepos += i;
+				strcat(console_input.lines.ptr[console_input.cursor.line].ptr, cbd);
+				console_input.cursor.column += i;
 			}
 			free( cbd );
 		}
@@ -24074,26 +24023,25 @@ void Key_Console (int key)
 
 	if ( key == K_ENTER || key == K_KP_ENTER )
 	{
-		if (key_lines[edit_line][1] == '\\' || key_lines[edit_line][1] == '/')
-			Cbuf_AddText (key_lines[edit_line]+2);	// skip the >
+		if (console_input.lines.ptr[console_input.cursor.line].ptr[1] == '\\' || console_input.lines.ptr[console_input.cursor.line].ptr[1] == '/')
+			Cbuf_AddText(console_input.lines.ptr[console_input.cursor.line].ptr+2);	// skip the >
 		else
-			Cbuf_AddText (key_lines[edit_line]+1);	// valid command
+			Cbuf_AddText(console_input.lines.ptr[console_input.cursor.line].ptr+1);	// valid command
 
 		Cbuf_AddText ("\n");
-		Com_Printf ("%s\n",key_lines[edit_line]);
-		edit_line = (edit_line + 1) & 31;
-		history_line = edit_line;
-		key_lines[edit_line][0] = ']';
-		key_linepos = 1;
+		Com_Printf ("%s\n",console_input.lines.ptr[console_input.cursor.line]);
+		console_input.cursor.line = (console_input.cursor.line + 1) & 31;
+		history_line = console_input.cursor.line;
+		console_input.lines.ptr[console_input.cursor.line].ptr[0] = ']';
+		console_input.cursor.column = 1;
 		if (cls.state == ca_disconnected)
-			SCR_UpdateScreen ();	// force an update, because the command
-									// may take some time
+			SCR_UpdateScreen ();	// force an update, because the command may take some time
 		return;
 	}
 
 	// command completion
 	if (key == K_TAB) {
-		char* s = key_lines[edit_line] + 1;
+		char* s = console_input.lines.ptr[console_input.cursor.line].ptr + 1;
 		if (*s == '\\' || *s == '/') {
 			s++;
 		}
@@ -24158,12 +24106,12 @@ void Key_Console (int key)
 
 		// NOTE: perform completion
 		if (cmd) {
-			key_lines[edit_line][1] = '/';
-			strcpy(key_lines[edit_line] + 2, cmd);
-			key_linepos = strlen(cmd) + 2;
-			key_lines[edit_line][key_linepos] = ' ';
-			key_linepos++;
-			key_lines[edit_line][key_linepos] = 0;
+			console_input.lines.ptr[console_input.cursor.line].ptr[1] = '/';
+			strcpy(console_input.lines.ptr[console_input.cursor.line].ptr + 2, cmd);
+			console_input.cursor.column = strlen(cmd) + 2;
+			console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = ' ';
+			console_input.cursor.column++;
+			console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
 		}
 
 		return;
@@ -24171,8 +24119,8 @@ void Key_Console (int key)
 
 	if ( ( key == K_BACKSPACE ) || ( key == K_LEFTARROW ) || ( key == K_KP_LEFTARROW ) || ( ( key == 'h' ) && ( keydown[K_CTRL] ) ) )
 	{
-		if (key_linepos > 1)
-			key_linepos--;
+		if (console_input.cursor.column > 1)
+			console_input.cursor.column--;
 		return;
 	}
 
@@ -24182,34 +24130,32 @@ void Key_Console (int key)
 		do
 		{
 			history_line = (history_line - 1) & 31;
-		} while (history_line != edit_line
-				&& !key_lines[history_line][1]);
-		if (history_line == edit_line)
-			history_line = (edit_line+1)&31;
-		strcpy(key_lines[edit_line], key_lines[history_line]);
-		key_linepos = strlen(key_lines[edit_line]);
+		} while (history_line != console_input.cursor.line && !console_input.lines.ptr[history_line].ptr[1]);
+		if (history_line == console_input.cursor.line)
+			history_line = (console_input.cursor.line+1)&31;
+		strcpy(console_input.lines.ptr[console_input.cursor.line].ptr, console_input.lines.ptr[history_line].ptr);
+		console_input.cursor.column = console_input.lines.ptr[console_input.cursor.line].len;
 		return;
 	}
 
 	if ( ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) ||
 		 ( ( key == 'n' ) && keydown[K_CTRL] ) )
 	{
-		if (history_line == edit_line) return;
-		do
-		{
+		if (history_line == console_input.cursor.line) return;
+
+		do {
 			history_line = (history_line + 1) & 31;
-		}
-		while (history_line != edit_line
-			&& !key_lines[history_line][1]);
-		if (history_line == edit_line)
+		} while (history_line != console_input.cursor.line && !console_input.lines.ptr[history_line].ptr[1]);
+
+		if (history_line == console_input.cursor.line)
 		{
-			key_lines[edit_line][0] = ']';
-			key_linepos = 1;
+			console_input.lines.ptr[console_input.cursor.line].ptr[0] = ']';
+			console_input.cursor.column = 1;
 		}
 		else
 		{
-			strcpy(key_lines[edit_line], key_lines[history_line]);
-			key_linepos = strlen(key_lines[edit_line]);
+			strcpy(console_input.lines.ptr[console_input.cursor.line].ptr, console_input.lines.ptr[history_line].ptr);
+			console_input.cursor.column = console_input.lines.ptr[console_input.cursor.line].len;
 		}
 		return;
 	}
@@ -24243,69 +24189,13 @@ void Key_Console (int key)
 	if (key < 32 || key > 127)
 		return;	// non printable
 
-	if (key_linepos < MAXCMDLINE-1)
-	{
-		key_lines[edit_line][key_linepos] = key;
-		key_linepos++;
-		key_lines[edit_line][key_linepos] = 0;
+	if (console_input.cursor.column < console_input.lines.ptr[0].len-1) {
+		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = key;
+		console_input.cursor.column++;
+		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
 	}
 
 }
-
-//============================================================================
-
-bool	chat_team;
-char		chat_buffer[MAXCMDLINE];
-int			chat_bufferlen = 0;
-
-void Key_Message (int key)
-{
-
-	if ( key == K_ENTER || key == K_KP_ENTER )
-	{
-		if (chat_team)
-			Cbuf_AddText ("say_team \"");
-		else
-			Cbuf_AddText ("say \"");
-		Cbuf_AddText(chat_buffer);
-		Cbuf_AddText("\"\n");
-
-		cls.key_dest = key_game;
-		chat_bufferlen = 0;
-		chat_buffer[0] = 0;
-		return;
-	}
-
-	if (key == K_ESCAPE)
-	{
-		cls.key_dest = key_game;
-		chat_bufferlen = 0;
-		chat_buffer[0] = 0;
-		return;
-	}
-
-	if (key < 32 || key > 127)
-		return;	// non printable
-
-	if (key == K_BACKSPACE)
-	{
-		if (chat_bufferlen)
-		{
-			chat_bufferlen--;
-			chat_buffer[chat_bufferlen] = 0;
-		}
-		return;
-	}
-
-	if (chat_bufferlen == sizeof(chat_buffer)-1)
-		return; // all full
-
-	chat_buffer[chat_bufferlen++] = key;
-	chat_buffer[chat_bufferlen] = 0;
-}
-
-//============================================================================
-
 
 /*
 ===================
@@ -24539,9 +24429,6 @@ void Key_Event (int key, bool down, unsigned time)
 		}
 		switch (cls.key_dest)
 		{
-		case key_message:
-			Key_Message (key);
-			break;
 		case key_menu:
 			M_Keydown (key);
 			break;
@@ -24628,9 +24515,6 @@ void Key_Event (int key, bool down, unsigned time)
 
 	switch (cls.key_dest)
 	{
-	case key_message:
-		Key_Message (key);
-		break;
 	case key_menu:
 		M_Keydown (key);
 		break;
@@ -67759,11 +67643,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Key Init
 	// TODO: unglobal
 	{
-		for (int i = 0; i < 32; i++) {
-			key_lines[i][0] = ']';
-			key_lines[i][1] = 0;
+		console_input.lines = (String_Slice)arena_alloc_slice(&context.memory.perm, String, 1024);
+		for (i64 ind = 0; ind < console_input.lines.len; ind++) {
+			String* line = console_input.lines.ptr + ind;
+			*line = (String)arena_alloc_slice(&context.memory.perm, char, 1024);
+			line->ptr[0] = ']';
+			line->ptr[1] = 0;
 		}
-		key_linepos = 1;
+		console_input.cursor.column = 1;
 
 		// init ascii characters in console mode
 		for (int i = 32; i < 128; i++) {
