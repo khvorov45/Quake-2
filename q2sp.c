@@ -23547,16 +23547,14 @@ void DrawAltString (int x, int y, char *s)
 
 static struct {
 	String_Slice lines;
-	struct {
-		i64 line;
-		i64 column;
-	} cursor;
+	i64 max_line_capacity;
+	String* current;
 } console_input;
 
 static void Key_ClearTyping() {
-	console_input.cursor.column = 1;
-	assert(console_input.cursor.line >= 0 && console_input.cursor.line < console_input.lines.len);
-	console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
+	assert(console_input.max_line_capacity > 1);
+	console_input.current->len = 1;
+	console_input.current->ptr[1] = 0;
 }
 
 static void Con_ToggleConsole_f() {
@@ -23581,13 +23579,7 @@ static void Con_Clear_f() {
 	memset(con.text, ' ', carray_count(con.text));
 }
 
-/*
-================
-Con_Dump_f
-
-Save the console contents out to a file
-================
-*/
+// Save the console contents out to a file
 void Con_Dump_f (void)
 {
 	int		l, x;
@@ -23669,35 +23661,33 @@ void Con_CenteredPrint (char *text)
 // The input line scrolls horizontally if typing goes beyond the right edge
 static void Con_DrawInput() {
 	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-		assert(console_input.cursor.line >= 0 && console_input.cursor.line < console_input.lines.len);
+		String* line = console_input.current;
 
-		String line = console_input.lines.ptr[console_input.cursor.line];
-		assert(console_input.cursor.column >= 1 && console_input.cursor.column < line.len);
-
-		// add the cursor frame
+		// NOTE: Add the cursor temporarily
 		char block_char_code = 11;
-		line.ptr[console_input.cursor.column] = block_char_code;
+		assert(line->len < console_input.max_line_capacity);
+		line->ptr[line->len] = block_char_code;
 
-		// fill out remainder with spaces
-		assert(con.linewidth <= line.len);
-		for (i64 ind = console_input.cursor.column + 1; ind < con.linewidth; ind++) {
-			line.ptr[ind] = ' ';
+		// NOTE: Fill out remainder with spaces
+		assert(con.linewidth <= console_input.max_line_capacity);
+		for (i64 ind = line->len + 1; ind < con.linewidth; ind++) {
+			line->ptr[ind] = ' ';
 		}
 
 		// NOTE: Work out the subset to draw
-		char* text_to_draw = line.ptr;
-		if (console_input.cursor.column >= con.linewidth) {
-			text_to_draw += 1 + console_input.cursor.column - con.linewidth;
+		char* text_to_draw = line->ptr;
+		if (line->len >= con.linewidth) {
+			text_to_draw += 1 + line->len - con.linewidth;
 		}
-		assert(text_to_draw + con.linewidth <= line.ptr + line.len);
+		assert(text_to_draw + con.linewidth <= line->ptr + console_input.max_line_capacity);
 
-		// draw it
+		// NOTE: Draw all
 		for (i64 ind = 0; ind < con.linewidth; ind++) {
 			Draw_Char((ind + 1) << 3, con.vislines - 22, text_to_draw[ind]);
 		}
 
-		// NOTE: remove cursor once it's been drawn
-		line.ptr[console_input.cursor.column] = 0;
+		// NOTE: Remove cursor once it's been drawn
+		line->ptr[line->len] = 0;
 	}
 }
 
@@ -23843,8 +23833,6 @@ void Con_DrawConsole (float frac)
 int shift_down;
 int	anykeydown;
 
-static i32 history_line;
-
 int		key_waiting;
 char	*keybindings[256];
 bool	consolekeys[256];	// if true, can't be rebound while in console
@@ -23925,280 +23913,56 @@ keyname_t keynames[] =
 	{NULL,0}
 };
 
-/*
-==============================================================================
+void Key_Console(int key) {
 
-			LINE TYPING INTO THE CONSOLE
-
-==============================================================================
-*/
-
-/*
-====================
-Key_Console
-
-Interactive line editing and console scrollback
-====================
-*/
-void Key_Console (int key)
-{
-
-	switch ( key )
-	{
-	case K_KP_SLASH:
-		key = '/';
-		break;
-	case K_KP_MINUS:
-		key = '-';
-		break;
-	case K_KP_PLUS:
-		key = '+';
-		break;
-	case K_KP_HOME:
-		key = '7';
-		break;
-	case K_KP_UPARROW:
-		key = '8';
-		break;
-	case K_KP_PGUP:
-		key = '9';
-		break;
-	case K_KP_LEFTARROW:
-		key = '4';
-		break;
-	case K_KP_5:
-		key = '5';
-		break;
-	case K_KP_RIGHTARROW:
-		key = '6';
-		break;
-	case K_KP_END:
-		key = '1';
-		break;
-	case K_KP_DOWNARROW:
-		key = '2';
-		break;
-	case K_KP_PGDN:
-		key = '3';
-		break;
-	case K_KP_INS:
-		key = '0';
-		break;
-	case K_KP_DEL:
-		key = '.';
-		break;
+	// NOTE: Keypad remapping
+	switch (key) {
+		case K_KP_SLASH: key = '/'; break;
+		case K_KP_MINUS: key = '-'; break;
+		case K_KP_PLUS: key = '+'; break;
+		case K_KP_HOME: key = '7'; break;
+		case K_KP_UPARROW: key = '8'; break;
+		case K_KP_PGUP: key = '9'; break;
+		case K_KP_LEFTARROW: key = '4'; break;
+		case K_KP_5: key = '5'; break;
+		case K_KP_RIGHTARROW: key = '6'; break;
+		case K_KP_END: key = '1'; break;
+		case K_KP_DOWNARROW: key = '2'; break;
+		case K_KP_PGDN: key = '3'; break;
+		case K_KP_INS: key = '0'; break;
+		case K_KP_DEL: key = '.'; break;
 	}
 
-	if ( ( toupper( key ) == 'V' && keydown[K_CTRL] ) ||
-		 ( ( ( key == K_INS ) || ( key == K_KP_INS ) ) && keydown[K_SHIFT] ) )
-	{
-		char *cbd;
+	if (key == K_ENTER || key == K_KP_ENTER) {
 
-		if ( ( cbd = Sys_GetClipboardData() ) != 0 )
-		{
-			int i;
+		i64 to_skip = 1; // NOTE: leading everpresent char
+		if (console_input.current->ptr[1] == '\\' || console_input.current->ptr[1] == '/') {
+			to_skip += 1;
+		}
+		Cbuf_AddText(console_input.current->ptr + to_skip);
 
-			strtok( cbd, "\n\r\b" );
-
-			i = strlen( cbd );
-			if (i + console_input.cursor.column >= console_input.lines.ptr[0].len)
-				i = console_input.lines.ptr[0].len - console_input.cursor.column;
-
-			if ( i > 0 )
-			{
-				cbd[i]=0;
-				strcat(console_input.lines.ptr[console_input.cursor.line].ptr, cbd);
-				console_input.cursor.column += i;
-			}
-			free( cbd );
+		Cbuf_AddText("\n");
+		Com_Printf("%s\n", console_input.current->ptr);
+		console_input.current += 1;
+		if (console_input.current == console_input.lines.ptr + console_input.lines.len) {
+			console_input.current = console_input.lines.ptr;
 		}
 
-		return;
-	}
-
-	if ( key == 'l' )
-	{
-		if ( keydown[K_CTRL] )
-		{
-			Cbuf_AddText ("clear\n");
-			return;
-		}
-	}
-
-	if ( key == K_ENTER || key == K_KP_ENTER )
-	{
-		if (console_input.lines.ptr[console_input.cursor.line].ptr[1] == '\\' || console_input.lines.ptr[console_input.cursor.line].ptr[1] == '/')
-			Cbuf_AddText(console_input.lines.ptr[console_input.cursor.line].ptr+2);	// skip the >
-		else
-			Cbuf_AddText(console_input.lines.ptr[console_input.cursor.line].ptr+1);	// valid command
-
-		Cbuf_AddText ("\n");
-		Com_Printf ("%s\n",console_input.lines.ptr[console_input.cursor.line]);
-		console_input.cursor.line = (console_input.cursor.line + 1) & 31;
-		history_line = console_input.cursor.line;
-		console_input.lines.ptr[console_input.cursor.line].ptr[0] = ']';
-		console_input.cursor.column = 1;
-		if (cls.state == ca_disconnected)
-			SCR_UpdateScreen ();	// force an update, because the command may take some time
-		return;
-	}
-
-	// command completion
-	if (key == K_TAB) {
-		char* s = console_input.lines.ptr[console_input.cursor.line].ptr + 1;
-		if (*s == '\\' || *s == '/') {
-			s++;
-		}
-		int len = strlen(s);
-
-		char* cmd = 0;
-		if (len) {
-			if (!cmd) {
-				// check for an exact function match
-				for (cmd_function_t* proc = cmd_functions; proc; proc = proc->next) {
-					if (!strcmp(s, proc->name)) {
-						cmd = proc->name;
-					}
-				}
-			}
-
-			if (!cmd) {
-				// check for an exact alias match
-				for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-					if (!strcmp(s, a->name)) {
-						cmd = a->name;
-					}
-				}
-			}
-
-			if (!cmd) {
-				// check for a partial function match
-				for (cmd_function_t* proc = cmd_functions; proc; proc = proc->next) {
-					if (!strncmp (s,proc->name, len)) {
-						cmd = proc->name;
-					}
-				}
-			}
-
-			if (!cmd) {
-				// check for a partial alias match
-				for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-					if (!strncmp (s, a->name, len)) {
-						cmd = a->name;
-					}
-				}
-			}
-
-			if (!cmd) {
-				// check for an exact variable match
-				for (cvar_t* cvar = cvar_vars; cvar; cvar=cvar->next) {
-					if (!strcmp(s, cvar->name)) {
-						cmd = cvar->name;
-					}
-				}
-			}
-
-			if (!cmd) {
-				// check for a partial variable match
-				for (cvar_t* cvar = cvar_vars; cvar; cvar = cvar->next) {
-					if (!strncmp(s, cvar->name, len)) {
-						cmd =  cvar->name;
-					}
-				}
-			}
+		console_input.current->ptr[0] = ']';
+		console_input.current->ptr[1] = 0;
+		console_input.current->len = 1;
+		if (cls.state == ca_disconnected) {
+			SCR_UpdateScreen (); // force an update, because the command may take some time
 		}
 
-		// NOTE: perform completion
-		if (cmd) {
-			console_input.lines.ptr[console_input.cursor.line].ptr[1] = '/';
-			strcpy(console_input.lines.ptr[console_input.cursor.line].ptr + 2, cmd);
-			console_input.cursor.column = strlen(cmd) + 2;
-			console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = ' ';
-			console_input.cursor.column++;
-			console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
-		}
+	} else if (key == K_BACKSPACE) {
+		console_input.current->len = max(console_input.current->len - 1, 1);
+		console_input.current->ptr[console_input.current->len] = 0;
 
-		return;
-	}
-
-	if ( ( key == K_BACKSPACE ) || ( key == K_LEFTARROW ) || ( key == K_KP_LEFTARROW ) || ( ( key == 'h' ) && ( keydown[K_CTRL] ) ) )
-	{
-		if (console_input.cursor.column > 1)
-			console_input.cursor.column--;
-		return;
-	}
-
-	if ( ( key == K_UPARROW ) || ( key == K_KP_UPARROW ) ||
-		 ( ( key == 'p' ) && keydown[K_CTRL] ) )
-	{
-		do
-		{
-			history_line = (history_line - 1) & 31;
-		} while (history_line != console_input.cursor.line && !console_input.lines.ptr[history_line].ptr[1]);
-		if (history_line == console_input.cursor.line)
-			history_line = (console_input.cursor.line+1)&31;
-		strcpy(console_input.lines.ptr[console_input.cursor.line].ptr, console_input.lines.ptr[history_line].ptr);
-		console_input.cursor.column = console_input.lines.ptr[console_input.cursor.line].len;
-		return;
-	}
-
-	if ( ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) ||
-		 ( ( key == 'n' ) && keydown[K_CTRL] ) )
-	{
-		if (history_line == console_input.cursor.line) return;
-
-		do {
-			history_line = (history_line + 1) & 31;
-		} while (history_line != console_input.cursor.line && !console_input.lines.ptr[history_line].ptr[1]);
-
-		if (history_line == console_input.cursor.line)
-		{
-			console_input.lines.ptr[console_input.cursor.line].ptr[0] = ']';
-			console_input.cursor.column = 1;
-		}
-		else
-		{
-			strcpy(console_input.lines.ptr[console_input.cursor.line].ptr, console_input.lines.ptr[history_line].ptr);
-			console_input.cursor.column = console_input.lines.ptr[console_input.cursor.line].len;
-		}
-		return;
-	}
-
-	if (key == K_PGUP || key == K_KP_PGUP )
-	{
-		con.display -= 2;
-		return;
-	}
-
-	if (key == K_PGDN || key == K_KP_PGDN )
-	{
-		con.display += 2;
-		if (con.display > con.current)
-			con.display = con.current;
-		return;
-	}
-
-	if (key == K_HOME || key == K_KP_HOME )
-	{
-		con.display = con.current - con.totallines + 10;
-		return;
-	}
-
-	if (key == K_END || key == K_KP_END )
-	{
-		con.display = con.current;
-		return;
-	}
-
-	if (key < 32 || key > 127)
-		return;	// non printable
-
-	if (console_input.cursor.column < console_input.lines.ptr[0].len-1) {
-		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = key;
-		console_input.cursor.column++;
-		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
-	}
-
+	} else if (key >= 32 && key <= 127 && console_input.current->len < console_input.max_line_capacity) {
+		console_input.current->ptr[console_input.current->len++] = key;
+		console_input.current->ptr[console_input.current->len] = 0;
+	} // NOTE: ignore anything else
 }
 
 /*
@@ -67646,14 +67410,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Key Init
 	// TODO: unglobal
 	{
-		console_input.lines = (String_Slice)arena_alloc_slice(&context.memory.perm, String, 1024);
+		// NOTE: Each input line is initialised as "]" where the first character is never written to
+		console_input.lines = (String_Slice)arena_alloc_slice(&context.memory.perm, String, 32);
+		console_input.max_line_capacity = 1024;
+		console_input.current = console_input.lines.ptr;
 		for (i64 ind = 0; ind < console_input.lines.len; ind++) {
 			String* line = console_input.lines.ptr + ind;
-			*line = (String)arena_alloc_slice(&context.memory.perm, char, 1024);
+			*line = (String)arena_alloc_slice(&context.memory.perm, char, console_input.max_line_capacity);
 			line->ptr[0] = ']';
 			line->ptr[1] = 0;
+			line->len = 1;
 		}
-		console_input.cursor.column = 1;
 
 		// init ascii characters in console mode
 		for (int i = 32; i < 128; i++) {
