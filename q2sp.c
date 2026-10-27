@@ -617,13 +617,13 @@ static void* Z_TagMalloc(int size, int tag) {
 
 static void* Z_Malloc(int size) {return Z_TagMalloc(size, 0);}
 
-typedef struct sizebuf_s {
-	bool	allowoverflow;
-	bool	overflowed;		// set to true if the buffer size failed
-	u8		*data;
-	int			maxsize;
-	int			cursize;
-	int			readcount;
+typedef struct {
+	bool allowoverflow;
+	bool overflowed;		// set to true if the buffer size failed
+	u8* data;
+	i32 maxsize;
+	i32 cursize;
+	i32 readcount;
 } sizebuf_t;
 
 static void SZ_Init(sizebuf_t* buf, u8* data, int length) {
@@ -1628,7 +1628,7 @@ typedef struct {
 	bool	fatal_error;
 	netsrc_t	sock;
 	int			dropped;			// between last packet and previous
-	int			last_received;		// for timeouts
+	int			last_received;
 	int			last_sent;			// for retransmits
 	netadr_t	remote_address;
 	int			incoming_sequence;
@@ -2086,7 +2086,7 @@ static char defer_text_buf[8192];
 
 // as new commands are generated from the console or keybindings, the text is added to the end of the command buffer.
 static void Cbuf_AddText(char* text) {
-	int l = strlen (text);
+	int l = strlen(text);
 	if (cmd_text.cursize + l >= cmd_text.maxsize) {
 		Com_Printf("Cbuf_AddText: overflow\n");
 		return;
@@ -9011,15 +9011,6 @@ typedef struct {
 #define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)g_edicts ) / sizeof(edict_t))
 
 
-typedef enum
-{
-	cs_free,		// can be reused for a new connection
-	cs_zombie,		// client has been disconnected, but don't reuse
-					// connection for a couple seconds
-	cs_connected,	// has been assigned to a client_t, but not in game yet
-	cs_spawned		// client is fully in game
-} sv_client_state_t;	// renamed from client_state_t: clashes with client.h's in the unity build
-
 typedef struct
 {
 	int					areabytes;
@@ -9032,9 +9023,13 @@ typedef struct
 
 #define	LATENCY_COUNTS	16
 
-typedef struct client_s
-{
-	sv_client_state_t	state;
+typedef struct {
+	enum {
+		cs_free,
+		cs_zombie,		// client has been disconnected
+		cs_connected,	// has been assigned to a client_t, but not in game yet
+		cs_spawned,		// client is fully in game
+	} state;
 
 	char			userinfo[MAX_INFO_STRING];		// name, etc
 
@@ -9071,11 +9066,8 @@ typedef struct client_s
 
 // a client can leave the server in one of four ways:
 // dropping properly by quiting or disconnecting
-// timing out if no valid messages are received for timeout.value seconds
 // getting kicked off by the server operator
 // a program error, like an overflowed reliable buffer
-
-//=============================================================================
 
 // MAX_CHALLENGES is made large to prevent a denial
 // of service attack that could cycle all of them
@@ -9121,8 +9113,6 @@ extern	client_t	*sv_client;
 extern	edict_t		*sv_player;
 
 void SV_FinalMessage (char *message, bool reconnect);
-void SV_DropClient (client_t *drop);
-
 int SV_ModelIndex (char *name);
 int SV_SoundIndex (char *name);
 int SV_ImageIndex (char *name);
@@ -9157,7 +9147,6 @@ void SV_ExecuteClientMessage (client_t *cl);
 // sv_ccmds.c
 //
 void SV_ReadLevelFile (void);
-void SV_Status_f (void);
 
 //
 // sv_ents.c
@@ -9734,82 +9723,6 @@ static void SV_Savegame_f() {
 	Com_Printf ("Done.\n");
 }
 
-// Kick a user off of the server
-void SV_Kick_f (void)
-{
-	if (!svs.initialized)
-	{
-		Com_Printf ("No server running.\n");
-		return;
-	}
-
-	if (cmd_argc != 2)
-	{
-		Com_Printf ("Usage: kick <userid>\n");
-		return;
-	}
-
-	if (!SV_SetPlayer ())
-		return;
-
-	SV_BroadcastPrintf (PRINT_HIGH, "%s was kicked\n", sv_client->name);
-	// print directly, because the dropped client won't get the
-	// SV_BroadcastPrintf message
-	SV_ClientPrintf (sv_client, PRINT_HIGH, "You were kicked from the game\n");
-	SV_DropClient (sv_client);
-	sv_client->lastmessage = svs.realtime;	// min case there is a funny zombie
-}
-
-void SV_Status_f (void)
-{
-	int			i, j, l;
-	client_t	*cl;
-	char		*s;
-	int			ping;
-	Com_Printf ("map              : %s\n", sv.name);
-
-	Com_Printf ("num score ping name            lastmsg address               \n");
-	Com_Printf ("--- ----- ---- --------------- ------- --------------------- \n");
-	for (i=0,cl=&svs.client ; i<1; i++,cl++) {
-		if (!cl->state) {
-			continue;
-		}
-		Com_Printf ("%3i ", i);
-		Com_Printf ("%5i ", cl->edict->client->ps.stats[STAT_FRAGS]);
-
-		if (cl->state == cs_connected) {
-			Com_Printf ("CNCT ");
-		} else if (cl->state == cs_zombie) {
-			Com_Printf ("ZMBI ");
-		} else {
-			ping = cl->ping < 9999 ? cl->ping : 9999;
-			Com_Printf ("%4i ", ping);
-		}
-
-		Com_Printf ("%s", cl->name);
-		l = 16 - strlen(cl->name);
-		for (j=0 ; j<l ; j++) {
-			Com_Printf (" ");
-		}
-
-		Com_Printf ("%7i ", svs.realtime - cl->lastmessage );
-
-		s = NET_AdrToString ( cl->netchan.remote_address);
-		Com_Printf ("%s", s);
-		l = 22 - strlen(s);
-		for (j=0 ; j<l ; j++)
-			Com_Printf (" ");
-
-		Com_Printf ("\n");
-	}
-	Com_Printf ("\n");
-}
-
-/*
-==================
-SV_ConSay_f
-==================
-*/
 void SV_ConSay_f(void)
 {
 	client_t *client;
@@ -10936,8 +10849,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 client_t	*sv_client;			// current client
 cvar_t	*sv_paused;
 cvar_t	*sv_enforcetime;
-cvar_t	*timeout;				// seconds without any message
-cvar_t	*zombietime;			// seconds to sink messages after disconnect
 cvar_t	*allow_download;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
@@ -10954,34 +10865,22 @@ void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 
-/*
-=====================
-SV_DropClient
-
-Called when the player is totally leaving the server, either willingly
-or unwillingly.  This is NOT called if the entire server is quiting
-or crashing.
-=====================
-*/
-void SV_DropClient (client_t *drop)
-{
+static void SV_DropClient(client_t* drop) {
 	// add the disconnect
-	MSG_WriteByte (&drop->netchan.message, svc_disconnect);
+	MSG_WriteByte(&drop->netchan.message, svc_disconnect);
 
-	if (drop->state == cs_spawned)
-	{
+	if (drop->state == cs_spawned) {
 		// call the prog function for removing a client
 		// this will remove the body, among other things
 		ClientDisconnect (drop->edict);
 	}
 
-	if (drop->download)
-	{
+	if (drop->download) {
 		FS_FreeFile (drop->download);
 		drop->download = NULL;
 	}
 
-	drop->state = cs_zombie;		// become free in a few seconds
+	drop->state = cs_zombie;
 	drop->name[0] = 0;
 }
 
@@ -11210,7 +11109,7 @@ gotnewcl:
 
 	SZ_Init (&newcl->datagram, newcl->datagram_buf, sizeof(newcl->datagram_buf) );
 	newcl->datagram.allowoverflow = true;
-	newcl->lastmessage = svs.realtime;	// don't timeout
+	newcl->lastmessage = svs.realtime;
 	newcl->lastconnect = svs.realtime;
 }
 
@@ -11334,7 +11233,7 @@ void SV_ReadPackets (void)
 			{	// this is a valid, sequenced packet, so process it
 				if (cl->state != cs_zombie)
 				{
-					cl->lastmessage = svs.realtime;	// don't timeout
+					cl->lastmessage = svs.realtime;
 					SV_ExecuteClientMessage (cl);
 				}
 			}
@@ -11343,51 +11242,6 @@ void SV_ReadPackets (void)
 
 		if (i != 1)
 			continue;
-	}
-}
-
-/*
-==================
-SV_CheckTimeouts
-
-If a packet has not been received from a client for timeout->value
-seconds, drop the conneciton.  Server frames are used instead of
-realtime to avoid dropping the local client while debugging.
-
-When a client is normally dropped, the client_t goes into a zombie state
-for a few seconds to make sure any final reliable message gets resent
-if necessary
-==================
-*/
-void SV_CheckTimeouts (void)
-{
-	int		i;
-	client_t	*cl;
-	int			droppoint;
-	int			zombiepoint;
-
-	droppoint = svs.realtime - 1000*timeout->value;
-	zombiepoint = svs.realtime - 1000*zombietime->value;
-
-	for (i = 0, cl = &svs.client; i<1 ; i++,cl++)
-	{
-		// message times may be wrong across a changelevel
-		if (cl->lastmessage > svs.realtime)
-			cl->lastmessage = svs.realtime;
-
-		if (cl->state == cs_zombie
-		&& cl->lastmessage < zombiepoint)
-		{
-			cl->state = cs_free;	// can now be reused
-			continue;
-		}
-		if ( (cl->state == cs_connected || cl->state == cs_spawned)
-			&& cl->lastmessage < droppoint)
-		{
-			SV_BroadcastPrintf (PRINT_HIGH, "%s timed out\n", cl->name);
-			SV_DropClient (cl);
-			cl->state = cs_free;	// don't bother with zombie state
-		}
 	}
 }
 
@@ -11836,8 +11690,7 @@ bool SV_SendClientDatagram (client_t *client)
 	return true;
 }
 
-void SV_SendClientMessages (void)
-{
+void SV_SendClientMessages() {
 	int			i;
 	client_t	*c;
 
@@ -11846,14 +11699,13 @@ void SV_SendClientMessages (void)
 	{
 		if (!c->state)
 			continue;
-		// if the reliable message overflowed,
-		// drop the client
+		// if the reliable message overflowed, drop the client
 		if (c->netchan.message.overflowed)
 		{
 			SZ_Clear (&c->netchan.message);
 			SZ_Clear (&c->datagram);
 			SV_BroadcastPrintf (PRINT_HIGH, "%s overflowed\n", c->name);
-			SV_DropClient (c);
+			SV_DropClient(c);
 		}
 
 		if (c->state == cs_spawned)
@@ -12167,11 +12019,6 @@ void SV_BeginDownload_f(void)
 	SV_NextDownload_f ();
 }
 
-// The client is going to disconnect, so remove the connection immediately
-static void SV_Disconnect_f() {
-	SV_DropClient(sv_client);
-}
-
 // Dumps the serverinfo info string
 static void SV_ShowServerinfo_f() {
 	Info_Print(Info_Cvar_Server());
@@ -12189,8 +12036,6 @@ static ucmd_t ucmds[] =
 	{"configstrings", SV_Configstrings_f},
 	{"baselines", SV_Baselines_f},
 	{"begin", SV_Begin_f},
-
-	{"disconnect", SV_Disconnect_f},
 
 	// issued by hand at client consoles
 	{"info", SV_ShowServerinfo_f},
@@ -12219,18 +12064,7 @@ void SV_ExecuteUserCommand (char *s)
 		ClientCommand (sv_player);
 }
 
-/*
-===========================================================================
-
-USER CMD EXECUTION
-
-===========================================================================
-*/
-
-
-
 void SV_ClientThink (client_t *cl, usercmd_t *cmd)
-
 {
 	cl->commandMsec -= cmd->msec;
 
@@ -12242,16 +12076,9 @@ void SV_ClientThink (client_t *cl, usercmd_t *cmd)
 	ClientThink (cl->edict, cmd);
 }
 
-
-
 #define	MAX_STRINGCMDS	8
-/*
-===================
-SV_ExecuteClientMessage
 
-The current net_message is parsed for the given client
-===================
-*/
+// The current net_message is parsed for the given client
 void SV_ExecuteClientMessage (client_t *cl)
 {
 	int		c;
@@ -12344,10 +12171,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 				net_drop = cl->netchan.dropped;
 				if (net_drop < 20)
 				{
-
-//if (net_drop > 2)
-
-//	Com_Printf ("drop %i\n", net_drop);
 					while (net_drop > 2)
 					{
 						SV_ClientThink (cl, &cl->lastcmd);
@@ -12381,27 +12204,10 @@ void SV_ExecuteClientMessage (client_t *cl)
 	}
 }
 
-/* ============ end source: server/sv_user.c ============ */
-/* ============ begin source: server/sv_world.c ============ */
-
-// world.c -- world query functions
-
-/* already inlined above: server/server.h */
-
-/*
-===============================================================================
-
-ENTITY AREA CHECKING
-
-FIXME: this use of "area" is different from the bsp file use
-===============================================================================
-*/
-
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
 // ent = STRUCT_FROM_LINK(link,entity_t,order)
 // FIXME: remove this mess!
 #define	STRUCT_FROM_LINK(l,t,m) ((t *)((u8 *)l - (size_t)&(((t *)0)->m)))
-
 #define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
 
 typedef struct areanode_s
@@ -13269,20 +13075,13 @@ typedef struct
 extern char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
 extern int num_cl_weaponmodels;
 
-#define	CMD_BACKUP		64	// allow a lot of command backups for very fast systems
+#define	CMD_BACKUP 64
 
-//
-// the client_state_t structure is wiped completely at every
-// server map change
-//
-typedef struct
-{
-	int			timeoutcount;
+static struct {
+	bool refresh_prepped;
+	bool sound_prepped; // ambient sounds can start
 
-	bool	refresh_prepped;	// false if on new level or new ref dll
-	bool	sound_prepped;		// ambient sounds can start
-
-	int			parse_entities;		// index (not anded off) into cl_parse_entities[]
+	int parse_entities; // index (not anded off) into cl_parse_entities[]
 
 	usercmd_t	cmd;
 	usercmd_t	cmds[CMD_BACKUP];	// each mesage will send several old cmds
@@ -13306,8 +13105,7 @@ typedef struct
 	// and teleport direction changes
 	vec3_t		viewangles;
 
-	int			time;			// this is the time value that the client
-								// is rendering at.  always <= cls.realtime
+	int			time;			// this is the time value that the client is rendering at.  always <= cls.realtime
 	float		lerpfrac;		// between oldframe and frame
 
 	refdef_t	refdef;
@@ -13317,8 +13115,8 @@ typedef struct
 	//
 	// transient data from server
 	//
-	char		layout[1024];		// general 2D overlay
-	int			inventory[MAX_ITEMS];
+	char layout[1024];		// general 2D overlay
+	int inventory[MAX_ITEMS];
 
 	//
 	// server state information
@@ -13340,21 +13138,8 @@ typedef struct
 
 	clientinfo_t	clientinfo[MAX_CLIENTS];
 	clientinfo_t	baseclientinfo;
-} client_state_t;
+} cl;
 
-extern	client_state_t	cl;
-
-/*
-==================================================================
-
-==================================================================
-*/
-
-//=============================================================================
-
-//
-// cvars
-//
 extern	cvar_t	*cl_gun;
 extern	cvar_t	*cl_add_blend;
 extern	cvar_t	*cl_add_lights;
@@ -17625,7 +17410,6 @@ cvar_t	*freelook;
 cvar_t	*cl_noskins;
 cvar_t	*cl_autoskins;
 cvar_t	*cl_footsteps;
-cvar_t	*cl_timeout;
 cvar_t	*cl_predict;
 cvar_t	*cl_maxfps;
 cvar_t	*cl_gun;
@@ -17666,8 +17450,6 @@ cvar_t	*gender;
 cvar_t	*gender_auto;
 
 cvar_t	*cl_vwep;
-
-client_state_t	cl;
 
 centity_t		cl_entities[MAX_EDICTS];
 
@@ -18155,27 +17937,7 @@ void CL_ReadPackets (void)
 			continue;		// wasn't accepted for some reason
 		CL_ParseServerMessage ();
 	}
-
-	//
-	// check timeout
-	//
-	if (cls.state >= ca_connected
-	 && cls.realtime - cls.netchan.last_received > cl_timeout->value*1000)
-	{
-		if (++cl.timeoutcount > 5)	// timeoutcount saves debugger
-		{
-			Com_Printf ("\nServer connection timed out.\n");
-			CL_Disconnect ();
-			return;
-		}
-	}
-	else
-		cl.timeoutcount = 0;
-
 }
-
-
-//=============================================================================
 
 void CL_FixUpGender(void)
 {
@@ -67891,7 +67653,6 @@ static void CL_Frame(int msec) {
 		cls.frametime = (1.0 / 5);
 	}
 
-	// if in the debugger last frame, don't timeout
 	if (msec > 5000) {
 		cls.netchan.last_received = Sys_Milliseconds();
 	}
@@ -68212,7 +67973,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Console commands
 	// TODO: Remove non-essentials
 	{
-		SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
 		Cmd_AddCommand("exec", Cmd_Exec_f);
 		Cmd_AddCommand("echo", Cmd_Echo_f);
 		Cmd_AddCommand("alias", Cmd_Alias_f);
@@ -68223,8 +67983,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("unbind", Key_Unbind_f);
 		Cmd_AddCommand("unbindall", Key_Unbindall_f);
 		Cmd_AddCommand("bindlist", Key_Bindlist_f);
-		Cmd_AddCommand("kick", SV_Kick_f);
-		Cmd_AddCommand("status", SV_Status_f);
 		Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
 		Cmd_AddCommand("dumpuser", SV_DumpUser_f);
 		Cmd_AddCommand("map", SV_Map_f);
@@ -68331,11 +68089,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
 	}
 
+	// NOTE: Command buffer
+	// TODO: Unglobal
+	// TODO: Move to an arena
+	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
+
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		timeout = COM_GetCvar("timeout", "125", 0);
-		zombietime = COM_GetCvar("zombietime", "2", 0);
 		sv_paused = COM_GetCvar("paused", "0", 0);
 		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
 		allow_download = COM_GetCvar("allow_download", "0", CVAR_ARCHIVE);
@@ -68429,7 +68190,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
 		cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
 		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
-		cl_timeout = COM_GetCvar ("cl_timeout", "120", 0);
 		cl_paused = COM_GetCvar ("paused", "0", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
@@ -69161,9 +68921,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			// keep the random time dependent
 			rand();
-
-			// check timeouts
-			SV_CheckTimeouts();
 
 			// get packets from clients
 			SV_ReadPackets();
