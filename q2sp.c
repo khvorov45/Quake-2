@@ -23669,30 +23669,37 @@ void Con_CenteredPrint (char *text)
 // The input line scrolls horizontally if typing goes beyond the right edge
 static void Con_DrawInput() {
 	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-		char* text = console_input.lines.ptr[console_input.cursor.line].ptr;
+		assert(console_input.cursor.line >= 0 && console_input.cursor.line < console_input.lines.len);
+
+		String line = console_input.lines.ptr[console_input.cursor.line];
+		assert(console_input.cursor.column >= 1 && console_input.cursor.column < line.len);
 
 		// add the cursor frame
-		text[console_input.cursor.column] = 10 + ((i32)(cls.realtime >> 8) & 1);
+		char block_char_code = 11;
+		line.ptr[console_input.cursor.column] = block_char_code;
 
 		// fill out remainder with spaces
-		for (i64 i = console_input.cursor.column + 1; i < con.linewidth; i++) {
-			text[i] = ' ';
+		assert(con.linewidth <= line.len);
+		for (i64 ind = console_input.cursor.column + 1; ind < con.linewidth; ind++) {
+			line.ptr[ind] = ' ';
 		}
 
-		// prestep if horizontally scrolling
-		if (console_input.cursor.column >= con.linewidth)
-			text += 1 + console_input.cursor.column - con.linewidth;
+		// NOTE: Work out the subset to draw
+		char* text_to_draw = line.ptr;
+		if (console_input.cursor.column >= con.linewidth) {
+			text_to_draw += 1 + console_input.cursor.column - con.linewidth;
+		}
+		assert(text_to_draw + con.linewidth <= line.ptr + line.len);
 
 		// draw it
-		for (i64 i = 0; i < con.linewidth; i++) {
-			Draw_Char((i + 1) << 3, con.vislines - 22, text[i]);
+		for (i64 ind = 0; ind < con.linewidth; ind++) {
+			Draw_Char((ind + 1) << 3, con.vislines - 22, text_to_draw[ind]);
 		}
 
-		// remove cursor
-		console_input.lines.ptr[console_input.cursor.line].ptr[console_input.cursor.column] = 0;
+		// NOTE: remove cursor once it's been drawn
+		line.ptr[console_input.cursor.column] = 0;
 	}
 }
-
 
 /*
 ================
@@ -23833,11 +23840,8 @@ void Con_DrawConsole (float frac)
 	Con_DrawInput ();
 }
 
-
-
-int		shift_down=false;
+int shift_down;
 int	anykeydown;
-
 
 static i32 history_line;
 
@@ -60475,40 +60479,39 @@ static void GL_Bind(int texnum) {
 	}
 }
 
-// Draws one 8*8 graphics character with 0 being transparent.
+// Draws one 8x8 graphics character with 0 being transparent.
 // It can be clipped to the top of the screen to allow the console to be smoothly scrolled off.
-void Draw_Char (int x, int y, int num)
-{
+void Draw_Char(int x, int y, int num) {
 	int				row, col;
 	float			frow, fcol, size;
 
 	num &= 255;
 
-	if ( (num&127) == 32 )
-		return;		// space
+	if ( (num & 127) == 32 )
+		return; // space
 
 	if (y <= -8)
-		return;			// totally off screen
+		return; // totally off screen
 
-	row = num>>4;
-	col = num&15;
+	row = num >> 4;
+	col = num & 15;
 
-	frow = row*0.0625;
-	fcol = col*0.0625;
+	frow = row * 0.0625;
+	fcol = col * 0.0625;
 	size = 0.0625;
 
-	GL_Bind (draw_chars->texnum);
+	GL_Bind(draw_chars->texnum);
 
-	glBegin (GL_QUADS);
-	glTexCoord2f (fcol, frow);
-	glVertex2f (x, y);
-	glTexCoord2f (fcol + size, frow);
-	glVertex2f (x+8, y);
-	glTexCoord2f (fcol + size, frow + size);
-	glVertex2f (x+8, y+8);
-	glTexCoord2f (fcol, frow + size);
-	glVertex2f (x, y+8);
-	glEnd ();
+	glBegin(GL_QUADS);
+	glTexCoord2f(fcol, frow);
+	glVertex2f(x, y);
+	glTexCoord2f(fcol + size, frow);
+	glVertex2f(x + 8, y);
+	glTexCoord2f(fcol + size, frow + size);
+	glVertex2f(x + 8, y + 8);
+	glTexCoord2f(fcol, frow + size);
+	glVertex2f(x, y + 8);
+	glEnd();
 }
 
 // Finds or loads the given image
