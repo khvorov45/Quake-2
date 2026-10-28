@@ -12736,7 +12736,6 @@ void Key_ClearStates (void);
 
 void Con_DrawCharacter (int cx, int line, int num);
 
-void Con_DrawConsole (float frac);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
 
@@ -19822,8 +19821,69 @@ static void Con_CheckResize() {
 	console.display = console.current;
 }
 
-void SCR_DrawConsole (void)
-{
+typedef struct {
+	char* ptr; // NOTE: Null-terminated for convenience
+	i64 len; // NOTE: Does not include the null terminator
+	i64 cap; // NOTE: Does include the null terminator
+} Console_Input;
+static Console_Input console_input;
+
+// Draws the console with the solid background
+static void Con_DrawConsole(float frac) {
+	i64 lines = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
+	if (lines > 0) {
+
+		// NOTE: Background
+		void Draw_StretchPic(int x, int y, int w, int h, char* name);
+		Draw_StretchPic(0, -viddef.height + lines, viddef.width, viddef.height, "conback");
+
+		// NOTE: Text
+		console.vislines = lines;
+		i64 char_width_px = 8;
+		i64 rows_of_text_to_draw = (lines - 22) / char_width_px;
+
+		// TODO: Remove, disallow scrolling up
+		assert(console.display == console.current);
+
+		i64 y = lines - 30;
+		i64 row = console.display;
+		i64 char_height_px = 8;
+		for (i64 i = 0; i < rows_of_text_to_draw; i++, y -= char_height_px, row--) {
+			if (row >= 0 && console.current - row < console.totallines) {
+				char* text = console.text + (row % console.totallines) * console.linewidth;
+				for (i64 x = 0; x < console.linewidth; x++) {
+					char ch = text[x];
+					Draw_Char((x + 1) * char_width_px, y, ch);
+				}
+			}
+		}
+
+		// NOTE: Input
+		if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
+			i64 ycoord = console.vislines - 22;
+			i64 current_x = 0;
+
+			// NOTE: Prompt
+			Draw_Char(current_x, ycoord, ']');
+
+			// NOTE: Actual input
+			i64 char_width_px = 8;
+			for (i64 ind = 0; ind < console_input.len; ind++) {
+				char ch = console_input.ptr[ind];
+				current_x = (ind + 1) * char_width_px;
+				Draw_Char(current_x, ycoord, ch);
+			}
+
+			// NOTE: Cursor
+			char block_char_code = 11;
+			Draw_Char(current_x + char_width_px, ycoord, block_char_code);
+		}
+
+	}
+
+}
+
+static void SCR_DrawConsole() {
 	Con_CheckResize ();
 
 	if (cls.state == ca_disconnected || cls.state == ca_connecting)
@@ -22745,13 +22805,6 @@ void DrawAltString (int x, int y, char *s)
 	}
 }
 
-typedef struct {
-	char* ptr; // NOTE: Null-terminated for convenience
-	i64 len; // NOTE: Does not include the null terminator
-	i64 cap; // NOTE: Does include the null terminator
-} Console_Input;
-static Console_Input console_input;
-
 static void clear_console_input() {
 	assert(console_input.cap > 1);
 	console_input.len = 0;
@@ -22835,28 +22888,6 @@ void Con_Dump_f (void)
 	fclose (f);
 }
 
-static void Con_DrawInput() {
-	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-		i64 ycoord = console.vislines - 22;
-		i64 current_x = 0;
-
-		// NOTE: Prompt
-		Draw_Char(current_x, ycoord, ']');
-
-		// NOTE: Actual input
-		i64 char_width_px = 8;
-		for (i64 ind = 0; ind < console_input.len; ind++) {
-			char ch = console_input.ptr[ind];
-			current_x = (ind + 1) * char_width_px;
-			Draw_Char(current_x, ycoord, ch);
-		}
-
-		// NOTE: Cursor
-		char block_char_code = 11;
-		Draw_Char(current_x + char_width_px, ycoord, block_char_code);
-	}
-}
-
 // Draws the last few lines of output transparently over the game top
 void Con_DrawNotify (void)
 {
@@ -22883,111 +22914,6 @@ void Con_DrawNotify (void)
 
 		v += 8;
 	}
-}
-
-// Draws the console with the solid background
-void Con_DrawConsole (float frac)
-{
-	int				i, j, x, y, n;
-	int				rows;
-	char			*text;
-	int				row;
-	int				lines;
-	char			version[64];
-	char			dlbar[1024];
-
-	lines = viddef.height * frac;
-	if (lines <= 0)
-		return;
-
-	if (lines > viddef.height)
-		lines = viddef.height;
-
-	// draw the background
-	void Draw_StretchPic(int x, int y, int w, int h, char *name);
-	Draw_StretchPic (0, -viddef.height+lines, viddef.width, viddef.height, "conback");
-
-	Com_sprintf (version, sizeof(version), "v%4.2f", VERSION);
-	for (x=0 ; x<5 ; x++)
-		Draw_Char (viddef.width-44+x*8, lines-12, 128 + version[x] );
-
-	// draw the text
-	console.vislines = lines;
-
-	rows = (lines-22)>>3;		// rows of text to draw
-
-	y = lines - 30;
-
-	// draw from the bottom up
-	if (console.display != console.current)
-	{
-	// draw arrows to show the buffer is backscrolled
-		for (x=0 ; x<console.linewidth ; x+=4)
-			Draw_Char ( (x+1)<<3, y, '^');
-
-		y -= 8;
-		rows--;
-	}
-
-	row = console.display;
-	for (i=0 ; i<rows ; i++, y-=8, row--)
-	{
-		if (row < 0)
-			break;
-		if (console.current - row >= console.totallines)
-			break;		// past scrollback wrap point
-
-		text = console.text + (row % console.totallines)*console.linewidth;
-
-		for (x=0 ; x<console.linewidth ; x++)
-			Draw_Char ( (x+1)<<3, y, text[x]);
-	}
-
-	// draw the download bar
-	// figure out width
-	if (cls.download) {
-		if ((text = strrchr(cls.downloadname, '/')) != NULL)
-			text++;
-		else
-			text = cls.downloadname;
-
-		x = console.linewidth - ((console.linewidth * 7) / 40);
-		y = x - strlen(text) - 8;
-		i = console.linewidth/3;
-		if ((int)strlen(text) > i) {
-			y = x - i - 11;
-			strncpy(dlbar, text, i);
-			dlbar[i] = 0;
-			strcat(dlbar, "...");
-		} else
-			strcpy(dlbar, text);
-		strcat(dlbar, ": ");
-		i = strlen(dlbar);
-		dlbar[i++] = '\x80';
-		// where's the dot go?
-		if (cls.downloadpercent == 0)
-			n = 0;
-		else
-			n = y * cls.downloadpercent / 100;
-
-		for (j = 0; j < y; j++)
-			if (j == n)
-				dlbar[i++] = '\x83';
-			else
-				dlbar[i++] = '\x81';
-		dlbar[i++] = '\x82';
-		dlbar[i] = 0;
-
-		sprintf(dlbar + strlen(dlbar), " %02d%%", cls.downloadpercent);
-
-		// draw it
-		y = console.vislines-12;
-		for (i = 0; i < (int)strlen(dlbar); i++)
-			Draw_Char ( (i+1)<<3, y, dlbar[i]);
-	}
-
-	// draw the input prompt, user text, and cursor if desired
-	Con_DrawInput ();
 }
 
 int shift_down;
