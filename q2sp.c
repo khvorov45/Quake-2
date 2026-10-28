@@ -10714,9 +10714,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t *allow_download_models;
-cvar_t *allow_download_sounds;
-cvar_t *allow_download_maps;
 cvar_t	*sv_noreload;			// don't reload level state when reentering
 cvar_t	*public_server;			// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
@@ -12951,8 +12948,6 @@ extern	sizebuf_t	net_message;
 
 void DrawString (int x, int y, char *s);
 void DrawAltString (int x, int y, char *s);	// toggle high bit
-bool	CL_CheckOrDownloadFile (char *filename);
-
 void CL_AddNetgraph (void);
 
 //ROGUE
@@ -13105,7 +13100,6 @@ void CL_ParseServerMessage (void);
 void CL_LoadClientinfo (clientinfo_t *ci, char *s);
 void SHOWNET(char *s);
 void CL_ParseClientinfo (int player);
-void CL_Download_f (void);
 
 //
 // cl_view.c
@@ -17197,10 +17191,6 @@ centity_t		cl_entities[MAX_EDICTS];
 
 entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
-extern	cvar_t *allow_download_models;
-extern	cvar_t *allow_download_sounds;
-extern	cvar_t *allow_download_maps;
-
 void CL_Setenv_f( void )
 {
 	int argc = cmd_argc;
@@ -17685,108 +17675,31 @@ void CL_RequestNextDownload (void)
 {
 	unsigned	map_checksum;		// for detecting cheater maps
 	char fn[MAX_OSPATH];
-	dmdl_t *pheader;
 
 	if (cls.state != ca_connected)
 		return;
 
-	if (precache_check < ENV_CNT)
+	if (precache_check < ENV_CNT) {
 		precache_check = ENV_CNT;
+	}
 
 	if (precache_check == CS_MODELS) { // confirm map
 		precache_check = CS_MODELS+2; // 0 isn't used
-		if (allow_download_maps->value)
-			if (!CL_CheckOrDownloadFile(cl.configstrings[CS_MODELS+1]))
-				return; // started a download
 	}
+
 	if (precache_check >= CS_MODELS && precache_check < CS_MODELS+MAX_MODELS) {
-		if (allow_download_models->value) {
-			while (precache_check < CS_MODELS+MAX_MODELS &&
-				cl.configstrings[precache_check][0]) {
-				if (cl.configstrings[precache_check][0] == '*' ||
-					cl.configstrings[precache_check][0] == '#') {
-					precache_check++;
-					continue;
-				}
-				if (precache_model_skin == 0) {
-					if (!CL_CheckOrDownloadFile(cl.configstrings[precache_check])) {
-						precache_model_skin = 1;
-						return; // started a download
-					}
-					precache_model_skin = 1;
-				}
-
-				// checking for skins in the model
-				if (!precache_model) {
-
-					FS_LoadFile (cl.configstrings[precache_check], (void **)&precache_model);
-					if (!precache_model) {
-						precache_model_skin = 0;
-						precache_check++;
-						continue; // couldn't load it
-					}
-					if (LittleLong(*(unsigned *)precache_model) != IDALIASHEADER) {
-						// not an alias model
-						FS_FreeFile(precache_model);
-						precache_model = 0;
-						precache_model_skin = 0;
-						precache_check++;
-						continue;
-					}
-					pheader = (dmdl_t *)precache_model;
-					if (LittleLong (pheader->version) != ALIAS_VERSION) {
-						precache_check++;
-						precache_model_skin = 0;
-						continue; // couldn't load it
-					}
-				}
-
-				pheader = (dmdl_t *)precache_model;
-
-				while (precache_model_skin - 1 < LittleLong(pheader->num_skins)) {
-					if (!CL_CheckOrDownloadFile((char *)precache_model +
-						LittleLong(pheader->ofs_skins) +
-						(precache_model_skin - 1)*MAX_SKINNAME)) {
-						precache_model_skin++;
-						return; // started a download
-					}
-					precache_model_skin++;
-				}
-				if (precache_model) {
-					FS_FreeFile(precache_model);
-					precache_model = 0;
-				}
-				precache_model_skin = 0;
-				precache_check++;
-			}
-		}
 		precache_check = CS_SOUNDS;
 	}
+
 	if (precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS) {
-		if (allow_download_sounds->value) {
-			if (precache_check == CS_SOUNDS)
-				precache_check++; // zero is blank
-			while (precache_check < CS_SOUNDS+MAX_SOUNDS &&
-				cl.configstrings[precache_check][0]) {
-				if (cl.configstrings[precache_check][0] == '*') {
-					precache_check++;
-					continue;
-				}
-				Com_sprintf(fn, sizeof(fn), "sound/%s", cl.configstrings[precache_check++]);
-				if (!CL_CheckOrDownloadFile(fn))
-					return; // started a download
-			}
-		}
 		precache_check = CS_IMAGES;
 	}
+
 	if (precache_check >= CS_IMAGES && precache_check < CS_IMAGES+MAX_IMAGES) {
 		if (precache_check == CS_IMAGES)
 			precache_check++; // zero is blank
-		while (precache_check < CS_IMAGES+MAX_IMAGES &&
-			cl.configstrings[precache_check][0]) {
+		while (precache_check < CS_IMAGES+MAX_IMAGES && cl.configstrings[precache_check][0]) {
 			Com_sprintf(fn, sizeof(fn), "pics/%s.pcx", cl.configstrings[precache_check++]);
-			if (!CL_CheckOrDownloadFile(fn))
-				return; // started a download
 		}
 		precache_check = CS_PLAYERSKINS;
 	}
@@ -18958,77 +18871,7 @@ void CL_DownloadFileName(char *dest, int destlen, char *fn)
 	Com_sprintf(dest, destlen, "baseq2/%s", fn);
 }
 
-/*
-===============
-CL_CheckOrDownloadFile
-
-Returns true if the file exists, otherwise it attempts
-to start a download from the server.
-===============
-*/
-bool	CL_CheckOrDownloadFile (char *filename)
-{
-	FILE *fp;
-	char	name[MAX_OSPATH];
-
-	if (strstr (filename, ".."))
-	{
-		Com_Printf ("Refusing to download a path with ..\n");
-		return true;
-	}
-
-	if (FS_LoadFile (filename, NULL) != -1)
-	{	// it exists, no need to download
-		return true;
-	}
-
-	strcpy (cls.downloadname, filename);
-
-	// download to a temp name, and only rename
-	// to the real name when done, so if interrupted
-	// a runt file wont be left
-	COM_StripExtension (cls.downloadname, cls.downloadtempname);
-	strcat (cls.downloadtempname, ".tmp");
-
-//ZOID
-	// check to see if we already have a tmp for this file, if so, try to resume
-	// open the file if not opened yet
-	CL_DownloadFileName(name, sizeof(name), cls.downloadtempname);
-
-//	FS_CreatePath (name);
-
-	fp = fopen (name, "r+b");
-	if (fp) { // it exists
-		int len;
-		fseek(fp, 0, SEEK_END);
-		len = ftell(fp);
-
-		cls.download = fp;
-
-		// give the server an offset to start the download
-		Com_Printf ("Resuming %s\n", cls.downloadname);
-		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message,
-			va("download %s %i", cls.downloadname, len));
-	} else {
-		Com_Printf ("Downloading %s\n", cls.downloadname);
-		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message,
-			va("download %s", cls.downloadname));
-	}
-
-	cls.downloadnumber++;
-
-	return false;
-}
-
-/*
-===============
-CL_Download_f
-
-Request a download from the server
-===============
-*/
+// Request a download from the server
 void	CL_Download_f (void)
 {
 	char filename[MAX_OSPATH];
@@ -66808,9 +66651,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		allow_download_models = COM_GetCvar("allow_download_models", "1", CVAR_ARCHIVE);
-		allow_download_sounds = COM_GetCvar("allow_download_sounds", "1", CVAR_ARCHIVE);
-		allow_download_maps = COM_GetCvar("allow_download_maps", "1", CVAR_ARCHIVE);
 		sv_noreload = COM_GetCvar("sv_noreload", "0", 0);
 		public_server = COM_GetCvar("public", "0", 0);
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
