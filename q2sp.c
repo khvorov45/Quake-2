@@ -1802,13 +1802,6 @@ static void Con_Print(char* txt) {
 
 static char com_token[MAX_TOKEN_CHARS];
 
-static void COM_StripExtension(char* in, char* out) {
-	while (*in && *in != '.') {
-		*out++ = *in++;
-	}
-	*out = 0;
-}
-
 static void COM_FilePath(char *in, char *out) {
 	char* s = in + strlen(in) - 1;
 	while (s != in && *s != '/') {
@@ -13051,16 +13044,7 @@ void CL_RegisterSounds (void);
 void IN_Accumulate (void);
 
 void CL_ParseLayout (void);
-
-
-//
-// cl_main
-//
-
 void CL_FixUpGender(void);
-
-void CL_GetChallengePacket (void);
-void CL_RequestNextDownload (void);
 
 //
 // cl_input
@@ -17671,8 +17655,7 @@ u8 *precache_model; // used for skin checking in alias models
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
 #define TEXTURE_CNT (ENV_CNT+13)
 
-void CL_RequestNextDownload (void)
-{
+void CL_RequestNextDownload (void) {
 	unsigned	map_checksum;		// for detecting cheater maps
 	char fn[MAX_OSPATH];
 
@@ -17713,7 +17696,7 @@ void CL_RequestNextDownload (void)
 
 	if (precache_check == ENV_CNT) {
 		precache_check = ENV_CNT + 1;
-		CM_LoadMap (cl.configstrings[CS_MODELS+1], true, &map_checksum);
+		CM_LoadMap(cl.configstrings[CS_MODELS+1], true, &map_checksum);
 		assert((int)map_checksum == atoi(cl.configstrings[CS_MAPCHECKSUM]));
 	}
 
@@ -17735,35 +17718,15 @@ void CL_RequestNextDownload (void)
 	CL_PrepRefresh();
 
 	MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
-	MSG_WriteString(&cls.netchan.message, va("begin %i\n", precache_spawncount) );
+	MSG_WriteString(&cls.netchan.message, va("begin %i\n", precache_spawncount));
 }
 
-/*
-=================
-CL_Precache_f
-
-The server will send this command right
-before allowing the client into the server
-=================
-*/
-void CL_Precache_f (void)
-{
-	//Yet another hack to let old demos work
-	//the old precache sequence
-	if (cmd_argc < 2) {
-		unsigned	map_checksum;		// for detecting cheater maps
-
-		CM_LoadMap (cl.configstrings[CS_MODELS+1], true, &map_checksum);
-		CL_RegisterSounds ();
-		CL_PrepRefresh ();
-		return;
-	}
-
+// The server will send this command right before allowing the client into the server
+static void CL_Precache_f() {
 	precache_check = CS_MODELS;
 	precache_spawncount = atoi(Cmd_Argv(1));
 	precache_model = 0;
 	precache_model_skin = 0;
-
 	CL_RequestNextDownload();
 }
 
@@ -18871,51 +18834,6 @@ void CL_DownloadFileName(char *dest, int destlen, char *fn)
 	Com_sprintf(dest, destlen, "baseq2/%s", fn);
 }
 
-// Request a download from the server
-void	CL_Download_f (void)
-{
-	char filename[MAX_OSPATH];
-
-	if (cmd_argc != 2) {
-		Com_Printf("Usage: download <filename>\n");
-		return;
-	}
-
-	Com_sprintf(filename, sizeof(filename), "%s", Cmd_Argv(1));
-
-	if (strstr (filename, ".."))
-	{
-		Com_Printf ("Refusing to download a path with ..\n");
-		return;
-	}
-
-	if (FS_LoadFile (filename, NULL) != -1)
-	{	// it exists, no need to download
-		Com_Printf("File already exists.\n");
-		return;
-	}
-
-	strcpy (cls.downloadname, filename);
-	Com_Printf ("Downloading %s\n", cls.downloadname);
-
-	// download to a temp name, and only rename
-	// to the real name when done, so if interrupted
-	// a runt file wont be left
-	COM_StripExtension (cls.downloadname, cls.downloadtempname);
-	strcat (cls.downloadtempname, ".tmp");
-
-	MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-	MSG_WriteString (&cls.netchan.message,
-		va("download %s", cls.downloadname));
-
-	cls.downloadnumber++;
-}
-
-/*
-======================
-CL_RegisterSounds
-======================
-*/
 void CL_RegisterSounds (void)
 {
 	int		i;
@@ -18929,88 +18847,6 @@ void CL_RegisterSounds (void)
 		cl.sound_precache[i] = S_RegisterSound (cl.configstrings[CS_SOUNDS+i]);
 	}
 	S_EndRegistration ();
-}
-
-
-/*
-=====================
-CL_ParseDownload
-
-A download message has been received from the server
-=====================
-*/
-void CL_ParseDownload (void)
-{
-	int		size, percent;
-	char	name[MAX_OSPATH];
-	int		r;
-
-	// read the data
-	size = MSG_ReadShort (&net_message);
-	percent = MSG_ReadByte (&net_message);
-	if (size == -1)
-	{
-		Com_Printf ("Server does not have this file.\n");
-		if (cls.download)
-		{
-			// if here, we tried to resume a file but the server said no
-			fclose (cls.download);
-			cls.download = NULL;
-		}
-		CL_RequestNextDownload ();
-		return;
-	}
-
-	// open the file if not opened yet
-	if (!cls.download)
-	{
-		CL_DownloadFileName(name, sizeof(name), cls.downloadtempname);
-
-		FS_CreatePath (name);
-
-		cls.download = fopen (name, "wb");
-		if (!cls.download)
-		{
-			net_message.readcount += size;
-			Com_Printf ("Failed to open %s\n", cls.downloadtempname);
-			CL_RequestNextDownload ();
-			return;
-		}
-	}
-
-	fwrite (net_message.data + net_message.readcount, 1, size, cls.download);
-	net_message.readcount += size;
-
-	if (percent != 100)
-	{
-		// request next block
-		// change display routines by zoid
-		cls.downloadpercent = percent;
-
-		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-		SZ_Print (&cls.netchan.message, "nextdl");
-	}
-	else
-	{
-		char	oldn[MAX_OSPATH];
-		char	newn[MAX_OSPATH];
-
-		fclose (cls.download);
-
-		// rename the temp file to it's final name
-		CL_DownloadFileName(oldn, sizeof(oldn), cls.downloadtempname);
-		CL_DownloadFileName(newn, sizeof(newn), cls.downloadname);
-		r = rename (oldn, newn);
-		if (r)
-			Com_Printf ("failed to rename.\n");
-
-		cls.download = NULL;
-		cls.downloadpercent = 0;
-
-		// get another file if needed
-
-		CL_RequestNextDownload ();
-	}
 }
 
 static void CL_ParseServerData() {
@@ -19431,10 +19267,6 @@ void CL_ParseServerMessage (void)
 
 		case svc_muzzleflash2:
 			CL_ParseMuzzleFlash2 ();
-			break;
-
-		case svc_download:
-			CL_ParseDownload ();
 			break;
 
 		case svc_frame:
@@ -66583,7 +66415,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("reconnect", CL_Reconnect_f);
 		Cmd_AddCommand("setenv", CL_Setenv_f );
 		Cmd_AddCommand("precache", CL_Precache_f);
-		Cmd_AddCommand("download", CL_Download_f);
 		Cmd_AddCommand("wave", NULL);
 		Cmd_AddCommand("inven", NULL);
 		Cmd_AddCommand("kill", NULL);
