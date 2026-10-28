@@ -1704,74 +1704,37 @@ static struct {
 #define	PRINT_MEDIUM	1	// death messages
 #define	PRINT_HIGH		2	// critical messages
 
+typedef struct {char buf[1024]; i64 len; float timestamp;} Console_Line;
+typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log;
 static struct {
-	bool initialized;
-	char text[32768];
-	int current; // line where next message will be printed
-	int x; // offset in current line for next print
-	int linewidth; // characters across screen
-	int totallines; // total lines in console scrollback
-	float line_timestamps[4]; // cls.realtime time the line was generated
+	Console_Log log; // NOTE: Circular buffer
+	i64 char_width_px;
+	i64 char_height_px;
 } console;
 
-static void Con_Print(char* txt) {
-	if (!console.initialized) {
-		return;
+// index 0 is most recent, 1 is second most recent, etc.
+typedef struct {String text; float timestamp;} Log_Line;
+static Log_Line get_log_line(i64 recency_index) {
+	assert(recency_index >= 0 && recency_index < console.log.cap);
+	i64 actual_index = console.log.head - 1 - recency_index;
+	if (actual_index < 0) {
+		actual_index += console.log.cap;
 	}
+	assert(actual_index >= 0 && actual_index < console.log.cap);
+	Console_Line* line = console.log.ptr + actual_index;
+	Log_Line result = {.text = {line->buf, line->len}, .timestamp = line->timestamp};
+	return result;
+}
 
-	if (txt[0] == 1 || txt[0] == 2) {
-		txt++;
-	}
+static void add_line_to_console_log(String line) {
+	Console_Line* console_line = console.log.ptr + console.log.head;
+	console.log.head = (console.log.head + 1) % console.log.cap;
 
-	int c = 0;
-	while ((c = *txt)) {
-		// count word length
-		int l = 0;
-		for (l = 0; l < console.linewidth; l++) {
-			if (txt[l] <= ' ') {
-				break;
-			}
-		}
-
-		// word wrap
-		if (l != console.linewidth && (console.x + l > console.linewidth)) {
-			console.x = 0;
-		}
-
-		txt++;
-
-		if (!console.x) {
-			// Linefeed
-			{
-				console.x = 0;
-				console.current++;
-				memset(&console.text[(console.current%console.totallines)*console.linewidth], ' ', console.linewidth);
-			}
-
-			// mark time for transparent overlay
-			if (console.current >= 0) {
-				int timestamp_index = console.current % (int)carray_count(console.line_timestamps);
-				console.line_timestamps[timestamp_index] = cls.realtime;
-			}
-		}
-
-		switch (c) {
-		case '\n':
-		case '\r': {
-			console.x = 0;
-		} break;
-
-		// display character and advance
-		default: {
-			int y = console.current % console.totallines;
-			console.text[y * console.linewidth + console.x] = c;
-			console.x++;
-			if (console.x >= console.linewidth) {
-				console.x = 0;
-			}
-		} break;
-		}
-	}
+	assert((i64)carray_count(console_line->buf) > line.len);
+	copy_bytes(console_line->buf, line.ptr, line.len);
+	console_line->len = line.len;
+	console_line->buf[console_line->len] = 0;
+	console_line->timestamp = cls.realtime;
 }
 
 #define	MAXPRINTMSG		4096
@@ -1806,9 +1769,10 @@ static void Com_Printf(char *fmt, ...) {
 	char msg[MAXPRINTMSG];
 	va_list argptr;
 	va_start(argptr, fmt);
-	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+	int len = Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
 	va_end(argptr);
-	Con_Print(msg);
+	String line = {msg, len};
+	add_line_to_console_log(line);
 }
 
 // Parse a token out of a string
@@ -10460,15 +10424,8 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 void CL_Disconnect(void);
 
-static void console_reset_line_timestamps() {
-	for (int i = 0; i < (int)carray_count(console.line_timestamps); i++) {
-		console.line_timestamps[i] = 0;
-	}
-}
-
 static void SCR_EndLoadingPlaque() {
 	cls.disable_screen = 0;
-	console_reset_line_timestamps();
 }
 
 // A brand new game has been started
@@ -19433,7 +19390,6 @@ void SCR_CenterPrint (char *str)
 		s++;		// skip the \n
 	} while (1);
 	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-	console_reset_line_timestamps ();
 }
 
 
@@ -19584,49 +19540,6 @@ void SCR_RunConsole (void)
 
 }
 
-// If the line width has changed, reformat the buffer.
-static void Con_CheckResize() {
-	int width = (viddef.width >> 3) - 2;
-
-	if (width == console.linewidth) {
-		return;
-	}
-
-	int con_textsize = carray_count(console.text);
-
-	// video hasn't been initialized yet
-	if (width < 1) {
-		console.linewidth = 38;
-		console.totallines = con_textsize / console.linewidth;
-		memset(console.text, ' ', con_textsize);
-	} else {
-		int oldwidth = console.linewidth;
-		console.linewidth = width;
-
-		int oldtotallines = console.totallines;
-		console.totallines = con_textsize / console.linewidth;
-
-		int numlines = min(console.totallines, oldtotallines);
-		int numchars = min(console.linewidth, oldwidth);
-
-		// NOTE: save and clear
-		char tbuf[con_textsize] = {};
-		memcpy(tbuf, console.text, con_textsize);
-		memset(console.text, ' ', con_textsize);
-
-		// NOTE: copy back
-		for (int i = 0; i < numlines; i++) {
-			for (int j = 0; j < numchars; j++) {
-				console.text[(console.totallines - 1 - i) * console.linewidth + j] = tbuf[((console.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
-			}
-		}
-
-		console_reset_line_timestamps();
-	}
-
-	console.current = console.totallines - 1;
-}
-
 typedef struct {
 	char* ptr; // NOTE: Null-terminated for convenience
 	i64 len; // NOTE: Does not include the null terminator
@@ -19635,55 +19548,48 @@ typedef struct {
 static Console_Input console_input;
 
 static void Con_DrawConsole(float frac) {
-	i64 lines = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
-	if (lines > 0) {
+	i64 lines_px = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
+	if (lines_px > 0) {
 
 		// NOTE: Background
 		void Draw_StretchPic(int x, int y, int w, int h, char* name);
-		Draw_StretchPic(0, -viddef.height + lines, viddef.width, viddef.height, "conback");
+		Draw_StretchPic(0, -viddef.height + lines_px, viddef.width, viddef.height, "conback");
 
-		// NOTE: Text
-		i64 char_width_px = 8;
-		i64 rows_of_text_to_draw = (lines - 22) / char_width_px;
-		i64 y = lines - 30;
-		i64 row = console.current;
-		i64 char_height_px = 8;
-		for (i64 i = 0; i < rows_of_text_to_draw; i++, y -= char_height_px, row--) {
-			if (row >= 0 && console.current - row < console.totallines) {
-				char* text = console.text + (row % console.totallines) * console.linewidth;
-				for (i64 x = 0; x < console.linewidth; x++) {
-					char ch = text[x];
-					Draw_Char((x + 1) * char_width_px, y, ch);
-				}
+		// NOTE: Log lines
+		i64 input_offset = 22;
+		for (i64 row = 0; row < console.log.cap; row++) {
+			String line_str = get_log_line(row).text;
+			i64 ycoord = lines_px - input_offset - console.char_height_px - (row * console.char_height_px);
+			for (i64 column = 0; column < line_str.len; column++) {
+				char ch = line_str.ptr[column];
+				i64 xcoord = (column + 1) * console.char_width_px;
+				Draw_Char(xcoord, ycoord, ch);
 			}
-		} // draw text
+		} // log lines
 
 		// NOTE: Input
 		if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-			i64 ycoord = lines - 22;
+			i64 ycoord = lines_px - input_offset;
 			i64 current_x = 0;
 
 			// NOTE: Prompt
 			Draw_Char(current_x, ycoord, ']');
 
 			// NOTE: Actual input
-			i64 char_width_px = 8;
 			for (i64 ind = 0; ind < console_input.len; ind++) {
 				char ch = console_input.ptr[ind];
-				current_x = (ind + 1) * char_width_px;
+				current_x = (ind + 1) * console.char_width_px;
 				Draw_Char(current_x, ycoord, ch);
 			}
 
 			// NOTE: Cursor
 			char block_char_code = 11;
-			Draw_Char(current_x + char_width_px, ycoord, block_char_code);
+			Draw_Char(current_x + console.char_width_px, ycoord, block_char_code);
 		} // draw input
 	} // if any lines
 }
 
 static void SCR_DrawConsole() {
-	Con_CheckResize ();
-
 	if (cls.state == ca_disconnected || cls.state == ca_connecting)
 	{	// forced full screen console
 		Con_DrawConsole (1.0);
@@ -20376,10 +20282,6 @@ static void SCR_UpdateScreen() {
 			cls.disable_screen = 0;
 			Com_Printf("Loading plaque timed out.\n");
 		}
-		return;
-	}
-
-	if (!console.initialized) {
 		return;
 	}
 
@@ -22418,9 +22320,6 @@ static void CL_PrepRefresh() {
 	void R_EndRegistration (void);
 	R_EndRegistration ();
 
-	// clear any lines of console text
-	console_reset_line_timestamps ();
-
 	SCR_UpdateScreen ();
 	cl.refresh_prepped = true;
 }
@@ -22613,7 +22512,6 @@ static void Con_ToggleConsole_f() {
 	SCR_EndLoadingPlaque();
 
 	clear_console_input();
-	console_reset_line_timestamps();
 
 	if (cls.key_dest == key_console) {
 		M_ForceMenuOff();
@@ -22623,94 +22521,20 @@ static void Con_ToggleConsole_f() {
 	}
 }
 
-static void Con_Clear_f() {
-	memset(console.text, ' ', carray_count(console.text));
-}
-
-// Save the console contents out to a file
-void Con_Dump_f (void)
-{
-	int		l, x;
-	char	*line;
-	FILE	*f;
-	char	buffer[1024];
-	char	name[MAX_OSPATH];
-
-	if (cmd_argc != 2)
-	{
-		Com_Printf ("usage: condump <filename>\n");
-		return;
-	}
-
-	Com_sprintf (name, sizeof(name), "baseq2/%s.txt", Cmd_Argv(1));
-
-	Com_Printf ("Dumped console text to %s.\n", name);
-	FS_CreatePath (name);
-	f = fopen (name, "w");
-	if (!f)
-	{
-		Com_Printf ("ERROR: couldn't open.\n");
-		return;
-	}
-
-	// skip empty lines
-	for (l = console.current - console.totallines + 1 ; l <= console.current ; l++)
-	{
-		line = console.text + (l%console.totallines)*console.linewidth;
-		for (x=0 ; x<console.linewidth ; x++)
-			if (line[x] != ' ')
-				break;
-		if (x != console.linewidth)
-			break;
-	}
-
-	// write the remaining lines
-	buffer[console.linewidth] = 0;
-	for ( ; l <= console.current ; l++)
-	{
-		line = console.text + (l%console.totallines)*console.linewidth;
-		strncpy (buffer, line, console.linewidth);
-		for (x=console.linewidth-1 ; x>=0 ; x--)
-		{
-			if (buffer[x] == ' ')
-				buffer[x] = 0;
-			else
-				break;
-		}
-		for (x=0; buffer[x]; x++)
-			buffer[x] &= 0x7f;
-
-		fprintf (f, "%s\n", buffer);
-	}
-
-	fclose (f);
-}
-
 // Draws the last few lines of output transparently over the game top
-void Con_DrawNotify (void)
-{
-	int		x, v;
-	char	*text;
-	int		i;
-	int		time;
-
-	v = 0;
-	for (i= console.current-(int)carray_count(console.line_timestamps)+1 ; i<=console.current ; i++)
-	{
-		if (i < 0)
-			continue;
-		time = console.line_timestamps[i % (int)carray_count(console.line_timestamps)];
-		if (time == 0)
-			continue;
-		time = cls.realtime - time;
-		if (time > con_notifytime->value*1000)
-			continue;
-		text = console.text + (i % console.totallines)*console.linewidth;
-
-		for (x = 0 ; x < console.linewidth ; x++)
-			Draw_Char ( (x+1)<<3, v, text[x]);
-
-		v += 8;
+void Con_DrawNotify() {
+	i64 lines_to_draw = 4;
+	for (i64 row = 0; row < lines_to_draw; row++) {
+		Log_Line line = get_log_line(row);
+		float time_passed_since = cls.realtime - line.timestamp;
+		i64 ycoord = (lines_to_draw - row) * console.char_height_px;
+		if (time_passed_since > 0 && time_passed_since <= con_notifytime->value * 1000.0f) {
+			for (i64 column = 0; column < line.text.len; column++) {
+				char ch = line.text.ptr[column];
+				i64 xcoord = (column + 1) * console.char_width_px;
+				Draw_Char(xcoord, ycoord, ch);
+			}
+		}
 	}
 }
 
@@ -24392,7 +24216,6 @@ static void ConsoleFunc(void* unused) {
 	UNUSED(unused);
 	// the proper way to do this is probably to have ToggleConsole_f accept a parameter
 	clear_console_input();
-	console_reset_line_timestamps();
 	M_ForceMenuOff();
 	cls.key_dest = key_console;
 }
@@ -65986,8 +65809,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("load", SV_Loadgame_f);
 		Cmd_AddCommand("killserver", SV_KillServer_f);
 		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
-		Cmd_AddCommand("clear", Con_Clear_f);
-		Cmd_AddCommand("condump", Con_Dump_f);
 		Cmd_AddCommand("gun_next", V_Gun_Next_f);
 		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
 		Cmd_AddCommand("gun_model", V_Gun_Model_f);
@@ -66191,9 +66012,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Console init
 	// TODO: Unglobal
 	{
-		console.linewidth = -1;
-		Con_CheckResize();
-		console.initialized = true;
+		console.log = (Console_Log)arena_alloc_fixed_cap(&context.memory.perm, Console_Line, 128);
+		console.char_width_px = 8;
+		console.char_height_px = 8;
 	}
 
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
