@@ -23545,22 +23545,23 @@ void DrawAltString (int x, int y, char *s)
 	}
 }
 
-static struct {
-	String_Slice lines;
-	i64 max_line_capacity;
-	String* current;
-} console_input;
+typedef struct {
+	char* ptr; // NOTE: Null-terminated for convenience
+	i64 len; // NOTE: Does not include the null terminator
+	i64 cap; // NOTE: Does include the null terminator
+} Console_Input;
+static Console_Input console_input;
 
-static void Key_ClearTyping() {
-	assert(console_input.max_line_capacity > 1);
-	console_input.current->len = 1;
-	console_input.current->ptr[1] = 0;
+static void clear_console_input() {
+	assert(console_input.cap > 1);
+	console_input.len = 0;
+	console_input.ptr[0] = 0;
 }
 
 static void Con_ToggleConsole_f() {
 	SCR_EndLoadingPlaque();
 
-	Key_ClearTyping();
+	clear_console_input();
 	console_reset_line_timestamps();
 
 	if (cls.key_dest == key_console) {
@@ -23638,13 +23639,7 @@ void Con_Dump_f (void)
 	fclose (f);
 }
 
-/*
-==============
-Con_CenteredPrint
-==============
-*/
-void Con_CenteredPrint (char *text)
-{
+void Con_CenteredPrint(char* text) {
 	int		l;
 	char	buffer[1024];
 
@@ -23658,46 +23653,29 @@ void Con_CenteredPrint (char *text)
 	Con_Print (buffer);
 }
 
-// The input line scrolls horizontally if typing goes beyond the right edge
 static void Con_DrawInput() {
 	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-		String* line = console_input.current;
+		i64 ycoord = con.vislines - 22;
+		i64 current_x = 0;
 
-		// NOTE: Add the cursor temporarily
+		// NOTE: Prompt
+		Draw_Char(current_x, ycoord, ']');
+
+		// NOTE: Actual input
+		i64 char_width_px = 8;
+		for (i64 ind = 0; ind < console_input.len; ind++) {
+			char ch = console_input.ptr[ind];
+			current_x = (ind + 1) * char_width_px;
+			Draw_Char(current_x, ycoord, ch);
+		}
+
+		// NOTE: Cursor
 		char block_char_code = 11;
-		assert(line->len < console_input.max_line_capacity);
-		line->ptr[line->len] = block_char_code;
-
-		// NOTE: Fill out remainder with spaces
-		assert(con.linewidth <= console_input.max_line_capacity);
-		for (i64 ind = line->len + 1; ind < con.linewidth; ind++) {
-			line->ptr[ind] = ' ';
-		}
-
-		// NOTE: Work out the subset to draw
-		char* text_to_draw = line->ptr;
-		if (line->len >= con.linewidth) {
-			text_to_draw += 1 + line->len - con.linewidth;
-		}
-		assert(text_to_draw + con.linewidth <= line->ptr + console_input.max_line_capacity);
-
-		// NOTE: Draw all
-		for (i64 ind = 0; ind < con.linewidth; ind++) {
-			Draw_Char((ind + 1) << 3, con.vislines - 22, text_to_draw[ind]);
-		}
-
-		// NOTE: Remove cursor once it's been drawn
-		line->ptr[line->len] = 0;
+		Draw_Char(current_x + char_width_px, ycoord, block_char_code);
 	}
 }
 
-/*
-================
-Con_DrawNotify
-
-Draws the last few lines of output transparently over the game top
-================
-*/
+// Draws the last few lines of output transparently over the game top
 void Con_DrawNotify (void)
 {
 	int		x, v;
@@ -23935,33 +23913,24 @@ void Key_Console(int key) {
 
 	if (key == K_ENTER || key == K_KP_ENTER) {
 
-		i64 to_skip = 1; // NOTE: leading everpresent char
-		if (console_input.current->ptr[1] == '\\' || console_input.current->ptr[1] == '/') {
-			to_skip += 1;
-		}
-		Cbuf_AddText(console_input.current->ptr + to_skip);
-
+		i64 to_skip = console_input.ptr[1] == '\\' || console_input.ptr[1] == '/' ? 1 : 0;
+		Cbuf_AddText(console_input.ptr + to_skip);
 		Cbuf_AddText("\n");
-		Com_Printf("%s\n", console_input.current->ptr);
-		console_input.current += 1;
-		if (console_input.current == console_input.lines.ptr + console_input.lines.len) {
-			console_input.current = console_input.lines.ptr;
-		}
+		Com_Printf("%s\n", console_input.ptr);
 
-		console_input.current->ptr[0] = ']';
-		console_input.current->ptr[1] = 0;
-		console_input.current->len = 1;
+		clear_console_input();
+
 		if (cls.state == ca_disconnected) {
-			SCR_UpdateScreen (); // force an update, because the command may take some time
+			SCR_UpdateScreen(); // force an update, because the command may take some time
 		}
 
 	} else if (key == K_BACKSPACE) {
-		console_input.current->len = max(console_input.current->len - 1, 1);
-		console_input.current->ptr[console_input.current->len] = 0;
+		console_input.len = max(console_input.len - 1, 0);
+		console_input.ptr[console_input.len] = 0;
 
-	} else if (key >= 32 && key <= 127 && console_input.current->len < console_input.max_line_capacity) {
-		console_input.current->ptr[console_input.current->len++] = key;
-		console_input.current->ptr[console_input.current->len] = 0;
+	} else if (key >= 32 && key <= 127 && console_input.len < console_input.cap - 1) {
+		console_input.ptr[console_input.len++] = key;
+		console_input.ptr[console_input.len] = 0;
 	} // NOTE: ignore anything else
 }
 
@@ -25521,7 +25490,7 @@ static void ControlsResetDefaultsFunc(void* unused) {
 static void ConsoleFunc(void* unused) {
 	UNUSED(unused);
 	// the proper way to do this is probably to have ToggleConsole_f accept a parameter
-	Key_ClearTyping();
+	clear_console_input();
 	console_reset_line_timestamps();
 	M_ForceMenuOff();
 	cls.key_dest = key_console;
@@ -67410,17 +67379,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Key Init
 	// TODO: unglobal
 	{
-		// NOTE: Each input line is initialised as "]" where the first character is never written to
-		console_input.lines = (String_Slice)arena_alloc_slice(&context.memory.perm, String, 32);
-		console_input.max_line_capacity = 1024;
-		console_input.current = console_input.lines.ptr;
-		for (i64 ind = 0; ind < console_input.lines.len; ind++) {
-			String* line = console_input.lines.ptr + ind;
-			*line = (String)arena_alloc_slice(&context.memory.perm, char, console_input.max_line_capacity);
-			line->ptr[0] = ']';
-			line->ptr[1] = 0;
-			line->len = 1;
-		}
+		console_input = (Console_Input)arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
+		clear_console_input();
 
 		// init ascii characters in console mode
 		for (int i = 32; i < 128; i++) {
