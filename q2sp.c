@@ -708,8 +708,8 @@ static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 static char* va(char *format, ...) {
 	static char string[1024];
 	va_list argptr;
-	va_start (argptr, format);
-	Q_vsnprintf (string, sizeof(string), format, argptr);
+	va_start(argptr, format);
+	Q_vsnprintf(string, sizeof(string), format, argptr);
 	va_end (argptr);
 	return string;
 }
@@ -1705,23 +1705,23 @@ static struct {
 #define	PRINT_HIGH		2	// critical messages
 
 static struct {
-	bool	initialized;
-	char		text[32768];
-	int			current;		// line where next message will be printed
-	int			x;				// offset in current line for next print
-	int			display;		// bottom of console displays this line
-	int			ormask;			// high bit mask for colored characters
-	int 		linewidth;		// characters across screen
-	int			totallines;		// total lines in console scrollback
-	float		cursorspeed;
-	int			vislines;
-	float		line_timestamps[4];	// cls.realtime time the line was generated
-} con;
+	bool initialized;
+	char text[32768];
+	int current; // line where next message will be printed
+	int x; // offset in current line for next print
+	int display; // bottom of console displays this line
+	int ormask; // high bit mask for colored characters
+	int linewidth; // characters across screen
+	int totallines; // total lines in console scrollback
+	float cursorspeed;
+	int vislines;
+	float line_timestamps[4];	// cls.realtime time the line was generated
+} console;
 
-static void Con_Print(char *txt) {
+static void Con_Print(char* txt) {
 	static int cr = false;
 
-	if (!con.initialized) {
+	if (!console.initialized) {
 		return;
 	}
 
@@ -1736,59 +1736,59 @@ static void Con_Print(char *txt) {
 	while ((c = *txt)) {
 		// count word length
 		int l = 0;
-		for (l = 0; l < con.linewidth; l++) {
+		for (l = 0; l < console.linewidth; l++) {
 			if (txt[l] <= ' ') {
 				break;
 			}
 		}
 
 		// word wrap
-		if (l != con.linewidth && (con.x + l > con.linewidth)) {
-			con.x = 0;
+		if (l != console.linewidth && (console.x + l > console.linewidth)) {
+			console.x = 0;
 		}
 
 		txt++;
 
 		if (cr) {
-			con.current--;
+			console.current--;
 			cr = false;
 		}
 
-		if (!con.x) {
+		if (!console.x) {
 			// Linefeed
 			{
-				con.x = 0;
-				if (con.display == con.current) {
-					con.display++;
+				console.x = 0;
+				if (console.display == console.current) {
+					console.display++;
 				}
-				con.current++;
-				memset(&con.text[(con.current%con.totallines)*con.linewidth], ' ', con.linewidth);
+				console.current++;
+				memset(&console.text[(console.current%console.totallines)*console.linewidth], ' ', console.linewidth);
 			}
 
 			// mark time for transparent overlay
-			if (con.current >= 0) {
-				int timestamp_index = con.current % (int)carray_count(con.line_timestamps);
-				con.line_timestamps[timestamp_index] = cls.realtime;
+			if (console.current >= 0) {
+				int timestamp_index = console.current % (int)carray_count(console.line_timestamps);
+				console.line_timestamps[timestamp_index] = cls.realtime;
 			}
 		}
 
 		switch (c) {
 		case '\n': {
-			con.x = 0;
+			console.x = 0;
 		} break;
 
 		case '\r': {
-			con.x = 0;
+			console.x = 0;
 			cr = 1;
 		} break;
 
 		// display character and advance
 		default: {
-			int y = con.current % con.totallines;
-			con.text[y*con.linewidth + con.x] = c | mask | con.ormask;
-			con.x++;
-			if (con.x >= con.linewidth) {
-				con.x = 0;
+			int y = console.current % console.totallines;
+			console.text[y*console.linewidth + console.x] = c | mask | console.ormask;
+			console.x++;
+			if (console.x >= console.linewidth) {
+				console.x = 0;
 			}
 		} break;
 		}
@@ -5846,12 +5846,6 @@ void player_pain (edict_t* self, edict_t* other, float kick, int damage);
 void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
 //
-// g_svcmds.c
-//
-void	ServerCommand (void);
-bool SV_FilterPacket (char *from);
-
-//
 // p_view.c
 //
 void ClientEndServerFrame (edict_t *ent);
@@ -9213,62 +9207,6 @@ These commands can only be entered from stdin or by a remote operator datagram
 ===============================================================================
 */
 
-/*
-==================
-SV_SetPlayer
-
-Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
-==================
-*/
-bool SV_SetPlayer (void)
-{
-	client_t	*cl;
-	int			i;
-	int			idnum;
-	char		*s;
-
-	if (cmd_argc < 2)
-		return false;
-
-	s = Cmd_Argv(1);
-
-	// numeric values are just slot numbers
-	if (s[0] >= '0' && s[0] <= '9')
-	{
-		idnum = atoi(Cmd_Argv(1));
-		if (idnum < 0 || idnum >= 1)
-		{
-			Com_Printf ("Bad client slot: %i\n", idnum);
-			return false;
-		}
-
-		sv_client = &svs.client;
-		sv_player = sv_client->edict;
-		if (!sv_client->state)
-		{
-			Com_Printf ("Client %i is not active\n", idnum);
-			return false;
-		}
-		return true;
-	}
-
-	// check for a name match
-	for (i=0,cl=&svs.client ; i<1; i++,cl++)
-	{
-		if (!cl->state)
-			continue;
-		if (!strcmp(cl->name, s))
-		{
-			sv_client = cl;
-			sv_player = sv_client->edict;
-			return true;
-		}
-	}
-
-	Com_Printf ("Userid %s is not on the server\n", s);
-	return false;
-}
-
 // Delete save/<XXX>/
 void SV_WipeSavegame (char *savename)
 {
@@ -9714,40 +9652,11 @@ static void SV_Savegame_f() {
 	Com_Printf ("Done.\n");
 }
 
-// Examine or change the serverinfo string
-static void SV_Serverinfo_f() {
-	Com_Printf("Server info settings:\n");
-	Info_Print(Info_Cvar_Server());
-}
-
-// Examine all a users info strings
-static void SV_DumpUser_f() {
-	if (cmd_argc != 2)
-	{
-		Com_Printf ("Usage: info <userid>\n");
-		return;
-	}
-
-	if (!SV_SetPlayer ())
-		return;
-
-	Com_Printf ("userinfo\n");
-	Com_Printf ("--------\n");
-	Info_Print (sv_client->userinfo);
-
-}
-
 // Kick everyone off, possibly in preparation for a new game
-void SV_KillServer_f (void)
-{
+void SV_KillServer_f() {
 	if (!svs.initialized)
 		return;
 	SV_Shutdown ("Server was killed.\n", false);
-}
-
-// Let the game dll handle a command
-void SV_ServerCommand_f() {
-	ServerCommand();
 }
 
 // Writes a delta update of an entity_state_t list to the message.
@@ -10704,8 +10613,8 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 void CL_Disconnect(void);
 
 static void console_reset_line_timestamps() {
-	for (int i = 0; i < (int)carray_count(con.line_timestamps); i++) {
-		con.line_timestamps[i] = 0;
+	for (int i = 0; i < (int)carray_count(console.line_timestamps); i++) {
+		console.line_timestamps[i] = 0;
 	}
 }
 
@@ -12987,8 +12896,6 @@ void Key_ClearStates (void);
 void Con_DrawCharacter (int cx, int line, int num);
 
 void Con_DrawConsole (float frac);
-void Con_Print (char *txt);
-void Con_CenteredPrint (char *text);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
 
@@ -17927,17 +17834,6 @@ void CL_FixUpGender(void)
 	}
 }
 
-/*
-==============
-CL_Userinfo_f
-==============
-*/
-void CL_Userinfo_f (void)
-{
-	Com_Printf ("User info settings:\n");
-	Info_Print (Info_Cvar_User());
-}
-
 int precache_check; // for autodownload of precache items
 int precache_spawncount;
 int precache_tex;
@@ -19926,7 +19822,7 @@ void CL_ParseServerMessage (void)
 		case svc_print:
 			MSG_ReadByte(&net_message);
 			Com_Printf("%s", MSG_ReadString(&net_message));
-			con.ormask = 0;
+			console.ormask = 0;
 			break;
 
 		case svc_centerprint:
@@ -20571,44 +20467,44 @@ void SCR_RunConsole (void)
 static void Con_CheckResize() {
 	int width = (viddef.width >> 3) - 2;
 
-	if (width == con.linewidth) {
+	if (width == console.linewidth) {
 		return;
 	}
 
-	int con_textsize = carray_count(con.text);
+	int con_textsize = carray_count(console.text);
 
 	// video hasn't been initialized yet
 	if (width < 1) {
-		con.linewidth = 38;
-		con.totallines = con_textsize / con.linewidth;
-		memset(con.text, ' ', con_textsize);
+		console.linewidth = 38;
+		console.totallines = con_textsize / console.linewidth;
+		memset(console.text, ' ', con_textsize);
 	} else {
-		int oldwidth = con.linewidth;
-		con.linewidth = width;
+		int oldwidth = console.linewidth;
+		console.linewidth = width;
 
-		int oldtotallines = con.totallines;
-		con.totallines = con_textsize / con.linewidth;
+		int oldtotallines = console.totallines;
+		console.totallines = con_textsize / console.linewidth;
 
-		int numlines = min(con.totallines, oldtotallines);
-		int numchars = min(con.linewidth, oldwidth);
+		int numlines = min(console.totallines, oldtotallines);
+		int numchars = min(console.linewidth, oldwidth);
 
 		// NOTE: save and clear
 		char tbuf[con_textsize] = {};
-		memcpy(tbuf, con.text, con_textsize);
-		memset(con.text, ' ', con_textsize);
+		memcpy(tbuf, console.text, con_textsize);
+		memset(console.text, ' ', con_textsize);
 
 		// NOTE: copy back
 		for (int i = 0; i < numlines; i++) {
 			for (int j = 0; j < numchars; j++) {
-				con.text[(con.totallines - 1 - i) * con.linewidth + j] = tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
+				console.text[(console.totallines - 1 - i) * console.linewidth + j] = tbuf[((console.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
 			}
 		}
 
 		console_reset_line_timestamps();
 	}
 
-	con.current = con.totallines - 1;
-	con.display = con.current;
+	console.current = console.totallines - 1;
+	console.display = console.current;
 }
 
 void SCR_DrawConsole (void)
@@ -21310,7 +21206,7 @@ static void SCR_UpdateScreen() {
 		return;
 	}
 
-	if (!con.initialized) {
+	if (!console.initialized) {
 		return;
 	}
 
@@ -23577,7 +23473,7 @@ static void Con_ToggleConsole_f() {
 }
 
 static void Con_Clear_f() {
-	memset(con.text, ' ', carray_count(con.text));
+	memset(console.text, ' ', carray_count(console.text));
 }
 
 // Save the console contents out to a file
@@ -23607,23 +23503,23 @@ void Con_Dump_f (void)
 	}
 
 	// skip empty lines
-	for (l = con.current - con.totallines + 1 ; l <= con.current ; l++)
+	for (l = console.current - console.totallines + 1 ; l <= console.current ; l++)
 	{
-		line = con.text + (l%con.totallines)*con.linewidth;
-		for (x=0 ; x<con.linewidth ; x++)
+		line = console.text + (l%console.totallines)*console.linewidth;
+		for (x=0 ; x<console.linewidth ; x++)
 			if (line[x] != ' ')
 				break;
-		if (x != con.linewidth)
+		if (x != console.linewidth)
 			break;
 	}
 
 	// write the remaining lines
-	buffer[con.linewidth] = 0;
-	for ( ; l <= con.current ; l++)
+	buffer[console.linewidth] = 0;
+	for ( ; l <= console.current ; l++)
 	{
-		line = con.text + (l%con.totallines)*con.linewidth;
-		strncpy (buffer, line, con.linewidth);
-		for (x=con.linewidth-1 ; x>=0 ; x--)
+		line = console.text + (l%console.totallines)*console.linewidth;
+		strncpy (buffer, line, console.linewidth);
+		for (x=console.linewidth-1 ; x>=0 ; x--)
 		{
 			if (buffer[x] == ' ')
 				buffer[x] = 0;
@@ -23639,23 +23535,9 @@ void Con_Dump_f (void)
 	fclose (f);
 }
 
-void Con_CenteredPrint(char* text) {
-	int		l;
-	char	buffer[1024];
-
-	l = strlen(text);
-	l = (con.linewidth-l)/2;
-	if (l < 0)
-		l = 0;
-	memset (buffer, ' ', l);
-	strcpy (buffer+l, text);
-	strcat (buffer, "\n");
-	Con_Print (buffer);
-}
-
 static void Con_DrawInput() {
 	if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-		i64 ycoord = con.vislines - 22;
+		i64 ycoord = console.vislines - 22;
 		i64 current_x = 0;
 
 		// NOTE: Prompt
@@ -23684,19 +23566,19 @@ void Con_DrawNotify (void)
 	int		time;
 
 	v = 0;
-	for (i= con.current-(int)carray_count(con.line_timestamps)+1 ; i<=con.current ; i++)
+	for (i= console.current-(int)carray_count(console.line_timestamps)+1 ; i<=console.current ; i++)
 	{
 		if (i < 0)
 			continue;
-		time = con.line_timestamps[i % (int)carray_count(con.line_timestamps)];
+		time = console.line_timestamps[i % (int)carray_count(console.line_timestamps)];
 		if (time == 0)
 			continue;
 		time = cls.realtime - time;
 		if (time > con_notifytime->value*1000)
 			continue;
-		text = con.text + (i % con.totallines)*con.linewidth;
+		text = console.text + (i % console.totallines)*console.linewidth;
 
-		for (x = 0 ; x < con.linewidth ; x++)
+		for (x = 0 ; x < console.linewidth ; x++)
 			Draw_Char ( (x+1)<<3, v, text[x]);
 
 		v += 8;
@@ -23730,34 +23612,34 @@ void Con_DrawConsole (float frac)
 		Draw_Char (viddef.width-44+x*8, lines-12, 128 + version[x] );
 
 	// draw the text
-	con.vislines = lines;
+	console.vislines = lines;
 
 	rows = (lines-22)>>3;		// rows of text to draw
 
 	y = lines - 30;
 
 	// draw from the bottom up
-	if (con.display != con.current)
+	if (console.display != console.current)
 	{
 	// draw arrows to show the buffer is backscrolled
-		for (x=0 ; x<con.linewidth ; x+=4)
+		for (x=0 ; x<console.linewidth ; x+=4)
 			Draw_Char ( (x+1)<<3, y, '^');
 
 		y -= 8;
 		rows--;
 	}
 
-	row = con.display;
+	row = console.display;
 	for (i=0 ; i<rows ; i++, y-=8, row--)
 	{
 		if (row < 0)
 			break;
-		if (con.current - row >= con.totallines)
+		if (console.current - row >= console.totallines)
 			break;		// past scrollback wrap point
 
-		text = con.text + (row % con.totallines)*con.linewidth;
+		text = console.text + (row % console.totallines)*console.linewidth;
 
-		for (x=0 ; x<con.linewidth ; x++)
+		for (x=0 ; x<console.linewidth ; x++)
 			Draw_Char ( (x+1)<<3, y, text[x]);
 	}
 
@@ -23769,9 +23651,9 @@ void Con_DrawConsole (float frac)
 		else
 			text = cls.downloadname;
 
-		x = con.linewidth - ((con.linewidth * 7) / 40);
+		x = console.linewidth - ((console.linewidth * 7) / 40);
 		y = x - strlen(text) - 8;
-		i = con.linewidth/3;
+		i = console.linewidth/3;
 		if ((int)strlen(text) > i) {
 			y = x - i - 11;
 			strncpy(dlbar, text, i);
@@ -23799,7 +23681,7 @@ void Con_DrawConsole (float frac)
 		sprintf(dlbar + strlen(dlbar), " %02d%%", cls.downloadpercent);
 
 		// draw it
-		y = con.vislines-12;
+		y = console.vislines-12;
 		for (i = 0; i < (int)strlen(dlbar); i++)
 			Draw_Char ( (i+1)<<3, y, dlbar[i]);
 	}
@@ -38894,58 +38776,6 @@ typedef struct
 ipfilter_t	ipfilters[MAX_IPFILTERS];
 int			numipfilters;
 
-/*
-=================
-StringToFilter
-=================
-*/
-static bool StringToFilter (char *s, ipfilter_t *f)
-{
-	char	num[128];
-	int		i, j;
-	u8	b[4];
-	u8	m[4];
-
-	for (i=0 ; i<4 ; i++)
-	{
-		b[i] = 0;
-		m[i] = 0;
-	}
-
-	for (i=0 ; i<4 ; i++)
-	{
-		if (*s < '0' || *s > '9')
-		{
-			PF_cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
-			return false;
-		}
-
-		j = 0;
-		while (*s >= '0' && *s <= '9')
-		{
-			num[j++] = *s++;
-		}
-		num[j] = 0;
-		b[i] = atoi(num);
-		if (b[i] != 0)
-			m[i] = 255;
-
-		if (!*s)
-			break;
-		s++;
-	}
-
-	f->mask = *(unsigned *)m;
-	f->compare = *(unsigned *)b;
-
-	return true;
-}
-
-/*
-=================
-SV_FilterPacket
-=================
-*/
 bool SV_FilterPacket (char *from)
 {
 	int		i;
@@ -38973,69 +38803,6 @@ bool SV_FilterPacket (char *from)
 			return (int)filterban->value;
 
 	return (int)!filterban->value;
-}
-
-
-/*
-=================
-SV_AddIP_f
-=================
-*/
-void SVCmd_AddIP_f (void)
-{
-	int		i;
-
-	if (cmd_argc < 3) {
-		PF_cprintf(NULL, PRINT_HIGH, "Usage:  addip <ip-mask>\n");
-		return;
-	}
-
-	for (i=0 ; i<numipfilters ; i++)
-		if (ipfilters[i].compare == 0xffffffff)
-			break;		// free spot
-	if (i == numipfilters)
-	{
-		if (numipfilters == MAX_IPFILTERS)
-		{
-			PF_cprintf (NULL, PRINT_HIGH, "IP filter list is full\n");
-			return;
-		}
-		numipfilters++;
-	}
-
-	if (!StringToFilter (Cmd_Argv(2), &ipfilters[i]))
-		ipfilters[i].compare = 0xffffffff;
-}
-
-/*
-=================
-SV_RemoveIP_f
-=================
-*/
-void SVCmd_RemoveIP_f (void)
-{
-	ipfilter_t	f;
-	int			i, j;
-
-	if (cmd_argc < 3) {
-		PF_cprintf(NULL, PRINT_HIGH, "Usage:  sv removeip <ip-mask>\n");
-		return;
-	}
-
-	if (!StringToFilter (Cmd_Argv(2), &f))
-		return;
-
-	for (i=0 ; i<numipfilters ; i++)
-		if (ipfilters[i].mask == f.mask
-		&& ipfilters[i].compare == f.compare)
-		{
-			for (j=i+1 ; j<numipfilters ; j++)
-				ipfilters[j-1] = ipfilters[j];
-			numipfilters--;
-			PF_cprintf (NULL, PRINT_HIGH, "Removed.\n");
-			return;
-		}
-	PF_cprintf (NULL, PRINT_HIGH, "Didn't find %s.\n", Cmd_Argv(2));
 }
 
 /*
@@ -39085,43 +38852,6 @@ void SVCmd_WriteIP_f (void)
 	fclose (f);
 }
 
-/*
-=================
-ServerCommand
-
-ServerCommand will be called when an "sv" command is issued.
-The game can issue cmd_argc / Cmd_Argv() commands to get the rest
-of the parameters
-=================
-*/
-void	ServerCommand (void)
-{
-	char	*cmd;
-
-	cmd = Cmd_Argv(1);
-	if (Q_stricmp (cmd, "test") == 0)
-		Svcmd_Test_f ();
-	else if (Q_stricmp (cmd, "addip") == 0)
-		SVCmd_AddIP_f ();
-	else if (Q_stricmp (cmd, "removeip") == 0)
-		SVCmd_RemoveIP_f ();
-	else if (Q_stricmp (cmd, "listip") == 0)
-		SVCmd_ListIP_f ();
-	else if (Q_stricmp (cmd, "writeip") == 0)
-		SVCmd_WriteIP_f ();
-	else
-		PF_cprintf (NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
-}
-
-/* ============ end source: game/g_svcmds.c ============ */
-/* ============ begin source: game/g_target.c ============ */
-
-/* already inlined above: game/g_local.h */
-
-/*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8)
-Fire an origin based temp entity event to the clients.
-"style"		type u8
-*/
 static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
@@ -39137,10 +38867,6 @@ void SP_target_temp_entity (edict_t *ent)
 	ent->use = Use_Target_Tent;
 }
 
-
-//==========================================================
-
-//==========================================================
 
 /*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) looped-on looped-off reliable
 "noise"		wav file to play
@@ -60043,10 +59769,6 @@ model_t *Mod_ForName (char *name, bool crash);
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
 u8	*Mod_ClusterPVS (int cluster, model_t *model);
 
-void	Mod_Modellist_f (void);
-
-
-
 void GL_BeginRendering (int *x, int *y, int *width, int *height);
 void GL_EndRendering (void);
 
@@ -60184,7 +59906,6 @@ void	R_SwapBuffers( int );
 void GL_ResampleTexture (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight);
 
 image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t type, int bits);
-void	GL_ImageList_f (void);
 
 void	GL_FreeUnusedImages (void);
 
@@ -60556,61 +60277,6 @@ void GL_TextureSolidMode( char *string )
 
 	gl_tex_solid_format = gl_solid_modes[i].mode;
 }
-
-/*
-===============
-GL_ImageList_f
-===============
-*/
-void	GL_ImageList_f (void)
-{
-	int		i;
-	image_t	*image;
-	int		texels;
-
-	Com_Printf("------------------\n");
-	texels = 0;
-
-	for (i=0, image=gltextures ; i<numgltextures ; i++, image++)
-	{
-		if (image->texnum <= 0)
-			continue;
-		texels += image->upload_width*image->upload_height;
-		switch (image->type)
-		{
-		case it_skin:
-			Com_Printf("M");
-			break;
-		case it_sprite:
-			Com_Printf("S");
-			break;
-		case it_wall:
-			Com_Printf("W");
-			break;
-		case it_pic:
-			Com_Printf("P");
-			break;
-		default:
-			Com_Printf(" ");
-			break;
-		}
-
-		Com_Printf( " %3i %3i: %s\n", image->upload_width, image->upload_height, image->name);
-	}
-	Com_Printf("Total texel count (not counting mipmaps): %i\n", texels);
-}
-
-
-/*
-=============================================================================
-
-  scrap allocation
-
-  Allocate all the little status bar obejcts into a single texture
-  to crutch up inefficient hardware / drivers
-
-=============================================================================
-*/
 
 #define	MAX_SCRAPS		1
 #define	BLOCK_WIDTH		256
@@ -62613,43 +62279,12 @@ u8 *Mod_DecompressVis (u8 *in, model_t *model)
 	return decompressed;
 }
 
-/*
-==============
-Mod_ClusterPVS
-==============
-*/
 u8 *Mod_ClusterPVS (int cluster, model_t *model)
 {
 	if (cluster == -1 || !model->vis)
 		return mod_novis;
 	return Mod_DecompressVis ( (u8 *)model->vis + model->vis->bitofs[cluster][DVIS_PVS],
 		model);
-}
-
-
-//===============================================================================
-
-/*
-================
-Mod_Modellist_f
-================
-*/
-void Mod_Modellist_f (void)
-{
-	int		i;
-	model_t	*mod;
-	int		total;
-
-	total = 0;
-	Com_Printf("Loaded models:\n");
-	for (i=0, mod=mod_known ; i < mod_numknown ; i++, mod++)
-	{
-		if (!mod->name[0])
-			continue;
-		Com_Printf("%8i : %s\n",mod->extradatasize, mod->name);
-		total += mod->extradatasize;
-	}
-	Com_Printf("Total resident: %i\n", total);
 }
 
 static int hunk_cursize = 0;
@@ -64215,66 +63850,6 @@ void R_DrawBeam( Entity *e )
 	glEnable( GL_TEXTURE_2D );
 	glDisable( GL_BLEND );
 	glDepthMask( GL_TRUE );
-}
-
-void GL_ScreenShot_f(void)
-{
-	u8		*buffer;
-	char		picname[80];
-	char		checkname[MAX_OSPATH];
-	int			i, c, temp;
-	FILE		*f;
-
-	// create the scrnshots directory if it doesn't exist
-	Com_sprintf(checkname, sizeof(checkname), "baseq2/scrnshot");
-	Sys_Mkdir(checkname);
-
-	// find a file name to save it to
-	strcpy(picname,"quake00.tga");
-
-	for (i=0 ; i<=99 ; i++)
-	{
-		picname[5] = i/10 + '0';
-		picname[6] = i%10 + '0';
-		Com_sprintf (checkname, sizeof(checkname), "baseq2/scrnshot/%s", picname);
-		f = fopen (checkname, "rb");
-		if (!f)
-			break;	// file doesn't exist
-		fclose (f);
-	}
-	if (i==100)
-	{
-		Com_Printf("SCR_ScreenShot_f: Couldn't create a file\n");
-		return;
- 	}
-
-
-	buffer = malloc(viddef.width*viddef.height*3 + 18);
-	memset (buffer, 0, 18);
-	buffer[2] = 2;		// uncompressed type
-	buffer[12] = viddef.width&255;
-	buffer[13] = viddef.width>>8;
-	buffer[14] = viddef.height&255;
-	buffer[15] = viddef.height>>8;
-	buffer[16] = 24;	// pixel size
-
-	glReadPixels (0, 0, viddef.width, viddef.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 );
-
-	// swap rgb to bgr
-	c = 18+viddef.width*viddef.height*3;
-	for (i=18 ; i<c ; i+=3)
-	{
-		temp = buffer[i];
-		buffer[i] = buffer[i+2];
-		buffer[i+2] = temp;
-	}
-
-	f = fopen (checkname, "wb");
-	fwrite (buffer, 1, c, f);
-	fclose (f);
-
-	free (buffer);
-	Com_Printf("Wrote %s\n", picname);
 }
 
 static vec3_t	modelorg;		// relative to viewpoint
@@ -67280,13 +66855,6 @@ static void windows_write_config_string(String text) {
 	CloseHandle(file_handle);
 }
 
-static void windows_print_gl_strings() {
-	Com_Printf("GL_VENDOR: %s\n", (char*)glGetString(GL_VENDOR));
-	Com_Printf("GL_RENDERER: %s\n", (char*)glGetString(GL_RENDERER));
-	Com_Printf("GL_VERSION: %s\n", (char*)glGetString(GL_VERSION));
-	Com_Printf("GL_EXTENSIONS: %s\n", (char*)glGetString(GL_EXTENSIONS));
-}
-
 static void windows_debug_log(String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
 	String text_null_terminated = concatenate_strings(&context.memory.temp, STRS(text, STR("\n")));
@@ -67457,6 +67025,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Console commands
 	// TODO: Remove non-essentials
 	{
+		Cmd_AddCommand("write_config", write_config);
+		Cmd_AddCommand("quit", context.exit_process);
+
 		Cmd_AddCommand("exec", Cmd_Exec_f);
 		Cmd_AddCommand("echo", Cmd_Echo_f);
 		Cmd_AddCommand("alias", Cmd_Alias_f);
@@ -67467,21 +67038,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("unbind", Key_Unbind_f);
 		Cmd_AddCommand("unbindall", Key_Unbindall_f);
 		Cmd_AddCommand("bindlist", Key_Bindlist_f);
-		Cmd_AddCommand("serverinfo", SV_Serverinfo_f);
-		Cmd_AddCommand("dumpuser", SV_DumpUser_f);
 		Cmd_AddCommand("map", SV_Map_f);
 		Cmd_AddCommand("gamemap", SV_GameMap_f);
 		Cmd_AddCommand("save", SV_Savegame_f);
 		Cmd_AddCommand("load", SV_Loadgame_f);
 		Cmd_AddCommand("killserver", SV_KillServer_f);
-		Cmd_AddCommand("sv", SV_ServerCommand_f);
 		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
 		Cmd_AddCommand("clear", Con_Clear_f);
 		Cmd_AddCommand("condump", Con_Dump_f);
 		Cmd_AddCommand("vid_front", VID_Front_f);
-		Cmd_AddCommand("imagelist", GL_ImageList_f);
-		Cmd_AddCommand("screenshot", GL_ScreenShot_f);
-		Cmd_AddCommand("modellist", Mod_Modellist_f);
 		Cmd_AddCommand("gun_next", V_Gun_Next_f);
 		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
 		Cmd_AddCommand("gun_model", V_Gun_Model_f);
@@ -67499,10 +67064,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
 		Cmd_AddCommand("pause", CL_Pause_f);
 		Cmd_AddCommand("skins", CL_Skins_f);
-		Cmd_AddCommand("userinfo", CL_Userinfo_f);
 		Cmd_AddCommand("changing", CL_Changing_f);
-		Cmd_AddCommand("write_config", write_config);
-		Cmd_AddCommand("quit", context.exit_process);
 		Cmd_AddCommand("connect", CL_Connect_f);
 		Cmd_AddCommand("reconnect", CL_Reconnect_f);
 		Cmd_AddCommand("setenv", CL_Setenv_f );
@@ -67567,7 +67129,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 
 		Cmd_AddCommand("cmdlist", Cmd_List_f);
-		Cmd_AddCommand("windows_print_gl_strings", windows_print_gl_strings);
 	}
 
 	// NOTE: Command buffer
@@ -67708,9 +67269,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Console init
 	// TODO: Unglobal
 	{
-		con.linewidth = -1;
+		console.linewidth = -1;
 		Con_CheckResize();
-		con.initialized = true;
+		console.initialized = true;
 	}
 
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
