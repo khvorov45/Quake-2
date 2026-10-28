@@ -10523,7 +10523,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t	*public_server;			// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
@@ -65895,7 +65894,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		public_server = COM_GetCvar("public", "0", 0);
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
 		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
