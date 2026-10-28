@@ -5835,7 +5835,6 @@ void ClientBeginServerFrame (edict_t *ent);
 //
 // g_player.c
 //
-void player_pain (edict_t* self, edict_t* other, float kick, int damage);
 void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
 //
@@ -13044,7 +13043,6 @@ void CL_RegisterSounds (void);
 void IN_Accumulate (void);
 
 void CL_ParseLayout (void);
-void CL_FixUpGender(void);
 
 //
 // cl_input
@@ -16974,10 +16972,9 @@ void CL_SendCmd (void)
 	// send a userinfo update if needed
 	if (userinfo_modified)
 	{
-		CL_FixUpGender();
 		userinfo_modified = false;
-		MSG_WriteByte (&cls.netchan.message, clc_userinfo);
-		MSG_WriteString (&cls.netchan.message, Info_Cvar_User() );
+		MSG_WriteByte(&cls.netchan.message, clc_userinfo);
+		MSG_WriteString(&cls.netchan.message, Info_Cvar_User());
 	}
 
 	SZ_Init (&buf, data, sizeof(data));
@@ -17166,8 +17163,6 @@ cvar_t	*skin;
 cvar_t	*fov;
 cvar_t	*msg;
 cvar_t	*hand;
-cvar_t	*gender;
-cvar_t	*gender_auto;
 
 cvar_t	*cl_vwep;
 
@@ -17613,32 +17608,6 @@ void CL_ReadPackets (void)
 		if (!Netchan_Process(&cls.netchan, &net_message))
 			continue;		// wasn't accepted for some reason
 		CL_ParseServerMessage ();
-	}
-}
-
-void CL_FixUpGender(void)
-{
-	char *p;
-	char sk[80];
-
-	if (gender_auto->value) {
-
-		if (gender->modified) {
-			// was set directly, don't override the user
-			gender->modified = false;
-			return;
-		}
-
-		strncpy(sk, skin->string, sizeof(sk) - 1);
-		if ((p = strchr(sk, '/')) != NULL)
-			*p = 0;
-		if (Q_stricmp(sk, "male") == 0 || Q_stricmp(sk, "cyborg") == 0)
-			COM_SetCvar ("gender", "male");
-		else if (Q_stricmp(sk, "female") == 0 || Q_stricmp(sk, "crackhor") == 0)
-			COM_SetCvar ("gender", "female");
-		else
-			COM_SetCvar ("gender", "none");
-		gender->modified = false;
 	}
 }
 
@@ -55544,43 +55513,12 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 
 void SP_misc_teleporter_dest (edict_t *ent);
 
-
-//=======================================================================
-
-
-void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
+static void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(self);
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
 	// player pain is handled at the end of the frame in P_DamageFeedback
-}
-
-
-bool IsFemale (edict_t *ent)
-{
-	char		*info;
-
-	if (!ent->client)
-		return false;
-
-	info = Info_ValueForKey (ent->client->pers.userinfo, "gender");
-	if (info[0] == 'f' || info[0] == 'F')
-		return true;
-	return false;
-}
-
-bool IsNeutral (edict_t *ent)
-{
-	char		*info;
-
-	if (!ent->client)
-		return false;
-
-	info = Info_ValueForKey (ent->client->pers.userinfo, "gender");
-	if (info[0] != 'f' && info[0] != 'F' && info[0] != 'm' && info[0] != 'M')
-		return true;
-	return false;
 }
 
 static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker) {
@@ -66569,9 +66507,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
 		hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
 		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
-		gender = COM_GetCvar ("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
-		gender_auto = COM_GetCvar ("gender_auto", "1", CVAR_ARCHIVE);
-		gender->modified = false; // clear this so we know when user sets it manually
 		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
 		m_filter = COM_GetCvar("m_filter", "0", 0);
