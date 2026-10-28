@@ -1709,11 +1709,9 @@ static struct {
 	char text[32768];
 	int current; // line where next message will be printed
 	int x; // offset in current line for next print
-	int ormask; // high bit mask for colored characters
 	int linewidth; // characters across screen
 	int totallines; // total lines in console scrollback
-	float cursorspeed;
-	float line_timestamps[4];	// cls.realtime time the line was generated
+	float line_timestamps[4]; // cls.realtime time the line was generated
 } console;
 
 static void Con_Print(char* txt) {
@@ -1721,10 +1719,7 @@ static void Con_Print(char* txt) {
 		return;
 	}
 
-	int mask = 0;
 	if (txt[0] == 1 || txt[0] == 2) {
-		int colored_text_mask = 128;
-		mask = colored_text_mask;
 		txt++;
 	}
 
@@ -1769,7 +1764,7 @@ static void Con_Print(char* txt) {
 		// display character and advance
 		default: {
 			int y = console.current % console.totallines;
-			console.text[y*console.linewidth + console.x] = c | mask | console.ormask;
+			console.text[y * console.linewidth + console.x] = c;
 			console.x++;
 			if (console.x >= console.linewidth) {
 				console.x = 0;
@@ -18977,7 +18972,6 @@ void CL_ParseServerMessage (void)
 		case svc_print:
 			MSG_ReadByte(&net_message);
 			Com_Printf("%s", MSG_ReadString(&net_message));
-			console.ormask = 0;
 			break;
 
 		case svc_centerprint:
