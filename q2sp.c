@@ -10718,7 +10718,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 
 client_t	*sv_client;			// current client
 cvar_t	*sv_enforcetime;
-cvar_t	*allow_download;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
 cvar_t *allow_download_sounds;
@@ -11810,73 +11809,10 @@ void SV_NextDownload_f (void)
 	sv_client->download = NULL;
 }
 
-void SV_BeginDownload_f(void)
-{
-	char	*name;
-	extern	cvar_t *allow_download;
-	extern	cvar_t *allow_download_players;
-	extern	cvar_t *allow_download_models;
-	extern	cvar_t *allow_download_sounds;
-	extern	cvar_t *allow_download_maps;
-	extern	int		file_from_pak; // ZOID did file come from pak?
-	int offset = 0;
-
-	name = Cmd_Argv(1);
-
-	if (cmd_argc > 2)
-		offset = atoi(Cmd_Argv(2)); // downloaded offset
-
-	// hacked by zoid to allow more conrol over download
-	// first off, no .. or global allow check
-	if (strstr (name, "..") || !allow_download->value
-		// leading dot is no good
-		|| *name == '.'
-		// leading slash bad as well, must be in subdir
-		|| *name == '/'
-		// next up, skin check
-		|| (strncmp(name, "players/", 6) == 0 && !allow_download_players->value)
-		// now models
-		|| (strncmp(name, "models/", 6) == 0 && !allow_download_models->value)
-		// now sounds
-		|| (strncmp(name, "sound/", 6) == 0 && !allow_download_sounds->value)
-		// now maps (note special case for maps, must not be in pak)
-		|| (strncmp(name, "maps/", 6) == 0 && !allow_download_maps->value)
-		// MUST be in a subdirectory
-		|| !strstr (name, "/") )
-	{	// don't allow anything with .. path
-		MSG_WriteByte (&sv_client->netchan.message, svc_download);
-		MSG_WriteShort (&sv_client->netchan.message, -1);
-		MSG_WriteByte (&sv_client->netchan.message, 0);
-		return;
-	}
-
-
-	if (sv_client->download)
-		FS_FreeFile (sv_client->download);
-
-	sv_client->downloadsize = FS_LoadFile (name, (void **)&sv_client->download);
-	sv_client->downloadcount = offset;
-
-	if (offset > sv_client->downloadsize)
-		sv_client->downloadcount = sv_client->downloadsize;
-
-	if (!sv_client->download
-		// special check for maps, if it came from a pak file, don't allow
-		// download  ZOID
-		|| (strncmp(name, "maps/", 5) == 0 && file_from_pak))
-	{
-		if (sv_client->download) {
-			FS_FreeFile (sv_client->download);
-			sv_client->download = NULL;
-		}
-
-		MSG_WriteByte (&sv_client->netchan.message, svc_download);
-		MSG_WriteShort (&sv_client->netchan.message, -1);
-		MSG_WriteByte (&sv_client->netchan.message, 0);
-		return;
-	}
-
-	SV_NextDownload_f ();
+static void SV_BeginDownload_f() {
+	MSG_WriteByte(&sv_client->netchan.message, svc_download);
+	MSG_WriteShort(&sv_client->netchan.message, -1);
+	MSG_WriteByte(&sv_client->netchan.message, 0);
 }
 
 // Dumps the serverinfo info string
@@ -17306,7 +17242,6 @@ centity_t		cl_entities[MAX_EDICTS];
 
 entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
-extern	cvar_t *allow_download;
 extern	cvar_t *allow_download_players;
 extern	cvar_t *allow_download_models;
 extern	cvar_t *allow_download_sounds;
@@ -17792,8 +17727,6 @@ u8 *precache_model; // used for skin checking in alias models
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
 #define TEXTURE_CNT (ENV_CNT+13)
 
-static const char *env_suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
-
 void CL_RequestNextDownload (void)
 {
 	unsigned	map_checksum;		// for detecting cheater maps
@@ -17803,10 +17736,9 @@ void CL_RequestNextDownload (void)
 	if (cls.state != ca_connected)
 		return;
 
-	if (!allow_download->value && precache_check < ENV_CNT)
+	if (precache_check < ENV_CNT)
 		precache_check = ENV_CNT;
 
-//ZOID
 	if (precache_check == CS_MODELS) { // confirm map
 		precache_check = CS_MODELS+2; // 0 isn't used
 		if (allow_download_maps->value)
@@ -17994,20 +17926,6 @@ void CL_RequestNextDownload (void)
 	}
 
 	if (precache_check > ENV_CNT && precache_check < TEXTURE_CNT) {
-		if (allow_download->value && allow_download_maps->value) {
-			while (precache_check < TEXTURE_CNT) {
-				int n = precache_check++ - ENV_CNT - 1;
-
-				if (n & 1)
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.pcx",
-						cl.configstrings[CS_SKY], env_suf[n/2]);
-				else
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.tga",
-						cl.configstrings[CS_SKY], env_suf[n/2]);
-				if (!CL_CheckOrDownloadFile(fn))
-					return; // started a download
-			}
-		}
 		precache_check = TEXTURE_CNT;
 	}
 
@@ -18017,29 +17935,15 @@ void CL_RequestNextDownload (void)
 	}
 
 	// confirm existance of textures, download any that don't exist
-	if (precache_check == TEXTURE_CNT+1) {
-		// from qcommon/cmodel.c
-		extern int			numtexinfo;
-		extern mapsurface_t	map_surfaces[];
-
-		if (allow_download->value && allow_download_maps->value) {
-			while (precache_tex < numtexinfo) {
-				char fn[MAX_OSPATH];
-
-				sprintf(fn, "textures/%s.wal", map_surfaces[precache_tex++].rname);
-				if (!CL_CheckOrDownloadFile(fn))
-					return; // started a download
-			}
-		}
-		precache_check = TEXTURE_CNT+999;
+	if (precache_check == TEXTURE_CNT + 1) {
+		precache_check = TEXTURE_CNT + 999;
 	}
 
-//ZOID
-	CL_RegisterSounds ();
-	CL_PrepRefresh ();
+	CL_RegisterSounds();
+	CL_PrepRefresh();
 
-	MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-	MSG_WriteString (&cls.netchan.message, va("begin %i\n", precache_spawncount) );
+	MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
+	MSG_WriteString(&cls.netchan.message, va("begin %i\n", precache_spawncount) );
 }
 
 /*
@@ -67027,7 +66931,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// TODO: Remove non-essentials
 	{
 		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
-		allow_download = COM_GetCvar("allow_download", "0", CVAR_ARCHIVE);
 		allow_download_players = COM_GetCvar("allow_download_players", "0", CVAR_ARCHIVE);
 		allow_download_models = COM_GetCvar("allow_download_models", "1", CVAR_ARCHIVE);
 		allow_download_sounds = COM_GetCvar("allow_download_sounds", "1", CVAR_ARCHIVE);
