@@ -9080,8 +9080,6 @@ typedef struct
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
-extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
-
 extern	client_t	*sv_client;
 extern	edict_t		*sv_player;
 
@@ -9115,11 +9113,6 @@ void SV_BroadcastPrintf (int level, char *fmt, ...);
 void SV_BroadcastCommand (char *fmt, ...);
 
 void SV_ExecuteClientMessage (client_t *cl);
-
-//
-// sv_ccmds.c
-//
-void SV_ReadLevelFile (void);
 
 //
 // sv_ents.c
@@ -9332,14 +9325,7 @@ void SV_WriteLevelFile (void)
 	WriteLevel (name);
 }
 
-/*
-==============
-SV_ReadLevelFile
-
-==============
-*/
-void SV_ReadLevelFile (void)
-{
+void SV_ReadLevelFile() {
 	char	name[MAX_OSPATH];
 	FILE	*f;
 
@@ -9357,8 +9343,8 @@ void SV_ReadLevelFile (void)
 
 	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
 
-	void ReadLevel (char *filename);
-	ReadLevel (name);
+	void ReadLevel(char *filename);
+	ReadLevel(name);
 }
 
 /*
@@ -10471,46 +10457,7 @@ void SV_CreateBaseline (void)
 	}
 }
 
-void G_RunFrame (void);
-
-void SV_CheckForSavegame (void)
-{
-	char		name[MAX_OSPATH];
-	FILE		*f;
-	int			i;
-
-	if (sv_noreload->value)
-		return;
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
-	f = fopen (name, "rb");
-	if (!f)
-		return;		// no savegame
-
-	fclose (f);
-
-	SV_ClearWorld ();
-
-	// get configstrings and areaportals
-	SV_ReadLevelFile ();
-
-	if (!sv.loadgame)
-	{	// coming back to a level after being in a different
-		// level, so run it for ten seconds
-
-		// rlava2 was sending too many lightstyles, and overflowing the
-		// reliable data. temporarily changing the server state to loading
-		// prevents these from being passed down.
-		server_state_t		previousState;		// PGM
-
-		previousState = sv.state;				// PGM
-		sv.state = ss_loading;					// PGM
-		for (i=0 ; i<100 ; i++)
-			G_RunFrame ();
-
-		sv.state = previousState;				// PGM
-	}
-}
+void G_RunFrame();
 
 // Change the server to a new map, taking all connected clients along with it.
 static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
@@ -10591,8 +10538,37 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
-	// check for a savegame
-	SV_CheckForSavegame();
+	bool savegame_exists = false;
+	{
+		char name[MAX_OSPATH] = {};
+		Com_sprintf(name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
+		FILE* f = fopen(name, "rb");
+		if (f) {
+			savegame_exists = true;
+			fclose(f);
+		}
+	}
+
+	if (savegame_exists) {
+		SV_ClearWorld();
+
+		// get configstrings and areaportals
+		SV_ReadLevelFile();
+
+		if (!sv.loadgame) {
+			// coming back to a level after being in a different level, so run it for ten seconds
+
+			// rlava2 was sending too many lightstyles, and overflowing the reliable data.
+			// temporarily changing the server state to loading prevents these from being passed down.
+			server_state_t previousState = sv.state;
+			sv.state = ss_loading;
+			for (i64 i = 0; i < 100; i++) {
+				G_RunFrame();
+			}
+
+			sv.state = previousState;
+		}
+	}
 
 	// set serverinfo variable
 	COM_FullSetCvar("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
@@ -10706,7 +10682,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t	*sv_noreload;			// don't reload level state when reentering
 cvar_t	*public_server;			// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
@@ -66413,7 +66388,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		sv_noreload = COM_GetCvar("sv_noreload", "0", 0);
 		public_server = COM_GetCvar("public", "0", 0);
 		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
