@@ -10526,7 +10526,7 @@ client_t	*sv_client;			// current client
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
-bool ClientConnect (edict_t *ent, char *userinfo);
+bool ClientConnect(edict_t* ent);
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
@@ -10637,136 +10637,25 @@ void SVC_GetChallenge (void)
 	Netchan_OutOfBandPrint (NS_SERVER, net_from, "challenge %i", svs.challenges[i].challenge);
 }
 
-#define	VERSION 3.19
-
-static bool NET_IsLocalAddress(netadr_t adr) {
-	return adr.type == NA_LOOPBACK;
-}
-
 // A connection request that did not come from the master
-void SVC_DirectConnect (void)
-{
-	char		userinfo[MAX_INFO_STRING];
-	netadr_t	adr;
-	int			i;
-	client_t	*cl, *newcl;
-	client_t	temp;
-	edict_t		*ent;
-	int			edictnum;
-	int			version;
-	int			challenge;
+static void SVC_DirectConnect() {
+	sv_client = &svs.client;
+	i32 edictnum = 1;
+	edict_t* ent = EDICT_NUM(edictnum);
+	svs.client.edict = ent;
 
-	adr = net_from;
+	bool client_connect_result = ClientConnect(ent);
+	assert(client_connect_result);
 
+	Netchan_OutOfBandPrint(NS_SERVER, net_from, "client_connect");
+	Netchan_Setup(NS_SERVER, &svs.client.netchan , net_from);
 
-	version = atoi(Cmd_Argv(1));
-	if (version != PROTOCOL_VERSION)
-	{
-		Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nServer is version %4.2f.\n", VERSION);
-		return;
-	}
+	svs.client.state = cs_connected;
 
-	challenge = atoi(Cmd_Argv(2));
-
-	strncpy (userinfo, Cmd_Argv(3), sizeof(userinfo)-1);
-	userinfo[sizeof(userinfo) - 1] = 0;
-
-	// force the IP key/value pair so the game can filter based on ip
-	Info_SetValueForKey (userinfo, "ip", NET_AdrToString(net_from));
-
-	// see if the challenge is valid
-	if (!NET_IsLocalAddress (adr))
-	{
-		for (i=0 ; i<MAX_CHALLENGES ; i++)
-		{
-			if (NET_CompareBaseAdr (net_from, svs.challenges[i].adr))
-			{
-				if (challenge == svs.challenges[i].challenge)
-					break;		// good
-				Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nBad challenge.\n");
-				return;
-			}
-		}
-		if (i == MAX_CHALLENGES)
-		{
-			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nNo challenge for address.\n");
-			return;
-		}
-	}
-
-	newcl = &temp;
-	memset (newcl, 0, sizeof(client_t));
-
-	// if there is already a slot for this ip, reuse it
-	for (i=0,cl=&svs.client ; i<1 ; i++,cl++)
-	{
-		if (cl->state == cs_free)
-			continue;
-		if (NET_CompareBaseAdr(adr, cl->netchan.remote_address))
-		{
-			if (!NET_IsLocalAddress (adr) && (svs.realtime - cl->lastconnect) < ((int)sv_reconnect_limit->value * 1000))
-			{
-				return;
-			}
-			Com_Printf ("%s:reconnect\n", NET_AdrToString (adr));
-			newcl = cl;
-			goto gotnewcl;
-		}
-	}
-
-	// find a client slot
-	newcl = NULL;
-	for (i=0,cl=&svs.client ; i<1 ; i++,cl++)
-	{
-		if (cl->state == cs_free)
-		{
-			newcl = cl;
-			break;
-		}
-	}
-	if (!newcl)
-	{
-		Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nServer is full.\n");
-		return;
-	}
-
-gotnewcl:
-	// build a new connection
-	// accept the new client
-	// this is the only place a client_t is ever initialized
-	*newcl = temp;
-	sv_client = newcl;
-	edictnum = (newcl - &svs.client)+1;
-	ent = EDICT_NUM(edictnum);
-	newcl->edict = ent;
-	newcl->challenge = challenge; // save challenge for checksumming
-
-	// get the game a chance to reject this connection or modify the userinfo
-	if (!(ClientConnect (ent, userinfo)))
-	{
-		if (*Info_ValueForKey (userinfo, "rejmsg"))
-			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\n%s\nConnection refused.\n",
-				Info_ValueForKey (userinfo, "rejmsg"));
-		else
-			Netchan_OutOfBandPrint (NS_SERVER, adr, "print\nConnection refused.\n" );
-		return;
-	}
-
-	// parse some info from the info strings
-	strncpy (newcl->userinfo, userinfo, sizeof(newcl->userinfo)-1);
-	SV_UserinfoChanged (newcl);
-
-	// send the connect packet to the client
-	Netchan_OutOfBandPrint (NS_SERVER, adr, "client_connect");
-
-	Netchan_Setup (NS_SERVER, &newcl->netchan , adr);
-
-	newcl->state = cs_connected;
-
-	SZ_Init (&newcl->datagram, newcl->datagram_buf, sizeof(newcl->datagram_buf) );
-	newcl->datagram.allowoverflow = true;
-	newcl->lastmessage = svs.realtime;
-	newcl->lastconnect = svs.realtime;
+	SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
+	svs.client.datagram.allowoverflow = true;
+	svs.client.lastmessage = svs.realtime;
+	svs.client.lastconnect = svs.realtime;
 }
 
 // A connectionless packet has four leading 0xff characters to distinguish it from a game channel.
@@ -17271,11 +17160,6 @@ void CL_ConnectionlessPacket (void)
 	// remote command from gui front end
 	if (!strcmp(c, "cmd"))
 	{
-		if (!NET_IsLocalAddress(net_from))
-		{
-			Com_Printf ("Command packet from remote host.  Ignored.\n");
-			return;
-		}
 		Sys_AppActivate ();
 		s = MSG_ReadString (&net_message);
 		Cbuf_AddText (s);
@@ -55441,53 +55325,17 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	strncpy (ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo)-1);
 }
 
-
-/*
-===========
-ClientConnect
-
-Called when a player begins connecting to the server.
-The game can refuse entrance to a client by returning false.
-If the client is allowed, the connection process will continue
-and eventually get to ClientBegin()
-Changing levels will NOT cause this to be called again, but
-loadgames will.
-============
-*/
-bool ClientConnect (edict_t *ent, char *userinfo)
-{
-	char	*value;
-
-	// check to see if they are on the banned IP list
-	value = Info_ValueForKey (userinfo, "ip");
-	if (SV_FilterPacket(value)) {
-		Info_SetValueForKey(userinfo, "rejmsg", "Banned.");
-		return false;
-	}
-
-	// check for a password
-	value = Info_ValueForKey (userinfo, "password");
-	if (*password->string && strcmp(password->string, "none") &&
-		strcmp(password->string, value)) {
-		Info_SetValueForKey(userinfo, "rejmsg", "Password required or incorrect.");
-		return false;
-	}
-
-
-	// they can connect
+bool ClientConnect(edict_t *ent) {
 	ent->client = &game.client;
 
 	// if there is already a body waiting for us (a loadgame), just
 	// take it, otherwise spawn one from scratch
-	if (ent->inuse == false)
-	{
+	if (ent->inuse == false) {
 		// clear the respawning variables
 		InitClientResp (ent->client);
 		if (!game.autosaved || !ent->client->pers.weapon)
 			InitClientPersistant (ent->client);
 	}
-
-	ClientUserinfoChanged (ent, userinfo);
 
 	ent->client->pers.connected = true;
 	return true;
