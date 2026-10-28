@@ -9021,8 +9021,6 @@ typedef struct {
 	int				lastframe;			// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
 
-	int				commandMsec;		// every seconds this is reset, if user commands exhaust it, assume time cheating
-
 	int				frame_latency[LATENCY_COUNTS];
 	int				ping;
 
@@ -9091,7 +9089,6 @@ extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
 extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
-extern	cvar_t		*sv_enforcetime;
 
 extern	client_t	*sv_client;
 extern	edict_t		*sv_player;
@@ -10717,7 +10714,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t	*sv_enforcetime;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
 cvar_t *allow_download_sounds;
@@ -11043,38 +11039,6 @@ void SV_CalcPings() {
 	}
 }
 
-/*
-===================
-SV_GiveMsec
-
-Every few frames, gives all clients an allotment of milliseconds
-for their command moves.  If they exceed it, assume cheating.
-===================
-*/
-void SV_GiveMsec (void)
-{
-	int			i;
-	client_t	*cl;
-
-	if (sv.framenum & 15)
-		return;
-
-	for (i=0 ; i<1 ; i++)
-	{
-		cl = &svs.client;
-		if (cl->state == cs_free )
-			continue;
-
-		cl->commandMsec = 1800;		// 1600 + some slop
-	}
-}
-
-
-/*
-=================
-SV_ReadPackets
-=================
-*/
 void SV_ReadPackets (void)
 {
 	int			i;
@@ -11860,16 +11824,8 @@ void SV_ExecuteUserCommand (char *s)
 		ClientCommand (sv_player);
 }
 
-void SV_ClientThink (client_t *cl, usercmd_t *cmd)
-{
-	cl->commandMsec -= cmd->msec;
-
-	if (cl->commandMsec < 0 && sv_enforcetime->value )
-	{
-		return;
-	}
-
-	ClientThink (cl->edict, cmd);
+static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
+	ClientThink(cl->edict, cmd);
 }
 
 #define	MAX_STRINGCMDS	8
@@ -66930,7 +66886,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
 		allow_download_players = COM_GetCvar("allow_download_players", "0", CVAR_ARCHIVE);
 		allow_download_models = COM_GetCvar("allow_download_models", "1", CVAR_ARCHIVE);
 		allow_download_sounds = COM_GetCvar("allow_download_sounds", "1", CVAR_ARCHIVE);
@@ -67762,9 +67717,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			} else {
 				// update ping based on the last known frame from all clients
 				SV_CalcPings();
-
-				// give the clients some timeslices
-				SV_GiveMsec();
 
 				// let everything in the world think and move
 				SV_RunGameFrame();
