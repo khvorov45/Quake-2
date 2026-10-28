@@ -9090,7 +9090,6 @@ typedef struct
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
-extern	cvar_t		*sv_paused;
 extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
 extern	cvar_t		*sv_enforcetime;
 
@@ -10718,7 +10717,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t	*sv_paused;
 cvar_t	*sv_enforcetime;
 cvar_t	*allow_download;
 cvar_t *allow_download_players;
@@ -11146,14 +11144,11 @@ void SV_RunGameFrame() {
 	sv.framenum++;
 	sv.time = sv.framenum*100;
 
-	// don't run if paused
-	if (!sv_paused->value) {
-		G_RunFrame();
+	G_RunFrame();
 
-		// never get more than one tic behind
-		if ((i32)sv.time < svs.realtime) {
-			svs.realtime = sv.time;
-		}
+	// never get more than one tic behind
+	if ((i32)sv.time < svs.realtime) {
+		svs.realtime = sv.time;
 	}
 }
 
@@ -11293,13 +11288,7 @@ void SV_BroadcastPrintf (int level, char *fmt, ...)
 	}
 }
 
-/*
-=================
-SV_BroadcastCommand
-
-Sends text to all active clients
-=================
-*/
+// Sends text to all active clients
 void SV_BroadcastCommand (char *fmt, ...)
 {
 	va_list		argptr;
@@ -11311,9 +11300,9 @@ void SV_BroadcastCommand (char *fmt, ...)
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
 
-	MSG_WriteByte (&sv.multicast, svc_stufftext);
-	MSG_WriteString (&sv.multicast, string);
-	SV_Multicast (NULL, MULTICAST_ALL_R);
+	MSG_WriteByte(&sv.multicast, svc_stufftext);
+	MSG_WriteString(&sv.multicast, string);
+	SV_Multicast(NULL, MULTICAST_ALL_R);
 }
 
 // Sends the contents of sv.multicast to a subset of the clients,
@@ -12037,26 +12026,23 @@ void SV_ExecuteClientMessage (client_t *cl)
 				return;
 			}
 
-			if (!sv_paused->value)
+			net_drop = cl->netchan.dropped;
+			if (net_drop < 20)
 			{
-				net_drop = cl->netchan.dropped;
-				if (net_drop < 20)
+				while (net_drop > 2)
 				{
-					while (net_drop > 2)
-					{
-						SV_ClientThink (cl, &cl->lastcmd);
+					SV_ClientThink (cl, &cl->lastcmd);
 
-						net_drop--;
-					}
-					if (net_drop > 1)
-						SV_ClientThink (cl, &oldest);
-
-					if (net_drop > 0)
-						SV_ClientThink (cl, &oldcmd);
-
+					net_drop--;
 				}
-				SV_ClientThink (cl, &newcmd);
+				if (net_drop > 1)
+					SV_ClientThink (cl, &oldest);
+
+				if (net_drop > 0)
+					SV_ClientThink (cl, &oldcmd);
+
 			}
+			SV_ClientThink (cl, &newcmd);
 
 			cl->lastcmd = newcmd;
 			break;
@@ -13044,8 +13030,6 @@ extern	cvar_t	*m_forward;
 extern	cvar_t	*m_side;
 
 extern	cvar_t	*cl_lightlevel;	// FIXME HACK
-
-extern	cvar_t	*cl_paused;
 
 extern	cvar_t	*cl_vwep;
 
@@ -17292,8 +17276,6 @@ cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
 cvar_t	*cl_showclamp;
 
-cvar_t	*cl_paused;
-
 cvar_t	*lookspring;
 cvar_t	*lookstrafe;
 cvar_t	*sensitivity;
@@ -17384,15 +17366,6 @@ void CL_ForwardToServer_f (void)
 	{
 		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
 		SZ_Print (&cls.netchan.message, cmd_args);
-	}
-}
-
-static void CL_Pause_f() {
-	// never pause in multiplayer
-	if (!server_state) {
-		COM_SetValueCvar("paused", 0);
-	} else {
-		COM_SetValueCvar("paused", !cl_paused->value);
 	}
 }
 
@@ -17590,17 +17563,8 @@ void CL_Packet_f (void)
 	NET_SendPacket (NS_CLIENT, out-send, send, adr);
 }
 
-/*
-=================
-CL_Changing_f
-
-Just sent as a hint to the client that they should
-drop to full console
-=================
-*/
-void CL_Changing_f (void)
-{
-	//ZOID
+// Just sent as a hint to the client that they should drop to full console
+void CL_Changing_f(void) {
 	//if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
 	if (cls.download)
 		return;
@@ -17610,14 +17574,7 @@ void CL_Changing_f (void)
 	Com_Printf ("\nChanging map...\n");
 }
 
-
-/*
-=================
-CL_Reconnect_f
-
-The server is changing levels
-=================
-*/
+// The server is changing levels
 void CL_Reconnect_f (void)
 {
 	//ZOID
@@ -17650,18 +17607,6 @@ void CL_Reconnect_f (void)
 static void CL_ParseStatusMessage() {
 	char* s = MSG_ReadString(&net_message);
 	Com_Printf ("%s\n", s);
-}
-
-// Load or download any custom player skins and models
-static void CL_Skins_f() {
-	for (int i = 0; i < MAX_CLIENTS; i++) {
-		char* this_configstring = cl.configstrings[CS_PLAYERSKINS + i];
-		if (this_configstring[0]) {
-			Com_Printf("client %i: %s\n", i, this_configstring);
-			SCR_UpdateScreen();
-			CL_ParseClientinfo(i);
-		}
-	}
 }
 
 // Responses to broadcasts, etc
@@ -18165,7 +18110,6 @@ static cheatvar_t cheatvars[] = {
 	{"cl_testlights", "0", 0},
 	{"r_fullbright", "0", 0},
 	{"r_drawflat", "0", 0},
-	{"paused", "0", 0},
 	{"sw_draworder", "0", 0},
 	{"gl_lightmap", "0", 0},
 	{"gl_saturatelighting", "0", 0},
@@ -20053,14 +19997,7 @@ int		CL_PMpointcontents (vec3_t point)
 	return contents;
 }
 
-
-/*
-=================
-CL_PredictMovement
-
-Sets cl.predicted_origin and cl.predicted_angles
-=================
-*/
+// Sets cl.predicted_origin and cl.predicted_angles
 void CL_PredictMovement (void)
 {
 	int			ack, current;
@@ -20073,9 +20010,6 @@ void CL_PredictMovement (void)
 	int			oldz;
 
 	if (cls.state != ca_active)
-		return;
-
-	if (cl_paused->value)
 		return;
 
 	if (!cl_predict->value)
@@ -20411,20 +20345,6 @@ void SCR_DrawNet (void)
 }
 
 void Draw_GetPicSize (int *w, int *h, char *name);
-
-void SCR_DrawPause (void)
-{
-	int		w, h;
-
-	if (!scr_showpause->value)		// turn off for screenshots
-		return;
-
-	if (!cl_paused->value)
-		return;
-
-	Draw_GetPicSize (&w, &h, "pause");
-	Draw_Pic ((viddef.width-w)/2, viddef.height/2 + 8, "pause");
-}
 
 void SCR_DrawLoading (void)
 {
@@ -21238,7 +21158,6 @@ static void SCR_UpdateScreen() {
 		SCR_DrawDebugGraph();
 	}
 
-	SCR_DrawPause();
 	SCR_DrawConsole();
 
 	void M_Draw();
@@ -23330,10 +23249,7 @@ void SCR_DrawCrosshair (void)
 	, scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
 
-void V_RenderView()
-{
-	extern int entitycmpfnc( const Entity *, const Entity * );
-
+void V_RenderView() {
 	if (cls.state != ca_active)
 		return;
 
@@ -23342,7 +23258,7 @@ void V_RenderView()
 
 	// an invalid frame will just use the exact previous refdef
 	// we can't use the old frame if the video mode has changed, though...
-	if (cl.frame.valid && !cl_paused->value) {
+	if (cl.frame.valid) {
 		V_ClearScene ();
 
 		// build a refresh entity list and calc cl.sim*
@@ -23412,13 +23328,6 @@ void V_RenderView()
 	SCR_DrawCrosshair ();
 }
 
-void V_Viewpos_f (void)
-{
-	Com_Printf ("(%i %i %i) : %i\n", (int)cl.refdef.vieworg[0],
-		(int)cl.refdef.vieworg[1], (int)cl.refdef.vieworg[2],
-		(int)cl.refdef.viewangles[YAW]);
-}
-
 cvar_t		*con_notifytime;
 
 void DrawString (int x, int y, char *s)
@@ -23462,13 +23371,9 @@ static void Con_ToggleConsole_f() {
 
 	if (cls.key_dest == key_console) {
 		M_ForceMenuOff();
-		COM_SetCvar("paused", "0");
 	} else {
 		M_ForceMenuOff();
 		cls.key_dest = key_console;
-		if (server_state) {
-			COM_SetCvar("paused", "1");
-		}
 	}
 }
 
@@ -24279,10 +24184,6 @@ static void M_Banner(char* name) {
 }
 
 static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
-	if (server_state) {
-		COM_SetCvar("paused", "1");
-	}
-
 	// if this menu is already present, drop back to that level to avoid stacking menus by hotkeys
 	int i = 0;
 	for (; i < m_menudepth; i++) {
@@ -24313,7 +24214,6 @@ static void M_ForceMenuOff() {
 	cls.key_dest = key_game;
 	m_menudepth = 0;
 	Key_ClearStates();
-	COM_SetCvar("paused", "0");
 }
 
 static void M_PopMenu() {
@@ -26686,9 +26586,6 @@ void S_AddLoopSounds (void)
 	sfxcache_t	*sc;
 	int			num;
 	entity_state_t	*ent;
-
-	if (cl_paused->value)
-		return;
 
 	if (cls.state != ca_active)
 		return;
@@ -66523,12 +66420,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	return result;
 }
 
-void VID_Front_f( void )
-{
-	SetWindowLong( cl_hwnd, GWL_EXSTYLE, WS_EX_TOPMOST );
-	SetForegroundWindow( cl_hwnd );
-}
-
 static cvar_t *gl_picmip;
 
 static cvar_t *sw_mode;
@@ -67046,11 +66937,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
 		Cmd_AddCommand("clear", Con_Clear_f);
 		Cmd_AddCommand("condump", Con_Dump_f);
-		Cmd_AddCommand("vid_front", VID_Front_f);
 		Cmd_AddCommand("gun_next", V_Gun_Next_f);
 		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
 		Cmd_AddCommand("gun_model", V_Gun_Model_f);
-		Cmd_AddCommand("viewpos", V_Viewpos_f);
 		Cmd_AddCommand("menu_main", M_Menu_Main_f);
 		Cmd_AddCommand("menu_game", M_Menu_Game_f);
 		Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
@@ -67062,8 +66951,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("loading",SCR_Loading_f);
 		Cmd_AddCommand("sky",SCR_Sky_f);
 		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
-		Cmd_AddCommand("pause", CL_Pause_f);
-		Cmd_AddCommand("skins", CL_Skins_f);
 		Cmd_AddCommand("changing", CL_Changing_f);
 		Cmd_AddCommand("connect", CL_Connect_f);
 		Cmd_AddCommand("reconnect", CL_Reconnect_f);
@@ -67139,7 +67026,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		sv_paused = COM_GetCvar("paused", "0", 0);
 		sv_enforcetime = COM_GetCvar("sv_enforcetime", "0", 0);
 		allow_download = COM_GetCvar("allow_download", "0", CVAR_ARCHIVE);
 		allow_download_players = COM_GetCvar("allow_download_players", "0", CVAR_ARCHIVE);
@@ -67232,7 +67118,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
 		cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
 		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
-		cl_paused = COM_GetCvar ("paused", "0", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
