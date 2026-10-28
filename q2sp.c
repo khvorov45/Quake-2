@@ -1713,7 +1713,6 @@ static struct {
 	int linewidth; // characters across screen
 	int totallines; // total lines in console scrollback
 	float cursorspeed;
-	int vislines;
 	float line_timestamps[4];	// cls.realtime time the line was generated
 } console;
 
@@ -12719,13 +12718,7 @@ void Key_Event (int key, bool down, unsigned time);
 void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
 
-void Con_DrawCharacter (int cx, int line, int num);
-
-void Con_Clear_f (void);
 void Con_DrawNotify (void);
-
-
-//=============================================================================
 
 typedef struct
 {
@@ -19812,7 +19805,6 @@ typedef struct {
 } Console_Input;
 static Console_Input console_input;
 
-// Draws the console with the solid background
 static void Con_DrawConsole(float frac) {
 	i64 lines = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
 	if (lines > 0) {
@@ -19822,7 +19814,6 @@ static void Con_DrawConsole(float frac) {
 		Draw_StretchPic(0, -viddef.height + lines, viddef.width, viddef.height, "conback");
 
 		// NOTE: Text
-		console.vislines = lines;
 		i64 char_width_px = 8;
 		i64 rows_of_text_to_draw = (lines - 22) / char_width_px;
 		i64 y = lines - 30;
@@ -19840,7 +19831,7 @@ static void Con_DrawConsole(float frac) {
 
 		// NOTE: Input
 		if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
-			i64 ycoord = console.vislines - 22;
+			i64 ycoord = lines - 22;
 			i64 current_x = 0;
 
 			// NOTE: Prompt
