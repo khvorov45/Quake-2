@@ -17655,79 +17655,72 @@ u8 *precache_model; // used for skin checking in alias models
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
 #define TEXTURE_CNT (ENV_CNT+13)
 
-void CL_RequestNextDownload (void) {
-	unsigned	map_checksum;		// for detecting cheater maps
-	char fn[MAX_OSPATH];
-
-	if (cls.state != ca_connected)
-		return;
-
-	if (precache_check < ENV_CNT) {
-		precache_check = ENV_CNT;
-	}
-
-	if (precache_check == CS_MODELS) { // confirm map
-		precache_check = CS_MODELS+2; // 0 isn't used
-	}
-
-	if (precache_check >= CS_MODELS && precache_check < CS_MODELS+MAX_MODELS) {
-		precache_check = CS_SOUNDS;
-	}
-
-	if (precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS) {
-		precache_check = CS_IMAGES;
-	}
-
-	if (precache_check >= CS_IMAGES && precache_check < CS_IMAGES+MAX_IMAGES) {
-		if (precache_check == CS_IMAGES)
-			precache_check++; // zero is blank
-		while (precache_check < CS_IMAGES+MAX_IMAGES && cl.configstrings[precache_check][0]) {
-			Com_sprintf(fn, sizeof(fn), "pics/%s.pcx", cl.configstrings[precache_check++]);
-		}
-		precache_check = CS_PLAYERSKINS;
-	}
-
-	// skins are special, since a player has three things to download:
-	// model, weapon model and skin
-	// so precache_check is now *3
-	if (precache_check >= CS_PLAYERSKINS && precache_check < CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT) {
-		precache_check = ENV_CNT;
-	}
-
-	if (precache_check == ENV_CNT) {
-		precache_check = ENV_CNT + 1;
-		CM_LoadMap(cl.configstrings[CS_MODELS+1], true, &map_checksum);
-		assert((int)map_checksum == atoi(cl.configstrings[CS_MAPCHECKSUM]));
-	}
-
-	if (precache_check > ENV_CNT && precache_check < TEXTURE_CNT) {
-		precache_check = TEXTURE_CNT;
-	}
-
-	if (precache_check == TEXTURE_CNT) {
-		precache_check = TEXTURE_CNT+1;
-		precache_tex = 0;
-	}
-
-	// confirm existance of textures, download any that don't exist
-	if (precache_check == TEXTURE_CNT + 1) {
-		precache_check = TEXTURE_CNT + 999;
-	}
-
-	CL_RegisterSounds();
-	CL_PrepRefresh();
-
-	MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
-	MSG_WriteString(&cls.netchan.message, va("begin %i\n", precache_spawncount));
-}
-
 // The server will send this command right before allowing the client into the server
 static void CL_Precache_f() {
 	precache_check = CS_MODELS;
 	precache_spawncount = atoi(Cmd_Argv(1));
 	precache_model = 0;
 	precache_model_skin = 0;
-	CL_RequestNextDownload();
+
+	if (cls.state == ca_connected) {
+		if (precache_check < ENV_CNT) {
+			precache_check = ENV_CNT;
+		}
+
+		if (precache_check == CS_MODELS) { // confirm map
+			precache_check = CS_MODELS+2; // 0 isn't used
+		}
+
+		if (precache_check >= CS_MODELS && precache_check < CS_MODELS+MAX_MODELS) {
+			precache_check = CS_SOUNDS;
+		}
+
+		if (precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS) {
+			precache_check = CS_IMAGES;
+		}
+
+		if (precache_check >= CS_IMAGES && precache_check < CS_IMAGES + MAX_IMAGES) {
+			if (precache_check == CS_IMAGES) {
+				precache_check++; // zero is blank
+			}
+			while (precache_check < CS_IMAGES + MAX_IMAGES && cl.configstrings[precache_check][0]) {
+				char fn[MAX_OSPATH] = {};
+				Com_sprintf(fn, sizeof(fn), "pics/%s.pcx", cl.configstrings[precache_check++]);
+			}
+			precache_check = CS_PLAYERSKINS;
+		}
+
+		if (precache_check >= CS_PLAYERSKINS && precache_check < CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT) {
+			precache_check = ENV_CNT;
+		}
+
+		if (precache_check == ENV_CNT) {
+			precache_check = ENV_CNT + 1;
+			u32 map_checksum = 0;
+			CM_LoadMap(cl.configstrings[CS_MODELS + 1], true, &map_checksum);
+			assert((int)map_checksum == atoi(cl.configstrings[CS_MAPCHECKSUM]));
+		}
+
+		if (precache_check > ENV_CNT && precache_check < TEXTURE_CNT) {
+			precache_check = TEXTURE_CNT;
+		}
+
+		if (precache_check == TEXTURE_CNT) {
+			precache_check = TEXTURE_CNT+1;
+			precache_tex = 0;
+		}
+
+		// confirm existance of textures, download any that don't exist
+		if (precache_check == TEXTURE_CNT + 1) {
+			precache_check = TEXTURE_CNT + 999;
+		}
+
+		CL_RegisterSounds();
+		CL_PrepRefresh();
+
+		MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
+		MSG_WriteString(&cls.netchan.message, va("begin %i\n", precache_spawncount));
+	}
 }
 
 // Write key bindings and archived cvars to config file
