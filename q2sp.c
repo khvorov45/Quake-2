@@ -1718,8 +1718,6 @@ static struct {
 } console;
 
 static void Con_Print(char* txt) {
-	static int cr = false;
-
 	if (!console.initialized) {
 		return;
 	}
@@ -1748,11 +1746,6 @@ static void Con_Print(char* txt) {
 
 		txt++;
 
-		if (cr) {
-			console.current--;
-			cr = false;
-		}
-
 		if (!console.x) {
 			// Linefeed
 			{
@@ -1769,13 +1762,9 @@ static void Con_Print(char* txt) {
 		}
 
 		switch (c) {
-		case '\n': {
-			console.x = 0;
-		} break;
-
+		case '\n':
 		case '\r': {
 			console.x = 0;
-			cr = 1;
 		} break;
 
 		// display character and advance
