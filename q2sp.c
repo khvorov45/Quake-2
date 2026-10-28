@@ -2433,14 +2433,6 @@ static void Cmd_Exec_f() {
 	FS_FreeFile(f);
 }
 
-// Just prints the rest of the line to the console
-static void Cmd_Echo_f() {
-	for (int i=1; i < cmd_argc; i++) {
-		Com_Printf("%s ", Cmd_Argv(i));
-	}
-	Com_Printf ("\n");
-}
-
 // Creates a new command that executes a command string (possibly ; seperated)
 static void Cmd_Alias_f() {
 	char cmd[1024] = {};
@@ -2512,42 +2504,6 @@ static void Cmd_Cvar_Set_f() {
 	}
 }
 
-static void Cmd_Cvar_List_f() {
-
-	int i = 0;
-	for (cvar_t* var = cvar_vars ; var ; var = var->next, i++) {
-		if (var->flags & CVAR_ARCHIVE) {
-			Com_Printf ("*");
-		} else {
-			Com_Printf (" ");
-		}
-
-		if (var->flags & CVAR_USERINFO) {
-			Com_Printf ("U");
-		} else {
-			Com_Printf (" ");
-		}
-
-		if (var->flags & CVAR_SERVERINFO) {
-			Com_Printf ("S");
-		} else {
-			Com_Printf (" ");
-		}
-
-		if (var->flags & CVAR_NOSET) {
-			Com_Printf ("-");
-		} else if (var->flags & CVAR_LATCH) {
-			Com_Printf ("L");
-		} else {
-			Com_Printf (" ");
-		}
-
-		Com_Printf (" %s \"%s\"\n", var->name, var->string);
-	}
-
-	Com_Printf ("%i cvars\n", i);
-}
-
 #define	MAX_INFO_KEY	64
 #define	MAX_INFO_VALUE	64
 #define	MAX_INFO_STRING	512
@@ -2599,7 +2555,6 @@ static void Info_RemoveKey(char *s, char *key) {
 	char value[512];
 
 	if (strstr (key, "\\")) {
-		// Com_Printf ("Can't use a key with a \\\n");
 		return;
 	}
 
@@ -2693,47 +2648,6 @@ static bool Info_Validate(char *s) {
 		return false;
 	}
 	return true;
-}
-
-static void Info_Print(char *s) {
-	if (*s == '\\') {
-		s++;
-	}
-
-	char key[512];
-	char value[512];
-	while (*s) {
-		char* o = key;
-		while (*s && *s != '\\') {
-			*o++ = *s++;
-		}
-
-		int l = o - key;
-		if (l < 20) {
-			memset (o, ' ', 20 - l);
-			key[20] = 0;
-		} else {
-			*o = 0;
-		}
-		Com_Printf ("%s", key);
-
-		if (!*s) {
-			Com_Printf ("MISSING VALUE\n");
-			return;
-		}
-
-		o = value;
-		s++;
-		while (*s && *s != '\\') {
-			*o++ = *s++;
-		}
-		*o = 0;
-
-		if (*s) {
-			s++;
-		}
-		Com_Printf ("%s\n", value);
-	}
 }
 
 static char* Info_Cvar_Bit(int bit) {
@@ -6096,7 +6010,6 @@ void CM_BoxLeafnums_r (int nodenum)
 		{
 			if (leaf_count >= leaf_maxcount)
 			{
-//				Com_Printf ("CM_BoxLeafnums_r: overflow\n");
 				return;
 			}
 			leaf_list[leaf_count++] = -1 - nodenum;
@@ -9093,7 +9006,6 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					int soundindex, float volume,
 					float attenuation, float timeofs);
 void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...);
-void SV_BroadcastPrintf (int level, char *fmt, ...);
 void SV_BroadcastCommand (char *fmt, ...);
 
 void SV_ExecuteClientMessage (client_t *cl);
@@ -10155,14 +10067,7 @@ void PF_Unicast (edict_t *ent, bool reliable)
 	SZ_Clear (&sv.multicast);
 }
 
-
-/*
-===============
-PF_dprintf
-
-Debug print to server console
-===============
-*/
+// Debug print to server console
 void PF_dprintf (char *fmt, ...)
 {
 	char		msg[1024];
@@ -10725,17 +10630,6 @@ void SVC_Status (void) {
 
 /*
 ================
-SVC_Ack
-
-================
-*/
-void SVC_Ack (void)
-{
-	Com_Printf ("Ping acknowledge from %s\n", NET_AdrToString(net_from));
-}
-
-/*
-================
 SVC_Ping
 
 Just responds with an acknowledgement
@@ -10941,8 +10835,6 @@ void SV_ConnectionlessPacket() {
 
 	if (!strcmp(c, "ping"))
 		SVC_Ping ();
-	else if (!strcmp(c, "ack"))
-		SVC_Ack ();
 	else if (!strcmp(c,"status"))
 		SVC_Status ();
 	else if (!strcmp(c,"getchallenge"))
@@ -11156,13 +11048,7 @@ void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...)
 	MSG_WriteString (&cl->netchan.message, string);
 }
 
-/*
-=================
-SV_BroadcastPrintf
-
-Sends text to all active clients
-=================
-*/
+// Sends text to all active clients
 void SV_BroadcastPrintf (int level, char *fmt, ...)
 {
 	va_list		argptr;
@@ -11726,11 +11612,6 @@ static void SV_BeginDownload_f() {
 	MSG_WriteByte(&sv_client->netchan.message, 0);
 }
 
-// Dumps the serverinfo info string
-static void SV_ShowServerinfo_f() {
-	Info_Print(Info_Cvar_Server());
-}
-
 typedef struct {
 	char	*name;
 	void	(*func) (void);
@@ -11743,9 +11624,6 @@ static ucmd_t ucmds[] =
 	{"configstrings", SV_Configstrings_f},
 	{"baselines", SV_Baselines_f},
 	{"begin", SV_Begin_f},
-
-	// issued by hand at client consoles
-	{"info", SV_ShowServerinfo_f},
 
 	{"download", SV_BeginDownload_f},
 	{"nextdl", SV_NextDownload_f},
@@ -12848,7 +12726,6 @@ extern	cvar_t	*cl_run;
 
 extern	cvar_t	*cl_anglespeedkey;
 
-extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showmiss;
 extern	cvar_t	*cl_showclamp;
 
@@ -13032,7 +12909,6 @@ extern	char *svc_strings[256];
 
 void CL_ParseServerMessage (void);
 void CL_LoadClientinfo (clientinfo_t *ci, char *s);
-void SHOWNET(char *s);
 void CL_ParseClientinfo (int player);
 
 //
@@ -13311,8 +13187,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 
 		while (oldnum < newnum)
 		{	// one or more entities from the old packet are unchanged
-			if (cl_shownet->value == 3)
-				Com_Printf ("   unchanged: %i\n", oldnum);
 			CL_DeltaEntity (newframe, oldnum, oldstate, 0);
 
 			oldindex++;
@@ -13328,8 +13202,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 
 		if (bits & U_REMOVE)
 		{	// the entity present in oldframe is not in the current frame
-			if (cl_shownet->value == 3)
-				Com_Printf ("   remove: %i\n", newnum);
 			if (oldnum != newnum)
 				Com_Printf ("U_REMOVE: oldnum != newnum\n");
 
@@ -13347,8 +13219,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 
 		if (oldnum == newnum)
 		{	// delta from previous state
-			if (cl_shownet->value == 3)
-				Com_Printf ("   delta: %i\n", newnum);
 			CL_DeltaEntity (newframe, newnum, oldstate, bits);
 
 			oldindex++;
@@ -13365,8 +13235,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 
 		if (oldnum > newnum)
 		{	// delta from baseline
-			if (cl_shownet->value == 3)
-				Com_Printf ("   baseline: %i\n", newnum);
 			CL_DeltaEntity (newframe, newnum, &cl_entities[newnum].baseline, bits);
 			continue;
 		}
@@ -13376,8 +13244,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 	// any remaining entities in the old frame are copied over
 	while (oldnum != 99999)
 	{	// one or more entities from the old packet are unchanged
-		if (cl_shownet->value == 3)
-			Com_Printf ("   unchanged: %i\n", oldnum);
 		CL_DeltaEntity (newframe, oldnum, oldstate, 0);
 
 		oldindex++;
@@ -13557,10 +13423,6 @@ void CL_ParseFrame (void)
 	cl.frame.deltaframe = MSG_ReadLong (&net_message);
 	cl.frame.servertime = cl.frame.serverframe*100;
 
-	if (cl_shownet->value == 3)
-		Com_Printf ("   frame:%i  delta:%i\n", cl.frame.serverframe,
-		cl.frame.deltaframe);
-
 	// If the frame is delta compressed from data that we
 	// no longer have available, we must suck up the rest of
 	// the frame, but not use it, then ask for a non-compressed
@@ -13604,13 +13466,11 @@ void CL_ParseFrame (void)
 
 	// read playerinfo
 	cmd = MSG_ReadByte (&net_message);
-	SHOWNET(svc_strings[cmd]);
 	assert(cmd == svc_playerinfo);
 	CL_ParsePlayerstate (old, &cl.frame);
 
 	// read packet entities
 	cmd = MSG_ReadByte (&net_message);
-	SHOWNET(svc_strings[cmd]);
 	assert(cmd == svc_packetentities);
 	CL_ParsePacketEntities (old, &cl.frame);
 
@@ -17090,7 +16950,6 @@ cvar_t	*cl_add_lights;
 cvar_t	*cl_add_entities;
 cvar_t	*cl_add_blend;
 
-cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
 cvar_t	*cl_showclamp;
 
@@ -17531,7 +17390,6 @@ void CL_ReadPackets (void)
 {
 	while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
 	{
-//	Com_Printf ("packet\n");
 		//
 		// remote command packet
 		//
@@ -19080,24 +18938,10 @@ void CL_ParseStartSoundPacket(void)
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
 }
 
-
-void SHOWNET(char *s)
-{
-	if (cl_shownet->value>=2)
-		Com_Printf ("%3i:%s\n", net_message.readcount-1, s);
-}
-
 void CL_ParseServerMessage (void)
 {
 	int			cmd;
 	char		*s;
-
-	// if recording demos, copy the message out
-	if (cl_shownet->value == 1)
-		Com_Printf ("%i ",net_message.cursize);
-	else if (cl_shownet->value >= 2)
-		Com_Printf ("------------------\n");
-
 
 	// parse the message
 	for (;;) {
@@ -19107,16 +18951,7 @@ void CL_ParseServerMessage (void)
 
 		if (cmd == -1)
 		{
-			SHOWNET("END OF MESSAGE");
 			break;
-		}
-
-		if (cl_shownet->value>=2)
-		{
-			if (!svc_strings[cmd])
-				Com_Printf ("%3i:BAD CMD %i\n", net_message.readcount-1,cmd);
-			else
-				SHOWNET(svc_strings[cmd]);
 		}
 
 		// other commands
@@ -19827,7 +19662,7 @@ static void Con_DrawConsole(float frac) {
 					Draw_Char((x + 1) * char_width_px, y, ch);
 				}
 			}
-		}
+		} // draw text
 
 		// NOTE: Input
 		if (cls.key_dest != key_menu && cls.key_dest == key_console && cls.state == ca_active) {
@@ -19848,10 +19683,8 @@ static void Con_DrawConsole(float frac) {
 			// NOTE: Cursor
 			char block_char_code = 11;
 			Draw_Char(current_x + char_width_px, ycoord, block_char_code);
-		}
-
-	}
-
+		} // draw input
+	} // if any lines
 }
 
 static void SCR_DrawConsole() {
@@ -28236,35 +28069,6 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 	}
 }
 
-void Cmd_PlayerList_f(edict_t *ent)
-{
-	int i;
-	char st[80];
-	char text[1400];
-	edict_t *e2;
-
-	// connect time, ping, score, name
-	*text = 0;
-	for (i = 0, e2 = g_edicts + 1; i < 1; i++, e2++) {
-		if (!e2->inuse)
-			continue;
-
-		sprintf(st, "%02d:%02d %4d %3d %s\n",
-			(level.framenum - e2->client->resp.enterframe) / 600,
-			((level.framenum - e2->client->resp.enterframe) % 600)/10,
-			e2->client->ping,
-			e2->client->resp.score,
-			e2->client->pers.netname);
-		if (strlen(text) + strlen(st) > sizeof(text) - 50) {
-			sprintf(text+strlen(text), "And more...\n");
-			PF_cprintf(ent, PRINT_HIGH, "%s", text);
-			return;
-		}
-		strcat(text, st);
-	}
-	PF_cprintf(ent, PRINT_HIGH, "%s", text);
-}
-
 void ClientCommand (edict_t *ent)
 {
 	char	*cmd;
@@ -28340,8 +28144,6 @@ void ClientCommand (edict_t *ent)
 		Cmd_PutAway_f (ent);
 	else if (Q_stricmp (cmd, "wave") == 0)
 		Cmd_Wave_f (ent);
-	else if (Q_stricmp(cmd, "playerlist") == 0)
-		Cmd_PlayerList_f(ent);
 }
 
 // Returns true if the inflictor can directly damage the target.
@@ -30405,7 +30207,6 @@ void train_next (edict_t* self)
 again:
 	if (!self->target)
 	{
-//		PF_dprintf ("train_next: no next target\n");
 		return;
 	}
 
@@ -30571,7 +30372,6 @@ static void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activa
 
 	if (self->movetarget->nextthink)
 	{
-//		PF_dprintf("elevator busy\n");
 		return;
 	}
 
@@ -33569,7 +33369,6 @@ void SP_func_wall (edict_t* self)
 	// it must be TRIGGER_SPAWN
 	if (!(self->spawnflags & 1))
 	{
-//		PF_dprintf("func_wall missing TRIGGER_SPAWN\n");
 		self->spawnflags |= 1;
 	}
 
@@ -35793,7 +35592,6 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 		{	// go along the crease
 			if (numplanes != 2)
 			{
-//				PF_dprintf ("clip velocity, numplanes == %i\n",numplanes);
 				VectorCopy (vec3_origin, ent->velocity);
 				return 7;
 			}
@@ -38669,8 +38467,7 @@ static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activat
 				break;
 			if (strcmp(e->classname, "light") != 0)
 			{
-				PF_dprintf("%s at %s ", self->classname, vtos(self->s.origin));
-				PF_dprintf("target %s (%s at %s) is not a light\n", self->target, e->classname, vtos(e->s.origin));
+				PF_dprintf("%s at %s target %s (%s at %s) is not a light\n", self->classname, vtos(self->s.origin), self->target, e->classname, vtos(e->s.origin));
 			}
 			else
 			{
@@ -66182,11 +65979,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// TODO: Remove non-essentials
 		Cmd_AddCommand("exec", Cmd_Exec_f);
-		Cmd_AddCommand("echo", Cmd_Echo_f);
 		Cmd_AddCommand("alias", Cmd_Alias_f);
 		Cmd_AddCommand("wait",  Cmd_Wait_f);
 		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
-		Cmd_AddCommand("cvarlist", Cmd_Cvar_List_f);
 		Cmd_AddCommand("bind", Key_Bind_f);
 		Cmd_AddCommand("unbind", Key_Unbind_f);
 		Cmd_AddCommand("unbindall", Key_Unbindall_f);
@@ -66367,7 +66162,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
 		m_forward = COM_GetCvar ("m_forward", "1", 0);
 		m_side = COM_GetCvar ("m_side", "1", 0);
-		cl_shownet = COM_GetCvar ("cl_shownet", "0", 0);
 		cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
 		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
