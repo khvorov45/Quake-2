@@ -1709,7 +1709,6 @@ static struct {
 	char text[32768];
 	int current; // line where next message will be printed
 	int x; // offset in current line for next print
-	int display; // bottom of console displays this line
 	int ormask; // high bit mask for colored characters
 	int linewidth; // characters across screen
 	int totallines; // total lines in console scrollback
@@ -1758,9 +1757,6 @@ static void Con_Print(char* txt) {
 			// Linefeed
 			{
 				console.x = 0;
-				if (console.display == console.current) {
-					console.display++;
-				}
 				console.current++;
 				memset(&console.text[(console.current%console.totallines)*console.linewidth], ' ', console.linewidth);
 			}
@@ -19818,7 +19814,6 @@ static void Con_CheckResize() {
 	}
 
 	console.current = console.totallines - 1;
-	console.display = console.current;
 }
 
 typedef struct {
@@ -19841,12 +19836,8 @@ static void Con_DrawConsole(float frac) {
 		console.vislines = lines;
 		i64 char_width_px = 8;
 		i64 rows_of_text_to_draw = (lines - 22) / char_width_px;
-
-		// TODO: Remove, disallow scrolling up
-		assert(console.display == console.current);
-
 		i64 y = lines - 30;
-		i64 row = console.display;
+		i64 row = console.current;
 		i64 char_height_px = 8;
 		for (i64 i = 0; i < rows_of_text_to_draw; i++, y -= char_height_px, row--) {
 			if (row >= 0 && console.current - row < console.totallines) {
