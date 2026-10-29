@@ -12477,8 +12477,6 @@ extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
 extern	cvar_t	*m_side;
 
-extern	cvar_t	*cl_lightlevel;	// FIXME HACK
-
 extern	cvar_t	*cl_vwep;
 
 typedef struct
@@ -16412,11 +16410,8 @@ void CL_ClampPitch (void)
 		cl.viewangles[PITCH] = -89 - pitch;
 }
 
-/*
-==============
-CL_FinishMove
-==============
-*/
+static u8 cl_lightlevel;
+
 void CL_FinishMove (usercmd_t *cmd)
 {
 	int		ms;
@@ -16449,8 +16444,8 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->impulse = in_impulse;
 	in_impulse = 0;
 
-// send the ambient light level at the player's current position
-	cmd->lightlevel = (u8)cl_lightlevel->value;
+	// send the ambient light level at the player's current position
+	cmd->lightlevel = cl_lightlevel;
 }
 
 /*
@@ -16693,8 +16688,6 @@ cvar_t	*m_pitch;
 cvar_t	*m_yaw;
 cvar_t	*m_forward;
 cvar_t	*m_side;
-
-cvar_t	*cl_lightlevel;
 
 //
 // userinfo
@@ -57921,8 +57914,6 @@ extern	vec3_t	r_origin;
 //
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-extern	cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
-
 extern	cvar_t		*intensity;
 
 extern	int		gl_solid_format;
@@ -60081,16 +60072,16 @@ void R_DrawAliasModel (Entity *e)
 			if (shadelight[0] > shadelight[1])
 			{
 				if (shadelight[0] > shadelight[2])
-					r_lightlevel->value = 150*shadelight[0];
+					cl_lightlevel = 150*shadelight[0];
 				else
-					r_lightlevel->value = 150*shadelight[2];
+					cl_lightlevel = 150*shadelight[2];
 			}
 			else
 			{
 				if (shadelight[1] > shadelight[2])
-					r_lightlevel->value = 150*shadelight[1];
+					cl_lightlevel = 150*shadelight[1];
 				else
-					r_lightlevel->value = 150*shadelight[2];
+					cl_lightlevel = 150*shadelight[2];
 			}
 
 		}
@@ -61282,8 +61273,6 @@ float	r_base_world_matrix[16];
 
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
-
 // Returns true if the box is completely outside the frustom
 bool R_CullBox (vec3_t mins, vec3_t maxs)
 {
@@ -61717,16 +61706,16 @@ void R_SetLightLevel (void)
 	if (shadelight[0] > shadelight[1])
 	{
 		if (shadelight[0] > shadelight[2])
-			r_lightlevel->value = 150*shadelight[0];
+			cl_lightlevel = 150*shadelight[0];
 		else
-			r_lightlevel->value = 150*shadelight[2];
+			cl_lightlevel = 150*shadelight[2];
 	}
 	else
 	{
 		if (shadelight[1] > shadelight[2])
-			r_lightlevel->value = 150*shadelight[1];
+			cl_lightlevel = 150*shadelight[1];
 		else
-			r_lightlevel->value = 150*shadelight[2];
+			cl_lightlevel = 150*shadelight[2];
 	}
 
 }
@@ -65128,7 +65117,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
 		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
 		gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
@@ -65199,7 +65187,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
 		m_forward = COM_GetCvar ("m_forward", "1", 0);
 		m_side = COM_GetCvar ("m_side", "1", 0);
-		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
 		name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
