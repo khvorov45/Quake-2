@@ -57921,8 +57921,6 @@ extern	vec3_t	r_origin;
 //
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-extern	cvar_t	*r_lerpmodels;
-
 extern	cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
 extern	cvar_t		*intensity;
@@ -60195,8 +60193,6 @@ void R_DrawAliasModel (Entity *e)
 		currententity->oldframe = 0;
 	}
 
-	if ( !r_lerpmodels->value )
-		currententity->backlerp = 0;
 	GL_DrawAliasFrameLerp (paliashdr, currententity->backlerp);
 
 	GL_TexEnv( GL_REPLACE );
@@ -61285,8 +61281,6 @@ float	r_world_matrix[16];
 float	r_base_world_matrix[16];
 
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
-
-cvar_t	*r_lerpmodels;
 
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
@@ -65134,7 +65128,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_lerpmodels = COM_GetCvar("r_lerpmodels", "1", 0);
 		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
 		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
