@@ -17206,7 +17206,6 @@ static cheatvar_t cheatvars[] = {
 	{"cl_testlights", "0", 0},
 	{"r_drawflat", "0", 0},
 	{"sw_draworder", "0", 0},
-	{"gl_lightmap", "0", 0},
 	{"gl_saturatelighting", "0", 0},
 	{NULL, NULL, 0},
 };
@@ -57923,10 +57922,6 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_lightmap;
-static cvar_t* gl_shadows;
-static cvar_t* gl_dynamic;
-static cvar_t* gl_round_down;
 static cvar_t* gl_picmip;
 static cvar_t* gl_skymip;
 static cvar_t* gl_showtris;
@@ -58602,11 +58597,11 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 
 	for (scaled_width = 1 ; scaled_width < width ; scaled_width<<=1)
 		;
-	if (gl_round_down->value && scaled_width > width && mipmap)
+	if (scaled_width > width && mipmap)
 		scaled_width >>= 1;
 	for (scaled_height = 1 ; scaled_height < height ; scaled_height<<=1)
 		;
-	if (gl_round_down->value && scaled_height > height && mipmap)
+	if (scaled_height > height && mipmap)
 		scaled_height >>= 1;
 
 	// let people sample down the world textures for speed
@@ -60107,8 +60102,7 @@ void R_DrawAliasModel (Entity *e)
 	if (currententity->flags & RF_DEPTHHACK)
 		glDepthRange (gldepthmin, gldepthmax);
 
-	if (gl_shadows->value && !(currententity->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)))
-	{
+	if (!(currententity->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL))) {
 		glPushMatrix ();
 		R_RotateForEntity (e);
 		glDisable (GL_TEXTURE_2D);
@@ -61977,22 +61971,15 @@ void R_BlendLightmaps (void)
 	// don't bother writing Z
 	glDepthMask( 0 );
 
-	/*
-	** set the appropriate blending mode unless we're only looking at the
-	** lightmaps.
-	*/
-	if (!gl_lightmap->value)
-	{
-		glEnable (GL_BLEND);
+	glEnable (GL_BLEND);
 
-		if ( gl_saturatelighting->value )
-		{
-			glBlendFunc( GL_ONE, GL_ONE );
-		}
-		else
-		{
-			glBlendFunc (GL_ZERO, GL_SRC_COLOR );
-		}
+	if ( gl_saturatelighting->value )
+	{
+		glBlendFunc( GL_ONE, GL_ONE );
+	}
+	else
+	{
+		glBlendFunc (GL_ZERO, GL_SRC_COLOR );
 	}
 
 	/*
@@ -62012,75 +61999,70 @@ void R_BlendLightmaps (void)
 		}
 	}
 
-	/*
-	** render dynamic lightmaps
-	*/
-	if ( gl_dynamic->value )
+	// NOTE: dynamic lightmaps
+	LM_InitBlock();
+
+	GL_Bind( gl_state.lightmap_textures+0 );
+
+	newdrawsurf = gl_lms.lightmap_surfaces[0];
+
+	for ( surf = gl_lms.lightmap_surfaces[0]; surf != 0; surf = surf->lightmapchain )
 	{
-		LM_InitBlock();
+		int		smax, tmax;
+		u8	*base;
 
-		GL_Bind( gl_state.lightmap_textures+0 );
+		smax = (surf->extents[0]>>4)+1;
+		tmax = (surf->extents[1]>>4)+1;
 
-		newdrawsurf = gl_lms.lightmap_surfaces[0];
-
-		for ( surf = gl_lms.lightmap_surfaces[0]; surf != 0; surf = surf->lightmapchain )
+		if ( LM_AllocBlock( smax, tmax, &surf->dlight_s, &surf->dlight_t ) )
 		{
-			int		smax, tmax;
-			u8	*base;
+			base = gl_lms.lightmap_buffer;
+			base += ( surf->dlight_t * BLOCK_WIDTH + surf->dlight_s ) * LIGHTMAP_BYTES;
 
-			smax = (surf->extents[0]>>4)+1;
-			tmax = (surf->extents[1]>>4)+1;
-
-			if ( LM_AllocBlock( smax, tmax, &surf->dlight_s, &surf->dlight_t ) )
-			{
-				base = gl_lms.lightmap_buffer;
-				base += ( surf->dlight_t * BLOCK_WIDTH + surf->dlight_s ) * LIGHTMAP_BYTES;
-
-				R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
-			}
-			else
-			{
-				msurface_t *drawsurf;
-
-				// upload what we have so far
-				LM_UploadBlock( true );
-
-				// draw all surfaces that use this lightmap
-				for ( drawsurf = newdrawsurf; drawsurf != surf; drawsurf = drawsurf->lightmapchain )
-				{
-					if ( drawsurf->polys )
-						DrawGLPolyChain( drawsurf->polys,
-										  ( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ),
-										( drawsurf->light_t - drawsurf->dlight_t ) * ( 1.0 / 128.0 ) );
-				}
-
-				newdrawsurf = drawsurf;
-
-				// clear the block
-				LM_InitBlock();
-
-				// try uploading the block now
-				bool lm_alloc_block_result = LM_AllocBlock(smax, tmax, &surf->dlight_s, &surf->dlight_t);
-				assert(lm_alloc_block_result);
-
-				base = gl_lms.lightmap_buffer;
-				base += ( surf->dlight_t * BLOCK_WIDTH + surf->dlight_s ) * LIGHTMAP_BYTES;
-
-				R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
-			}
+			R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
 		}
+		else
+		{
+			msurface_t *drawsurf;
 
-		/*
-		** draw remainder of dynamic lightmaps that haven't been uploaded yet
-		*/
-		if ( newdrawsurf )
+			// upload what we have so far
 			LM_UploadBlock( true );
 
-		for ( surf = newdrawsurf; surf != 0; surf = surf->lightmapchain )
-		{
-			if ( surf->polys )
-				DrawGLPolyChain( surf->polys, ( surf->light_s - surf->dlight_s ) * ( 1.0 / 128.0 ), ( surf->light_t - surf->dlight_t ) * ( 1.0 / 128.0 ) );
+			// draw all surfaces that use this lightmap
+			for ( drawsurf = newdrawsurf; drawsurf != surf; drawsurf = drawsurf->lightmapchain )
+			{
+				if ( drawsurf->polys )
+					DrawGLPolyChain( drawsurf->polys,
+										( drawsurf->light_s - drawsurf->dlight_s ) * ( 1.0 / 128.0 ),
+									( drawsurf->light_t - drawsurf->dlight_t ) * ( 1.0 / 128.0 ) );
+			}
+
+			newdrawsurf = drawsurf;
+
+			// clear the block
+			LM_InitBlock();
+
+			// try uploading the block now
+			bool lm_alloc_block_result = LM_AllocBlock(smax, tmax, &surf->dlight_s, &surf->dlight_t);
+			assert(lm_alloc_block_result);
+
+			base = gl_lms.lightmap_buffer;
+			base += ( surf->dlight_t * BLOCK_WIDTH + surf->dlight_s ) * LIGHTMAP_BYTES;
+
+			R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
 		}
+	}
+
+	/*
+	** draw remainder of dynamic lightmaps that haven't been uploaded yet
+	*/
+	if ( newdrawsurf )
+		LM_UploadBlock( true );
+
+	for ( surf = newdrawsurf; surf != 0; surf = surf->lightmapchain )
+	{
+		if ( surf->polys )
+			DrawGLPolyChain( surf->polys, ( surf->light_s - surf->dlight_s ) * ( 1.0 / 128.0 ), ( surf->light_t - surf->dlight_t ) * ( 1.0 / 128.0 ) );
 	}
 
 	/*
@@ -62148,12 +62130,9 @@ void R_RenderBrushPoly (msurface_t *fa)
 	if ( fa->dlightframe == r_framecount )
 	{
 dynamic:
-		if ( gl_dynamic->value )
+		if (!( fa->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP ) ) )
 		{
-			if (!( fa->texinfo->flags & (SURF_SKY|SURF_TRANS33|SURF_TRANS66|SURF_WARP ) ) )
-			{
-				is_dynamic = true;
-			}
+			is_dynamic = true;
 		}
 	}
 
@@ -65000,10 +64979,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
-		gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
-		gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
-		gl_round_down = COM_GetCvar ("gl_round_down", "1", 0);
 		gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
 		gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
 		gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
