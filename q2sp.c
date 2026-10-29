@@ -1836,7 +1836,7 @@ static char* COM_Parse(char** data_p) {
 	} while (c > 32);
 
 	if (len == MAX_TOKEN_CHARS) {
-		Com_Printf ("Token exceeded %i chars, discarded.\n", MAX_TOKEN_CHARS);
+		add_line_to_console_log(STR("Token too long"));
 		len = 0;
 	}
 	com_token[len] = 0;
@@ -1851,7 +1851,7 @@ static char* COM_Parse(char** data_p) {
 static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
 	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
 		if (!Cvar_InfoValidate(var_name)) {
-			Com_Printf("invalid info cvar name\n");
+			add_line_to_console_log(STR("invalid info cvar name"));
 			return NULL;
 		}
 	}
@@ -1868,7 +1868,7 @@ static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
 
 	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
 		if (!Cvar_InfoValidate (var_value)) {
-			Com_Printf("invalid info cvar value\n");
+			add_line_to_console_log(STR("invalid info cvar value"));
 			return NULL;
 		}
 	}
@@ -1898,14 +1898,14 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 
 	if (var->flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
 		if (!Cvar_InfoValidate (value)) {
-			Com_Printf("invalid info cvar value\n");
+			add_line_to_console_log(STR("invalid info cvar value"));
 			return var;
 		}
 	}
 
 	if (!force) {
 		if (var->flags & CVAR_NOSET) {
-			Com_Printf("%s is write protected.\n", var_name);
+			add_line_to_console_log(STR("write protected"));
 			return var;
 		}
 
@@ -1922,7 +1922,7 @@ static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
 			}
 
 			if (server_state) {
-				Com_Printf("%s will be changed for next game.\n", var_name);
+				add_line_to_console_log(STR("will be changed for next game"));
 				var->latched_string = CopyString(value);
 			} else {
 				var->string = CopyString(value);
@@ -2015,7 +2015,7 @@ static char defer_text_buf[8192];
 static void Cbuf_AddText(char* text) {
 	int l = strlen(text);
 	if (cmd_text.cursize + l >= cmd_text.maxsize) {
-		Com_Printf("Cbuf_AddText: overflow\n");
+		add_line_to_console_log(STR("cbuf overflow"));
 		return;
 	}
 	SZ_Write(&cmd_text, text, l);
@@ -2116,7 +2116,7 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 
 		int len = strlen(scan);
 		if (len >= MAX_STRING_CHARS) {
-			Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+			add_line_to_console_log(STR("too long"));
 			return;
 		}
 
@@ -2148,7 +2148,7 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 			int j = strlen(token);
 			len += j;
 			if (len >= MAX_STRING_CHARS) {
-				Com_Printf ("Expanded line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+				add_line_to_console_log(STR("too long"));
 				return;
 			}
 
@@ -2161,13 +2161,13 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 			i--;
 
 			if (++count == 100) {
-				Com_Printf ("Macro expansion loop, discarded.\n");
+				add_line_to_console_log(STR("Macro expansion loop, discarded."));
 				return;
 			}
 		}
 
 		if (inquote) {
-			Com_Printf("Line has unmatched quote, discarded.\n");
+			add_line_to_console_log(STR("Line has unmatched quote, discarded."));
 			return;
 		}
 
@@ -2245,7 +2245,7 @@ static void Cmd_ExecuteString(char* text) {
 	for (cmdalias_t* a = cmd_alias; a; a = a->next) {
 		if (!Q_strcasecmp (cmd_argv[0], a->name)) {
 			if (++alias_count == ALIAS_LOOP_COUNT) {
-				Com_Printf ("ALIAS_LOOP_COUNT\n");
+				add_line_to_console_log(STR("ALIAS_LOOP_COUNT"));
 				return;
 			}
 			Cbuf_InsertText(a->value);
@@ -2258,7 +2258,7 @@ static void Cmd_ExecuteString(char* text) {
 		cvar_t* v = Cvar_FindVar(Cmd_Argv(0));
 		if (v) {
 			if (cmd_argc == 1) {
-				Com_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
+				add_line_to_console_log(string_from_cstring(v->string));
 			} else {
 				COM_SetCvar(v->name, Cmd_Argv(1));
 			}
@@ -2271,15 +2271,15 @@ static void Cmd_ExecuteString(char* text) {
 		char* cmd = Cmd_Argv(0);
 
 		if (cls.state <= ca_connected || *cmd == '-' || *cmd == '+') {
-			Com_Printf ("Unknown command \"%s\"\n", cmd);
+			add_line_to_console_log(STR("Unknown command"));
 			return;
 		}
 
 		MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
 		SZ_Print(&cls.netchan.message, cmd);
 		if (cmd_argc > 1) {
-			SZ_Print (&cls.netchan.message, " ");
-			SZ_Print (&cls.netchan.message, cmd_args);
+			SZ_Print(&cls.netchan.message, " ");
+			SZ_Print(&cls.netchan.message, cmd_args);
 		}
 	}
 }
@@ -2340,14 +2340,14 @@ static void Cmd_ExecuteCbuf() {
 static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 	// fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0]) {
-		Com_Printf("already defined as a var\n");
+		add_line_to_console_log(STR("already defined as a var"));
 		return;
 	}
 
 	// fail if the command already exists
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
 		if (!strcmp(cmd_name, cmd->name)) {
-			Com_Printf("already defined\n");
+			add_line_to_console_log(STR("already defined"));
 			return;
 		}
 	}
@@ -2362,24 +2362,22 @@ static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 static void Cmd_List_f() {
 	int i = 0;
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next, i++) {
-		Com_Printf("%s\n", cmd->name);
+		add_line_to_console_log(string_from_cstring(cmd->name));
 	}
-	Com_Printf("%i commands\n", i);
 }
 
 static void Cmd_Exec_f() {
 	if (cmd_argc != 2) {
-		Com_Printf ("exec <filename> : execute a script file\n");
+		add_line_to_console_log(STR("exec <filename> : execute a script file"));
 		return;
 	}
 
 	char* f = 0;
 	int len = FS_LoadFile(Cmd_Argv(1), (void **)&f);
 	if (!f) {
-		Com_Printf ("couldn't exec %s\n",Cmd_Argv(1));
+		add_line_to_console_log(STR("file not found"));
 		return;
 	}
-	Com_Printf ("execing %s\n",Cmd_Argv(1));
 
 	// the file doesn't have a trailing 0, so we need to copy it off
 	char* f2 = tml_alloc(len + 1);
@@ -2397,16 +2395,15 @@ static void Cmd_Alias_f() {
 	char cmd[1024] = {};
 
 	if (cmd_argc == 1) {
-		Com_Printf("Current alias commands:\n");
 		for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-			Com_Printf ("%s : %s\n", a->name, a->value);
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value))));
 		}
 		return;
 	}
 
 	char* s = Cmd_Argv(1);
 	if (strlen(s) >= MAX_ALIAS_NAME) {
-		Com_Printf ("Alias name is too long\n");
+		add_line_to_console_log(STR("Alias name is too long"));
 		return;
 	}
 
@@ -2414,7 +2411,7 @@ static void Cmd_Alias_f() {
 	cmdalias_t* a = cmd_alias;
 	for (; a; a = a->next) {
 		if (!strcmp(s, a->name)) {
-			tml_free (a->value);
+			tml_free(a->value);
 			break;
 		}
 	}
@@ -2452,14 +2449,14 @@ static void Cmd_Cvar_Set_f() {
 		else if (!strcmp(Cmd_Argv(3), "s")) {
 			flags = CVAR_SERVERINFO;
 		} else {
-			Com_Printf ("flags can only be 'u' or 's'\n");
+			add_line_to_console_log(STR("flags can only be 'u' or 's'"));
 			return;
 		}
 		COM_FullSetCvar (Cmd_Argv(1), Cmd_Argv(2), flags);
 	} else if (cmd_argc == 3) {
 		COM_SetCvar (Cmd_Argv(1), Cmd_Argv(2));
 	} else {
-		Com_Printf("usage: set <variable> <value> [u / s]\n");
+		add_line_to_console_log(STR("usage: set <variable> <value> [u / s]"));
 	}
 }
 
@@ -2555,22 +2552,22 @@ static void Info_RemoveKey(char *s, char *key) {
 
 static void Info_SetValueForKey(char *s, char *key, char *value) {
 	if (strstr(key, "\\") || strstr (value, "\\")) {
-		Com_Printf("Can't use keys or values with a \\\n");
+		add_line_to_console_log(STR("Can't use keys or values with a \\"));
 		return;
 	}
 
 	if (strstr(key, ";")) {
-		Com_Printf("Can't use keys or values with a semicolon\n");
+		add_line_to_console_log(STR("Can't use keys or values with a semicolon"));
 		return;
 	}
 
 	if (strstr (key, "\"") || strstr (value, "\"")) {
-		Com_Printf("Can't use keys or values with a \"\n");
+		add_line_to_console_log(STR("Can't use keys or values with a \""));
 		return;
 	}
 
 	if (strlen(key) > MAX_INFO_KEY-1 || strlen(value) > MAX_INFO_KEY-1) {
-		Com_Printf("Keys and values must be < 64 characters.\n");
+		add_line_to_console_log(STR("Keys and values must be < 64 characters."));
 		return;
 	}
 	Info_RemoveKey(s, key);
@@ -2582,7 +2579,7 @@ static void Info_SetValueForKey(char *s, char *key, char *value) {
 	Com_sprintf(newi, sizeof(newi), "\\%s\\%s", key, value);
 
 	if (strlen(newi) + strlen(s) > MAX_INFO_STRING) {
-		Com_Printf("Info string length exceeded\n");
+		add_line_to_console_log(STR("Info string length exceeded"));
 		return;
 	}
 
@@ -7484,14 +7481,7 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 	bool	send_reliable;
 	unsigned	w1, w2;
 
-	// check for message overflow
-	if (chan->message.overflowed)
-	{
-		chan->fatal_error = true;
-		Com_Printf ("%s:Outgoing message overflow\n"
-			, NET_AdrToString (chan->remote_address));
-		return;
-	}
+	assert(!chan->message.overflowed);
 
 	send_reliable = Netchan_NeedReliable (chan);
 
@@ -7526,7 +7516,7 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 	if (send.maxsize - send.cursize >= length)
 		SZ_Write (&send, data, length);
 	else
-		Com_Printf ("Netchan_Transmit: dumped unreliable\n");
+		add_line_to_console_log(STR("Netchan_Transmit: dumped unreliable"));
 
 	// send the datagram
 	NET_SendPacket (chan->sock, send.cursize, send.data, chan->remote_address);
@@ -8964,7 +8954,6 @@ void SV_Multicast (vec3_t origin, multicast_t to);
 void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					int soundindex, float volume,
 					float attenuation, float timeofs);
-void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...);
 void SV_BroadcastCommand (char *fmt, ...);
 
 void SV_ExecuteClientMessage (client_t *cl);
@@ -9167,7 +9156,7 @@ void SV_WriteLevelFile (void)
 	f = fopen(name, "wb");
 	if (!f)
 	{
-		Com_Printf ("Failed to open %s\n", name);
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	fwrite (sv.configstrings, sizeof(sv.configstrings), 1, f);
@@ -9188,7 +9177,7 @@ void SV_ReadLevelFile() {
 	f = fopen(name, "rb");
 	if (!f)
 	{
-		Com_Printf ("Failed to open %s\n", name);
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	FS_Read (sv.configstrings, sizeof(sv.configstrings), f);
@@ -9202,12 +9191,6 @@ void SV_ReadLevelFile() {
 	ReadLevel(name);
 }
 
-/*
-==============
-SV_WriteServerFile
-
-==============
-*/
 void SV_WriteServerFile (bool autosave)
 {
 	FILE	*f;
@@ -9221,7 +9204,7 @@ void SV_WriteServerFile (bool autosave)
 	f = fopen (name, "wb");
 	if (!f)
 	{
-		Com_Printf ("Couldn't write %s\n", name);
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	// write the comment field
@@ -9255,7 +9238,7 @@ void SV_WriteServerFile (bool autosave)
 		if (strlen(var->name) >= sizeof(name)-1
 			|| strlen(var->string) >= sizeof(string)-1)
 		{
-			Com_Printf ("Cvar too long: %s = %s\n", var->name, var->string);
+			add_line_to_console_log(STR("too long"));
 			continue;
 		}
 		memset (name, 0, sizeof(name));
@@ -9285,7 +9268,7 @@ void SV_ReadServerFile (void)
 	f = fopen (name, "rb");
 	if (!f)
 	{
-		Com_Printf ("Couldn't read %s\n", name);
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	// read the comment field
@@ -9327,7 +9310,7 @@ static void SV_GameMap_f() {
 	bool	*savedInuse;
 
 	if (cmd_argc != 2) {
-		Com_Printf ("USAGE: gamemap <map>\n");
+		add_line_to_console_log(STR("USAGE: gamemap <map>"));
 		return;
 	}
 
@@ -9385,7 +9368,7 @@ static void SV_Map_f() {
 		char expanded[MAX_QPATH] = {};
 		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
 		if (FS_LoadFile (expanded, NULL) == -1) {
-			Com_Printf ("Can't find %s\n", expanded);
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
 			return;
 		}
 	}
@@ -9402,23 +9385,23 @@ static void SV_Loadgame_f() {
 
 	if (cmd_argc != 2)
 	{
-		Com_Printf ("USAGE: loadgame <directory>\n");
+		add_line_to_console_log(STR("USAGE: loadgame <directory>"));
 		return;
 	}
 
-	Com_Printf ("Loading game...\n");
+	add_line_to_console_log(STR("Loading game..."));
 
 	dir = Cmd_Argv(1);
 	if (strstr(dir, "..") || strstr (dir, "/") || strstr (dir, "\\"))
 	{
-		Com_Printf ("Bad savedir.\n");
+		add_line_to_console_log(STR("Bad savedir."));
 	}
 
 	// make sure the server.ssv file exists
 	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", Cmd_Argv(1));
 	f = fopen(name, "rb");
 	if (!f) {
-		Com_Printf ("No such savegame: %s\n", name);
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	fclose(f);
@@ -9437,35 +9420,35 @@ static void SV_Savegame_f() {
 
 	if (sv.state != ss_game)
 	{
-		Com_Printf ("You must be in a game to save.\n");
+		add_line_to_console_log(STR("You must be in a game to save."));
 		return;
 	}
 
 	if (cmd_argc != 2)
 	{
-		Com_Printf ("USAGE: savegame <directory>\n");
+		add_line_to_console_log(STR("USAGE: savegame <directory>"));
 		return;
 	}
 
 	if (!strcmp (Cmd_Argv(1), "current"))
 	{
-		Com_Printf ("Can't save to 'current'\n");
+		add_line_to_console_log(STR("Can't save to 'current'"));
 		return;
 	}
 
 	if (svs.client.edict->client->ps.stats[STAT_HEALTH] <= 0)
 	{
-		Com_Printf ("\nCan't savegame while dead!\n");
+		add_line_to_console_log(STR("\nCan't savegame while dead!"));
 		return;
 	}
 
 	dir = Cmd_Argv(1);
 	if (strstr (dir, "..") || strstr (dir, "/") || strstr (dir, "\\") )
 	{
-		Com_Printf ("Bad savedir.\n");
+		add_line_to_console_log(STR("Bad savedir."));
 	}
 
-	Com_Printf ("Saving game...\n");
+	add_line_to_console_log(STR("Saving game..."));
 
 	// archive current level, including all client edicts.
 	// when the level is reloaded, they will be shells awaiting
@@ -9478,7 +9461,7 @@ static void SV_Savegame_f() {
 	// copy it off
 	SV_CopySaveGame ("current", dir);
 
-	Com_Printf ("Done.\n");
+	add_line_to_console_log(STR("Done."));
 }
 
 // Kick everyone off, possibly in preparation for a new game
@@ -10026,22 +10009,11 @@ void PF_Unicast (edict_t *ent, bool reliable)
 	SZ_Clear (&sv.multicast);
 }
 
-// Debug print to server console
-void PF_dprintf (char *fmt, ...)
-{
-	char		msg[1024];
-	va_list		argptr;
-
-	va_start (argptr,fmt);
-	vsprintf (msg, fmt, argptr);
-	va_end (argptr);
-
-	Com_Printf ("%s", msg);
-}
-
 // Print to a single client
 void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 {
+	UNUSED(level);
+
 	char		msg[1024];
 	va_list		argptr;
 	int			n;
@@ -10056,10 +10028,7 @@ void PF_cprintf (edict_t *ent, int level, char *fmt, ...)
 	vsprintf (msg, fmt, argptr);
 	va_end (argptr);
 
-	if (ent)
-		SV_ClientPrintf (&svs.client+(n-1), level, "%s", msg);
-	else
-		Com_Printf ("%s", msg);
+	add_line_to_console_log(string_from_cstring(msg));
 }
 
 // centerprint to a single client
@@ -10682,8 +10651,7 @@ void SV_ConnectionlessPacket() {
 	else if (!strcmp(c,"connect"))
 		SVC_DirectConnect ();
 	else
-		Com_Printf ("bad connectionless packet from %s:\n%s\n"
-		, NET_AdrToString (net_from), s);
+		assert(!"unreachable");
 }
 
 // Updates the cl->ping variables
@@ -11230,7 +11198,7 @@ void SV_New_f (void)
 
 	if (sv_client->state != cs_connected)
 	{
-		Com_Printf ("New not valid -- already spawned\n");
+		add_line_to_console_log(STR("New not valid -- already spawned"));
 		return;
 	}
 
@@ -11282,14 +11250,14 @@ void SV_Configstrings_f (void)
 
 	if (sv_client->state != cs_connected)
 	{
-		Com_Printf ("configstrings not valid -- already spawned\n");
+		add_line_to_console_log(STR("configstrings not valid -- already spawned"));
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
 	{
-		Com_Printf ("SV_Configstrings_f from different level\n");
+		add_line_to_console_log(STR("SV_Configstrings_f from different level"));
 		SV_New_f ();
 		return;
 	}
@@ -11338,14 +11306,14 @@ void SV_Baselines_f (void)
 
 	if (sv_client->state != cs_connected)
 	{
-		Com_Printf ("baselines not valid -- already spawned\n");
+		add_line_to_console_log(STR("baselines not valid -- already spawned"));
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
 	{
-		Com_Printf ("SV_Baselines_f from different level\n");
+		add_line_to_console_log(STR("SV_Baselines_f from different level"));
 		SV_New_f ();
 		return;
 	}
@@ -11393,7 +11361,7 @@ void SV_Begin_f (void)
 	// handle the case of a level changing while a client was connecting
 	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
 	{
-		Com_Printf ("SV_Begin_f from different level\n");
+		add_line_to_console_log(STR("SV_Begin_f from different level"));
 		SV_New_f ();
 		return;
 	}
@@ -11521,7 +11489,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 	{
 		if (net_message.readcount > net_message.cursize)
 		{
-			Com_Printf ("SV_ReadClientMessage: badread\n");
+			add_line_to_console_log(STR("SV_ReadClientMessage: badread"));
 			SV_DropClient (cl);
 			return;
 		}
@@ -11533,7 +11501,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 		switch (c)
 		{
 		default:
-			Com_Printf ("SV_ReadClientMessage: unknown command char\n");
+			add_line_to_console_log(STR("SV_ReadClientMessage: unknown command char"));
 			SV_DropClient (cl);
 			return;
 
@@ -11963,7 +11931,7 @@ void SV_AreaEdicts_r (areanode_t *node)
 
 		if (area_count == area_maxcount)
 		{
-			Com_Printf ("SV_AreaEdicts: MAXCOUNT\n");
+			add_line_to_console_log(STR("SV_AreaEdicts: MAXCOUNT"));
 			return;
 		}
 
@@ -13043,7 +13011,7 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 		if (bits & U_REMOVE)
 		{	// the entity present in oldframe is not in the current frame
 			if (oldnum != newnum)
-				Com_Printf ("U_REMOVE: oldnum != newnum\n");
+				add_line_to_console_log(STR("U_REMOVE: oldnum != newnum"));
 
 			oldindex++;
 
@@ -13277,16 +13245,16 @@ void CL_ParseFrame (void)
 		old = &cl.frames[cl.frame.deltaframe & UPDATE_MASK];
 		if (!old->valid)
 		{	// should never happen
-			Com_Printf ("Delta from invalid frame (not supposed to happen!).\n");
+			add_line_to_console_log(STR("Delta from invalid frame (not supposed to happen!)."));
 		}
 		if (old->serverframe != cl.frame.deltaframe)
 		{	// The frame that the server did the delta from
 			// is too old, so we can't reconstruct it properly.
-			Com_Printf ("Delta frame too old.\n");
+			add_line_to_console_log(STR("Delta frame too old."));
 		}
 		else if (cl.parse_entities - old->parse_entities > MAX_PARSE_ENTITIES-128)
 		{
-			Com_Printf ("Delta parse_entities too old.\n");
+			add_line_to_console_log(STR("Delta parse_entities too old."));
 		}
 		else
 			cl.frame.valid = true;	// valid delta parse
@@ -16285,7 +16253,7 @@ void KeyDown (kbutton_t *b)
 		b->down[1] = k;
 	else
 	{
-		Com_Printf ("Three keys down for a button!\n");
+		add_line_to_console_log(STR("Three keys down for a button!"));
 		return;
 	}
 
@@ -16885,7 +16853,7 @@ void CL_SendConnectPacket (void)
 
 	if (!NET_StringToAdr (cls.servername, &adr))
 	{
-		Com_Printf ("Bad server address\n");
+		add_line_to_console_log(STR("Bad server address"));
 		cls.connect_time = 0;
 		return;
 	}
@@ -16929,7 +16897,7 @@ void CL_CheckForResend (void)
 
 	if (!NET_StringToAdr (cls.servername, &adr))
 	{
-		Com_Printf ("Bad server address\n");
+		add_line_to_console_log(STR("Bad server address"));
 		cls.state = ca_disconnected;
 		return;
 	}
@@ -16949,7 +16917,7 @@ void CL_Connect_f (void)
 
 	if (cmd_argc != 2)
 	{
-		Com_Printf ("usage: connect <server>\n");
+		add_line_to_console_log(STR("usage: connect <server>"));
 		return;
 	}
 
@@ -17040,13 +17008,13 @@ void CL_Packet_f (void)
 
 	if (cmd_argc != 3)
 	{
-		Com_Printf ("packet <destination> <contents>\n");
+		add_line_to_console_log(STR("packet <destination> <contents>"));
 		return;
 	}
 
 	if (!NET_StringToAdr (Cmd_Argv(1), &adr))
 	{
-		Com_Printf ("Bad address\n");
+		add_line_to_console_log(STR("Bad address"));
 		return;
 	}
 	if (!adr.port)
@@ -17080,7 +17048,7 @@ void CL_Changing_f(void) {
 
 	SCR_BeginLoadingPlaque ();
 	cls.state = ca_connected;	// not active anymore, but not disconnected
-	Com_Printf ("\nChanging map...\n");
+	add_line_to_console_log(STR("\nChanging map..."));
 }
 
 // The server is changing levels
@@ -17093,7 +17061,7 @@ void CL_Reconnect_f (void)
 
 	S_StopAllSounds ();
 	if (cls.state == ca_connected) {
-		Com_Printf ("reconnecting...\n");
+		add_line_to_console_log(STR("reconnecting..."));
 		cls.state = ca_connected;
 		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
 		MSG_WriteString (&cls.netchan.message, "new");
@@ -17108,7 +17076,7 @@ void CL_Reconnect_f (void)
 			cls.connect_time = -99999; // fire immediately
 
 		cls.state = ca_connecting;
-		Com_Printf ("reconnecting...\n");
+		add_line_to_console_log(STR("reconnecting..."));
 	}
 }
 
@@ -17140,7 +17108,7 @@ void CL_ConnectionlessPacket (void)
 	{
 		if (cls.state == ca_connected)
 		{
-			Com_Printf ("Dup connect received.  Ignored.\n");
+			add_line_to_console_log(STR("Dup connect received.  Ignored."));
 			return;
 		}
 		Netchan_Setup(NS_CLIENT, &cls.netchan, net_from);
@@ -17196,7 +17164,7 @@ void CL_ConnectionlessPacket (void)
 		return;
 	}
 
-	Com_Printf ("Unknown command.\n");
+	add_line_to_console_log(STR("Unknown command."));
 }
 
 
@@ -17212,7 +17180,7 @@ void CL_DumpPackets (void)
 {
 	while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
 	{
-		Com_Printf ("dumnping a packet\n");
+		add_line_to_console_log(STR("dumnping a packet"));
 	}
 }
 
@@ -18472,7 +18440,7 @@ static void CL_ParseServerData() {
 	char* level_name = MSG_ReadString(&net_message);
 
 	// seperate the printfs so the server message can have a color
-	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
 	Com_Printf("%c%s\n", 2, level_name);
 
 	// need to prep refresh at next oportunity
@@ -18795,11 +18763,11 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_disconnect:
-			Com_Printf("Server disconnected\n");
+			add_line_to_console_log(STR("Server disconnected"));
 			break;
 
 		case svc_reconnect:
-			Com_Printf ("Server disconnected, reconnecting\n");
+			add_line_to_console_log(STR("Server disconnected, reconnecting"));
 			if (cls.download) {
 				//ZOID, close download
 				fclose (cls.download);
@@ -19069,7 +19037,7 @@ void CL_PredictMovement (void)
 	if (current - ack >= CMD_BACKUP)
 	{
 		if (cl_showmiss->value)
-			Com_Printf ("exceeded CMD_BACKUP\n");
+			add_line_to_console_log(STR("exceeded CMD_BACKUP"));
 		return;
 	}
 
@@ -19243,7 +19211,7 @@ void SCR_CenterPrint (char *str)
 	}
 
 	// echo it to the console
-	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
 
 	s = str;
 	do
@@ -19272,7 +19240,7 @@ void SCR_CenterPrint (char *str)
 			break;
 		s++;		// skip the \n
 	} while (1);
-	Com_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
 }
 
 
@@ -19352,7 +19320,7 @@ void SCR_Sky_f (void)
 
 	if (cmd_argc < 2)
 	{
-		Com_Printf ("Usage: sky <basename> <rotate> <axis x y z>\n");
+		add_line_to_console_log(STR("Usage: sky <basename> <rotate> <axis x y z>"));
 		return;
 	}
 	if (cmd_argc > 2)
@@ -20163,7 +20131,7 @@ static void SCR_UpdateScreen() {
 	if (cls.disable_screen) {
 		if (Sys_Milliseconds() - cls.disable_screen > 120000) {
 			cls.disable_screen = 0;
-			Com_Printf("Loading plaque timed out.\n");
+			add_line_to_console_log(STR("Loading plaque timed out."));
 		}
 		return;
 	}
@@ -20502,7 +20470,7 @@ int CL_ParseBeam (struct model_s *model)
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");
+	add_line_to_console_log(STR("beam list overflow!"));
 	return ent;
 }
 
@@ -20554,7 +20522,7 @@ int CL_ParseBeam2 (struct model_s *model)
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");
+	add_line_to_console_log(STR("beam list overflow!"));
 	return ent;
 }
 
@@ -20619,7 +20587,7 @@ int CL_ParsePlayerBeam (struct model_s *model)
 			return ent;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");
+	add_line_to_console_log(STR("beam list overflow!"));
 	return ent;
 }
 //rogue
@@ -20673,7 +20641,7 @@ int CL_ParseLightning (struct model_s *model)
 			return srcEnt;
 		}
 	}
-	Com_Printf ("beam list overflow!\n");
+	add_line_to_console_log(STR("beam list overflow!"));
 	return srcEnt;
 }
 
@@ -20750,7 +20718,6 @@ void CL_ParseSteam (void)
 		}
 		else
 		{
-//				Com_Printf ("No free sustains!\n");
 			// FIXME - read the stuff anyway
 			cnt = MSG_ReadByte (&net_message);
 			MSG_ReadPos (&net_message, pos);
@@ -21433,12 +21400,9 @@ void CL_AddBeams (void)
 		// through the tesla mine (instead it goes through the target)
 		if ((b->model == cl_mod_lightning) && (d <= model_length))
 		{
-//			Com_Printf ("special case\n");
 			VectorCopy (b->end, ent.origin);
 			// offset to push beam outside of tesla model (negative because dist is from end to start
 			// for this beam)
-//			for (j=0 ; j<3 ; j++)
-//				ent.origin[j] -= dist[j]*10.0;
 			ent.model = b->model;
 			ent.flags = RF_FULLBRIGHT;
 			ent.angles[0] = pitch;
@@ -21465,7 +21429,6 @@ void CL_AddBeams (void)
 				ent.angles[2] = rand()%360;
 			}
 
-//			Com_Printf("B: %d -> %d\n", b->entity, b->dest_entity);
 			V_AddEntity (&ent);
 
 			for (j=0 ; j<3 ; j++)
@@ -21632,11 +21595,9 @@ void CL_AddPlayerBeams (void)
 			if (b->entity != cl.playernum+1)
 			{
 				framenum = 2;
-//				Com_Printf ("Third person\n");
 				ent.angles[0] = -pitch;
 				ent.angles[1] = yaw + 180.0;
 				ent.angles[2] = 0;
-//				Com_Printf ("%f %f - %f %f %f\n", -pitch, yaw+180.0, b->offset[0], b->offset[1], b->offset[2]);
 				AngleVectors(ent.angles, f, r, u);
 
 				// if it's a non-origin offset, it's a player, so use the hardcoded player offset
@@ -21689,12 +21650,9 @@ void CL_AddPlayerBeams (void)
 		// through the tesla mine (instead it goes through the target)
 		if ((b->model == cl_mod_lightning) && (d <= model_length))
 		{
-//			Com_Printf ("special case\n");
 			VectorCopy (b->end, ent.origin);
 			// offset to push beam outside of tesla model (negative because dist is from end to start
 			// for this beam)
-//			for (j=0 ; j<3 ; j++)
-//				ent.origin[j] -= dist[j]*10.0;
 			ent.model = b->model;
 			ent.flags = RF_FULLBRIGHT;
 			ent.angles[0] = pitch;
@@ -21709,13 +21667,10 @@ void CL_AddPlayerBeams (void)
 			ent.model = b->model;
 			if(cl_mod_heatbeam && (b->model == cl_mod_heatbeam))
 			{
-//				ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
-//				ent.alpha = 0.3;
 				ent.flags = RF_FULLBRIGHT;
 				ent.angles[0] = -pitch;
 				ent.angles[1] = yaw + 180.0;
 				ent.angles[2] = (cl.time) % 360;
-//				ent.angles[2] = rand()%360;
 				ent.frame = framenum;
 			}
 			else if (b->model == cl_mod_lightning)
@@ -21732,7 +21687,6 @@ void CL_AddPlayerBeams (void)
 				ent.angles[2] = rand()%360;
 			}
 
-//			Com_Printf("B: %d -> %d\n", b->entity, b->dest_entity);
 			V_AddEntity (&ent);
 
 			for (j=0 ; j<3 ; j++)
@@ -22127,13 +22081,13 @@ static void CL_PrepRefresh() {
 
 	void R_BeginRegistration (char *model);
 	R_BeginRegistration(mapname);
-	Com_Printf ("                                     \r");
+	add_line_to_console_log(STR("                                     "));
 
 	// precache status bar pics
-	Com_Printf ("pics\r");
+	add_line_to_console_log(STR("pics"));
 	SCR_UpdateScreen ();
 	SCR_TouchPics ();
-	Com_Printf ("                                     \r");
+	add_line_to_console_log(STR("                                     "));
 
 	CL_RegisterTEntModels ();
 
@@ -22166,7 +22120,7 @@ static void CL_PrepRefresh() {
 				cl.model_clip[i] = NULL;
 		}
 		if (name[0] != '*')
-			Com_Printf ("                                     \r");
+			add_line_to_console_log(STR("                                     "));
 	}
 
 	Com_Printf ("images\r", i);
@@ -22176,7 +22130,7 @@ static void CL_PrepRefresh() {
 		cl.image_precache[i] = Draw_FindPic (cl.configstrings[CS_IMAGES+i]);
 	}
 
-	Com_Printf ("                                     \r");
+	add_line_to_console_log(STR("                                     "));
 	for (i=0 ; i<MAX_CLIENTS ; i++)
 	{
 		if (!cl.configstrings[CS_PLAYERSKINS+i][0])
@@ -22184,7 +22138,7 @@ static void CL_PrepRefresh() {
 		Com_Printf ("client %i\r", i);
 		SCR_UpdateScreen ();
 		CL_ParseClientinfo (i);
-		Com_Printf ("                                     \r");
+		add_line_to_console_log(STR("                                     "));
 	}
 
 	CL_LoadClientinfo (&cl.baseclientinfo, "unnamed\\male/grunt");
@@ -22196,7 +22150,7 @@ static void CL_PrepRefresh() {
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f",
 		&axis[0], &axis[1], &axis[2]);
 	R_SetSky (cl.configstrings[CS_SKY], rotate, axis);
-	Com_Printf ("                                     \r");
+	add_line_to_console_log(STR("                                     "));
 
 	// the renderer can now free unneeded stuff
 
@@ -22631,7 +22585,7 @@ void Key_Unbind_f (void)
 
 	if (cmd_argc != 2)
 	{
-		Com_Printf ("unbind <key> : remove commands from a key\n");
+		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
 		return;
 	}
 
@@ -22669,7 +22623,7 @@ void Key_Bind_f (void)
 
 	if (c < 2)
 	{
-		Com_Printf ("bind <key> [command] : attach a command to a key\n");
+		add_line_to_console_log(STR("bind <key> [command] : attach a command to a key"));
 		return;
 	}
 	b = Key_StringToKeynum (Cmd_Argv(1));
@@ -24824,7 +24778,6 @@ void S_Spatialize(channel_t *ch);
 #endif	// SND_LOC_H
 
 void S_Play(void);
-void S_SoundList(void);
 
 
 // =======================================================================
@@ -25528,49 +25481,10 @@ void S_Play(void)
 	}
 }
 
-void S_SoundList(void)
-{
-	int		i;
-	sfx_t	*sfx;
-	sfxcache_t	*sc;
-	int		size, total;
-
-	total = 0;
-	for (sfx=known_sfx, i=0 ; i<num_sfx ; i++, sfx++)
-	{
-		if (!sfx->registration_sequence)
-			continue;
-		sc = sfx->cache;
-		if (sc)
-		{
-			size = sc->length*sc->width*(sc->stereo+1);
-			total += size;
-			if (sc->loopstart >= 0)
-				Com_Printf ("L");
-			else
-				Com_Printf (" ");
-			Com_Printf("(%2db) %6i : %s\n",sc->width*8,  size, sfx->name);
-		}
-		else
-		{
-			if (sfx->name[0] == '*')
-				Com_Printf("  placeholder : %s\n", sfx->name);
-			else
-				Com_Printf("  not loaded  : %s\n", sfx->name);
-		}
-	}
-	Com_Printf ("Total resident: %i\n", total);
-}
-
-int			cache_full_cycle;
+int cache_full_cycle;
 
 u8 *S_Alloc (int size);
 
-/*
-================
-ResampleSfx
-================
-*/
 void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
 {
 	int		outcount;
@@ -25654,7 +25568,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (sc)
 		return sc;
 
-//Com_Printf ("S_LoadSound: %x\n", (int)stackbuf);
 // load it in
 	if (s->truename)
 		name = s->truename;
@@ -25665,8 +25578,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		strcpy(namebuffer, &name[1]);
 	else
 		Com_sprintf (namebuffer, sizeof(namebuffer), "sound/%s", name);
-
-//	Com_Printf ("loading %s\n",namebuffer);
 
 	size = FS_LoadFile (namebuffer, (void **)&data);
 
@@ -25814,7 +25725,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	FindChunk("RIFF");
 	if (!(data_p && !strncmp((char*)data_p+8, "WAVE", 4)))
 	{
-		Com_Printf("Missing RIFF/WAVE chunks\n");
+		add_line_to_console_log(STR("Missing RIFF/WAVE chunks"));
 		return info;
 	}
 
@@ -25825,14 +25736,14 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	FindChunk("fmt ");
 	if (!data_p)
 	{
-		Com_Printf("Missing fmt chunk\n");
+		add_line_to_console_log(STR("Missing fmt chunk"));
 		return info;
 	}
 	data_p += 8;
 	format = GetLittleShort();
 	if (format != 1)
 	{
-		Com_Printf("Microsoft PCM format only\n");
+		add_line_to_console_log(STR("Microsoft PCM format only"));
 		return info;
 	}
 
@@ -25869,7 +25780,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	FindChunk("data");
 	if (!data_p)
 	{
-		Com_Printf("Missing data chunk\n");
+		add_line_to_console_log(STR("Missing data chunk"));
 		return info;
 	}
 
@@ -26385,7 +26296,6 @@ void FoundTarget (edict_t* self)
 	{
 		self->goalentity = self->movetarget = self->enemy;
 		HuntTarget (self);
-		PF_dprintf("%s at %s, combattarget %s not found\n", self->classname, vtos(self->s.origin), self->combattarget);
 		return;
 	}
 
@@ -29648,7 +29558,6 @@ void SP_func_door_rotating (edict_t *ent)
 
 	if (!st.distance)
 	{
-		PF_dprintf("%s at %s with no distance set\n", ent->classname, vtos(ent->s.origin));
 		st.distance = 90;
 	}
 
@@ -29913,7 +29822,6 @@ again:
 	ent = G_PickTarget (self->target);
 	if (!ent)
 	{
-		PF_dprintf ("train_next: bad target %s\n", self->target);
 		return;
 	}
 
@@ -29924,7 +29832,6 @@ again:
 	{
 		if (!first)
 		{
-			PF_dprintf ("connected teleport path_corners, see %s at %s\n", ent->classname, vtos(ent->s.origin));
 			return;
 		}
 		first = false;
@@ -29974,13 +29881,11 @@ void func_train_find (edict_t* self)
 
 	if (!self->target)
 	{
-		PF_dprintf ("train_find: no target\n");
 		return;
 	}
 	ent = G_PickTarget (self->target);
 	if (!ent)
 	{
-		PF_dprintf ("train_find: target %s not found\n", self->target);
 		return;
 	}
 	self->target = ent->target;
@@ -30058,10 +29963,6 @@ void SP_func_train (edict_t* self)
 		self->nextthink = level.time + FRAMETIME;
 		self->think = func_train_find;
 	}
-	else
-	{
-		PF_dprintf ("func_train without a target at %s\n", vtos(self->absmin));
-	}
 }
 
 // QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8)
@@ -30077,14 +29978,12 @@ static void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activa
 
 	if (!other->pathtarget)
 	{
-		PF_dprintf("elevator used with no pathtarget\n");
 		return;
 	}
 
 	target = G_PickTarget (other->pathtarget);
 	if (!target)
 	{
-		PF_dprintf("elevator used with bad pathtarget: %s\n", other->pathtarget);
 		return;
 	}
 
@@ -30096,18 +29995,15 @@ void trigger_elevator_init (edict_t* self)
 {
 	if (!self->target)
 	{
-		PF_dprintf("trigger_elevator has no target\n");
 		return;
 	}
 	self->movetarget = G_PickTarget (self->target);
 	if (!self->movetarget)
 	{
-		PF_dprintf("trigger_elevator unable to find target %s\n", self->target);
 		return;
 	}
 	if (strcmp(self->movetarget->classname, "func_train") != 0)
 	{
-		PF_dprintf("trigger_elevator target %s is not a train\n", self->target);
 		return;
 	}
 
@@ -30173,7 +30069,6 @@ void SP_func_timer (edict_t* self)
 	if (self->random >= self->wait)
 	{
 		self->random = self->wait - FRAMETIME;
-		PF_dprintf("func_timer at %s has random >= wait\n", vtos(self->s.origin));
 	}
 
 	if (self->spawnflags & 1)
@@ -31234,7 +31129,6 @@ void droptofloor (edict_t *ent)
 	tr = SV_Trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
 	if (tr.startsolid)
 	{
-		PF_dprintf ("droptofloor: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -31360,7 +31254,6 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 		if (strcmp(ent->classname, "key_power_cube") != 0)
 		{
 			ent->spawnflags = 0;
-			PF_dprintf("%s at %s has invalid spawnflags set\n", ent->classname, vtos(ent->s.origin));
 		}
 	}
 
@@ -32839,7 +32732,6 @@ void SP_path_corner (edict_t* self)
 {
 	if (!self->targetname)
 	{
-		PF_dprintf ("path_corner with no targetname at %s\n", vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -32873,7 +32765,6 @@ static void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 		other->goalentity = other->movetarget = G_PickTarget(other->target);
 		if (!other->goalentity)
 		{
-			PF_dprintf("%s at %s target %s does not exist\n", self->classname, vtos(self->s.origin), self->target);
 			other->movetarget = self;
 		}
 		self->target = NULL;
@@ -32934,7 +32825,6 @@ void TH_viewthing(edict_t *ent)
 
 void SP_viewthing(edict_t *ent)
 {
-	PF_dprintf ("viewthing spawned\n");
 
 	ent->movetype = MOVETYPE_NONE;
 	ent->solid = SOLID_BBOX;
@@ -33077,7 +32967,6 @@ void SP_func_wall (edict_t* self)
 	{
 		if (!(self->spawnflags & 2))
 		{
-			PF_dprintf("func_wall START_ON without TOGGLE\n");
 			self->spawnflags |= 2;
 		}
 	}
@@ -33719,7 +33608,6 @@ void SP_misc_viper (edict_t *ent)
 {
 	if (!ent->target)
 	{
-		PF_dprintf ("misc_viper without a target at %s\n", vtos(ent->absmin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -33853,7 +33741,6 @@ void SP_misc_strogg_ship (edict_t *ent)
 {
 	if (!ent->target)
 	{
-		PF_dprintf ("%s without a target at %s\n", ent->classname, vtos(ent->absmin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -34193,14 +34080,12 @@ void SP_func_clock (edict_t* self)
 {
 	if (!self->target)
 	{
-		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	if ((self->spawnflags & 2) && (!self->count))
 	{
-		PF_dprintf("%s with no count at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -34234,7 +34119,6 @@ static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csu
 	dest = G_Find (NULL, FOFS(targetname), self->target);
 	if (!dest)
 	{
-		PF_dprintf ("Couldn't find destination\n");
 		return;
 	}
 
@@ -34277,7 +34161,6 @@ void SP_misc_teleporter (edict_t *ent)
 
 	if (!ent->target)
 	{
-		PF_dprintf ("teleporter without a target.\n");
 		G_FreeEdict (ent);
 		return;
 	}
@@ -34860,8 +34743,6 @@ bool monster_start (edict_t* self)
 	if (st.item)
 	{
 		self->item = FindItemByClassname (st.item);
-		if (!self->item)
-			PF_dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
 	}
 
 	// randomize what frame they start on
@@ -34881,12 +34762,10 @@ void monster_start_go (edict_t* self)
 	// check for target to combat_point and change to combattarget
 	if (self->target)
 	{
-		bool	notcombat;
 		bool	fixup;
 		edict_t		*target;
 
 		target = NULL;
-		notcombat = false;
 		fixup = false;
 		while ((target = G_Find (target, FOFS(targetname), self->target)) != NULL)
 		{
@@ -34895,13 +34774,7 @@ void monster_start_go (edict_t* self)
 				self->combattarget = self->target;
 				fixup = true;
 			}
-			else
-			{
-				notcombat = true;
-			}
 		}
-		if (notcombat && self->combattarget)
-			PF_dprintf("%s at %s has target with mixed types\n", self->classname, vtos(self->s.origin));
 		if (fixup)
 			self->target = NULL;
 	}
@@ -34912,16 +34785,7 @@ void monster_start_go (edict_t* self)
 		edict_t		*target;
 
 		target = NULL;
-		while ((target = G_Find (target, FOFS(targetname), self->combattarget)) != NULL)
-		{
-			if (strcmp(target->classname, "point_combat") != 0)
-			{
-				PF_dprintf("%s at (%i %i %i) has a bad combattarget %s : %s at (%i %i %i)\n",
-					self->classname, (int)self->s.origin[0], (int)self->s.origin[1], (int)self->s.origin[2],
-					self->combattarget, target->classname, (int)target->s.origin[0], (int)target->s.origin[1],
-					(int)target->s.origin[2]);
-			}
-		}
+		while ((target = G_Find (target, FOFS(targetname), self->combattarget)) != NULL) {}
 	}
 
 	if (self->target)
@@ -34929,7 +34793,6 @@ void monster_start_go (edict_t* self)
 		self->goalentity = self->movetarget = G_PickTarget(self->target);
 		if (!self->movetarget)
 		{
-			PF_dprintf ("%s can't find target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
 			self->target = NULL;
 			self->monsterinfo.pausetime = 100000000;
 			self->monsterinfo.stand (self);
@@ -34964,10 +34827,6 @@ void walkmonster_start_go (edict_t* self)
 	if (!(self->spawnflags & 2) && level.time < 1)
 	{
 		M_droptofloor (self);
-
-		if (self->groundentity)
-			if (!M_walkmove (self, 0, 0))
-				PF_dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 	}
 
 	if (!self->yaw_speed)
@@ -34989,9 +34848,6 @@ void walkmonster_start (edict_t* self)
 
 void flymonster_start_go (edict_t* self)
 {
-	if (!M_walkmove (self, 0, 0))
-		PF_dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
-
 	if (!self->yaw_speed)
 		self->yaw_speed = 10;
 	self->viewheight = 25;
@@ -36068,8 +35924,6 @@ static field_t clientfields[] = {
 // This will be called when the dll is first loaded,
 // which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
-	PF_dprintf ("==== InitGame ====\n");
-
 	gun_x = COM_GetCvar ("gun_x", "0", 0);
 	gun_y = COM_GetCvar ("gun_y", "0", 0);
 	gun_z = COM_GetCvar ("gun_z", "0", 0);
@@ -36866,7 +36720,6 @@ void ED_CallSpawn (edict_t *ent)
 
 	if (!ent->classname)
 	{
-		PF_dprintf ("ED_CallSpawn: NULL classname\n");
 		return;
 	}
 
@@ -36891,7 +36744,6 @@ void ED_CallSpawn (edict_t *ent)
 			return;
 		}
 	}
-	PF_dprintf ("%s doesn't have a spawn function\n", ent->classname);
 }
 
 /*
@@ -36985,7 +36837,6 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
 			return;
 		}
 	}
-	PF_dprintf ("%s is not a field\n", key);
 }
 
 // Parses an edict out of the given string, returning the new position
@@ -37046,10 +36897,7 @@ void G_FindTeams (void)
 {
 	edict_t	*e, *e2, *chain;
 	int		i, j;
-	int		c, c2;
 
-	c = 0;
-	c2 = 0;
 	for (i=1, e=g_edicts+i ; i < global_num_edicts ; i++,e++)
 	{
 		if (!e->inuse)
@@ -37060,8 +36908,6 @@ void G_FindTeams (void)
 			continue;
 		chain = e;
 		e->teammaster = e;
-		c++;
-		c2++;
 		for (j=i+1, e2=e+1 ; j < global_num_edicts ; j++,e2++)
 		{
 			if (!e2->inuse)
@@ -37072,7 +36918,6 @@ void G_FindTeams (void)
 				continue;
 			if (!strcmp(e->team, e2->team))
 			{
-				c2++;
 				chain->teamchain = e2;
 				e2->teammaster = e;
 				chain = e2;
@@ -37081,14 +36926,12 @@ void G_FindTeams (void)
 		}
 	}
 
-	PF_dprintf ("%i teams with %i entities\n", c, c2);
 }
 
 // Creates a server's entity / program execution context by parsing textual entity definitions out of an ent file.
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 {
 	edict_t		*ent;
-	int			inhibit;
 	char		*com_token;
 	float		skill_level;
 
@@ -37114,9 +36957,8 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	g_edicts[1].client = &game.client;
 
 	ent = NULL;
-	inhibit = 0;
 
-// parse ents
+	// parse ents
 	while (1)
 	{
 		// parse the opening brace
@@ -37144,7 +36986,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 				)
 				{
 					G_FreeEdict (ent);
-					inhibit++;
 					continue;
 				}
 
@@ -37154,7 +36995,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		ED_CallSpawn (ent);
 	}
 
-	PF_dprintf ("%i entities inhibited\n", inhibit);
 
 	G_FindTeams ();
 
@@ -37600,7 +37440,6 @@ void SP_target_speaker (edict_t *ent)
 
 	if(!st.noise)
 	{
-		PF_dprintf("target_speaker with no noise set at %s\n", vtos(ent->s.origin));
 		return;
 	}
 	if (!strstr (st.noise, ".wav"))
@@ -37648,7 +37487,6 @@ void SP_target_help(edict_t *ent)
 {
 	if (!ent->message)
 	{
-		PF_dprintf ("%s with no message at %s\n", ent->classname, vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -37780,7 +37618,6 @@ void SP_target_changelevel (edict_t *ent)
 {
 	if (!ent->map)
 	{
-		PF_dprintf("target_changelevel with no map at %s\n", vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
@@ -38088,8 +37925,6 @@ void target_laser_start (edict_t* self)
 		if (self->target)
 		{
 			ent = G_Find (NULL, FOFS(targetname), self->target);
-			if (!ent)
-				PF_dprintf ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
 			self->enemy = ent;
 		}
 		else
@@ -38165,11 +38000,7 @@ static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activat
 			e = G_Find (e, FOFS(targetname), self->target);
 			if (!e)
 				break;
-			if (strcmp(e->classname, "light") != 0)
-			{
-				PF_dprintf("%s at %s target %s (%s at %s) is not a light\n", self->classname, vtos(self->s.origin), self->target, e->classname, vtos(e->s.origin));
-			}
-			else
+			if (strcmp(e->classname, "light") == 0)
 			{
 				self->enemy = e;
 			}
@@ -38177,7 +38008,6 @@ static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activat
 
 		if (!self->enemy)
 		{
-			PF_dprintf("%s target %s not found at %s\n", self->classname, self->target, vtos(self->s.origin));
 			G_FreeEdict (self);
 			return;
 		}
@@ -38191,14 +38021,12 @@ void SP_target_lightramp (edict_t* self)
 {
 	if (!self->message || strlen(self->message) != 2 || self->message[0] < 'a' || self->message[0] > 'z' || self->message[1] < 'a' || self->message[1] > 'z' || self->message[0] == self->message[1])
 	{
-		PF_dprintf("target_lightramp has bad ramp (%s) at %s\n", self->message, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	if (!self->target)
 	{
-		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -38262,8 +38090,6 @@ static void target_earthquake_use(edict_t* self, edict_t* other, edict_t* activa
 
 void SP_target_earthquake (edict_t* self)
 {
-	if (!self->targetname)
-		PF_dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
 
 	if (!self->count)
 		self->count = 5;
@@ -38444,7 +38270,6 @@ void SP_trigger_once(edict_t *ent)
 		VectorMA (ent->mins, 0.5, ent->size, v);
 		ent->spawnflags &= ~1;
 		ent->spawnflags |= 4;
-		PF_dprintf("fixed TRIGGERED flag on %s at %s\n", ent->classname, vtos(v));
 	}
 
 	ent->wait = -1;
@@ -38511,20 +38336,17 @@ void SP_trigger_key (edict_t* self)
 {
 	if (!st.item)
 	{
-		PF_dprintf("no key item for trigger_key at %s\n", vtos(self->s.origin));
 		return;
 	}
 	self->item = FindItemByClassname (st.item);
 
 	if (!self->item)
 	{
-		PF_dprintf("item %s not found for trigger_key at %s\n", st.item, vtos(self->s.origin));
 		return;
 	}
 
 	if (!self->target)
 	{
-		PF_dprintf("%s at %s has no target\n", self->classname, vtos(self->s.origin));
 		return;
 	}
 
@@ -38775,7 +38597,6 @@ void SP_trigger_gravity (edict_t* self)
 {
 	if (st.gravity == 0)
 	{
-		PF_dprintf("trigger_gravity without gravity set at %s\n", vtos(self->s.origin));
 		G_FreeEdict  (self);
 		return;
 	}
@@ -39022,11 +38843,7 @@ void turret_breach_think (edict_t* self)
 void turret_breach_finish_init (edict_t* self)
 {
 	// get and save info for muzzle location
-	if (!self->target)
-	{
-		PF_dprintf("%s at %s needs a target\n", self->classname, vtos(self->s.origin));
-	}
-	else
+	if (self->target)
 	{
 		self->target_ent = G_PickTarget (self->target);
 		VectorSubtract (self->target_ent->s.origin, self->s.origin, self->move_origin);
@@ -39237,8 +39054,6 @@ void SP_turret_driver (edict_t* self)
 	if (st.item)
 	{
 		self->item = FindItemByClassname (st.item);
-		if (!self->item)
-			PF_dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
 	}
 
 	self->think = turret_driver_link;
@@ -39355,7 +39170,6 @@ edict_t *G_PickTarget (char *targetname)
 
 	if (!targetname)
 	{
-		PF_dprintf("G_PickTarget called with NULL targetname\n");
 		return NULL;
 	}
 
@@ -39371,7 +39185,6 @@ edict_t *G_PickTarget (char *targetname)
 
 	if (!num_choices)
 	{
-		PF_dprintf("G_PickTarget: target %s not found\n", targetname);
 		return NULL;
 	}
 
@@ -39417,8 +39230,6 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 		t->nextthink = level.time + ent->delay;
 		t->think = Think_Delay;
 		t->activator = activator;
-		if (!activator)
-			PF_dprintf ("Think_Delay with no activator\n");
 		t->message = ent->message;
 		t->target = ent->target;
 		t->killtarget = ent->killtarget;
@@ -39449,7 +39260,6 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 			G_FreeEdict (t);
 			if (!ent->inuse)
 			{
-				PF_dprintf("entity was removed while using killtargets\n");
 				return;
 			}
 		}
@@ -39468,18 +39278,13 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 				(!Q_stricmp(ent->classname, "func_door") || !Q_stricmp(ent->classname, "func_door_rotating")))
 				continue;
 
-			if (t == ent)
-			{
-				PF_dprintf ("WARNING: Entity used itself.\n");
-			}
-			else
+			if (t != ent)
 			{
 				if (t->use)
 					t->use (t, ent, activator);
 			}
 			if (!ent->inuse)
 			{
-				PF_dprintf("entity was removed while using targets\n");
 				return;
 			}
 		}
@@ -41027,7 +40832,6 @@ static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
 	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0))
 	{
-		PF_dprintf ("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
 		self->target = NULL;
 		self->monsterinfo.pausetime = 100000000;
 		self->monsterinfo.stand (self);
@@ -41044,14 +40848,12 @@ void SP_misc_actor (edict_t* self)
 {
 	if (!self->targetname)
 	{
-		PF_dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
 
 	if (!self->target)
 	{
-		PF_dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
 		G_FreeEdict (self);
 		return;
 	}
@@ -41197,9 +40999,6 @@ static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 
 void SP_target_actor (edict_t* self)
 {
-	if (!self->targetname)
-		PF_dprintf ("%s with no targetname at %s\n", self->classname, vtos(self->s.origin));
-
 	self->solid = SOLID_TRIGGER;
 	self->touch = target_actor_touch;
 	VectorSet (self->mins, -8, -8, -8);
@@ -58840,7 +58639,7 @@ void GL_TextureMode( char *string )
 
 	if (i == (int)carray_count(modes))
 	{
-		Com_Printf("bad filter name\n");
+		add_line_to_console_log(STR("bad filter name"));
 		return;
 	}
 
@@ -58871,7 +58670,7 @@ void GL_TextureAlphaMode( char *string )
 
 	if (i == (int)carray_count(gl_alpha_modes))
 	{
-		Com_Printf("bad alpha texture mode name\n");
+		add_line_to_console_log(STR("bad alpha texture mode name"));
 		return;
 	}
 
@@ -58890,7 +58689,7 @@ void GL_TextureSolidMode( char *string )
 
 	if (i == (int)carray_count(gl_solid_modes))
 	{
-		Com_Printf("bad solid texture mode name\n");
+		add_line_to_console_log(STR("bad solid texture mode name"));
 		return;
 	}
 
@@ -61203,12 +61002,8 @@ void Mod_LoadTexinfo (lump_t *l)
 			out->next = NULL;
 		Com_sprintf (name, sizeof(name), "textures/%s.wal", in->texture);
 
-		out->image = GL_FindImage (name, it_wall);
-		if (!out->image)
-		{
-			Com_Printf("Couldn't load %s\n", name);
-			out->image = r_notexture;
-		}
+		out->image = GL_FindImage(name, it_wall);
+		assert(out->image);
 	}
 
 	// count animation frames
@@ -65283,7 +65078,7 @@ void GLimp_BeginFrame()
 		if ( gl_bitdepth->value != 0 && !glw_state.allowdisplaydepthchange )
 		{
 			COM_SetValueCvar( "gl_bitdepth", 0 );
-			Com_Printf("gl_bitdepth requires Win95 OSR2.x or WinNT 4.x\n");
+			add_line_to_console_log(STR("gl_bitdepth requires Win95 OSR2.x or WinNT 4.x"));
 		}
 		gl_bitdepth->modified = false;
 	}
@@ -65730,7 +65525,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("-mlook", IN_MLookUp);
 		Cmd_AddCommand("play", S_Play);
 		Cmd_AddCommand("stopsound", S_StopAllSounds);
-		Cmd_AddCommand("soundlist", S_SoundList);
 		Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 	}
 
