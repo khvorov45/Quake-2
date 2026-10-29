@@ -16568,7 +16568,6 @@ void CL_DrawInventory (void)
 //
 // userinfo
 //
-cvar_t	*skin;
 cvar_t	*fov;
 cvar_t	*msg;
 
@@ -64276,7 +64275,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
 		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
 		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
 		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
