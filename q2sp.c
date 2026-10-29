@@ -62934,9 +62934,6 @@ extern RECT		window_rect;
 cvar_t	*in_mouse;
 bool	in_appactive;
 
-// mouse variables
-cvar_t	*m_filter;
-
 bool	mlooking;
 
 void IN_MLookDown (void) { mlooking = true; }
@@ -62947,7 +62944,7 @@ void IN_MLookUp (void) {
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
 POINT		current_pos;
-int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
+int			mouse_x, mouse_y, mx_accum, my_accum;
 
 int			old_x, old_y;
 
@@ -63080,19 +63077,8 @@ void IN_MouseMove (usercmd_t *cmd)
 	mx = current_pos.x - window_center_x;
 	my = current_pos.y - window_center_y;
 
-	if (m_filter->value)
-	{
-		mouse_x = (mx + old_mouse_x) * 0.5;
-		mouse_y = (my + old_mouse_y) * 0.5;
-	}
-	else
-	{
-		mouse_x = mx;
-		mouse_y = my;
-	}
-
-	old_mouse_x = mx;
-	old_mouse_y = my;
+	mouse_x = mx;
+	mouse_y = my;
 
 	float sensitivity = 3.0f;
 	mouse_x *= sensitivity;
@@ -64256,7 +64242,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		m_filter = COM_GetCvar("m_filter", "0", 0);
 		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
 		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
 		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
