@@ -17206,7 +17206,6 @@ static cheatvar_t cheatvars[] = {
 	{"cl_testlights", "0", 0},
 	{"r_drawflat", "0", 0},
 	{"sw_draworder", "0", 0},
-	{"gl_saturatelighting", "0", 0},
 	{NULL, NULL, 0},
 };
 
@@ -57922,16 +57921,6 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_clear;
-static cvar_t* gl_cull;
-static cvar_t* gl_polyblend;
-static cvar_t* gl_playermip;
-static cvar_t* gl_saturatelighting;
-static cvar_t* gl_texturemode;
-static cvar_t* gl_texturealphamode;
-static cvar_t* gl_texturesolidmode;
-static cvar_t* gl_lockpvs;
-
 void R_TranslatePlayerSkin (int playernum);
 
 void R_LightPoint (vec3_t p, vec3_t color);
@@ -61132,8 +61121,6 @@ void R_EndRegistration (void)
 	GL_FreeUnusedImages ();
 }
 
-void R_Clear (void);
-
 float		gldepthmin, gldepthmax;
 
 
@@ -61399,8 +61386,6 @@ R_PolyBlend
 */
 void R_PolyBlend (void)
 {
-	if (!gl_polyblend->value)
-		return;
 	if (!v_blend[3])
 		return;
 
@@ -61451,16 +61436,9 @@ void MYgluPerspective( GLdouble fovy, GLdouble aspect,
    glFrustum( xmin, xmax, ymin, ymax, zNear, zFar );
 }
 
-
-/*
-=============
-R_SetupGL
-=============
-*/
 void R_SetupGL (void)
 {
 	float	screenaspect;
-//	float	yfov;
 	int		x, x2, y2, y, w, h;
 
 	//
@@ -61501,30 +61479,18 @@ void R_SetupGL (void)
 	//
 	// set drawing parms
 	//
-	if (gl_cull->value)
-		glEnable(GL_CULL_FACE);
-	else
-		glDisable(GL_CULL_FACE);
-
+	glEnable(GL_CULL_FACE);
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
 	glEnable(GL_DEPTH_TEST);
 }
 
-void R_Clear (void)
-{
-	{
-		if (gl_clear->value)
-			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		else
-			glClear (GL_DEPTH_BUFFER_BIT);
-		gldepthmin = 0;
-		gldepthmax = 1;
-		glDepthFunc (GL_LEQUAL);
-	}
-
-	glDepthRange (gldepthmin, gldepthmax);
-
+static void R_Clear() {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	gldepthmin = 0;
+	gldepthmax = 1;
+	glDepthFunc(GL_LEQUAL);
+	glDepthRange(gldepthmin, gldepthmax);
 }
 
 void R_Flash( void )
@@ -61611,27 +61577,6 @@ static void R_BeginFrame() {
 	glDisable (GL_BLEND);
 	glEnable (GL_ALPHA_TEST);
 	glColor4f (1,1,1,1);
-
-	/*
-	** texturemode stuff
-	*/
-	if ( gl_texturemode->modified )
-	{
-		GL_TextureMode( gl_texturemode->string );
-		gl_texturemode->modified = false;
-	}
-
-	if ( gl_texturealphamode->modified )
-	{
-		GL_TextureAlphaMode( gl_texturealphamode->string );
-		gl_texturealphamode->modified = false;
-	}
-
-	if ( gl_texturesolidmode->modified )
-	{
-		GL_TextureSolidMode( gl_texturesolidmode->string );
-		gl_texturesolidmode->modified = false;
-	}
 
 	R_Clear ();
 }
@@ -61894,14 +61839,7 @@ void R_BlendLightmaps (void)
 
 	glEnable (GL_BLEND);
 
-	if ( gl_saturatelighting->value )
-	{
-		glBlendFunc( GL_ONE, GL_ONE );
-	}
-	else
-	{
-		glBlendFunc (GL_ZERO, GL_SRC_COLOR );
-	}
+	glBlendFunc (GL_ZERO, GL_SRC_COLOR );
 
 	/*
 	** render static lightmaps first
@@ -62474,11 +62412,6 @@ void R_MarkLeaves (void)
 	int		cluster;
 
 	if (r_oldviewcluster == r_viewcluster && r_oldviewcluster2 == r_viewcluster2 && r_viewcluster != -1)
-		return;
-
-	// development aid to let you run around and see exactly where
-	// the pvs ends
-	if (gl_lockpvs->value)
 		return;
 
 	r_visframecount++;
@@ -64870,15 +64803,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_clear = COM_GetCvar ("gl_clear", "0", 0);
-		gl_cull = COM_GetCvar ("gl_cull", "1", 0);
-		gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
-		gl_playermip = COM_GetCvar ("gl_playermip", "0", 0);
-		gl_texturemode = COM_GetCvar( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-		gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
-		gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
-		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 		intensity = COM_GetCvar("intensity", "2", 0);
 		crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
 		cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
@@ -65431,9 +65355,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glShadeModel(GL_FLAT);
 
-		GL_TextureMode(gl_texturemode->string);
-		GL_TextureAlphaMode(gl_texturealphamode->string);
-		GL_TextureSolidMode(gl_texturesolidmode->string);
+		GL_TextureMode("GL_LINEAR_MIPMAP_NEAREST");
+		GL_TextureAlphaMode("default");
+		GL_TextureSolidMode("default");
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
