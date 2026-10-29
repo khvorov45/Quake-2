@@ -12432,8 +12432,6 @@ static struct {
 	clientinfo_t	baseclientinfo;
 } cl;
 
-extern	cvar_t	*m_side;
-
 extern	cvar_t	*cl_vwep;
 
 typedef struct
@@ -16567,13 +16565,9 @@ void CL_DrawInventory (void)
 
 }
 
-cvar_t	*m_side;
-
 //
 // userinfo
 //
-cvar_t	*info_password;
-cvar_t	*info_spectator;
 cvar_t	*name;
 cvar_t	*skin;
 cvar_t	*fov;
@@ -64283,9 +64277,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		m_side = COM_GetCvar ("m_side", "1", 0);
-		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
-		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
 		name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
 		skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
 		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
