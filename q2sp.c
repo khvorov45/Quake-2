@@ -16047,8 +16047,6 @@ void CL_ClearEffects (void)
 	CL_ClearLightStyles ();
 }
 
-cvar_t	*cl_nodelta;
-
 static unsigned sys_frame_time;
 unsigned	frame_msec;
 unsigned	old_sys_frame_time;
@@ -16425,12 +16423,7 @@ void CL_SendCmd (void)
 	checksumIndex = buf.cursize;
 	MSG_WriteByte (&buf, 0);
 
-	// let the server know what the last frame we
-	// got was, so the next message can be delta compressed
-	if (cl_nodelta->value || !cl.frame.valid)
-		MSG_WriteLong(&buf, -1);	// no compression
-	else
-		MSG_WriteLong(&buf, cl.frame.serverframe);
+	MSG_WriteLong(&buf, -1); // no compression
 
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
@@ -64263,7 +64256,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
 		m_filter = COM_GetCvar("m_filter", "0", 0);
 		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
 		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
