@@ -12434,7 +12434,6 @@ static struct {
 
 extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
-extern	cvar_t	*m_forward;
 extern	cvar_t	*m_side;
 
 extern	cvar_t	*cl_vwep;
@@ -16572,7 +16571,6 @@ void CL_DrawInventory (void)
 
 cvar_t	*m_pitch;
 cvar_t	*m_yaw;
-cvar_t	*m_forward;
 cvar_t	*m_side;
 
 //
@@ -64314,7 +64312,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
 		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
-		m_forward = COM_GetCvar ("m_forward", "1", 0);
 		m_side = COM_GetCvar ("m_side", "1", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
