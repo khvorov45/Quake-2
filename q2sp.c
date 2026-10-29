@@ -57923,8 +57923,6 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_nosubimage;
-static cvar_t* gl_vertex_arrays;
 static cvar_t* gl_particle_min_size;
 static cvar_t* gl_particle_max_size;
 static cvar_t* gl_particle_size;
@@ -59669,128 +59667,52 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 
 	GL_LerpVerts( paliashdr->num_xyz, v, ov, verts, lerp, move, frontv, backv );
 
-	if ( gl_vertex_arrays->value )
+	while (1)
 	{
-		float colorArray[MAX_VERTS*4];
-
-		glEnableClientState( GL_VERTEX_ARRAY );
-		glVertexPointer( 3, GL_FLOAT, 16, s_lerped );	// padded for SIMD
-
-		// PMM - added double damage shell
-		if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM) )
+		// get the vertex count and primitive type
+		count = *order++;
+		if (!count)
+			break;		// done
+		if (count < 0)
 		{
-			glColor4f( shadelight[0], shadelight[1], shadelight[2], alpha );
+			count = -count;
+			glBegin (GL_TRIANGLE_FAN);
 		}
 		else
 		{
-			glEnableClientState( GL_COLOR_ARRAY );
-			glColorPointer( 3, GL_FLOAT, 0, colorArray );
-
-			//
-			// pre light everything
-			//
-			for ( i = 0; i < paliashdr->num_xyz; i++ )
-			{
-				float l = shadedots[verts[i].lightnormalindex];
-
-				colorArray[i*3+0] = l * shadelight[0];
-				colorArray[i*3+1] = l * shadelight[1];
-				colorArray[i*3+2] = l * shadelight[2];
-			}
+			glBegin (GL_TRIANGLE_STRIP);
 		}
 
-		while (1)
+		if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE ) )
 		{
-			// get the vertex count and primitive type
-			count = *order++;
-			if (!count)
-				break;		// done
-			if (count < 0)
+			do
 			{
-				count = -count;
-				glBegin (GL_TRIANGLE_FAN);
-			}
-			else
-			{
-				glBegin (GL_TRIANGLE_STRIP);
-			}
+				index_xyz = order[2];
+				order += 3;
 
-			// PMM - added double damage shell
-			if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM) )
-			{
-				do
-				{
-					index_xyz = order[2];
-					order += 3;
+				glColor4f( shadelight[0], shadelight[1], shadelight[2], alpha);
+				glVertex3fv (s_lerped[index_xyz]);
 
-					glVertex3fv( s_lerped[index_xyz] );
-
-				} while (--count);
-			}
-			else
-			{
-				do
-				{
-					// texture coordinates come from the draw list
-					glTexCoord2f (((float *)order)[0], ((float *)order)[1]);
-					index_xyz = order[2];
-					order += 3;
-					glArrayElement( index_xyz );
-
-				} while (--count);
-			}
-			glEnd ();
+			} while (--count);
 		}
-	}
-	else
-	{
-		while (1)
+		else
 		{
-			// get the vertex count and primitive type
-			count = *order++;
-			if (!count)
-				break;		// done
-			if (count < 0)
+			do
 			{
-				count = -count;
-				glBegin (GL_TRIANGLE_FAN);
-			}
-			else
-			{
-				glBegin (GL_TRIANGLE_STRIP);
-			}
+				// texture coordinates come from the draw list
+				glTexCoord2f (((float *)order)[0], ((float *)order)[1]);
+				index_xyz = order[2];
+				order += 3;
 
-			if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE ) )
-			{
-				do
-				{
-					index_xyz = order[2];
-					order += 3;
+				// normals and vertexes come from the frame list
+				l = shadedots[verts[index_xyz].lightnormalindex];
 
-					glColor4f( shadelight[0], shadelight[1], shadelight[2], alpha);
-					glVertex3fv (s_lerped[index_xyz]);
-
-				} while (--count);
-			}
-			else
-			{
-				do
-				{
-					// texture coordinates come from the draw list
-					glTexCoord2f (((float *)order)[0], ((float *)order)[1]);
-					index_xyz = order[2];
-					order += 3;
-
-					// normals and vertexes come from the frame list
-					l = shadedots[verts[index_xyz].lightnormalindex];
-
-					glColor4f (l* shadelight[0], l*shadelight[1], l*shadelight[2], alpha);
-					glVertex3fv (s_lerped[index_xyz]);
-				} while (--count);
-			}
-
-			glEnd ();
+				glColor4f (l* shadelight[0], l*shadelight[1], l*shadelight[2], alpha);
+				glVertex3fv (s_lerped[index_xyz]);
+			} while (--count);
 		}
+
+		glEnd ();
 	}
 
 	// PMM - added double damage shell
@@ -65117,7 +65039,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
 		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
 		gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
 		gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
@@ -65142,7 +65063,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
 		gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
 		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-		gl_vertex_arrays = COM_GetCvar( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
 		gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
 		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 		intensity = COM_GetCvar("intensity", "2", 0);
