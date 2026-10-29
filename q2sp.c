@@ -57921,7 +57921,6 @@ extern	vec3_t	r_origin;
 //
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_lerpmodels;
 
 extern	cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
@@ -61287,7 +61286,6 @@ float	r_base_world_matrix[16];
 
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-cvar_t	*r_nocull;
 cvar_t	*r_lerpmodels;
 
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
@@ -61296,9 +61294,6 @@ cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 bool R_CullBox (vec3_t mins, vec3_t maxs)
 {
 	int		i;
-
-	if (r_nocull->value)
-		return false;
 
 	for (i=0 ; i<4 ; i++)
 		if (CM_BoxOnPlaneSide(mins, maxs, &frustum[i]) == 2)
@@ -65139,7 +65134,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_nocull = COM_GetCvar("r_nocull", "0", 0);
 		r_lerpmodels = COM_GetCvar("r_lerpmodels", "1", 0);
 		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		gl_nosubimage = COM_GetCvar( "gl_nosubimage", "0", 0 );
