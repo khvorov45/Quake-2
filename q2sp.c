@@ -4998,7 +4998,6 @@ void SV_Shutdown (char *finalmsg, bool reconnect);
 typedef struct {
 	char		userinfo[MAX_INFO_STRING];
 	char		netname[16];
-	int			hand;
 
 	bool	connected;			// a loadgame will leave valid entities that
 									// just don't have a connection yet
@@ -5235,11 +5234,6 @@ typedef enum {
 #define POWER_ARMOR_NONE		0
 #define POWER_ARMOR_SCREEN		1
 #define POWER_ARMOR_SHIELD		2
-
-// handedness values
-#define RIGHT_HANDED			0
-#define LEFT_HANDED				1
-#define CENTER_HANDED			2
 
 // game.serverflags values
 #define SFL_CROSS_TRIGGER_1		0x00000001
@@ -16711,7 +16705,6 @@ cvar_t	*name;
 cvar_t	*skin;
 cvar_t	*fov;
 cvar_t	*msg;
-cvar_t	*hand;
 
 cvar_t	*cl_vwep;
 
@@ -21292,8 +21285,6 @@ void CL_AddBeams (void)
 	}
 }
 
-extern cvar_t *hand;
-
 /*
 =================
 ROGUE - draw player locked beams
@@ -21317,21 +21308,7 @@ void CL_AddPlayerBeams (void)
 	frame_t		*oldframe;
 	player_state_t	*ps, *ops;
 
-//PMM
-	if (hand)
-	{
-		if (hand->value == 2)
-			hand_multiplier = 0;
-		else if (hand->value == 1)
-			hand_multiplier = -1;
-		else
-			hand_multiplier = 1;
-	}
-	else
-	{
-		hand_multiplier = 1;
-	}
-//PMM
+	hand_multiplier = 1;
 
 // update beams
 	for (i=0, b=cl_playerbeams ; i< MAX_BEAMS ; i++, b++)
@@ -21362,9 +21339,7 @@ void CL_AddPlayerBeams (void)
 				VectorMA (b->start, (hand_multiplier * b->offset[0]), cl.v_right, org);
 				VectorMA (     org, b->offset[1], cl.v_forward, org);
 				VectorMA (     org, b->offset[2], cl.v_up, org);
-				if ((hand) && (hand->value == 2)) {
-					VectorMA (org, -1, cl.v_up, org);
-				}
+
 				// FIXME - take these out when final
 				VectorCopy (cl.v_right, r);
 				VectorCopy (cl.v_forward, f);
@@ -21385,10 +21360,9 @@ void CL_AddPlayerBeams (void)
 			VectorAdd (b->start, b->offset, org);
 		}
 
-	// calculate pitch and yaw
+		// calculate pitch and yaw
 		VectorSubtract (b->end, org, dist);
 
-//PMM
 		if(cl_mod_heatbeam && (b->model == cl_mod_heatbeam) && (b->entity == cl.playernum+1))
 		{
 			vec_t len;
@@ -21398,11 +21372,7 @@ void CL_AddPlayerBeams (void)
 			VectorMA (dist, (hand_multiplier * b->offset[0]), r, dist);
 			VectorMA (dist, b->offset[1], f, dist);
 			VectorMA (dist, b->offset[2], u, dist);
-			if ((hand) && (hand->value == 2)) {
-				VectorMA (org, -1, cl.v_up, org);
-			}
 		}
-//PMM
 
 		if (dist[1] == 0 && dist[0] == 0)
 		{
@@ -54859,13 +54829,6 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	else if (ent->client->ps.fov > 160)
 		ent->client->ps.fov = 160;
 
-	// handedness
-	s = Info_ValueForKey (userinfo, "hand");
-	if (strlen(s))
-	{
-		ent->client->pers.hand = atoi(s);
-	}
-
 	// save off the userinfo in case we want to check something later
 	strncpy (ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo)-1);
 }
@@ -55400,8 +55363,7 @@ void G_SetStats (edict_t *ent)
 	//
 	if (ent->client->pers.helpchanged && (level.framenum&8) )
 		ent->client->ps.stats[STAT_HELPICON] = SV_ImageIndex ("i_help");
-	else if ( (ent->client->pers.hand == CENTER_HANDED || ent->client->ps.fov > 91)
-		&& ent->client->pers.weapon)
+	else if ( (ent->client->ps.fov > 91) && ent->client->pers.weapon)
 		ent->client->ps.stats[STAT_HELPICON] = SV_ImageIndex (ent->client->pers.weapon->icon);
 	else
 		ent->client->ps.stats[STAT_HELPICON] = 0;
@@ -56570,13 +56532,10 @@ void weapon_grenade_fire (edict_t *ent, bool held);
 
 static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
+	UNUSED(client);
 	vec3_t	_distance;
 
 	VectorCopy (distance, _distance);
-	if (client->pers.hand == LEFT_HANDED)
-		_distance[1] *= -1;
-	else if (client->pers.hand == CENTER_HANDED)
-		_distance[1] = 0;
 	G_ProjectSource (point, _distance, forward, right, result);
 }
 
@@ -57965,7 +57924,6 @@ extern	vec3_t	r_origin;
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 
-extern	cvar_t	*r_lefthand;
 extern	cvar_t	*r_drawentities;
 extern	cvar_t	*r_drawworld;
 
@@ -60058,12 +60016,6 @@ void R_DrawAliasModel (Entity *e)
 			return;
 	}
 
-	if ( e->flags & RF_WEAPONMODEL )
-	{
-		if ( r_lefthand->value == 2 )
-			return;
-	}
-
 	paliashdr = (dmdl_t *)currentmodel->extradata;
 
 	// get lighting information
@@ -60204,20 +60156,6 @@ void R_DrawAliasModel (Entity *e)
 	if (currententity->flags & RF_DEPTHHACK) // hack the depth range to prevent view model from poking into walls
 		glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
 
-	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
-	{
-		extern void MYgluPerspective( GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar );
-
-		glMatrixMode( GL_PROJECTION );
-		glPushMatrix();
-		glLoadIdentity();
-		glScalef( -1, 1, 1 );
-		MYgluPerspective( r_newrefdef.fov_y, ( float ) r_newrefdef.width / r_newrefdef.height,  4,  4096);
-		glMatrixMode( GL_MODELVIEW );
-
-		glCullFace( GL_BACK );
-	}
-
 	glPushMatrix ();
 	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
 	R_RotateForEntity (e);
@@ -60274,14 +60212,6 @@ void R_DrawAliasModel (Entity *e)
 	glShadeModel (GL_FLAT);
 
 	glPopMatrix ();
-
-	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
-	{
-		glMatrixMode( GL_PROJECTION );
-		glPopMatrix();
-		glMatrixMode( GL_MODELVIEW );
-		glCullFace( GL_FRONT );
-	}
 
 	if ( currententity->flags & RF_TRANSLUCENT )
 	{
@@ -61371,7 +61301,6 @@ cvar_t	*r_fullbright;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_lerpmodels;
-cvar_t	*r_lefthand;
 
 cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
@@ -65236,7 +65165,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
 		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
 		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
 		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
@@ -65320,7 +65248,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		name = COM_GetCvar ("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
 		skin = COM_GetCvar ("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
 		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
-		hand = COM_GetCvar ("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
 		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
 		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
