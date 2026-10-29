@@ -17212,7 +17212,6 @@ typedef struct {
 static cheatvar_t cheatvars[] = {
 	{"r_drawworld", "1", 0},
 	{"cl_testlights", "0", 0},
-	{"r_fullbright", "0", 0},
 	{"r_drawflat", "0", 0},
 	{"sw_draworder", "0", 0},
 	{"gl_lightmap", "0", 0},
@@ -57927,7 +57926,6 @@ extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 extern	cvar_t	*r_drawentities;
 extern	cvar_t	*r_drawworld;
 
-extern	cvar_t	*r_fullbright;
 extern	cvar_t	*r_novis;
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_lerpmodels;
@@ -61297,7 +61295,6 @@ int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 cvar_t	*r_drawentities;
 cvar_t	*r_drawworld;
-cvar_t	*r_fullbright;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_lerpmodels;
@@ -62118,9 +62115,6 @@ void R_BlendLightmaps (void)
 	int			i;
 	msurface_t	*surf, *newdrawsurf = 0;
 
-	// don't bother if we're set to fullbright
-	if (r_fullbright->value)
-		return;
 	if (!r_worldmodel->lightdata)
 		return;
 
@@ -65165,7 +65159,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
 		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
 		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
 		r_novis = COM_GetCvar("r_novis", "0", 0);
