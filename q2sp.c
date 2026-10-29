@@ -12432,27 +12432,6 @@ static struct {
 	clientinfo_t	baseclientinfo;
 } cl;
 
-extern	cvar_t	*cl_gun;
-extern	cvar_t	*cl_add_blend;
-extern	cvar_t	*cl_add_lights;
-extern	cvar_t	*cl_add_particles;
-extern	cvar_t	*cl_add_entities;
-extern	cvar_t	*cl_predict;
-extern	cvar_t	*cl_footsteps;
-extern	cvar_t	*cl_noskins;
-extern	cvar_t	*cl_autoskins;
-
-extern	cvar_t	*cl_upspeed;
-extern	cvar_t	*cl_forwardspeed;
-extern	cvar_t	*cl_sidespeed;
-
-extern	cvar_t	*cl_yawspeed;
-extern	cvar_t	*cl_pitchspeed;
-
-extern	cvar_t	*cl_run;
-
-extern	cvar_t	*cl_anglespeedkey;
-
 extern	cvar_t	*lookspring;
 extern	cvar_t	*lookstrafe;
 extern	cvar_t	*sensitivity;
@@ -13729,21 +13708,10 @@ void CL_AddPacketEntities (frame_t *frame)
 	}
 }
 
-
-
-/*
-==============
-CL_AddViewWeapon
-==============
-*/
 void CL_AddViewWeapon (player_state_t *ps, player_state_t *ops)
 {
 	Entity	gun;		// view model
 	int			i;
-
-	// allow the gun to be completely removed
-	if (!cl_gun->value)
-		return;
 
 	// don't draw gun if in wide angle view
 	if (ps->fov > 90)
@@ -13819,7 +13787,6 @@ void CL_CalcViewValues (void)
 	lerp = cl.lerpfrac;
 
 	// calculate the origin
-	if ((cl_predict->value))
 	{	// use predicted values
 		unsigned	delta;
 
@@ -13835,13 +13802,6 @@ void CL_CalcViewValues (void)
 		delta = cls.realtime - cl.predicted_step_time;
 		if (delta < 100)
 			cl.refdef.vieworg[2] -= cl.predicted_step * (100 - delta) * 0.01;
-	}
-	else
-	{	// just use interpolated values
-		for (i=0 ; i<3 ; i++)
-			cl.refdef.vieworg[i] = ops->pmove.origin[i]*0.125 + ops->viewoffset[i]
-				+ lerp * (ps->pmove.origin[i]*0.125 + ps->viewoffset[i]
-				- (ops->pmove.origin[i]*0.125 + ops->viewoffset[i]) );
 	}
 
 	// if not running a demo or on a locked frame, add the local angle movement
@@ -16078,8 +16038,7 @@ void CL_EntityEvent (entity_state_t *ent)
 		CL_TeleportParticles (ent->origin);
 		break;
 	case EV_FOOTSTEP:
-		if (cl_footsteps->value)
-			S_StartSound (NULL, ent->number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
+		S_StartSound (NULL, ent->number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
 		break;
 	case EV_FALLSHORT:
 		S_StartSound (NULL, ent->number, CHAN_AUTO, S_RegisterSound ("player/land1.wav"), 1, ATTN_NORM, 0);
@@ -16286,95 +16245,69 @@ float CL_KeyState (kbutton_t *key)
 	return val;
 }
 
-
-
-
-//==========================================================================
-
-cvar_t	*cl_upspeed;
-cvar_t	*cl_forwardspeed;
-cvar_t	*cl_sidespeed;
-
-cvar_t	*cl_yawspeed;
-cvar_t	*cl_pitchspeed;
-
-cvar_t	*cl_run;
-
-cvar_t	*cl_anglespeedkey;
-
-
-/*
-================
-CL_AdjustAngles
-
-Moves the local angle positions
-================
-*/
 void CL_AdjustAngles (void)
 {
 	float	speed;
 	float	up, down;
 
 	if (in_speed.state & 1)
-		speed = cls.frametime * cl_anglespeedkey->value;
+		speed = cls.frametime * 1.5f;
 	else
 		speed = cls.frametime;
 
 	if (!(in_strafe.state & 1))
 	{
-		cl.viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
-		cl.viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		float yawspeed = 140.0f;
+		cl.viewangles[YAW] -= speed * yawspeed * CL_KeyState(&in_right);
+		cl.viewangles[YAW] += speed * yawspeed * CL_KeyState(&in_left);
 	}
+
+	float pitchspeed = 150.0f;
 	if (in_klook.state & 1)
 	{
-		cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_KeyState (&in_forward);
-		cl.viewangles[PITCH] += speed*cl_pitchspeed->value * CL_KeyState (&in_back);
+		cl.viewangles[PITCH] -= speed * pitchspeed * CL_KeyState(&in_forward);
+		cl.viewangles[PITCH] += speed * pitchspeed * CL_KeyState(&in_back);
 	}
 
-	up = CL_KeyState (&in_lookup);
+	up = CL_KeyState(&in_lookup);
 	down = CL_KeyState(&in_lookdown);
 
-	cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
-	cl.viewangles[PITCH] += speed*cl_pitchspeed->value * down;
+	cl.viewangles[PITCH] -= speed * pitchspeed * up;
+	cl.viewangles[PITCH] += speed * pitchspeed * down;
 }
 
-/*
-================
-CL_BaseMove
-
-Send the intended movement message to the server
-================
-*/
+// Send the intended movement message to the server
 void CL_BaseMove (usercmd_t *cmd)
 {
 	CL_AdjustAngles ();
 
 	memset (cmd, 0, sizeof(*cmd));
 
+	float speed = 200.0f;
+
 	VectorCopy (cl.viewangles, cmd->angles);
 	if (in_strafe.state & 1)
 	{
-		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
-		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
+		cmd->sidemove += speed * CL_KeyState (&in_right);
+		cmd->sidemove -= speed * CL_KeyState (&in_left);
 	}
 
-	cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
-	cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+	cmd->sidemove += speed * CL_KeyState (&in_moveright);
+	cmd->sidemove -= speed * CL_KeyState (&in_moveleft);
 
-	cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
-	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
+	cmd->upmove += speed * CL_KeyState (&in_up);
+	cmd->upmove -= speed * CL_KeyState (&in_down);
 
 	if (! (in_klook.state & 1) )
 	{
-		cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
-		cmd->forwardmove -= cl_forwardspeed->value * CL_KeyState (&in_back);
+		cmd->forwardmove += speed * CL_KeyState (&in_forward);
+		cmd->forwardmove -= speed * CL_KeyState (&in_back);
 	}
 
-//
-// adjust for speed key / running
-//
-	if ( (in_speed.state & 1) ^ (int)(cl_run->value) )
-	{
+	//
+	// adjust for speed key / running
+	//
+	if ((in_speed.state & 1)) {
 		cmd->forwardmove *= 2;
 		cmd->sidemove *= 2;
 		cmd->upmove *= 2;
@@ -16649,20 +16582,6 @@ void CL_DrawInventory (void)
 
 
 }
-
-cvar_t	*freelook;
-
-cvar_t	*cl_noskins;
-cvar_t	*cl_autoskins;
-cvar_t	*cl_footsteps;
-cvar_t	*cl_predict;
-cvar_t	*cl_maxfps;
-cvar_t	*cl_gun;
-
-cvar_t	*cl_add_particles;
-cvar_t	*cl_add_lights;
-cvar_t	*cl_add_entities;
-cvar_t	*cl_add_blend;
 
 cvar_t	*lookspring;
 cvar_t	*lookstrafe;
@@ -18354,7 +18273,7 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 		s = t+1;
 	}
 
-	if (cl_noskins->value || *s == 0)
+	if (*s == 0)
 	{
 		Com_sprintf (model_filename, sizeof(model_filename), "players/male/tris.md2");
 		Com_sprintf (weapon_filename, sizeof(weapon_filename), "players/male/weapon.md2");
@@ -18690,9 +18609,6 @@ void CL_CheckPredictionError (void)
 	int		i;
 	int		len;
 
-	if (!cl_predict->value)
-		return;
-
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan.incoming_acknowledged;
 	frame &= (CMD_BACKUP-1);
@@ -18848,21 +18764,11 @@ void CL_PredictMovement (void)
 	int			oldframe;
 	usercmd_t	*cmd;
 	pmove_t		pm;
-	int			i;
 	int			step;
 	int			oldz;
 
 	if (cls.state != ca_active)
 		return;
-
-	if (!cl_predict->value)
-	{	// just set angles
-		for (i=0 ; i<3 ; i++)
-		{
-			cl.predicted_angles[i] = cl.viewangles[i] + SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[i]);
-		}
-		return;
-	}
 
 	ack = cls.netchan.incoming_acknowledged;
 	current = cls.netchan.outgoing_sequence;
@@ -18921,10 +18827,6 @@ float		scr_conlines;		// 0.0 to 1.0 lines of console to display
 int			scr_draw_loading;
 
 vrect_t		scr_vrect;		// position of render window on screen
-
-cvar_t		*scr_graphheight;
-cvar_t		*scr_graphscale;
-cvar_t		*scr_graphshift;
 
 char		crosshair_pic[MAX_QPATH];
 int			crosshair_width, crosshair_height;
@@ -21807,17 +21709,6 @@ void V_RenderView() {
 
 		cl.refdef.areabits = cl.frame.areabits;
 
-		if (!cl_add_entities->value)
-			r_numentities = 0;
-		if (!cl_add_particles->value)
-			r_numparticles = 0;
-		if (!cl_add_lights->value)
-			r_numdlights = 0;
-		if (!cl_add_blend->value)
-		{
-			VectorClear (cl.refdef.blend);
-		}
-
 		cl.refdef.num_entities = r_numentities;
 		cl.refdef.entities = r_entities;
 		cl.refdef.num_particles = r_numparticles;
@@ -22839,8 +22730,6 @@ static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
 static menuslider_s		s_options_sensitivity_slider;
-static menulist_s		s_options_freelook_box;
-static menulist_s		s_options_alwaysrun_box;
 static menulist_s		s_options_invertmouse_box;
 static menulist_s		s_options_lookspring_box;
 static menulist_s		s_options_lookstrafe_box;
@@ -23498,16 +23387,6 @@ static void CustomizeControlsFunc(void* unused) {
 	M_Menu_Keys_f();
 }
 
-static void AlwaysRunFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "cl_run", s_options_alwaysrun_box.curvalue );
-}
-
-static void FreeLookFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "freelook", s_options_freelook_box.curvalue );
-}
-
 static void InvertMouseFunc(void* unused) {
 	UNUSED(unused);
 	if (s_options_invertmouse_box.curvalue == 0) {
@@ -23531,9 +23410,6 @@ static void ControlsSetMenuItemValues() {
 	s_options_sfxvolume_slider.curvalue = Cvar_VariableValue("s_volume") * 10;
 	s_options_sensitivity_slider.curvalue = (sensitivity->value) * 2;
 
-	COM_SetValueCvar("cl_run", clamp(cl_run->value, 0, 1));
-	s_options_alwaysrun_box.curvalue = cl_run->value;
-
 	s_options_invertmouse_box.curvalue = m_pitch->value < 0;
 
 	COM_SetValueCvar("lookspring", clamp(lookspring->value, 0, 1));
@@ -23541,9 +23417,6 @@ static void ControlsSetMenuItemValues() {
 
 	COM_SetValueCvar("lookstrafe", clamp(lookstrafe->value, 0, 1));
 	s_options_lookstrafe_box.curvalue = lookstrafe->value;
-
-	COM_SetValueCvar("freelook", clamp(freelook->value, 0, 1));
-	s_options_freelook_box.curvalue = freelook->value;
 }
 
 static void ControlsResetDefaultsFunc(void* unused) {
@@ -23586,13 +23459,6 @@ static void Options_MenuInit() {
 	s_options_sensitivity_slider.minvalue		= 2;
 	s_options_sensitivity_slider.maxvalue		= 22;
 
-	s_options_alwaysrun_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_alwaysrun_box.generic.x	= 0;
-	s_options_alwaysrun_box.generic.y	= 60;
-	s_options_alwaysrun_box.generic.name	= "always run";
-	s_options_alwaysrun_box.generic.callback = AlwaysRunFunc;
-	s_options_alwaysrun_box.itemnames = yesno_names;
-
 	s_options_invertmouse_box.generic.type = MTYPE_SPINCONTROL;
 	s_options_invertmouse_box.generic.x	= 0;
 	s_options_invertmouse_box.generic.y	= 70;
@@ -23613,13 +23479,6 @@ static void Options_MenuInit() {
 	s_options_lookstrafe_box.generic.name	= "lookstrafe";
 	s_options_lookstrafe_box.generic.callback = LookstrafeFunc;
 	s_options_lookstrafe_box.itemnames = yesno_names;
-
-	s_options_freelook_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_freelook_box.generic.x	= 0;
-	s_options_freelook_box.generic.y	= 100;
-	s_options_freelook_box.generic.name	= "free look";
-	s_options_freelook_box.generic.callback = FreeLookFunc;
-	s_options_freelook_box.itemnames = yesno_names;
 
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
@@ -23643,11 +23502,9 @@ static void Options_MenuInit() {
 
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sfxvolume_slider );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sensitivity_slider );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_alwaysrun_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_invertmouse_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookspring_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookstrafe_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_freelook_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -63208,9 +63065,7 @@ bool	mlooking;
 
 void IN_MLookDown (void) { mlooking = true; }
 void IN_MLookUp (void) {
-mlooking = false;
-if (!freelook->value && lookspring->value)
-		IN_CenterView ();
+	mlooking = false;
 }
 
 int			mouse_buttons;
@@ -63376,7 +63231,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	else
 		cl.viewangles[YAW] -= m_yaw->value * mouse_x;
 
-	if ( (mlooking || freelook->value) && !(in_strafe.state & 1))
+	if (!(in_strafe.state & 1))
 	{
 		cl.viewangles[PITCH] += m_pitch->value * mouse_y;
 	}
@@ -64110,8 +63965,9 @@ static void CL_Frame(int msec) {
 		return;			// don't flood packets out while connecting
 	}
 
-	if (extratime < 1000 / cl_maxfps->value) {
-		return;			// framerate is too high
+	i64 maxfps = 90;
+	if (extratime < 1000 / maxfps) {
+		return; // framerate is too high
 	}
 
 	// let the mouse activate or deactivate
@@ -64539,27 +64395,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		scr_graphheight = COM_GetCvar("graphheight", "32", 0);
-		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
-		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
-		cl_add_blend = COM_GetCvar ("cl_blend", "1", 0);
-		cl_add_lights = COM_GetCvar ("cl_lights", "1", 0);
-		cl_add_particles = COM_GetCvar ("cl_particles", "1", 0);
-		cl_add_entities = COM_GetCvar ("cl_entities", "1", 0);
-		cl_gun = COM_GetCvar ("cl_gun", "1", 0);
-		cl_footsteps = COM_GetCvar ("cl_footsteps", "1", 0);
-		cl_noskins = COM_GetCvar ("cl_noskins", "0", 0);
-		cl_autoskins = COM_GetCvar ("cl_autoskins", "0", 0);
-		cl_predict = COM_GetCvar ("cl_predict", "1", 0);
-		cl_maxfps = COM_GetCvar ("cl_maxfps", "90", 0);
-		cl_upspeed = COM_GetCvar ("cl_upspeed", "200", 0);
-		cl_forwardspeed = COM_GetCvar ("cl_forwardspeed", "200", 0);
-		cl_sidespeed = COM_GetCvar ("cl_sidespeed", "200", 0);
-		cl_yawspeed = COM_GetCvar ("cl_yawspeed", "140", 0);
-		cl_pitchspeed = COM_GetCvar ("cl_pitchspeed", "150", 0);
-		cl_anglespeedkey = COM_GetCvar ("cl_anglespeedkey", "1.5", 0);
-		cl_run = COM_GetCvar ("cl_run", "0", CVAR_ARCHIVE);
-		freelook = COM_GetCvar( "freelook", "1", CVAR_ARCHIVE );
 		lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
 		lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
 		sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
