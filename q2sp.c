@@ -17210,7 +17210,6 @@ typedef struct {
 } cheatvar_t;
 
 static cheatvar_t cheatvars[] = {
-	{"r_drawworld", "1", 0},
 	{"cl_testlights", "0", 0},
 	{"r_drawflat", "0", 0},
 	{"sw_draworder", "0", 0},
@@ -57922,10 +57921,6 @@ extern	vec3_t	r_origin;
 //
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-
-extern	cvar_t	*r_drawworld;
-
-extern	cvar_t	*r_novis;
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_lerpmodels;
 
@@ -61292,8 +61287,6 @@ float	r_base_world_matrix[16];
 
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-cvar_t	*r_drawworld;
-cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_lerpmodels;
 
@@ -62659,9 +62652,6 @@ void R_DrawWorld (void)
 {
 	Entity	ent;
 
-	if (!r_drawworld->value)
-		return;
-
 	if ( r_newrefdef.rdflags & RDF_NOWORLDMODEL )
 		return;
 
@@ -62712,7 +62702,7 @@ void R_MarkLeaves (void)
 	mleaf_t	*leaf;
 	int		cluster;
 
-	if (r_oldviewcluster == r_viewcluster && r_oldviewcluster2 == r_viewcluster2 && !r_novis->value && r_viewcluster != -1)
+	if (r_oldviewcluster == r_viewcluster && r_oldviewcluster2 == r_viewcluster2 && r_viewcluster != -1)
 		return;
 
 	// development aid to let you run around and see exactly where
@@ -62724,7 +62714,7 @@ void R_MarkLeaves (void)
 	r_oldviewcluster = r_viewcluster;
 	r_oldviewcluster2 = r_viewcluster2;
 
-	if (r_novis->value || r_viewcluster == -1 || !r_worldmodel->vis)
+	if (r_viewcluster == -1 || !r_worldmodel->vis)
 	{
 		// mark everything
 		for (i=0 ; i<r_worldmodel->numleafs ; i++)
@@ -65149,8 +65139,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
-		r_novis = COM_GetCvar("r_novis", "0", 0);
 		r_nocull = COM_GetCvar("r_nocull", "0", 0);
 		r_lerpmodels = COM_GetCvar("r_lerpmodels", "1", 0);
 		r_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
