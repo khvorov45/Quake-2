@@ -12228,13 +12228,7 @@ extern	float		scr_conlines;		// lines of console to display
 
 extern	int			sb_lines;
 
-extern	cvar_t		*crosshair;
-
 extern	vrect_t		scr_vrect;		// position of render window
-
-extern	char		crosshair_pic[MAX_QPATH];
-extern	int			crosshair_width, crosshair_height;
-
 
 struct sfx_s;
 
@@ -19661,14 +19655,7 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 	}
 }
 
-
-/*
-===============
-SCR_TouchPics
-
-Allows rendering code to cache all needed sbar graphics
-===============
-*/
+// Allows rendering code to cache all needed sbar graphics
 void SCR_TouchPics (void)
 {
 	int		i, j;
@@ -19677,16 +19664,9 @@ void SCR_TouchPics (void)
 		for (j=0 ; j<11 ; j++)
 			Draw_FindPic (sb_nums[i][j]);
 
-	if (crosshair->value)
-	{
-		if (crosshair->value > 3 || crosshair->value < 0)
-			crosshair->value = 3;
-
-		Com_sprintf (crosshair_pic, sizeof(crosshair_pic), "ch%i", (int)(crosshair->value));
-		Draw_GetPicSize (&crosshair_width, &crosshair_height, crosshair_pic);
-		if (!crosshair_width)
-			crosshair_pic[0] = 0;
-	}
+	Com_sprintf(crosshair_pic, sizeof(crosshair_pic), "ch1");
+	Draw_GetPicSize (&crosshair_width, &crosshair_height, crosshair_pic);
+	assert(crosshair_width);
 }
 
 /*
@@ -21654,12 +21634,6 @@ void CL_AddTEnts (void)
 int			gun_frame;
 struct model_s	*gun_model;
 
-cvar_t		*crosshair;
-cvar_t		*cl_testparticles;
-cvar_t		*cl_testentities;
-cvar_t		*cl_testlights;
-cvar_t		*cl_testblend;
-
 int			r_numdlights;
 dlight_t	r_dlights[MAX_DLIGHTS];
 
@@ -21759,101 +21733,6 @@ void V_AddLightStyle (int style, float r, float g, float b)
 	ls->rgb[0] = r;
 	ls->rgb[1] = g;
 	ls->rgb[2] = b;
-}
-
-/*
-================
-V_TestParticles
-
-If cl_testparticles is set, create 4096 particles in the view
-================
-*/
-void V_TestParticles (void)
-{
-	particle_t	*p;
-	int			i, j;
-	float		d, r, u;
-
-	r_numparticles = MAX_PARTICLES;
-	for (i=0 ; i<r_numparticles ; i++)
-	{
-		d = i*0.25;
-		r = 4*((i&7)-3.5);
-		u = 4*(((i>>3)&7)-3.5);
-		p = &r_particles[i];
-
-		for (j=0 ; j<3 ; j++)
-			p->origin[j] = cl.refdef.vieworg[j] + cl.v_forward[j]*d +
-			cl.v_right[j]*r + cl.v_up[j]*u;
-
-		p->color = 8;
-		p->alpha = cl_testparticles->value;
-	}
-}
-
-/*
-================
-V_TestEntities
-
-If cl_testentities is set, create 32 player models
-================
-*/
-void V_TestEntities (void)
-{
-	int			i, j;
-	float		f, r;
-	Entity	*ent;
-
-	r_numentities = 32;
-	memset (r_entities, 0, sizeof(r_entities));
-
-	for (i=0 ; i<r_numentities ; i++)
-	{
-		ent = &r_entities[i];
-
-		r = 64 * ( (i%4) - 1.5 );
-		f = 64.0f * ((float)i/4.0f) + 128.0f;
-
-		for (j=0 ; j<3 ; j++)
-			ent->origin[j] = cl.refdef.vieworg[j] + cl.v_forward[j]*f +
-			cl.v_right[j]*r;
-
-		ent->model = cl.baseclientinfo.model;
-		ent->skin = cl.baseclientinfo.skin;
-	}
-}
-
-/*
-================
-V_TestLights
-
-If cl_testlights is set, create 32 lights models
-================
-*/
-void V_TestLights (void)
-{
-	int			i, j;
-	float		f, r;
-	dlight_t	*dl;
-
-	r_numdlights = 32;
-	memset (r_dlights, 0, sizeof(r_dlights));
-
-	for (i=0 ; i<r_numdlights ; i++)
-	{
-		dl = &r_dlights[i];
-
-		r = 64 * ( (i%4) - 1.5 );
-		f = 64.0f * ((float)i/4.0f) + 128.0f;
-
-		for (j=0 ; j<3 ; j++)
-			dl->origin[j] = cl.refdef.vieworg[j] + cl.v_forward[j]*f +
-			cl.v_right[j]*r;
-		dl->color[0] = ((i%6)+1) & 1;
-		dl->color[1] = (((i%6)+1) & 2)>>1;
-		dl->color[2] = (((i%6)+1) & 4)>>2;
-		dl->intensity = 200;
-	}
 }
 
 // Call before entering a new level, or after changing dlls
@@ -21984,22 +21863,9 @@ void V_Gun_Model_f (void)
 	gun_model = R_RegisterModel (name);
 }
 
-void SCR_DrawCrosshair (void)
-{
-	if (!crosshair->value)
-		return;
-
-	if (crosshair->modified)
-	{
-		crosshair->modified = false;
-		SCR_TouchPics ();
-	}
-
-	if (!crosshair_pic[0])
-		return;
-
-	Draw_Pic (scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1)
-	, scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
+static void SCR_DrawCrosshair() {
+	assert(crosshair_pic[0]);
+	Draw_Pic(scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1), scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
 
 void V_RenderView() {
@@ -22018,20 +21884,6 @@ void V_RenderView() {
 		// this also calls CL_CalcViewValues which loads
 		// v_forward, etc.
 		CL_AddEntities ();
-
-		if (cl_testparticles->value)
-			V_TestParticles ();
-		if (cl_testentities->value)
-			V_TestEntities ();
-		if (cl_testlights->value)
-			V_TestLights ();
-		if (cl_testblend->value)
-		{
-			cl.refdef.blend[0] = 1;
-			cl.refdef.blend[1] = 0.5;
-			cl.refdef.blend[2] = 0.25;
-			cl.refdef.blend[3] = 0.5;
-		}
 
 		// never let it sit exactly on a node line, because a water plane can
 		// dissapear when viewed with the eye exactly on it.
@@ -23086,7 +22938,6 @@ static menulist_s		s_options_alwaysrun_box;
 static menulist_s		s_options_invertmouse_box;
 static menulist_s		s_options_lookspring_box;
 static menulist_s		s_options_lookstrafe_box;
-static menulist_s		s_options_crosshair_box;
 static menuslider_s		s_options_sfxvolume_slider;
 static menulist_s		s_options_console_action;
 
@@ -23146,11 +22997,6 @@ static void MouseSpeedFunc(void* unused)
 {
 	UNUSED(unused);
 	COM_SetValueCvar( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
-}
-
-static void CrosshairFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "crosshair", s_options_crosshair_box.curvalue );
 }
 
 static int bind_grab;
@@ -23792,9 +23638,6 @@ static void ControlsSetMenuItemValues() {
 
 	COM_SetValueCvar("freelook", clamp(freelook->value, 0, 1));
 	s_options_freelook_box.curvalue = freelook->value;
-
-	COM_SetValueCvar("crosshair", clamp(crosshair->value, 0, 3));
-	s_options_crosshair_box.curvalue = crosshair->value;
 }
 
 static void ControlsResetDefaultsFunc(void* unused) {
@@ -23814,7 +23657,6 @@ static void ConsoleFunc(void* unused) {
 
 static void Options_MenuInit() {
 	static char* yesno_names[] = {"no", "yes", 0};
-	static char* crosshair_names[] = {"none", "cross", "dot", "angle", 0};
 
 	// configure controls menu and menu items
 	s_options_menu.x = viddef.width / 2;
@@ -23873,13 +23715,6 @@ static void Options_MenuInit() {
 	s_options_freelook_box.generic.callback = FreeLookFunc;
 	s_options_freelook_box.itemnames = yesno_names;
 
-	s_options_crosshair_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_crosshair_box.generic.x	= 0;
-	s_options_crosshair_box.generic.y	= 110;
-	s_options_crosshair_box.generic.name	= "crosshair";
-	s_options_crosshair_box.generic.callback = CrosshairFunc;
-	s_options_crosshair_box.itemnames = crosshair_names;
-
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
 	s_options_customize_options_action.generic.y		= 140;
@@ -23907,7 +23742,6 @@ static void Options_MenuInit() {
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookspring_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookstrafe_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_freelook_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_crosshair_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -57912,8 +57746,6 @@ extern	vec3_t	r_origin;
 //
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-extern	cvar_t		*intensity;
-
 extern	int		gl_solid_format;
 extern	int		gl_alpha_format;
 extern	int		gl_tex_solid_format;
@@ -58189,8 +58021,6 @@ int			base_textureid;		// gltextures[i] = base_textureid+i
 
 static u8			 intensitytable[256];
 static unsigned char gammatable[256];
-
-cvar_t		*intensity;
 
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
@@ -64803,12 +64633,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		intensity = COM_GetCvar("intensity", "2", 0);
-		crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
-		cl_testblend = COM_GetCvar ("cl_testblend", "0", 0);
-		cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
-		cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
-		cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
 		scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
 		scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
 		scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
@@ -65370,14 +65194,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		GL_TexEnv(GL_REPLACE);
 
 		registration_sequence = 1;
-		gl_state.inverse_intensity = 1 / intensity->value;
+		float intensity = 2.0f;
+		gl_state.inverse_intensity = 1.0f / intensity;
 
 		for (i64 ind = 0; ind < 256; ind++) {
 			gammatable[ind] = ind;
 		}
 
 		for (i64 ind=0 ; ind<256 ; ind++) {
-			i64 j = min(ind * intensity->value, 255);
+			i64 j = min(ind * intensity, 255);
 			intensitytable[ind] = j;
 		}
 
