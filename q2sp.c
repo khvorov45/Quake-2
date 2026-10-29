@@ -16569,7 +16569,6 @@ void CL_DrawInventory (void)
 // userinfo
 //
 cvar_t	*fov;
-cvar_t	*msg;
 
 cvar_t	*cl_vwep;
 
@@ -16662,7 +16661,7 @@ void CL_Connect_f (void)
 
 	if (server_state) {
 		// if running a local server, kill it and reissue
-		SV_Shutdown (va("Server quit\n", msg), false);
+		SV_Shutdown ("Server quit\n", false);
 	}
 	else
 	{
@@ -64275,7 +64274,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		msg = COM_GetCvar ("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
 		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
 		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
