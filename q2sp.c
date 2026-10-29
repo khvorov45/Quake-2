@@ -57923,8 +57923,6 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_bitdepth;
-static cvar_t* gl_drawbuffer;
 static cvar_t* gl_lightmap;
 static cvar_t* gl_shadows;
 static cvar_t* gl_dynamic;
@@ -61659,19 +61657,6 @@ static void R_BeginFrame() {
 	glColor4f (1,1,1,1);
 
 	/*
-	** draw buffer stuff
-	*/
-	if ( gl_drawbuffer->modified )
-	{
-		gl_drawbuffer->modified = false;
-
-		if ( Q_stricmp( gl_drawbuffer->string, "GL_FRONT" ) == 0 )
-			glDrawBuffer( GL_FRONT );
-		else
-			glDrawBuffer( GL_BACK );
-	}
-
-	/*
 	** texturemode stuff
 	*/
 	if ( gl_texturemode->modified )
@@ -64568,26 +64553,14 @@ static char* VID_MenuKey(int key) {
 
 void GLimp_BeginFrame()
 {
-	if ( gl_bitdepth->modified )
-	{
-		if ( gl_bitdepth->value != 0 && !glw_state.allowdisplaydepthchange )
-		{
-			COM_SetValueCvar( "gl_bitdepth", 0 );
-			add_line_to_console_log(STR("gl_bitdepth requires Win95 OSR2.x or WinNT 4.x"));
-		}
-		gl_bitdepth->modified = false;
-	}
-
 	glDrawBuffer( GL_BACK );
 }
 
 static void GLimp_EndFrame() {
 	int err = glGetError();
 	assert(err == GL_NO_ERROR);
-	if (_stricmp( gl_drawbuffer->string, "GL_BACK" ) == 0) {
-		BOOL swap_buffers_result = SwapBuffers(glw_state.hDC);
-		assert(swap_buffers_result);
-	}
+	BOOL swap_buffers_result = SwapBuffers(glw_state.hDC);
+	assert(swap_buffers_result);
 }
 
 static void CL_Frame(int msec) {
@@ -65027,7 +65000,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
 		gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
 		gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
 		gl_dynamic = COM_GetCvar ("gl_dynamic", "1", 0);
@@ -65044,7 +65016,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		gl_texturealphamode = COM_GetCvar( "gl_texturealphamode", "default", CVAR_ARCHIVE );
 		gl_texturesolidmode = COM_GetCvar( "gl_texturesolidmode", "default", CVAR_ARCHIVE );
 		gl_lockpvs = COM_GetCvar( "gl_lockpvs", "0", 0 );
-		gl_drawbuffer = COM_GetCvar( "gl_drawbuffer", "GL_BACK", 0 );
 		gl_saturatelighting = COM_GetCvar( "gl_saturatelighting", "0", 0 );
 		intensity = COM_GetCvar("intensity", "2", 0);
 		crosshair = COM_GetCvar ("crosshair", "0", CVAR_ARCHIVE);
