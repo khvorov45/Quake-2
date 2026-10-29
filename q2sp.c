@@ -10482,7 +10482,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 }
 
 client_t	*sv_client;			// current client
-cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 bool ClientConnect(edict_t* ent);
@@ -22121,8 +22120,6 @@ void V_RenderView() {
 	SCR_DrawCrosshair ();
 }
 
-cvar_t		*con_notifytime;
-
 void DrawString (int x, int y, char *s)
 {
 	while (*s)
@@ -22169,7 +22166,8 @@ void Con_DrawNotify() {
 		Log_Line line = get_log_line(row);
 		float time_passed_since = cls.realtime - line.timestamp;
 		i64 ycoord = (lines_to_draw - row) * console.char_height_px;
-		if (time_passed_since > 0 && time_passed_since <= con_notifytime->value * 1000.0f) {
+		float keep_for_ms = 3000.0f;
+		if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
 			for (i64 column = 0; column < line.text.len; column++) {
 				char ch = line.text.ptr[column];
 				i64 xcoord = (column + 1) * console.char_width_px;
@@ -60046,12 +60044,6 @@ static bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
 	}
 }
 
-/*
-=================
-R_DrawAliasModel
-
-=================
-*/
 void R_DrawAliasModel (Entity *e)
 {
 	int			i;
@@ -65244,8 +65236,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		sv_reconnect_limit = COM_GetCvar("sv_reconnect_limit", "3", CVAR_ARCHIVE);
-		con_notifytime = COM_GetCvar("con_notifytime", "3", 0);
 		r_lefthand = COM_GetCvar( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE );
 		r_fullbright = COM_GetCvar("r_fullbright", "0", 0);
 		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
