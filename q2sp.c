@@ -10857,42 +10857,6 @@ void SV_ClientPrintf (client_t *cl, int level, char *fmt, ...)
 }
 
 // Sends text to all active clients
-void SV_BroadcastPrintf (int level, char *fmt, ...)
-{
-	va_list		argptr;
-	char		string[2048];
-	client_t	*cl;
-	int			i;
-
-	va_start (argptr,fmt);
-	vsprintf (string, fmt,argptr);
-	va_end (argptr);
-
-	// echo to console
-	{
-		char	copy[1024];
-		int		i;
-
-		// mask off high bits
-		for (i=0 ; i<1023 && string[i] ; i++)
-			copy[i] = string[i]&127;
-		copy[i] = 0;
-		Com_Printf ("%s", copy);
-	}
-
-	for (i=0, cl = &svs.client ; i<1; i++, cl++)
-	{
-		if (level < cl->messagelevel)
-			continue;
-		if (cl->state != cs_spawned)
-			continue;
-		MSG_WriteByte (&cl->netchan.message, svc_print);
-		MSG_WriteByte (&cl->netchan.message, level);
-		MSG_WriteString (&cl->netchan.message, string);
-	}
-}
-
-// Sends text to all active clients
 void SV_BroadcastCommand (char *fmt, ...)
 {
 	va_list		argptr;
@@ -11136,17 +11100,11 @@ bool SV_SendClientDatagram (client_t *client)
 	// for this client out to the message
 	// it is necessary for this to be after the WriteEntities
 	// so that entity references will be current
-	if (client->datagram.overflowed)
-		Com_Printf ("WARNING: datagram overflowed for %s\n", client->name);
-	else
-		SZ_Write (&msg, client->datagram.data, client->datagram.cursize);
+	assert(!client->datagram.overflowed);
+	SZ_Write (&msg, client->datagram.data, client->datagram.cursize);
 	SZ_Clear (&client->datagram);
 
-	if (msg.overflowed)
-	{	// must have room left for the packet header
-		Com_Printf ("WARNING: msg overflowed for %s\n", client->name);
-		SZ_Clear (&msg);
-	}
+	assert(!msg.overflowed);
 
 	// send the datagram
 	Netchan_Transmit (&client->netchan, msg.cursize, msg.data);
@@ -11163,14 +11121,7 @@ void SV_SendClientMessages() {
 	{
 		if (!c->state)
 			continue;
-		// if the reliable message overflowed, drop the client
-		if (c->netchan.message.overflowed)
-		{
-			SZ_Clear (&c->netchan.message);
-			SZ_Clear (&c->datagram);
-			SV_BroadcastPrintf (PRINT_HIGH, "%s overflowed\n", c->name);
-			SV_DropClient(c);
-		}
+		assert(!c->netchan.message.overflowed);
 
 		if (c->state == cs_spawned)
 		{
@@ -11178,7 +11129,7 @@ void SV_SendClientMessages() {
 		}
 		else
 		{
-	// just update reliable	if needed
+			// just update reliable	if needed
 			if (c->netchan.message.cursize	|| curtime - c->netchan.last_sent > 1000 )
 				Netchan_Transmit (&c->netchan, 0, NULL);
 		}
@@ -12533,9 +12484,6 @@ extern	cvar_t	*cl_pitchspeed;
 extern	cvar_t	*cl_run;
 
 extern	cvar_t	*cl_anglespeedkey;
-
-extern	cvar_t	*cl_showmiss;
-extern	cvar_t	*cl_showclamp;
 
 extern	cvar_t	*lookspring;
 extern	cvar_t	*lookstrafe;
@@ -13973,15 +13921,11 @@ void CL_AddEntities (void)
 
 	if (cl.time > cl.frame.servertime)
 	{
-		if (cl_showclamp->value)
-			Com_Printf ("high clamp %i\n", cl.time - cl.frame.servertime);
 		cl.time = cl.frame.servertime;
 		cl.lerpfrac = 1.0;
 	}
 	else if (cl.time < cl.frame.servertime - 100)
 	{
-		if (cl_showclamp->value)
-			Com_Printf ("low clamp %i\n", cl.frame.servertime-100 - cl.time);
 		cl.time = cl.frame.servertime - 100;
 		cl.lerpfrac = 0;
 	}
@@ -16758,9 +16702,6 @@ cvar_t	*cl_add_lights;
 cvar_t	*cl_add_entities;
 cvar_t	*cl_add_blend;
 
-cvar_t	*cl_showmiss;
-cvar_t	*cl_showclamp;
-
 cvar_t	*lookspring;
 cvar_t	*lookstrafe;
 cvar_t	*sensitivity;
@@ -16789,52 +16730,11 @@ centity_t		cl_entities[MAX_EDICTS];
 
 entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
-void CL_Setenv_f( void )
-{
-	int argc = cmd_argc;
-
-	if ( argc > 2 )
-	{
-		char buffer[1000];
-		int i;
-
-		strcpy( buffer, Cmd_Argv(1) );
-		strcat( buffer, "=" );
-
-		for ( i = 2; i < argc; i++ )
-		{
-			strcat( buffer, Cmd_Argv( i ) );
-			strcat( buffer, " " );
-		}
-
-		_putenv( buffer );
-	}
-	else if ( argc == 2 )
-	{
-		char *env = getenv( Cmd_Argv(1) );
-
-		if ( env )
-		{
-			Com_Printf( "%s=%s\n", Cmd_Argv(1), env );
-		}
-		else
-		{
-			Com_Printf( "%s undefined\n", Cmd_Argv(1), env );
-		}
-	}
-}
-
-
-/*
-==================
-CL_ForwardToServer_f
-==================
-*/
 void CL_ForwardToServer_f (void)
 {
 	if (cls.state != ca_connected && cls.state != ca_active)
 	{
-		Com_Printf ("Can't \"%s\", not connected\n", Cmd_Argv(0));
+		add_line_to_console_log(STR("not connected"));
 		return;
 	}
 
@@ -16865,13 +16765,6 @@ void CL_SendConnectPacket (void)
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i \"%s\"\n", PROTOCOL_VERSION, cls.challenge, Info_Cvar_User());
 }
 
-/*
-=================
-CL_CheckForResend
-
-Resend a connect message if the last one has timed out
-=================
-*/
 void CL_CheckForResend (void)
 {
 	netadr_t	adr;
@@ -16885,7 +16778,6 @@ void CL_CheckForResend (void)
 		// we don't need a challenge on the localhost
 		CL_SendConnectPacket ();
 		return;
-//		cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
 	}
 
 	// resend if we haven't gotten a reply yet
@@ -16906,9 +16798,9 @@ void CL_CheckForResend (void)
 
 	cls.connect_time = cls.realtime;	// for retransmit requests
 
-	Com_Printf ("Connecting to %s...\n", cls.servername);
+	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Connecting to"), string_from_cstring(cls.servername))));
 
-	Netchan_OutOfBandPrint (NS_CLIENT, adr, "getchallenge\n");
+	Netchan_OutOfBandPrint(NS_CLIENT, adr, "getchallenge\n");
 }
 
 void CL_Connect_f (void)
@@ -17083,7 +16975,7 @@ void CL_Reconnect_f (void)
 // Handle a reply from a ping
 static void CL_ParseStatusMessage() {
 	char* s = MSG_ReadString(&net_message);
-	Com_Printf ("%s\n", s);
+	add_line_to_console_log(string_from_cstring(s));
 }
 
 // Responses to broadcasts, etc
@@ -17101,7 +16993,7 @@ void CL_ConnectionlessPacket (void)
 
 	c = Cmd_Argv(0);
 
-	Com_Printf ("%s: %s\n", NET_AdrToString (net_from), c);
+	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(string_from_cstring(NET_AdrToString(net_from)), STR(": "), string_from_cstring(c))));
 
 	// server connection
 	if (!strcmp(c, "client_connect"))
@@ -17138,7 +17030,7 @@ void CL_ConnectionlessPacket (void)
 	if (!strcmp(c, "print"))
 	{
 		s = MSG_ReadString (&net_message);
-		Com_Printf ("%s", s);
+		add_line_to_console_log(string_from_cstring(s));
 		return;
 	}
 
@@ -17205,11 +17097,7 @@ void CL_ReadPackets (void)
 		if (cls.state == ca_disconnected || cls.state == ca_connecting)
 			continue;		// dump it if not connected
 
-		if (net_message.cursize < 8)
-		{
-			Com_Printf ("%s: Runt packet\n",NET_AdrToString(net_from));
-			continue;
-		}
+		assert(net_message.cursize >= 8);
 
 		//
 		// packet from server
@@ -18438,10 +18326,7 @@ static void CL_ParseServerData() {
 
 	cl.playernum = MSG_ReadShort(&net_message);
 	char* level_name = MSG_ReadString(&net_message);
-
-	// seperate the printfs so the server message can have a color
-	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
-	Com_Printf("%c%s\n", 2, level_name);
+	add_line_to_console_log(string_from_cstring(level_name));
 
 	// need to prep refresh at next oportunity
 	cl.refresh_prepped = false;
@@ -18779,7 +18664,7 @@ void CL_ParseServerMessage (void)
 
 		case svc_print:
 			MSG_ReadByte(&net_message);
-			Com_Printf("%s", MSG_ReadString(&net_message));
+			add_line_to_console_log(string_from_cstring(MSG_ReadString(&net_message)));
 			break;
 
 		case svc_centerprint:
@@ -18870,10 +18755,6 @@ void CL_CheckPredictionError (void)
 	}
 	else
 	{
-		if (cl_showmiss->value && (delta[0] || delta[1] || delta[2]) )
-			Com_Printf ("prediction miss on %i: %i\n", cl.frame.serverframe,
-			delta[0] + delta[1] + delta[2]);
-
 		VectorCopy (cl.frame.playerstate.pmove.origin, cl.predicted_origins[frame]);
 
 		// save for error itnerpolation
@@ -19036,8 +18917,6 @@ void CL_PredictMovement (void)
 	// if we are too far out of date, just freeze
 	if (current - ack >= CMD_BACKUP)
 	{
-		if (cl_showmiss->value)
-			add_line_to_console_log(STR("exceeded CMD_BACKUP"));
 		return;
 	}
 
@@ -19210,9 +19089,6 @@ void SCR_CenterPrint (char *str)
 		s++;
 	}
 
-	// echo it to the console
-	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
-
 	s = str;
 	do
 	{
@@ -19231,7 +19107,7 @@ void SCR_CenterPrint (char *str)
 		line[i] = '\n';
 		line[i+1] = 0;
 
-		Com_Printf ("%s", line);
+		add_line_to_console_log(string_from_cstring(line));
 
 		while (*s && *s != '\n')
 			s++;
@@ -19240,7 +19116,6 @@ void SCR_CenterPrint (char *str)
 			break;
 		s++;		// skip the \n
 	} while (1);
-	add_line_to_console_log(STR("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n"));
 }
 
 
@@ -20278,9 +20153,6 @@ void CL_RegisterTEntSounds (void)
 	int		i;
 	char	name[MAX_QPATH];
 
-	// PMM - version stuff
-//	Com_Printf ("%s\n", ROGUE_VERSION_STRING);
-	// PMM
 	cl_sfx_ric1 = S_RegisterSound ("world/ric1.wav");
 	cl_sfx_ric2 = S_RegisterSound ("world/ric2.wav");
 	cl_sfx_ric3 = S_RegisterSound ("world/ric3.wav");
@@ -20292,8 +20164,7 @@ void CL_RegisterTEntSounds (void)
 	cl_sfx_rockexp = S_RegisterSound ("weapons/rocklx1a.wav");
 	cl_sfx_grenexp = S_RegisterSound ("weapons/grenlx1a.wav");
 	cl_sfx_watrexp = S_RegisterSound ("weapons/xpld_wat.wav");
-	// RAFAEL
-	// cl_sfx_plasexp = S_RegisterSound ("weapons/plasexpl.wav");
+
 	S_RegisterSound ("player/land1.wav");
 
 	S_RegisterSound ("player/fall2.wav");
@@ -20492,9 +20363,7 @@ int CL_ParseBeam2 (struct model_s *model)
 	MSG_ReadPos (&net_message, end);
 	MSG_ReadPos (&net_message, offset);
 
-//	Com_Printf ("end- %f %f %f\n", end[0], end[1], end[2]);
-
-// override any beam with the same entity
+	// override any beam with the same entity
 
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
 		if (b->entity == ent)
@@ -20508,7 +20377,7 @@ int CL_ParseBeam2 (struct model_s *model)
 			return ent;
 		}
 
-// find a free beam
+	// find a free beam
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
 	{
 		if (!b->model || b->endtime < cl.time)
@@ -20555,10 +20424,9 @@ int CL_ParsePlayerBeam (struct model_s *model)
 	else
 		MSG_ReadPos (&net_message, offset);
 
-//	Com_Printf ("end- %f %f %f\n", end[0], end[1], end[2]);
 
-// override any beam with the same entity
-// PMM - For player beams, we only want one per player (entity) so..
+	// override any beam with the same entity
+	// PMM - For player beams, we only want one per player (entity) so..
 	for (i=0, b=cl_playerbeams ; i< MAX_BEAMS ; i++, b++)
 	{
 		if (b->entity == ent)
@@ -20573,7 +20441,7 @@ int CL_ParsePlayerBeam (struct model_s *model)
 		}
 	}
 
-// find a free beam
+	// find a free beam
 	for (i=0, b=cl_playerbeams ; i< MAX_BEAMS ; i++, b++)
 	{
 		if (!b->model || b->endtime < cl.time)
@@ -20610,11 +20478,10 @@ int CL_ParseLightning (struct model_s *model)
 	MSG_ReadPos (&net_message, start);
 	MSG_ReadPos (&net_message, end);
 
-// override any beam with the same source AND destination entities
+	// override any beam with the same source AND destination entities
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
 		if (b->entity == srcEnt && b->dest_entity == destEnt)
 		{
-//			Com_Printf("%d: OVERRIDE  %d -> %d\n", cl.time, srcEnt, destEnt);
 			b->entity = srcEnt;
 			b->dest_entity = destEnt;
 			b->model = model;
@@ -20625,12 +20492,11 @@ int CL_ParseLightning (struct model_s *model)
 			return srcEnt;
 		}
 
-// find a free beam
+	// find a free beam
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
 	{
 		if (!b->model || b->endtime < cl.time)
 		{
-//			Com_Printf("%d: NORMAL  %d -> %d\n", cl.time, srcEnt, destEnt);
 			b->entity = srcEnt;
 			b->dest_entity = destEnt;
 			b->model = model;
@@ -20692,7 +20558,6 @@ void CL_ParseSteam (void)
 	id = MSG_ReadShort (&net_message);		// an id of -1 is an instant effect
 	if (id != -1) // sustains
 	{
-//			Com_Printf ("Sustain effect id %d\n", id);
 		free_sustain = NULL;
 		for (i=0, s=cl_sustains; i<MAX_SUSTAINS; i++, s++)
 		{
@@ -21438,20 +21303,6 @@ void CL_AddBeams (void)
 	}
 }
 
-
-/*
-//				Com_Printf ("Endpoint:  %f %f %f\n", b->end[0], b->end[1], b->end[2]);
-//				Com_Printf ("Pred View Angles:  %f %f %f\n", cl.predicted_angles[0], cl.predicted_angles[1], cl.predicted_angles[2]);
-//				Com_Printf ("Act View Angles: %f %f %f\n", cl.refdef.viewangles[0], cl.refdef.viewangles[1], cl.refdef.viewangles[2]);
-//				VectorCopy (cl.predicted_origin, b->start);
-//				b->start[2] += 22;	// adjust for view height
-//				if (fabs(cl.refdef.vieworg[2] - b->start[2]) >= 10) {
-//					b->start[2] = cl.refdef.vieworg[2];
-//				}
-
-//				Com_Printf ("Time:  %d %d %f\n", cl.time, cls.realtime, cls.frametime);
-*/
-
 extern cvar_t *hand;
 
 /*
@@ -22076,18 +21927,16 @@ static void CL_PrepRefresh() {
 	mapname[strlen(mapname)-4] = 0;		// cut off ".bsp"
 
 	// register models, pics, and skins
-	Com_Printf ("Map: %s\r", mapname);
+	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Map: "), string_from_cstring(mapname))));
 	SCR_UpdateScreen ();
 
 	void R_BeginRegistration (char *model);
 	R_BeginRegistration(mapname);
-	add_line_to_console_log(STR("                                     "));
 
 	// precache status bar pics
 	add_line_to_console_log(STR("pics"));
 	SCR_UpdateScreen ();
 	SCR_TouchPics ();
-	add_line_to_console_log(STR("                                     "));
 
 	CL_RegisterTEntModels ();
 
@@ -22098,8 +21947,9 @@ static void CL_PrepRefresh() {
 	{
 		strcpy (name, cl.configstrings[CS_MODELS+i]);
 		name[37] = 0;	// never go beyond one line
-		if (name[0] != '*')
-			Com_Printf ("%s\r", name);
+		if (name[0] != '*') {
+			add_line_to_console_log(string_from_cstring(name));
+		}
 		SCR_UpdateScreen ();
 		if (name[0] == '#')
 		{
@@ -22119,38 +21969,32 @@ static void CL_PrepRefresh() {
 			else
 				cl.model_clip[i] = NULL;
 		}
-		if (name[0] != '*')
-			add_line_to_console_log(STR("                                     "));
 	}
 
-	Com_Printf ("images\r", i);
-	SCR_UpdateScreen ();
+	add_line_to_console_log(STR("images"));
+	SCR_UpdateScreen();
 	for (i=1 ; i<MAX_IMAGES && cl.configstrings[CS_IMAGES+i][0] ; i++)
 	{
 		cl.image_precache[i] = Draw_FindPic (cl.configstrings[CS_IMAGES+i]);
 	}
 
-	add_line_to_console_log(STR("                                     "));
 	for (i=0 ; i<MAX_CLIENTS ; i++)
 	{
 		if (!cl.configstrings[CS_PLAYERSKINS+i][0])
 			continue;
-		Com_Printf ("client %i\r", i);
 		SCR_UpdateScreen ();
 		CL_ParseClientinfo (i);
-		add_line_to_console_log(STR("                                     "));
 	}
 
 	CL_LoadClientinfo (&cl.baseclientinfo, "unnamed\\male/grunt");
 
 	// set sky textures and speed
-	Com_Printf ("sky\r", i);
+	add_line_to_console_log(STR("sky"));
 	SCR_UpdateScreen ();
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f",
 		&axis[0], &axis[1], &axis[2]);
 	R_SetSky (cl.configstrings[CS_SKY], rotate, axis);
-	add_line_to_console_log(STR("                                     "));
 
 	// the renderer can now free unneeded stuff
 
@@ -22182,23 +22026,6 @@ float CalcFov (float fov_x, float width, float height)
 	return a;
 }
 
-//============================================================================
-
-// gun frame debugging functions
-void V_Gun_Next_f (void)
-{
-	gun_frame++;
-	Com_Printf ("frame %i\n", gun_frame);
-}
-
-void V_Gun_Prev_f (void)
-{
-	gun_frame--;
-	if (gun_frame < 0)
-		gun_frame = 0;
-	Com_Printf ("frame %i\n", gun_frame);
-}
-
 void V_Gun_Model_f (void)
 {
 	char	name[MAX_QPATH];
@@ -22212,14 +22039,6 @@ void V_Gun_Model_f (void)
 	gun_model = R_RegisterModel (name);
 }
 
-//============================================================================
-
-
-/*
-=================
-SCR_DrawCrosshair
-=================
-*/
 void SCR_DrawCrosshair (void)
 {
 	if (!crosshair->value)
@@ -54689,12 +54508,6 @@ static void player_pain (edict_t* self, edict_t* other, float kick, int damage) 
 	// player pain is handled at the end of the frame in P_DamageFeedback
 }
 
-static void ClientObituary(edict_t* self, edict_t* inflictor, edict_t* attacker) {
-	UNUSED(inflictor);
-	UNUSED(attacker);
-	SV_BroadcastPrintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
-}
-
 void Touch_Item (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf);
 
 void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
@@ -54757,7 +54570,6 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 		self->client->respawn_time = level.time + 1.0;
 		LookAtKiller (self, inflictor, attacker);
 		self->client->ps.pmove.pm_type = PM_DEAD;
-		ClientObituary (self, inflictor, attacker);
 
 		// clear inventory
 		for (n = 0; n < game.num_items; n++)
@@ -55140,14 +54952,6 @@ bool ClientConnect(edict_t *ent) {
 	return true;
 }
 
-/*
-===========
-ClientDisconnect
-
-Called when a player drops from the server.
-Will not be called between levels.
-============
-*/
 void ClientDisconnect (edict_t *ent)
 {
 	int		playernum;
@@ -55155,13 +54959,11 @@ void ClientDisconnect (edict_t *ent)
 	if (!ent->client)
 		return;
 
-	SV_BroadcastPrintf (PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
-
 	// send effect
-	PF_WriteByte (svc_muzzleflash);
-	PF_WriteShort (ent-g_edicts);
-	PF_WriteByte (MZ_LOGOUT);
-	SV_Multicast (ent->s.origin, MULTICAST_PVS);
+	PF_WriteByte(svc_muzzleflash);
+	PF_WriteShort(ent-g_edicts);
+	PF_WriteByte(MZ_LOGOUT);
+	SV_Multicast(ent->s.origin, MULTICAST_PVS);
 
 	SV_UnlinkEdict (ent);
 	ent->s.modelindex = 0;
@@ -58800,7 +58602,6 @@ void R_FloodFillSkin( u8 *skin, int skinwidth, int skinheight )
 	// can't fill to filled color or to transparent color (used as visited marker)
 	if ((fillcolor == filledcolor) || (fillcolor == 255))
 	{
-		//printf( "not filling skin from %d to %d\n", fillcolor, filledcolor );
 		return;
 	}
 
@@ -65451,8 +65252,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("load", SV_Loadgame_f);
 		Cmd_AddCommand("killserver", SV_KillServer_f);
 		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
-		Cmd_AddCommand("gun_next", V_Gun_Next_f);
-		Cmd_AddCommand("gun_prev", V_Gun_Prev_f);
 		Cmd_AddCommand("gun_model", V_Gun_Model_f);
 		Cmd_AddCommand("menu_main", M_Menu_Main_f);
 		Cmd_AddCommand("menu_game", M_Menu_Game_f);
@@ -65468,7 +65267,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("changing", CL_Changing_f);
 		Cmd_AddCommand("connect", CL_Connect_f);
 		Cmd_AddCommand("reconnect", CL_Reconnect_f);
-		Cmd_AddCommand("setenv", CL_Setenv_f );
 		Cmd_AddCommand("precache", CL_Precache_f);
 		Cmd_AddCommand("wave", NULL);
 		Cmd_AddCommand("inven", NULL);
@@ -65617,8 +65415,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
 		m_forward = COM_GetCvar ("m_forward", "1", 0);
 		m_side = COM_GetCvar ("m_side", "1", 0);
-		cl_showmiss = COM_GetCvar ("cl_showmiss", "0", 0);
-		cl_showclamp = COM_GetCvar ("showclamp", "0", 0);
 		cl_lightlevel = COM_GetCvar ("r_lightlevel", "0", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
