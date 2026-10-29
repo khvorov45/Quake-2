@@ -57923,7 +57923,6 @@ extern	vec3_t	r_origin;
 extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 
-extern	cvar_t	*r_drawentities;
 extern	cvar_t	*r_drawworld;
 
 extern	cvar_t	*r_novis;
@@ -61293,7 +61292,6 @@ float	r_base_world_matrix[16];
 
 int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-cvar_t	*r_drawentities;
 cvar_t	*r_drawworld;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
@@ -61452,17 +61450,9 @@ void R_DrawNullModel (void)
 	glEnable (GL_TEXTURE_2D);
 }
 
-/*
-=============
-R_DrawEntitiesOnList
-=============
-*/
 void R_DrawEntitiesOnList (void)
 {
 	int		i;
-
-	if (!r_drawentities->value)
-		return;
 
 	// draw non-transparent first
 	for (i=0 ; i<r_newrefdef.num_entities ; i++)
@@ -65159,7 +65149,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		r_drawentities = COM_GetCvar("r_drawentities", "1", 0);
 		r_drawworld = COM_GetCvar("r_drawworld", "1", 0);
 		r_novis = COM_GetCvar("r_novis", "0", 0);
 		r_nocull = COM_GetCvar("r_nocull", "0", 0);
