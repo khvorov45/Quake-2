@@ -16565,11 +16565,6 @@ void CL_DrawInventory (void)
 
 }
 
-//
-// userinfo
-//
-cvar_t	*fov;
-
 cvar_t	*cl_vwep;
 
 centity_t		cl_entities[MAX_EDICTS];
@@ -64274,7 +64269,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		fov = COM_GetCvar ("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
 		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
 		m_filter = COM_GetCvar("m_filter", "0", 0);
