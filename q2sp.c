@@ -12432,8 +12432,6 @@ static struct {
 	clientinfo_t	baseclientinfo;
 } cl;
 
-extern	cvar_t	*m_pitch;
-extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_side;
 
 extern	cvar_t	*cl_vwep;
@@ -16569,8 +16567,6 @@ void CL_DrawInventory (void)
 
 }
 
-cvar_t	*m_pitch;
-cvar_t	*m_yaw;
 cvar_t	*m_side;
 
 //
@@ -22710,7 +22706,6 @@ static void M_Main_Draw (void)
 static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
-static menulist_s		s_options_invertmouse_box;
 static menuslider_s		s_options_sfxvolume_slider;
 static menulist_s		s_options_console_action;
 
@@ -23358,18 +23353,8 @@ static void CustomizeControlsFunc(void* unused) {
 	M_Menu_Keys_f();
 }
 
-static void InvertMouseFunc(void* unused) {
-	UNUSED(unused);
-	if (s_options_invertmouse_box.curvalue == 0) {
-		COM_SetValueCvar( "m_pitch", fabs(m_pitch->value ));
-	} else {
-		COM_SetValueCvar("m_pitch", -fabs(m_pitch->value));
-	}
-}
-
 static void ControlsSetMenuItemValues() {
 	s_options_sfxvolume_slider.curvalue = Cvar_VariableValue("s_volume") * 10;
-	s_options_invertmouse_box.curvalue = m_pitch->value < 0;
 }
 
 static void ControlsResetDefaultsFunc(void* unused) {
@@ -23388,8 +23373,6 @@ static void ConsoleFunc(void* unused) {
 }
 
 static void Options_MenuInit() {
-	static char* yesno_names[] = {"no", "yes", 0};
-
 	// configure controls menu and menu items
 	s_options_menu.x = viddef.width / 2;
 	s_options_menu.y = viddef.height / 2 - 58;
@@ -23403,13 +23386,6 @@ static void Options_MenuInit() {
 	s_options_sfxvolume_slider.minvalue		= 0;
 	s_options_sfxvolume_slider.maxvalue		= 10;
 	s_options_sfxvolume_slider.curvalue		= Cvar_VariableValue( "s_volume" ) * 10;
-
-	s_options_invertmouse_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_invertmouse_box.generic.x	= 0;
-	s_options_invertmouse_box.generic.y	= 70;
-	s_options_invertmouse_box.generic.name	= "invert mouse";
-	s_options_invertmouse_box.generic.callback = InvertMouseFunc;
-	s_options_invertmouse_box.itemnames = yesno_names;
 
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
@@ -23432,7 +23408,6 @@ static void Options_MenuInit() {
 	ControlsSetMenuItemValues();
 
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sfxvolume_slider );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_invertmouse_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -63151,11 +63126,9 @@ void IN_MouseMove (usercmd_t *cmd)
 	mouse_y *= sensitivity;
 
 	// add mouse X/Y movement to cmd
-	cl.viewangles[YAW] -= m_yaw->value * mouse_x;
-
-	{
-		cl.viewangles[PITCH] += m_pitch->value * mouse_y;
-	}
+	float pitch_and_yaw = 0.022;
+	cl.viewangles[YAW] -= pitch_and_yaw * mouse_x;
+	cl.viewangles[PITCH] += pitch_and_yaw * mouse_y;
 
 	// force the mouse to the center, so there's room to move
 	if (mx || my)
@@ -64310,8 +64283,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
-		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
 		m_side = COM_GetCvar ("m_side", "1", 0);
 		info_password = COM_GetCvar ("password", "", CVAR_USERINFO);
 		info_spectator = COM_GetCvar ("spectator", "0", CVAR_USERINFO);
