@@ -12432,8 +12432,6 @@ static struct {
 	clientinfo_t	baseclientinfo;
 } cl;
 
-extern	cvar_t	*cl_vwep;
-
 typedef struct
 {
 	int		key;				// so entities can reuse same entry
@@ -13511,7 +13509,7 @@ void CL_AddPacketEntities (frame_t *frame)
 			{	// custom weapon
 				ci = &cl.clientinfo[s1->skinnum & 0xff];
 				i = (s1->skinnum >> 8); // 0 is default weapon model
-				if (!cl_vwep->value || i > MAX_CLIENTWEAPONMODELS - 1)
+				if (i > MAX_CLIENTWEAPONMODELS - 1)
 					i = 0;
 				ent.model = ci->weaponmodel[i];
 				if (!ent.model) {
@@ -16565,8 +16563,6 @@ void CL_DrawInventory (void)
 
 }
 
-cvar_t	*cl_vwep;
-
 centity_t		cl_entities[MAX_EDICTS];
 
 entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
@@ -18307,8 +18303,6 @@ void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 				Com_sprintf (weapon_filename, sizeof(weapon_filename), "players/male/%s", cl_weaponmodels[i]);
 				ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
 			}
-			if (!cl_vwep->value)
-				break; // only one when vwep is off
 		}
 
 		// icon file
@@ -64269,7 +64263,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		cl_vwep = COM_GetCvar("cl_vwep", "1", CVAR_ARCHIVE);
 		cl_nodelta = COM_GetCvar("cl_nodelta", "0", 0);
 		m_filter = COM_GetCvar("m_filter", "0", 0);
 		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
