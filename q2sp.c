@@ -57923,18 +57923,11 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_particle_min_size;
-static cvar_t* gl_particle_max_size;
-static cvar_t* gl_particle_size;
-static cvar_t* gl_particle_att_a;
-static cvar_t* gl_particle_att_b;
-static cvar_t* gl_particle_att_c;
 static cvar_t* gl_bitdepth;
 static cvar_t* gl_drawbuffer;
 static cvar_t* gl_lightmap;
 static cvar_t* gl_shadows;
 static cvar_t* gl_dynamic;
-static cvar_t* gl_modulate;
 static cvar_t* gl_round_down;
 static cvar_t* gl_picmip;
 static cvar_t* gl_skymip;
@@ -59040,7 +59033,7 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 					maps++)
 			{
 				for (i=0 ; i<3 ; i++)
-					scale[i] = gl_modulate->value*r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
+					scale[i] = r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
 
 				pointcolor[0] += lightmap[0] * scale[0] * (1.0/255);
 				pointcolor[1] += lightmap[1] * scale[1] * (1.0/255);
@@ -59108,12 +59101,7 @@ void R_LightPoint (vec3_t p, vec3_t color)
 			VectorMA (color, add, dl->color, color);
 		}
 	}
-
-	VectorScale (color, gl_modulate->value, color);
 }
-
-
-//===================================================================
 
 static float s_blocklights[34*34*3];
 /*
@@ -59254,7 +59242,7 @@ void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 			bl = s_blocklights;
 
 			for (i=0 ; i<3 ; i++)
-				scale[i] = gl_modulate->value*r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
+				scale[i] = r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
 
 			if ( scale[0] == 1.0F &&
 				 scale[1] == 1.0F &&
@@ -59291,7 +59279,7 @@ void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 			bl = s_blocklights;
 
 			for (i=0 ; i<3 ; i++)
-				scale[i] = gl_modulate->value*r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
+				scale[i] = r_newrefdef.lightstyles[surf->styles[maps]].rgb[i];
 
 			if ( scale[0] == 1.0F &&
 				 scale[1] == 1.0F &&
@@ -65039,13 +65027,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_particle_min_size = COM_GetCvar( "gl_particle_min_size", "2", CVAR_ARCHIVE );
-		gl_particle_max_size = COM_GetCvar( "gl_particle_max_size", "40", CVAR_ARCHIVE );
-		gl_particle_size = COM_GetCvar( "gl_particle_size", "40", CVAR_ARCHIVE );
-		gl_particle_att_a = COM_GetCvar( "gl_particle_att_a", "0.01", CVAR_ARCHIVE );
-		gl_particle_att_b = COM_GetCvar( "gl_particle_att_b", "0.0", CVAR_ARCHIVE );
-		gl_particle_att_c = COM_GetCvar( "gl_particle_att_c", "0.01", CVAR_ARCHIVE );
-		gl_modulate = COM_GetCvar ("gl_modulate", "1", CVAR_ARCHIVE );
 		gl_bitdepth = COM_GetCvar( "gl_bitdepth", "0", 0 );
 		gl_lightmap = COM_GetCvar ("gl_lightmap", "0", 0);
 		gl_shadows = COM_GetCvar ("gl_shadows", "0", CVAR_ARCHIVE );
