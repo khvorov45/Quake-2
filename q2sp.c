@@ -62931,7 +62931,6 @@ void IN_MouseEvent (int mstate);
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
 
-cvar_t	*in_mouse;
 bool	in_appactive;
 
 bool	mlooking;
@@ -62958,25 +62957,14 @@ bool	mouseparmsvalid;
 int			window_center_x, window_center_y;
 RECT		window_rect;
 
-
-/*
-===========
-IN_ActivateMouse
-
-Called when the window gains focus or changes in some way
-===========
-*/
+// Called when the window gains focus or changes in some way
 void IN_ActivateMouse (void)
 {
 	int		width, height;
 
 	if (!mouseinitialized)
 		return;
-	if (!in_mouse->value)
-	{
-		mouseactive = false;
-		return;
-	}
+
 	if (mouseactive)
 		return;
 
@@ -63131,7 +63119,7 @@ void IN_Frame (void)
 	if (!mouseinitialized)
 		return;
 
-	if (!in_mouse || !in_appactive) {
+	if (!in_appactive) {
 		IN_DeactivateMouse();
 		return;
 	}
@@ -64242,7 +64230,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		in_mouse = COM_GetCvar("in_mouse", "1", CVAR_ARCHIVE);
 		v_centermove = COM_GetCvar("v_centermove", "0.15", 0);
 		v_centerspeed = COM_GetCvar("v_centerspeed", "500", 0);
 		s_volume = COM_GetCvar("s_volume", "0.7", CVAR_ARCHIVE);
