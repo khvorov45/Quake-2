@@ -57922,10 +57922,6 @@ extern	int		gl_tex_alpha_format;
 
 extern	float	r_world_matrix[16];
 
-static cvar_t* gl_picmip;
-static cvar_t* gl_skymip;
-static cvar_t* gl_showtris;
-static cvar_t* gl_ztrick;
 static cvar_t* gl_clear;
 static cvar_t* gl_cull;
 static cvar_t* gl_polyblend;
@@ -58603,13 +58599,6 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 		;
 	if (scaled_height > height && mipmap)
 		scaled_height >>= 1;
-
-	// let people sample down the world textures for speed
-	if (mipmap)
-	{
-		scaled_width >>= (int)gl_picmip->value;
-		scaled_height >>= (int)gl_picmip->value;
-	}
 
 	// don't ever bother with >256 textures
 	if (scaled_width > 256)
@@ -61522,35 +61511,8 @@ void R_SetupGL (void)
 	glEnable(GL_DEPTH_TEST);
 }
 
-/*
-=============
-R_Clear
-=============
-*/
 void R_Clear (void)
 {
-	if (gl_ztrick->value)
-	{
-		static int trickframe;
-
-		if (gl_clear->value)
-			glClear (GL_COLOR_BUFFER_BIT);
-
-		trickframe++;
-		if (trickframe & 1)
-		{
-			gldepthmin = 0;
-			gldepthmax = 0.49999;
-			glDepthFunc (GL_LEQUAL);
-		}
-		else
-		{
-			gldepthmin = 1;
-			gldepthmax = 0.5;
-			glDepthFunc (GL_GEQUAL);
-		}
-	}
-	else
 	{
 		if (gl_clear->value)
 			glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -61871,47 +61833,6 @@ void DrawGLFlowingPoly (msurface_t *fa)
 }
 //PGM
 //============
-
-/*
-** R_DrawTriangleOutlines
-*/
-void R_DrawTriangleOutlines (void)
-{
-	int			i, j;
-	glpoly_t	*p;
-
-	if (!gl_showtris->value)
-		return;
-
-	glDisable (GL_TEXTURE_2D);
-	glDisable (GL_DEPTH_TEST);
-	glColor4f (1,1,1,1);
-
-	for (i=0 ; i<MAX_LIGHTMAPS ; i++)
-	{
-		msurface_t *surf;
-
-		for ( surf = gl_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain )
-		{
-			p = surf->polys;
-			for ( ; p ; p=p->chain)
-			{
-				for (j=2 ; j<p->numverts ; j++ )
-				{
-					glBegin (GL_LINE_STRIP);
-					glVertex3fv (p->verts[0]);
-					glVertex3fv (p->verts[j-1]);
-					glVertex3fv (p->verts[j]);
-					glVertex3fv (p->verts[0]);
-					glEnd ();
-				}
-			}
-		}
-	}
-
-	glEnable (GL_DEPTH_TEST);
-	glEnable (GL_TEXTURE_2D);
-}
 
 /*
 ** DrawGLPolyChain
@@ -62532,8 +62453,6 @@ void R_DrawWorld (void)
 	R_BlendLightmaps ();
 
 	R_DrawSkyBox ();
-
-	R_DrawTriangleOutlines ();
 }
 
 
@@ -63424,23 +63343,13 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 
 	for (i=0 ; i<6 ; i++)
 	{
-		// chop down rotating skies for less memory
-		if (gl_skymip->value || skyrotate)
-			gl_picmip->value++;
-
 		Com_sprintf (pathname, sizeof(pathname), "env/%s%s.tga", skyname, suf[i]);
 
 		sky_images[i] = GL_FindImage (pathname, it_sky);
 		if (!sky_images[i])
 			sky_images[i] = r_notexture;
 
-		if (gl_skymip->value || skyrotate)
-		{	// take less memory
-			gl_picmip->value--;
-			sky_min = 1.0/256;
-			sky_max = 255.0/256;
-		}
-		else
+
 		{
 			sky_min = 1.0/512;
 			sky_max = 511.0/512;
@@ -64396,8 +64305,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	return result;
 }
 
-static cvar_t *gl_picmip;
-
 static cvar_t *sw_mode;
 
 /*
@@ -64410,7 +64317,6 @@ MENU INTERACTION
 
 static menuframework_s	s_opengl_menu;
 
-static menuslider_s		s_tq_slider;
 static menuaction_s		s_cancel_action;
 static menuaction_s		s_defaults_action;
 
@@ -64421,9 +64327,6 @@ static void ResetDefaults(void* unused) {
 
 static void ApplyChanges(void* unused) {
 	UNUSED(unused);
-
-	COM_SetValueCvar("gl_picmip", 3 - s_tq_slider.curvalue);
-
 	M_ForceMenuOff();
 }
 
@@ -64434,9 +64337,6 @@ static void CancelChanges(void* unused) {
 }
 
 static void VID_MenuInit() {
-	if (!gl_picmip) {
-		gl_picmip = COM_GetCvar("gl_picmip", "0", 0);
-	}
 
 	if (!sw_mode) {
 		sw_mode = COM_GetCvar("sw_mode", "0", 0);
@@ -64457,15 +64357,6 @@ static void VID_MenuInit() {
 	s_cancel_action.generic.y    = 100;
 	s_cancel_action.generic.callback = CancelChanges;
 
-	s_tq_slider.generic.type = MTYPE_SLIDER;
-	s_tq_slider.generic.x = 0;
-	s_tq_slider.generic.y = 60;
-	s_tq_slider.generic.name = "texture quality";
-	s_tq_slider.minvalue = 0;
-	s_tq_slider.maxvalue = 3;
-	s_tq_slider.curvalue = 3 - gl_picmip->value;
-
-	Menu_AddItem(&s_opengl_menu, (void*)&s_tq_slider);
 	Menu_AddItem(&s_opengl_menu, (void*) &s_defaults_action);
 	Menu_AddItem(&s_opengl_menu, (void*) &s_cancel_action);
 
@@ -64979,10 +64870,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		gl_picmip = COM_GetCvar ("gl_picmip", "0", 0);
-		gl_skymip = COM_GetCvar ("gl_skymip", "0", 0);
-		gl_showtris = COM_GetCvar ("gl_showtris", "0", 0);
-		gl_ztrick = COM_GetCvar ("gl_ztrick", "0", 0);
 		gl_clear = COM_GetCvar ("gl_clear", "0", 0);
 		gl_cull = COM_GetCvar ("gl_cull", "1", 0);
 		gl_polyblend = COM_GetCvar ("gl_polyblend", "1", 0);
