@@ -4983,9 +4983,6 @@ enum svc_ops_e {
 	svc_frame
 };
 
-// this is in the client code, but can be used for debugging from server
-void SCR_DebugGraph (float value, int color);
-
 void Sys_AppActivate (void);
 
 char* Sys_GetClipboardData( void );
@@ -10167,9 +10164,6 @@ static void SV_ShutdownGameProgs() {
 	tml_free_all(TAG_GAME);
 }
 
-// Init the game subsystem for a new map
-void SCR_DebugGraph(float value, int color);
-
 void InitGame(void);
 
 void SV_InitGameProgs() {
@@ -12216,9 +12210,6 @@ void	SCR_UpdateScreen (void);
 void	SCR_CenterPrint (char *str);
 void	SCR_BeginLoadingPlaque (void);
 
-
-void	SCR_DebugGraph (float value, int color);
-
 void	SCR_TouchPics (void);
 
 void	SCR_RunConsole (void);
@@ -12500,7 +12491,6 @@ extern	sizebuf_t	net_message;
 
 void DrawString (int x, int y, char *s);
 void DrawAltString (int x, int y, char *s);	// toggle high bit
-void CL_AddNetgraph (void);
 
 //ROGUE
 typedef struct cl_sustain
@@ -18691,8 +18681,6 @@ void CL_ParseServerMessage (void)
 		}
 
 	}
-
-	CL_AddNetgraph ();
 }
 
 void CL_CheckPredictionError (void)
@@ -18894,8 +18882,6 @@ void CL_PredictMovement (void)
 
 	pm.s = cl.frame.playerstate.pmove;
 
-//	SCR_DebugGraph (current - ack - 1, 0);
-
 	frame = 0;
 
 	// run frames
@@ -18929,23 +18915,13 @@ void CL_PredictMovement (void)
 	VectorCopy (pm.viewangles, cl.predicted_angles);
 }
 
-float		scr_con_current;	// aproaches scr_conlines at scr_conspeed
+float		scr_con_current;	// console drop animation
 float		scr_conlines;		// 0.0 to 1.0 lines of console to display
 
 int			scr_draw_loading;
 
 vrect_t		scr_vrect;		// position of render window on screen
 
-
-cvar_t		*scr_conspeed;
-cvar_t		*scr_centertime;
-cvar_t		*scr_showturtle;
-cvar_t		*scr_showpause;
-cvar_t		*scr_printspeed;
-
-cvar_t		*scr_netgraph;
-cvar_t		*scr_timegraph;
-cvar_t		*scr_debuggraph;
 cvar_t		*scr_graphheight;
 cvar_t		*scr_graphscale;
 cvar_t		*scr_graphshift;
@@ -18955,77 +18931,14 @@ int			crosshair_width, crosshair_height;
 
 void SCR_Loading_f (void);
 
-// A new packet was just parsed
-void CL_AddNetgraph (void)
-{
-	int		i;
-	int		in;
-	int		ping;
-
-	// if using the debuggraph for something else, don't
-	// add the net lines
-	if (scr_debuggraph->value || scr_timegraph->value)
-		return;
-
-	for (i=0 ; i<cls.netchan.dropped ; i++)
-		SCR_DebugGraph (30, 0x40);
-
-	// see what the latency was on this packet
-	in = cls.netchan.incoming_acknowledged & (CMD_BACKUP-1);
-	ping = cls.realtime - cl.cmd_time[in];
-	ping /= 30;
-	if (ping > 30)
-		ping = 30;
-	SCR_DebugGraph (ping, 0xd0);
-}
-
-
 typedef struct
 {
 	float	value;
 	int		color;
 } graphsamp_t;
 
-static	int			current;
-static	graphsamp_t	values[1024];
-
-void SCR_DebugGraph (float value, int color)
-{
-	values[current&1023].value = value;
-	values[current&1023].color = color;
-	current++;
-}
 
 void Draw_Fill (int x, int y, int w, int h, int c);
-
-void SCR_DrawDebugGraph (void)
-{
-	int		a, x, y, w, i, h;
-	float	v;
-	int		color;
-
-	//
-	// draw the graph
-	//
-	w = scr_vrect.width;
-
-	x = scr_vrect.x;
-	y = scr_vrect.y+scr_vrect.height;
-	Draw_Fill (x, y-scr_graphheight->value, w, scr_graphheight->value, 8);
-
-	for (a=0 ; a<w ; a++)
-	{
-		i = (current-1-a+1024) & 1023;
-		v = values[i].value;
-		color = values[i].color;
-		v = v*scr_graphscale->value + scr_graphshift->value;
-
-		if (v < 0)
-			v += scr_graphheight->value * (1+(int)(-v/scr_graphheight->value));
-		h = (int)v % (int)scr_graphheight->value;
-		Draw_Fill (x+w-1-a, y - h, 1,	h, color);
-	}
-}
 
 char		scr_centerstring[1024];
 float		scr_centertime_start;	// for slow victory printing
@@ -19041,7 +18954,7 @@ void SCR_CenterPrint (char *str)
 	int		i, j, l;
 
 	strncpy (scr_centerstring, str, sizeof(scr_centerstring)-1);
-	scr_centertime_off = scr_centertime->value;
+	scr_centertime_off = 2.5f;
 	scr_centertime_start = cl.time;
 
 	// count the number of lines for centering
@@ -19215,16 +19128,17 @@ void SCR_RunConsole (void)
 	else
 		scr_conlines = 0;				// none visible
 
+	float speed = 3.0f;
 	if (scr_conlines < scr_con_current)
 	{
-		scr_con_current -= scr_conspeed->value*cls.frametime;
+		scr_con_current -= speed * cls.frametime;
 		if (scr_conlines > scr_con_current)
 			scr_con_current = scr_conlines;
 
 	}
 	else if (scr_conlines > scr_con_current)
 	{
-		scr_con_current += scr_conspeed->value*cls.frametime;
+		scr_con_current += speed * cls.frametime;
 		if (scr_conlines < scr_con_current)
 			scr_con_current = scr_conlines;
 	}
@@ -19981,14 +19895,6 @@ static void SCR_UpdateScreen() {
 
 	SCR_DrawNet();
 	SCR_CheckDrawCenterString();
-
-	if (scr_timegraph->value) {
-		SCR_DebugGraph (cls.frametime*300, 0);
-	}
-
-	if (scr_debuggraph->value || scr_timegraph->value || scr_netgraph->value) {
-		SCR_DrawDebugGraph();
-	}
 
 	SCR_DrawConsole();
 
@@ -64633,14 +64539,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
-		scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
-		scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
-		scr_centertime = COM_GetCvar("scr_centertime", "2.5", 0);
-		scr_printspeed = COM_GetCvar("scr_printspeed", "8", 0);
-		scr_netgraph = COM_GetCvar("netgraph", "0", 0);
-		scr_timegraph = COM_GetCvar("timegraph", "0", 0);
-		scr_debuggraph = COM_GetCvar("debuggraph", "0", 0);
 		scr_graphheight = COM_GetCvar("graphheight", "32", 0);
 		scr_graphscale = COM_GetCvar("graphscale", "1", 0);
 		scr_graphshift = COM_GetCvar("graphshift", "0", 0);
