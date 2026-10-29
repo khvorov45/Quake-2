@@ -12581,7 +12581,6 @@ typedef struct
 } kbutton_t;
 
 extern	kbutton_t	in_mlook, in_klook;
-extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
 void CL_SendCmd (void);
@@ -16091,7 +16090,7 @@ Key_Event (int key, bool down, unsigned time);
 kbutton_t	in_klook;
 kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
-kbutton_t	in_strafe, in_speed, in_use, in_attack;
+kbutton_t	in_speed, in_use, in_attack;
 kbutton_t	in_up, in_down;
 
 int			in_impulse;
@@ -16198,8 +16197,6 @@ void IN_MoverightUp(void) {KeyUp(&in_moveright);}
 
 void IN_SpeedDown(void) {KeyDown(&in_speed);}
 void IN_SpeedUp(void) {KeyUp(&in_speed);}
-void IN_StrafeDown(void) {KeyDown(&in_strafe);}
-void IN_StrafeUp(void) {KeyUp(&in_strafe);}
 
 void IN_AttackDown(void) {KeyDown(&in_attack);}
 void IN_AttackUp(void) {KeyUp(&in_attack);}
@@ -16251,7 +16248,6 @@ void CL_AdjustAngles (void)
 	else
 		speed = cls.frametime;
 
-	if (!(in_strafe.state & 1))
 	{
 		float yawspeed = 140.0f;
 		cl.viewangles[YAW] -= speed * yawspeed * CL_KeyState(&in_right);
@@ -16282,11 +16278,6 @@ void CL_BaseMove (usercmd_t *cmd)
 	float speed = 200.0f;
 
 	VectorCopy (cl.viewangles, cmd->angles);
-	if (in_strafe.state & 1)
-	{
-		cmd->sidemove += speed * CL_KeyState (&in_right);
-		cmd->sidemove -= speed * CL_KeyState (&in_left);
-	}
 
 	cmd->sidemove += speed * CL_KeyState (&in_moveright);
 	cmd->sidemove -= speed * CL_KeyState (&in_moveleft);
@@ -22822,7 +22813,6 @@ static char* bindnames[][2] = {
 	{"+speed", "run"},
 	{"+moveleft", "step left"},
 	{"+moveright", "step right"},
-	{"+strafe", "sidestep"},
 	{"+lookup", "look up"},
 	{"+lookdown", "look down"},
 	{"centerview", "center view"},
@@ -25911,7 +25901,7 @@ void ai_run_missile(edict_t* self)
 =============
 ai_run_slide
 
-Strafe sideways, but stay at aproximately the same range
+Move sideways, but stay at aproximately the same range
 =============
 */
 void ai_run_slide(edict_t* self, float distance)
@@ -63128,14 +63118,10 @@ void IN_MouseEvent (int mstate)
 	mouse_oldbuttonstate = mstate;
 }
 
-
-/*
-===========
-IN_MouseMove
-===========
-*/
 void IN_MouseMove (usercmd_t *cmd)
 {
+	UNUSED(cmd);
+
 	int		mx, my;
 
 	if (!mouseactive)
@@ -63167,18 +63153,10 @@ void IN_MouseMove (usercmd_t *cmd)
 	mouse_y *= sensitivity;
 
 	// add mouse X/Y movement to cmd
-	if (in_strafe.state & 1)
-		cmd->sidemove += m_side->value * mouse_x;
-	else
-		cl.viewangles[YAW] -= m_yaw->value * mouse_x;
+	cl.viewangles[YAW] -= m_yaw->value * mouse_x;
 
-	if (!(in_strafe.state & 1))
 	{
 		cl.viewangles[PITCH] += m_pitch->value * mouse_y;
-	}
-	else
-	{
-		cmd->forwardmove -= m_forward->value * mouse_y;
 	}
 
 	// force the mouse to the center, so there's room to move
@@ -64307,8 +64285,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("-lookup", IN_LookupUp);
 		Cmd_AddCommand("+lookdown", IN_LookdownDown);
 		Cmd_AddCommand("-lookdown", IN_LookdownUp);
-		Cmd_AddCommand("+strafe", IN_StrafeDown);
-		Cmd_AddCommand("-strafe", IN_StrafeUp);
 		Cmd_AddCommand("+moveleft", IN_MoveleftDown);
 		Cmd_AddCommand("-moveleft", IN_MoveleftUp);
 		Cmd_AddCommand("+moveright", IN_MoverightDown);
