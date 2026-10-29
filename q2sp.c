@@ -12432,10 +12432,6 @@ static struct {
 	clientinfo_t	baseclientinfo;
 } cl;
 
-extern	cvar_t	*lookspring;
-extern	cvar_t	*lookstrafe;
-extern	cvar_t	*sensitivity;
-
 extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
 extern	cvar_t	*m_forward;
@@ -16582,10 +16578,6 @@ void CL_DrawInventory (void)
 
 
 }
-
-cvar_t	*lookspring;
-cvar_t	*lookstrafe;
-cvar_t	*sensitivity;
 
 cvar_t	*m_pitch;
 cvar_t	*m_yaw;
@@ -22729,10 +22721,7 @@ static void M_Main_Draw (void)
 static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
-static menuslider_s		s_options_sensitivity_slider;
 static menulist_s		s_options_invertmouse_box;
-static menulist_s		s_options_lookspring_box;
-static menulist_s		s_options_lookstrafe_box;
 static menuslider_s		s_options_sfxvolume_slider;
 static menulist_s		s_options_console_action;
 
@@ -22786,12 +22775,6 @@ static menuaction_s		s_savegame_actions[MAX_SAVEGAMES];
 static void UpdateVolumeFunc(void* unused) {
 	UNUSED(unused);
 	COM_SetValueCvar( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
-}
-
-static void MouseSpeedFunc(void* unused)
-{
-	UNUSED(unused);
-	COM_SetValueCvar( "sensitivity", s_options_sensitivity_slider.curvalue / 2.0F );
 }
 
 static int bind_grab;
@@ -23396,27 +23379,9 @@ static void InvertMouseFunc(void* unused) {
 	}
 }
 
-static void LookspringFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "lookspring", s_options_lookspring_box.curvalue );
-}
-
-static void LookstrafeFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "lookstrafe", s_options_lookstrafe_box.curvalue );
-}
-
 static void ControlsSetMenuItemValues() {
 	s_options_sfxvolume_slider.curvalue = Cvar_VariableValue("s_volume") * 10;
-	s_options_sensitivity_slider.curvalue = (sensitivity->value) * 2;
-
 	s_options_invertmouse_box.curvalue = m_pitch->value < 0;
-
-	COM_SetValueCvar("lookspring", clamp(lookspring->value, 0, 1));
-	s_options_lookspring_box.curvalue = lookspring->value;
-
-	COM_SetValueCvar("lookstrafe", clamp(lookstrafe->value, 0, 1));
-	s_options_lookstrafe_box.curvalue = lookstrafe->value;
 }
 
 static void ControlsResetDefaultsFunc(void* unused) {
@@ -23451,34 +23416,12 @@ static void Options_MenuInit() {
 	s_options_sfxvolume_slider.maxvalue		= 10;
 	s_options_sfxvolume_slider.curvalue		= Cvar_VariableValue( "s_volume" ) * 10;
 
-	s_options_sensitivity_slider.generic.type	= MTYPE_SLIDER;
-	s_options_sensitivity_slider.generic.x		= 0;
-	s_options_sensitivity_slider.generic.y		= 50;
-	s_options_sensitivity_slider.generic.name	= "mouse speed";
-	s_options_sensitivity_slider.generic.callback = MouseSpeedFunc;
-	s_options_sensitivity_slider.minvalue		= 2;
-	s_options_sensitivity_slider.maxvalue		= 22;
-
 	s_options_invertmouse_box.generic.type = MTYPE_SPINCONTROL;
 	s_options_invertmouse_box.generic.x	= 0;
 	s_options_invertmouse_box.generic.y	= 70;
 	s_options_invertmouse_box.generic.name	= "invert mouse";
 	s_options_invertmouse_box.generic.callback = InvertMouseFunc;
 	s_options_invertmouse_box.itemnames = yesno_names;
-
-	s_options_lookspring_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_lookspring_box.generic.x	= 0;
-	s_options_lookspring_box.generic.y	= 80;
-	s_options_lookspring_box.generic.name	= "lookspring";
-	s_options_lookspring_box.generic.callback = LookspringFunc;
-	s_options_lookspring_box.itemnames = yesno_names;
-
-	s_options_lookstrafe_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_lookstrafe_box.generic.x	= 0;
-	s_options_lookstrafe_box.generic.y	= 90;
-	s_options_lookstrafe_box.generic.name	= "lookstrafe";
-	s_options_lookstrafe_box.generic.callback = LookstrafeFunc;
-	s_options_lookstrafe_box.itemnames = yesno_names;
 
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
@@ -23501,10 +23444,7 @@ static void Options_MenuInit() {
 	ControlsSetMenuItemValues();
 
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sfxvolume_slider );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sensitivity_slider );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_invertmouse_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookspring_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookstrafe_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -63222,11 +63162,12 @@ void IN_MouseMove (usercmd_t *cmd)
 	old_mouse_x = mx;
 	old_mouse_y = my;
 
-	mouse_x *= sensitivity->value;
-	mouse_y *= sensitivity->value;
+	float sensitivity = 3.0f;
+	mouse_x *= sensitivity;
+	mouse_y *= sensitivity;
 
-// add mouse X/Y movement to cmd
-	if ( (in_strafe.state & 1) || (lookstrafe->value && mlooking ))
+	// add mouse X/Y movement to cmd
+	if (in_strafe.state & 1)
 		cmd->sidemove += m_side->value * mouse_x;
 	else
 		cl.viewangles[YAW] -= m_yaw->value * mouse_x;
@@ -64395,9 +64336,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		lookspring = COM_GetCvar ("lookspring", "0", CVAR_ARCHIVE);
-		lookstrafe = COM_GetCvar ("lookstrafe", "0", CVAR_ARCHIVE);
-		sensitivity = COM_GetCvar ("sensitivity", "3", CVAR_ARCHIVE);
 		m_pitch = COM_GetCvar ("m_pitch", "0.022", CVAR_ARCHIVE);
 		m_yaw = COM_GetCvar ("m_yaw", "0.022", 0);
 		m_forward = COM_GetCvar ("m_forward", "1", 0);
