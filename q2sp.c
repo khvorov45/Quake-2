@@ -1765,16 +1765,6 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	strncpy(dest, bigbuffer, size - 1);
 }
 
-static void Com_Printf(char *fmt, ...) {
-	char msg[MAXPRINTMSG];
-	va_list argptr;
-	va_start(argptr, fmt);
-	int len = Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
-	va_end(argptr);
-	String line = {msg, len};
-	add_line_to_console_log(line);
-}
-
 // Parse a token out of a string
 // data is an in/out parm, returns a parsed out token
 static char* COM_Parse(char** data_p) {
@@ -21712,9 +21702,6 @@ cvar_t		*cl_testentities;
 cvar_t		*cl_testlights;
 cvar_t		*cl_testblend;
 
-cvar_t		*cl_stats;
-
-
 int			r_numdlights;
 dlight_t	r_dlights[MAX_DLIGHTS];
 
@@ -22130,8 +22117,6 @@ void V_RenderView() {
 	}
 
 	R_RenderFrame(&cl.refdef);
-	if (cl_stats->value)
-		Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
 
 	SCR_DrawCrosshair ();
 }
@@ -22302,7 +22287,7 @@ void Key_Console(int key) {
 		i64 to_skip = console_input.ptr[1] == '\\' || console_input.ptr[1] == '/' ? 1 : 0;
 		Cbuf_AddText(console_input.ptr + to_skip);
 		Cbuf_AddText("\n");
-		Com_Printf("%s\n", console_input.ptr);
+		add_line_to_console_log((String){console_input.ptr, console_input.len});
 
 		clear_console_input();
 
@@ -22411,7 +22396,7 @@ void Key_Unbind_f (void)
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
-		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
+		add_line_to_console_log(STR("invalid key"));
 		return;
 	}
 
@@ -22448,16 +22433,17 @@ void Key_Bind_f (void)
 	b = Key_StringToKeynum (Cmd_Argv(1));
 	if (b==-1)
 	{
-		Com_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
+		add_line_to_console_log(STR("invalid key"));
 		return;
 	}
 
 	if (c == 2)
 	{
-		if (keybindings[b])
-			Com_Printf ("\"%s\" = \"%s\"\n", Cmd_Argv(1), keybindings[b] );
-		else
-			Com_Printf ("\"%s\" is not bound\n", Cmd_Argv(1) );
+		if (keybindings[b]) {
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_cstring(keybindings[b]))));
+		} else {
+			add_line_to_console_log(STR("key not bound"));
+		}
 		return;
 	}
 
@@ -22473,20 +22459,12 @@ void Key_Bind_f (void)
 	Key_SetBinding (b, cmd);
 }
 
-
-/*
-============
-Key_Bindlist_f
-
-============
-*/
-void Key_Bindlist_f (void)
-{
-	int		i;
-
-	for (i=0 ; i<256 ; i++)
-		if (keybindings[i] && keybindings[i][0])
-			Com_Printf ("%s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+void Key_Bindlist_f() {
+	for (i64 i = 0; i < 256; i++) {
+		if (keybindings[i] && keybindings[i][0]) {
+			add_line_to_console_log(concatenate_strings(&context.memory.perm, STRS(string_from_cstring(Key_KeynumToString(i)), STR(" "), string_from_cstring(keybindings[i]))));
+		}
+	}
 }
 
 // Called by the system between frames for both key up and key down events
@@ -22519,8 +22497,9 @@ void Key_Event (int key, bool down, unsigned time)
 			&& key_repeats[key] > 1)
 			return;	// ignore most autorepeats
 
-		if (key >= 200 && !keybindings[key])
-			Com_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key) );
+		if (key >= 200 && !keybindings[key]) {
+			add_line_to_console_log(STR("unbound, hit F4 to bind"));
+		}
 	}
 	else
 	{
@@ -24642,17 +24621,6 @@ cvar_t		*s_volume;
 cvar_t		*s_loadas8bit;
 cvar_t		*s_mixahead;
 
-void S_SoundInfo_f(void)
-{
-	Com_Printf("%5d stereo\n", dma.channels - 1);
-	Com_Printf("%5d samples\n", dma.samples);
-	Com_Printf("%5d samplepos\n", dma.samplepos);
-	Com_Printf("%5d samplebits\n", dma.samplebits);
-	Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
-	Com_Printf("%5d speed\n", dma.speed);
-	Com_Printf("0x%x dma buffer\n", dma.buffer);
-}
-
 sfx_t *S_FindName (char *name, bool create)
 {
 	int		i;
@@ -25154,11 +25122,7 @@ void S_StartLocalSound (char *sound)
 	sfx_t	*sfx;
 
 	sfx = S_RegisterSound (sound);
-	if (!sfx)
-	{
-		Com_Printf ("S_StartLocalSound: can't cache %s\n", sound);
-		return;
-	}
+	assert(sfx);
 	S_StartSound (NULL, cl.playernum+1, 0, sfx, 1, 1, 0);
 }
 
@@ -25361,13 +25325,6 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
 	}
 }
 
-//=============================================================================
-
-/*
-==============
-S_LoadSound
-==============
-*/
 sfxcache_t *S_LoadSound (sfx_t *s)
 {
 	char	namebuffer[MAX_QPATH];
@@ -25382,12 +25339,12 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (s->name[0] == '*')
 		return NULL;
 
-// see if still in memory
+	// see if still in memory
 	sc = s->cache;
 	if (sc)
 		return sc;
 
-// load it in
+	// load it in
 	if (s->truename)
 		name = s->truename;
 	else
@@ -25408,7 +25365,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	info = GetWavinfo (data, size);
 	if (info.channels != 1)
 	{
-		Com_Printf ("%s is a stereo sample\n",s->name);
 		FS_FreeFile (data);
 		return NULL;
 	}
@@ -25508,23 +25464,6 @@ void FindChunk(char *name)
 	FindNextChunk (name);
 }
 
-
-void DumpChunks(void)
-{
-	char	str[5];
-
-	str[4] = 0;
-	data_p=iff_data;
-	do
-	{
-		memcpy (str, data_p, 4);
-		data_p += 4;
-		iff_chunk_len = GetLittleLong();
-		Com_Printf ("0x%x : %s (%d)\n", (size_t)(data_p - 4), str, iff_chunk_len);
-		data_p += (iff_chunk_len + 1) & ~1;
-	} while (data_p < iff_end);
-}
-
 wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 {
 	wavinfo_t	info;
@@ -25540,7 +25479,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	iff_data = wav;
 	iff_end = wav + wavlength;
 
-// find "RIFF" chunk
+	// find "RIFF" chunk
 	FindChunk("RIFF");
 	if (!(data_p && !strncmp((char*)data_p+8, "WAVE", 4)))
 	{
@@ -25548,9 +25487,8 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 		return info;
 	}
 
-// get "fmt " chunk
+	// get "fmt " chunk
 	iff_data = data_p + 12;
-// DumpChunks ();
 
 	FindChunk("fmt ");
 	if (!data_p)
@@ -25571,13 +25509,12 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 	data_p += 4+2;
 	info.width = GetLittleShort() / 8;
 
-// get cue chunk
+	// get cue chunk
 	FindChunk("cue ");
 	if (data_p)
 	{
 		data_p += 32;
 		info.loopstart = GetLittleLong();
-//		Com_Printf("loopstart=%d\n", sfx->loopstart);
 
 	// if the next chunk is a LIST chunk, look for a cue length marker
 		FindNextChunk ("LIST");
@@ -25588,14 +25525,13 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 				data_p += 24;
 				i = GetLittleLong ();	// samples in loop
 				info.samples = info.loopstart + i;
-//				Com_Printf("looped length: %i\n", i);
 			}
 		}
 	}
 	else
 		info.loopstart = -1;
 
-// find data chunk
+	// find data chunk
 	FindChunk("data");
 	if (!data_p)
 	{
@@ -54999,14 +54935,6 @@ unsigned CheckBlock (void *b, int c)
 		v+= ((u8 *)b)[i];
 	return v;
 }
-void PrintPmove (pmove_t *pm)
-{
-	unsigned	c1, c2;
-
-	c1 = CheckBlock (&pm->s, sizeof(pm->s));
-	c2 = CheckBlock (&pm->cmd, sizeof(pm->cmd));
-	Com_Printf ("sv %3i:%i %i\n", pm->cmd.impulse, c1, c2);
-}
 
 /*
 ==============
@@ -58261,11 +58189,7 @@ void Draw_StretchPic (int x, int y, int w, int h, char *pic)
 	image_t *gl;
 
 	gl = Draw_FindPic (pic);
-	if (!gl)
-	{
-		Com_Printf("Can't find pic: %s\n", pic);
-		return;
-	}
+	assert(gl);
 
 	if (scrap_dirty)
 		Scrap_Upload ();
@@ -58288,11 +58212,8 @@ void Draw_Pic (int x, int y, char *pic)
 	image_t *gl;
 
 	gl = Draw_FindPic (pic);
-	if (!gl)
-	{
-		Com_Printf("Can't find pic: %s\n", pic);
-		return;
-	}
+	assert(gl);
+
 	if (scrap_dirty)
 		Scrap_Upload ();
 
@@ -58804,8 +58725,6 @@ bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 	else if (samples == gl_alpha_format)
 		comp = gl_tex_alpha_format;
 	else {
-		Com_Printf(			   "Unknown number of texture components %i\n",
-			   samples);
 		comp = samples;
 	}
 
@@ -60005,14 +59924,10 @@ static bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
 
 	if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
 	{
-		Com_Printf("R_CullAliasModel %s: no such frame %d\n",
-			currentmodel->name, e->frame);
 		e->frame = 0;
 	}
 	if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
 	{
-		Com_Printf("R_CullAliasModel %s: no such oldframe %d\n",
-			currentmodel->name, e->oldframe);
 		e->oldframe = 0;
 	}
 
@@ -60348,8 +60263,6 @@ void R_DrawAliasModel (Entity *e)
 	if ( (currententity->frame >= paliashdr->num_frames)
 		|| (currententity->frame < 0) )
 	{
-		Com_Printf("R_DrawAliasModel %s: no such frame %d\n",
-			currentmodel->name, currententity->frame);
 		currententity->frame = 0;
 		currententity->oldframe = 0;
 	}
@@ -60357,8 +60270,6 @@ void R_DrawAliasModel (Entity *e)
 	if ( (currententity->oldframe >= paliashdr->num_frames)
 		|| (currententity->oldframe < 0))
 	{
-		Com_Printf("R_DrawAliasModel %s: no such oldframe %d\n",
-			currentmodel->name, currententity->oldframe);
 		currententity->frame = 0;
 		currententity->oldframe = 0;
 	}
@@ -65323,7 +65234,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("-mlook", IN_MLookUp);
 		Cmd_AddCommand("play", S_Play);
 		Cmd_AddCommand("stopsound", S_StopAllSounds);
-		Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 	}
 
 	// NOTE: Command buffer
@@ -65378,7 +65288,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		cl_testparticles = COM_GetCvar ("cl_testparticles", "0", 0);
 		cl_testentities = COM_GetCvar ("cl_testentities", "0", 0);
 		cl_testlights = COM_GetCvar ("cl_testlights", "0", 0);
-		cl_stats = COM_GetCvar ("cl_stats", "0", 0);
 		scr_conspeed = COM_GetCvar("scr_conspeed", "3", 0);
 		scr_showturtle = COM_GetCvar("scr_showturtle", "0", 0);
 		scr_showpause = COM_GetCvar("scr_showpause", "1", 0);
