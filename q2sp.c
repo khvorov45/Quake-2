@@ -22679,7 +22679,6 @@ static void M_Main_Draw (void)
 static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
 static menuaction_s		s_options_customize_options_action;
-static menuslider_s		s_options_sfxvolume_slider;
 static menulist_s		s_options_console_action;
 
 static menuframework_s	s_keys_menu;
@@ -22728,11 +22727,6 @@ static char m_savestrings[MAX_SAVEGAMES][32];
 static bool m_savevalid[MAX_SAVEGAMES];
 
 static menuaction_s		s_savegame_actions[MAX_SAVEGAMES];
-
-static void UpdateVolumeFunc(void* unused) {
-	UNUSED(unused);
-	COM_SetValueCvar( "s_volume", s_options_sfxvolume_slider.curvalue / 10 );
-}
 
 static int bind_grab;
 
@@ -23326,15 +23320,10 @@ static void CustomizeControlsFunc(void* unused) {
 	M_Menu_Keys_f();
 }
 
-static void ControlsSetMenuItemValues() {
-	s_options_sfxvolume_slider.curvalue = Cvar_VariableValue("s_volume") * 10;
-}
-
 static void ControlsResetDefaultsFunc(void* unused) {
 	UNUSED(unused);
 	Cbuf_AddText("exec default.cfg\n");
 	Cmd_ExecuteCbuf();
-	ControlsSetMenuItemValues();
 }
 
 static void ConsoleFunc(void* unused) {
@@ -23350,15 +23339,6 @@ static void Options_MenuInit() {
 	s_options_menu.x = viddef.width / 2;
 	s_options_menu.y = viddef.height / 2 - 58;
 	s_options_menu.nitems = 0;
-
-	s_options_sfxvolume_slider.generic.type	= MTYPE_SLIDER;
-	s_options_sfxvolume_slider.generic.x	= 0;
-	s_options_sfxvolume_slider.generic.y	= 0;
-	s_options_sfxvolume_slider.generic.name	= "effects volume";
-	s_options_sfxvolume_slider.generic.callback	= UpdateVolumeFunc;
-	s_options_sfxvolume_slider.minvalue		= 0;
-	s_options_sfxvolume_slider.maxvalue		= 10;
-	s_options_sfxvolume_slider.curvalue		= Cvar_VariableValue( "s_volume" ) * 10;
 
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
@@ -23378,9 +23358,6 @@ static void Options_MenuInit() {
 	s_options_console_action.generic.name	= "go to console";
 	s_options_console_action.generic.callback = ConsoleFunc;
 
-	ControlsSetMenuItemValues();
-
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_sfxvolume_slider );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -23987,7 +23964,6 @@ extern	vec3_t	listener_up;
 extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
 
-extern cvar_t	*s_volume;
 extern cvar_t	*s_nosound;
 extern cvar_t	*s_loadas8bit;
 extern cvar_t	*s_mixahead;
@@ -23997,8 +23973,6 @@ wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 sfxcache_t *S_LoadSound (sfx_t *s);
 
 void S_IssuePlaysound (playsound_t *ps);
-
-void S_PaintChannels(int endtime);
 
 // spatializes a channel
 void S_Spatialize(channel_t *ch);
@@ -24047,7 +24021,6 @@ playsound_t	s_pendingplays;
 
 int			s_beginofs;
 
-cvar_t		*s_volume;
 cvar_t		*s_loadas8bit;
 cvar_t		*s_mixahead;
 
@@ -24989,9 +24962,6 @@ portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
 static i32 snd_vol;
 
-void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int endtime, int offset);
-void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int endtime, int offset);
-
 void S_PaintChannels(int endtime)
 {
 	int 	end;
@@ -25000,7 +24970,8 @@ void S_PaintChannels(int endtime)
 	int		ltime, count;
 	playsound_t	*ps;
 
-	snd_vol = s_volume->value * 256;
+	float sound_volume_01 = 0.5;
+	snd_vol = sound_volume_01 * 256;
 
 	while (paintedtime < endtime)
 	{
@@ -25053,11 +25024,37 @@ void S_PaintChannels(int endtime)
 
 				if (count > 0 && ch->sfx)
 				{
-					if (sc->width == 1)
-						S_PaintChannelFrom8(ch, sc, count,  ltime - paintedtime);
-					else
-						S_PaintChannelFrom16(ch, sc, count, ltime - paintedtime);
+					i64 offset = ltime - paintedtime;
 
+					if (sc->width == 1) {
+						ch->leftvol = clamp(ch->leftvol, 0, 255);
+						ch->rightvol = clamp(ch->rightvol, 0, 255);
+						u8* samples = (u8*)sc->data + ch->pos;
+						portable_samplepair_t* samp = paintbuffer + offset;
+						i64 master_volume_0_256 = (i64)(sound_volume_01 * 256.0f);
+						for (i64 ind = 0; ind < count; ind++, samp++) {
+							i8 sample = (i8)samples[ind];
+							samp->left += ch->leftvol * sample * master_volume_0_256;
+							samp->right += ch->rightvol * sample * master_volume_0_256;
+						}
+
+					} else {
+						i32 leftvol = ch->leftvol * snd_vol;
+						i32 rightvol = ch->rightvol * snd_vol;
+						i16* sfx = (i16*)sc->data + ch->pos;
+
+						portable_samplepair_t* samp = paintbuffer + offset;
+						for (i64 ind=0 ; ind<count ; ind++, samp++) {
+							i32 data = sfx[ind];
+							i32 left = (data * leftvol)>>8;
+							i32 right = (data * rightvol)>>8;
+							samp->left += left;
+							samp->right += right;
+						}
+
+					}
+
+					ch->pos += count;
 					ltime += count;
 				}
 
@@ -25114,37 +25111,6 @@ void S_PaintChannels(int endtime)
 
 		paintedtime = end;
 	}
-}
-
-void S_PaintChannelFrom8(channel_t* ch, sfxcache_t* sc, int count, int offset) {
-	ch->leftvol = clamp(ch->leftvol, 0, 255);
-	ch->rightvol = clamp(ch->rightvol, 0, 255);
-	u8* samples = (u8*)sc->data + ch->pos;
-	portable_samplepair_t* samp = paintbuffer + offset;
-	i64 master_volume_0_256 = (i64)(s_volume->value * 256.0f);
-	for (i64 ind = 0; ind < count; ind++, samp++) {
-		i8 sample = (i8)samples[ind];
-		samp->left += ch->leftvol * sample * master_volume_0_256;
-		samp->right += ch->rightvol * sample * master_volume_0_256;
-	}
-	ch->pos += count;
-}
-
-void S_PaintChannelFrom16(channel_t *ch, sfxcache_t *sc, int count, int offset) {
-	i32 leftvol = ch->leftvol * snd_vol;
-	i32 rightvol = ch->rightvol * snd_vol;
-	i16* sfx = (i16*)sc->data + ch->pos;
-
-	portable_samplepair_t* samp = paintbuffer + offset;
-	for (i64 ind=0 ; ind<count ; ind++, samp++) {
-		i32 data = sfx[ind];
-		i32 left = (data * leftvol)>>8;
-		i32 right = (data * rightvol)>>8;
-		samp->left += left;
-		samp->right += right;
-	}
-
-	ch->pos += count;
 }
 
 bool FindTarget (edict_t* self);
@@ -64217,7 +64183,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		s_volume = COM_GetCvar("s_volume", "0.7", CVAR_ARCHIVE);
 		s_loadas8bit = COM_GetCvar("s_loadas8bit", "1", CVAR_ARCHIVE);
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
 
