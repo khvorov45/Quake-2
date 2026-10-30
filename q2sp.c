@@ -5445,7 +5445,6 @@ static edict_t* g_edicts;
 #define crandom()	(2.0 * (random() - 0.5))
 
 static cvar_t* dmflags;
-static cvar_t* skill;
 static cvar_t* password;
 static cvar_t* maxentities;
 static cvar_t* g_select_empty;
@@ -9210,8 +9209,6 @@ void SV_WriteServerFile (bool autosave)
 	// write the mapcmd
 	fwrite (svs.mapcmd, 1, sizeof(svs.mapcmd), f);
 
-	// write all CVAR_LATCH cvars
-	// these will be things like skill, etc
 	for (var = cvar_vars ; var ; var=var->next)
 	{
 		if (!(var->flags & CVAR_LATCH))
@@ -9258,8 +9255,6 @@ void SV_ReadServerFile (void)
 	// read the mapcmd
 	FS_Read (mapcmd, sizeof(mapcmd), f);
 
-	// read all CVAR_LATCH cvars
-	// these will be things like skill, etc
 	while (1)
 	{
 		if (!fread (name, 1, sizeof(name), f))
@@ -23490,19 +23485,16 @@ static void StartGame( void )
 
 static void EasyGameFunc(void* data) {
 	UNUSED(data);
-	Com_ForceSetCvar( "skill", "0" );
 	StartGame();
 }
 
 static void MediumGameFunc(void* data) {
 	UNUSED(data);
-	Com_ForceSetCvar( "skill", "1" );
 	StartGame();
 }
 
 static void HardGameFunc(void* data) {
 	UNUSED(data);
-	Com_ForceSetCvar( "skill", "2" );
 	StartGame();
 }
 
@@ -25690,9 +25682,6 @@ bool M_CheckAttack (edict_t* self)
 	// melee attack
 	if (enemy_range == RANGE_MELEE)
 	{
-		// don't always melee in easy mode
-		if (skill->value == 0 && (rand()&3) )
-			return false;
 		if (self->monsterinfo.melee)
 			self->monsterinfo.attack_state = AS_MELEE;
 		else
@@ -25700,7 +25689,7 @@ bool M_CheckAttack (edict_t* self)
 		return true;
 	}
 
-// missile attack
+	// missile attack
 	if (!self->monsterinfo.attack)
 		return false;
 
@@ -25730,11 +25719,6 @@ bool M_CheckAttack (edict_t* self)
 	{
 		return false;
 	}
-
-	if (skill->value == 0)
-		chance *= 0.5;
-	else if (skill->value >= 2)
-		chance *= 2;
 
 	if (random () < chance)
 	{
@@ -27242,14 +27226,6 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 	if (!targ->takedamage)
 		return;
 
-	// easy mode takes half damage
-	if (skill->value == 0 && targ->client)
-	{
-		damage *= 0.5;
-		if (!damage)
-			damage = 1;
-	}
-
 	client = targ->client;
 
 	if (dflags & DAMAGE_BULLET)
@@ -27350,9 +27326,6 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 		if (!(targ->monsterinfo.aiflags & AI_DUCKED) && (take))
 		{
 			targ->pain (targ, attacker, knockback, take);
-			// nightmare mode monsters don't go into pain frames often
-			if (skill->value == 3)
-				targ->pain_debounce_time = level.time + 5;
 		}
 	}
 	else if (client)
@@ -29584,7 +29557,7 @@ bool Pickup_Powerup (edict_t *ent, edict_t* other)
 	int		quantity;
 
 	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
-	if ((skill->value == 1 && quantity >= 2) || (skill->value >= 2 && quantity >= 1))
+	if (quantity >= 2)
 		return false;
 
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
@@ -33348,10 +33321,6 @@ void SP_misc_teleporter_dest (edict_t *ent)
 // monster weapons
 //
 
-//FIXME mosnters should call these with a totally accurate direction
-// and we can mess it up based on skill.  Spread should be for normal
-// and we can tighten or loosen based on skill.  We could muck with
-// the damages too, but I'm not sure that's such a good idea.
 void monster_fire_bullet (edict_t* self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype)
 {
 	fire_bullet (self, start, dir, damage, kick, hspread, vspread, MOD_UNKNOWN);
@@ -35075,7 +35044,6 @@ static void InitGame() {
 	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
-	skill = COM_GetCvar ("skill", "1", CVAR_LATCH);
 	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
@@ -36070,15 +36038,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 {
 	edict_t		*ent;
 	char		*com_token;
-	float		skill_level;
-
-	skill_level = floor (skill->value);
-	if (skill_level < 0)
-		skill_level = 0;
-	if (skill_level > 3)
-		skill_level = 3;
-	if (skill->value != skill_level)
-		Com_ForceSetCvar("skill", va("%f", skill_level));
 
 	SaveClientData ();
 
@@ -36114,17 +36073,11 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		if (!Q_stricmp(level.mapname, "command") && !Q_stricmp(ent->classname, "trigger_once") && !Q_stricmp(ent->model, "*27"))
 			ent->spawnflags &= ~SPAWNFLAG_NOT_HARD;
 
-		// remove things (except the world) from different skill levels
-		if (ent != g_edicts)
-		{
-			if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-				((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-				(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
-				)
-				{
-					G_FreeEdict (ent);
-					continue;
-				}
+		if (ent != g_edicts) {
+			if (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM){
+				G_FreeEdict (ent);
+				continue;
+			}
 
 			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD);
 		}
@@ -37867,7 +37820,7 @@ void turret_breach_fire (edict_t* self)
 	VectorMA (start, self->move_origin[2], u, start);
 
 	damage = 100 + random() * 50;
-	speed = 550 + 50 * skill->value;
+	speed = 600;
 	fire_rocket (self->teammaster->owner, start, f, damage, speed, 150, damage);
 	SV_StartSound (start, self, CHAN_WEAPON, SV_SoundIndex("weapons/rocklf1a.wav"), 1, ATTN_NORM, 0);
 }
@@ -38118,7 +38071,7 @@ void turret_driver_think (edict_t* self)
 	if (level.time < self->monsterinfo.attack_finished)
 		return;
 
-	reaction_time = (3 - skill->value) * 1.0;
+	reaction_time = 2.0f;
 	if ((level.time - self->monsterinfo.trail_time) < reaction_time)
 		return;
 
@@ -38736,12 +38689,6 @@ static void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
 	trace_t	tr;
 	float	eta;
 
-	// easy mode only ducks one quarter the time
-	if (skill->value == 0)
-	{
-		if (random() > 0.25)
-			return;
-	}
 	VectorMA (start, 8192, dir, end);
 	tr = SV_Trace (start, NULL, NULL, end, self, MASK_SHOT);
 	if ((tr.ent) && (tr.ent->svflags & SVF_MONSTER) && (tr.ent->health > 0) && (tr.ent->monsterinfo.dodge) && infront(tr.ent, self))
@@ -40442,9 +40389,6 @@ static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) 
 	self->pain_debounce_time = level.time + 3;
 	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 	if ((damage < 20) || (random() < 0.5))
 		self->monsterinfo.currentmove = &berserk_move_pain1;
 	else
@@ -41684,8 +41628,6 @@ static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
 
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (damage <= 50)
 	{
@@ -42490,9 +42432,6 @@ static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
 			return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 
 	if (damage <= 40)
 	{
@@ -43209,7 +43148,7 @@ void brain_tentacle_attack (edict_t* self)
 	vec3_t	aim;
 
 	VectorSet (aim, MELEE_DISTANCE, 0, 8);
-	if (fire_hit (self, aim, (10 + (rand() %5)), -600) && skill->value > 0)
+	if (fire_hit (self, aim, (10 + (rand() %5)), -600))
 		self->spawnflags |= 65536;
 	PF_StartSound (self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
@@ -43299,8 +43238,6 @@ static void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	r = random();
 	if (r < 0.33)
@@ -43695,8 +43632,6 @@ static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (damage <= 10)
 		self->monsterinfo.currentmove = &chick_move_pain1;
@@ -44315,9 +44250,6 @@ static void flipper_pain(edict_t* self, edict_t* other, float kick, int damage) 
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	n = (rand() + 1) % 2;
 	if (n == 0)
@@ -45048,8 +44980,6 @@ static void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	n = (rand() + 1) % 3;
 	if (n == 0)
@@ -45671,8 +45601,6 @@ static void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	n = rand() % 3;
 	if (n == 0)
@@ -46004,8 +45932,6 @@ static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damag
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (self->velocity[2] > 100)
 		self->monsterinfo.currentmove = &gladiator_move_pain_air;
@@ -46418,9 +46344,6 @@ static void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 	if (damage <= 10)
 		self->monsterinfo.currentmove = &gunner_move_pain3;
 	else if (damage <= 25)
@@ -46491,11 +46414,6 @@ void gunner_duck_down (edict_t* self)
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
 	self->monsterinfo.aiflags |= AI_DUCKED;
-	if (skill->value >= 2)
-	{
-		if (random() > 0.5)
-			GunnerGrenade (self);
-	}
 
 	self->maxs[2] -= 32;
 	self->takedamage = DAMAGE_YES;
@@ -47235,9 +47153,6 @@ static void hover_pain(edict_t* self, edict_t* other, float kick, int damage) {
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 	if (damage <= 25)
 	{
 		if (random() < 0.5)
@@ -47574,9 +47489,6 @@ static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	n = rand() % 2;
 	if (n == 0)
@@ -48442,9 +48354,6 @@ static void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		l = 100;
 	PF_StartSound (self, CHAN_VOICE, SV_SoundIndex (va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 	// Don't go into pain frames if crucified.
 	if (self->spawnflags & 8)
 	{
@@ -48950,9 +48859,6 @@ static void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (random() < 0.5)
 	{
@@ -50202,7 +50108,7 @@ void mutant_check_refire (edict_t* self)
 	if (!self->enemy || !self->enemy->inuse || self->enemy->health <= 0)
 		return;
 
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
+	if ((range(self, self->enemy) == RANGE_MELEE))
 		self->monsterinfo.nextframe = 8;
 }
 
@@ -50432,9 +50338,6 @@ static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) 
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	r = random();
 	if (r < 0.33)
@@ -50855,9 +50758,6 @@ static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (random() < 0.5)
 		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
@@ -51484,9 +51384,6 @@ static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
 		return;
 	}
 
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
-
 	r = random();
 
 	if (r < 0.33)
@@ -51585,7 +51482,7 @@ void soldier_attack1_refire1 (edict_t* self)
 	if (self->enemy->health <= 0)
 		return;
 
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
+	if  ((range(self, self->enemy) == RANGE_MELEE))
 		self->monsterinfo.nextframe = 1;
 	else
 		self->monsterinfo.nextframe = 9;
@@ -51599,7 +51496,7 @@ void soldier_attack1_refire2 (edict_t* self)
 	if (self->enemy->health <= 0)
 		return;
 
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
+	if ( (range(self, self->enemy) == RANGE_MELEE) )
 		self->monsterinfo.nextframe = 1;
 }
 
@@ -51635,7 +51532,7 @@ void soldier_attack2_refire1 (edict_t* self)
 	if (self->enemy->health <= 0)
 		return;
 
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
+	if ( (range(self, self->enemy) == RANGE_MELEE) )
 		self->monsterinfo.nextframe = 15;
 	else
 		self->monsterinfo.nextframe = 27;
@@ -51649,7 +51546,7 @@ void soldier_attack2_refire2 (edict_t* self)
 	if (self->enemy->health <= 0)
 		return;
 
-	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
+	if ( (range(self, self->enemy) == RANGE_MELEE) )
 		self->monsterinfo.nextframe = 15;
 }
 
@@ -51728,12 +51625,6 @@ mmove_t soldier_move_attack3 = {30, 38, soldier_frames_attack3, soldier_run};
 void soldier_fire4 (edict_t* self)
 {
 	soldier_fire (self, 3);
-//
-//	if (self->enemy->health <= 0)
-//		return;
-//
-//	if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-//		self->monsterinfo.nextframe = FRAME_attak402;
 }
 
 mframe_t soldier_frames_attack4 [] =
@@ -51761,9 +51652,6 @@ void soldier_attack6_refire (edict_t* self)
 
 	if (range(self, self->enemy) < RANGE_MID)
 		return;
-
-	if (skill->value == 3)
-		self->monsterinfo.nextframe = 111;
 }
 
 mframe_t soldier_frames_attack6 [] =
@@ -51813,7 +51701,7 @@ static void soldier_sight(edict_t* self, edict_t* other) {
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
 
-	if ((skill->value > 0) && (range(self, self->enemy) >= RANGE_MID))
+	if ((range(self, self->enemy) >= RANGE_MID))
 	{
 		if (random() > 0.5)
 			self->monsterinfo.currentmove = &soldier_move_attack6;
@@ -51853,27 +51741,11 @@ void soldier_dodge (edict_t* self, edict_t* attacker, float eta)
 	if (!self->enemy)
 		self->enemy = attacker;
 
-	if (skill->value == 0)
-	{
-		self->monsterinfo.currentmove = &soldier_move_duck;
-		return;
-	}
-
 	self->monsterinfo.pausetime = level.time + eta + 0.3;
 	r = random();
 
-	if (skill->value == 1)
 	{
 		if (r > 0.33)
-			self->monsterinfo.currentmove = &soldier_move_duck;
-		else
-			self->monsterinfo.currentmove = &soldier_move_attack3;
-		return;
-	}
-
-	if (skill->value >= 2)
-	{
-		if (r > 0.66)
 			self->monsterinfo.currentmove = &soldier_move_duck;
 		else
 			self->monsterinfo.currentmove = &soldier_move_attack3;
@@ -52750,15 +52622,7 @@ static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage
 		if (random()<0.2)
 			return;
 
-	// Don't go into pain if he's firing his rockets
-	if (skill->value >= 2)
-		if ( (self->s.frame >= 20) && (self->s.frame <= 33) )
-			return;
-
 	self->pain_debounce_time = level.time + 3;
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (damage <= 10)
 	{
@@ -53271,20 +53135,8 @@ static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		if (random() > 0.2)
 			return;
 
-	// If hard or nightmare, don't go into pain while attacking
-	if ( skill->value >= 2)
-	{
-		if ( (self->s.frame >= 115) && (self->s.frame <= 144) )
-			return;
-		if ( (self->s.frame >= 55) && (self->s.frame <= 70) )
-			return;
-	}
-
 	self->pain_debounce_time = level.time + 3;
 	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
-
-	if (skill->value == 3)
-		return;		// no pain anims in nightmare
 
 	if (damage <= 30)
 		self->monsterinfo.currentmove = &tank_move_pain1;
@@ -53437,14 +53289,6 @@ mmove_t tank_move_attack_post_blast = {71, 76, tank_frames_attack_post_blast, ta
 
 void tank_reattack_blaster (edict_t* self)
 {
-	if (skill->value >= 2)
-		if (visible (self, self->enemy))
-			if (self->enemy->health > 0)
-				if (random() <= 0.6)
-				{
-					self->monsterinfo.currentmove = &tank_move_reattack_blast;
-					return;
-				}
 	self->monsterinfo.currentmove = &tank_move_attack_post_blast;
 }
 
@@ -53606,15 +53450,6 @@ mmove_t tank_move_attack_chain = {168, 196, tank_frames_attack_chain, tank_run};
 
 void tank_refire_rocket (edict_t* self)
 {
-	// Only on hard or nightmare
-	if ( skill->value >= 2 )
-		if (self->enemy->health > 0)
-			if (visible(self, self->enemy) )
-				if (random() <= 0.4)
-				{
-					self->monsterinfo.currentmove = &tank_move_attack_fire_rocket;
-					return;
-				}
 	self->monsterinfo.currentmove = &tank_move_attack_post_rocket;
 }
 
@@ -54600,21 +54435,12 @@ void BeginIntermission (edict_t *targ)
 void HelpComputer (edict_t *ent)
 {
 	char	string[1024];
-	char	*sk;
-
-	if (skill->value == 0)
-		sk = "easy";
-	else if (skill->value == 1)
-		sk = "medium";
-	else if (skill->value == 2)
-		sk = "hard";
-	else
-		sk = "hard+";
+	char* sk = "medium";
 
 	// send the layout
 	Com_sprintf (string, sizeof(string),
 		"xv 32 yv 8 picn help "			// background
-		"xv 202 yv 12 string2 \"%s\" "		// skill
+		"xv 202 yv 12 string2 \"%s\" "		// sk
 		"xv 0 yv 24 cstring2 \"%s\" "		// level name
 		"xv 0 yv 54 cstring2 \"%s\" "		// help 1
 		"xv 0 yv 110 cstring2 \"%s\" "		// help 2
@@ -64170,7 +63996,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
 		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
 		COM_GetCvar("in_initmouse", "1", CVAR_NOSET);
