@@ -13092,12 +13092,6 @@ void CL_FireEntityEvents (frame_t *frame)
 	}
 }
 
-
-/*
-================
-CL_ParseFrame
-================
-*/
 void CL_ParseFrame (void)
 {
 	int			cmd;
@@ -23965,7 +23959,6 @@ extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
 
 extern cvar_t	*s_nosound;
-extern cvar_t	*s_loadas8bit;
 extern cvar_t	*s_mixahead;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
@@ -24688,42 +24681,39 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
 
 	outcount = sc->length / stepscale;
 	sc->length = outcount;
-	if (sc->loopstart != -1)
+	if (sc->loopstart != -1) {
 		sc->loopstart = sc->loopstart / stepscale;
+	}
 
 	sc->speed = dma.speed;
-	if (s_loadas8bit->value)
-		sc->width = 1;
-	else
-		sc->width = inwidth;
+	sc->width = inwidth;
 	sc->stereo = 0;
 
-// resample / decimate to the current source rate
+	// resample / decimate to the current source rate
 
-	if (stepscale == 1 && inwidth == 1 && sc->width == 1)
-	{
-// fast special case
-		for (i=0 ; i<outcount ; i++)
-			((signed char *)sc->data)[i]
-			= (int)( (unsigned char)(data[i]) - 128);
-	}
-	else
-	{
-// general case
+	if (stepscale == 1 && inwidth == 1 && sc->width == 1) {
+		// fast special case
+		for (i=0 ; i < outcount; i++) {
+			((i8*)sc->data)[i] = (i32)((u8)(data[i]) - 128);
+		}
+	} else {
+		// general case
 		samplefrac = 0;
 		fracstep = stepscale*256;
 		for (i=0 ; i<outcount ; i++)
 		{
 			srcsample = samplefrac >> 8;
 			samplefrac += fracstep;
-			if (inwidth == 2)
-				sample = LittleShort ( ((short *)data)[srcsample] );
-			else
-				sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
+			if (inwidth == 2) {
+				sample = ((i16*)data)[srcsample];
+			} else {
+				sample = (int)((u8)(data[srcsample]) - 128) << 8;
+			}
+
 			if (sc->width == 2)
-				((short *)sc->data)[i] = sample;
+				((i16*)sc->data)[i] = sample;
 			else
-				((signed char *)sc->data)[i] = sample >> 8;
+				((i8*)sc->data)[i] = sample >> 8;
 		}
 	}
 }
@@ -64183,7 +64173,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		s_loadas8bit = COM_GetCvar("s_loadas8bit", "1", CVAR_ARCHIVE);
+		s_loadas8bit = COM_GetCvar("s_loadas8bit", "0", CVAR_ARCHIVE);
 		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
 
 		COM_GetCvar("skill", "1", 0);
