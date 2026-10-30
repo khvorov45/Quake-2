@@ -23959,7 +23959,6 @@ extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
 
 extern cvar_t	*s_nosound;
-extern cvar_t	*s_mixahead;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
@@ -24013,9 +24012,6 @@ playsound_t	s_freeplays;
 playsound_t	s_pendingplays;
 
 int			s_beginofs;
-
-cvar_t		*s_loadas8bit;
-cvar_t		*s_mixahead;
 
 sfx_t *S_FindName (char *name, bool create)
 {
@@ -63848,7 +63844,8 @@ static void CL_Frame(int msec) {
 			}
 
 			// mix ahead of current position and to an even submission block size
-			u32 endtime = ((i32)(soundtime + s_mixahead->value * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
+			float mixahead_01 = 0.2f;
+			u32 endtime = ((i32)(soundtime + mixahead_01 * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
 			i32 samps = dma.samples >> (dma.channels-1);
 			if ((i32)(endtime - soundtime) > samps) {
 				endtime = soundtime + samps;
@@ -64173,9 +64170,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		s_loadas8bit = COM_GetCvar("s_loadas8bit", "0", CVAR_ARCHIVE);
-		s_mixahead = COM_GetCvar("s_mixahead", "0.2", CVAR_ARCHIVE);
-
 		COM_GetCvar("skill", "1", 0);
 		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
 		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
