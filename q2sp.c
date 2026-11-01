@@ -1525,56 +1525,8 @@ static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 
-#define	CVAR_USERINFO	2	// added to userinfo  when changed
-#define	CVAR_SERVERINFO	4	// added to serverinfo when changed
-#define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
-#define	CVAR_LATCH		16	// save changes until server restart
-
-// nothing outside the Cvar_*() functions should modify these fields!
-typedef struct cvar_s {
-	char			*name;
-	char			*string;
-	char			*latched_string; // for CVAR_LATCH vars
-	int				flags;
-	bool		modified; // set each time the cvar is changed
-	float			value;
-	struct cvar_s 	*next;
-} cvar_t;
-
-static cvar_t*	cvar_vars;
 static bool	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
 static int server_state;
-
-static bool Cvar_InfoValidate(char* s) {
-	if (strstr(s, "\\")) {
-		return false;
-	}
-	if (strstr(s, "\"")) {
-		return false;
-	}
-	if (strstr(s, ";")) {
-		return false;
-	}
-	return true;
-}
-
-static cvar_t* Cvar_FindVar(char* var_name) {
-	for (cvar_t* var = cvar_vars; var; var = var->next) {
-		if (!strcmp (var_name, var->name)) {
-			return var;
-		}
-	}
-	return NULL;
-}
-
-// returns an empty string if not defined
-static char* Cvar_VariableString(char* var_name) {
-	cvar_t* var = Cvar_FindVar(var_name);
-	if (!var) {
-		return "";
-	}
-	return var->string;
-}
 
 #define	MAX_MSGLEN	1400
 #define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
@@ -1818,146 +1770,6 @@ static char* COM_Parse(char** data_p) {
 	return com_token;
 }
 
-// creates the variable if it doesn't exist, or returns the existing one
-// if it exists, the value will not be changed, but flags will be ORed in
-// that allows variables to be unarchived without needing bitflags
-static cvar_t* COM_GetCvar(char* var_name, char* var_value, int flags) {
-	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
-		if (!Cvar_InfoValidate(var_name)) {
-			add_line_to_console_log(STR("invalid info cvar name"));
-			return NULL;
-		}
-	}
-
-	cvar_t* var = Cvar_FindVar(var_name);
-	if (var) {
-		var->flags |= flags;
-		return var;
-	}
-
-	if (!var_value) {
-		return NULL;
-	}
-
-	if (flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
-		if (!Cvar_InfoValidate (var_value)) {
-			add_line_to_console_log(STR("invalid info cvar value"));
-			return NULL;
-		}
-	}
-
-	var = tml_alloc(sizeof(*var));
-	var->name = CopyString(var_name);
-	var->string = CopyString(var_value);
-	var->modified = true;
-	var->value = atof(var->string);
-
-	// link the variable in
-	var->next = cvar_vars;
-	cvar_vars = var;
-
-	var->flags = flags;
-	return var;
-}
-
-// will create the variable if it doesn't exist
-// will set the variable even if NOSET or LATCH when force = true
-static cvar_t* COM_SetCvar_(char* var_name, char* value, bool force) {
-	cvar_t* var = Cvar_FindVar (var_name);
-	if (!var) {
-		// create it
-		return COM_GetCvar(var_name, value, 0);
-	}
-
-	if (var->flags & (CVAR_USERINFO | CVAR_SERVERINFO)) {
-		if (!Cvar_InfoValidate (value)) {
-			add_line_to_console_log(STR("invalid info cvar value"));
-			return var;
-		}
-	}
-
-	if (!force) {
-		if (var->flags & CVAR_NOSET) {
-			add_line_to_console_log(STR("write protected"));
-			return var;
-		}
-
-		if (var->flags & CVAR_LATCH) {
-			if (var->latched_string) {
-				if (strcmp(value, var->latched_string) == 0) {
-					return var;
-				}
-				tml_free (var->latched_string);
-			} else {
-				if (strcmp(value, var->string) == 0) {
-					return var;
-				}
-			}
-
-			if (server_state) {
-				add_line_to_console_log(STR("will be changed for next game"));
-				var->latched_string = CopyString(value);
-			} else {
-				var->string = CopyString(value);
-				var->value = atof (var->string);
-			}
-			return var;
-		}
-	} else {
-		if (var->latched_string) {
-			tml_free (var->latched_string);
-			var->latched_string = NULL;
-		}
-	}
-
-	if (!strcmp(value, var->string)) {
-		// not changed
-		return var;
-	}
-
-	var->modified = true;
-
-	if (var->flags & CVAR_USERINFO) {
-		// transmit at next oportunity
-		userinfo_modified = true;
-	}
-
-	// free the old value string
-	tml_free (var->string);
-
-	var->string = CopyString(value);
-	var->value = atof (var->string);
-
-	return var;
-}
-
-static cvar_t* COM_SetCvar(char* var_name, char* value)		{return COM_SetCvar_(var_name, value, false);}
-static cvar_t* Com_ForceSetCvar(char *var_name, char *value)	{return COM_SetCvar_(var_name, value, true);}
-
-static cvar_t* COM_FullSetCvar(char* var_name, char* value, int flags) {
-	cvar_t* var = Cvar_FindVar(var_name);
-	if (!var) {
-		// create it
-		return COM_GetCvar(var_name, value, flags);
-	}
-
-	var->modified = true;
-
-	if (var->flags & CVAR_USERINFO) {
-		// transmit at next oportunity
-		userinfo_modified = true;
-	}
-
-	// free the old value string
-	tml_free (var->string);
-
-	var->string = CopyString(value);
-	var->value = atof (var->string);
-	var->flags = flags;
-
-	return var;
-}
-
 unsigned	Com_BlockChecksum (void *buffer, int length);
 u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
 
@@ -2059,7 +1871,7 @@ static char* Cmd_Args() {return cmd_args;}
 // Parses the given string into command line tokens.
 // $Cvars will be expanded unless they are in a quoted token
 // Takes a null terminated string. Does not need to be /n terminated.
-static void Cmd_TokenizeString(char* text, bool macroExpand) {
+static void Cmd_TokenizeString(char* text) {
 	// clear the args from the last string
 	for (int i = 0; i < cmd_argc; i++) {
 		tml_free (cmd_argv[i]);
@@ -2067,74 +1879,6 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 
 	cmd_argc = 0;
 	cmd_args[0] = 0;
-
-	// macro expand the text
-	if (macroExpand) {
-		static char expanded[MAX_STRING_CHARS] = {};
-		char temporary[MAX_STRING_CHARS] = {};
-
-		bool inquote = false;
-		char* scan = text;
-
-		int len = strlen(scan);
-		if (len >= MAX_STRING_CHARS) {
-			add_line_to_console_log(STR("too long"));
-			return;
-		}
-
-		int count = 0;
-
-		for (int i = 0; i < len; i++) {
-			if (scan[i] == '"') {
-				inquote ^= 1;
-			}
-
-			if (inquote) {
-				// don't expand inside quotes
-				continue;
-			}
-
-			if (scan[i] != '$') {
-				continue;
-			}
-
-			// scan out the complete macro
-			char* start = scan + i + 1;
-			char* token = COM_Parse(&start);
-			if (!start) {
-				continue;
-			}
-
-			token = Cvar_VariableString(token);
-
-			int j = strlen(token);
-			len += j;
-			if (len >= MAX_STRING_CHARS) {
-				add_line_to_console_log(STR("too long"));
-				return;
-			}
-
-			strncpy(temporary, scan, i);
-			strcpy(temporary + i, token);
-			strcpy(temporary + i + j, start);
-
-			strcpy(expanded, temporary);
-			scan = expanded;
-			i--;
-
-			if (++count == 100) {
-				add_line_to_console_log(STR("Macro expansion loop, discarded."));
-				return;
-			}
-		}
-
-		if (inquote) {
-			add_line_to_console_log(STR("Line has unmatched quote, discarded."));
-			return;
-		}
-
-		text = scan;
-	}
 
 	for (;;) {
 		// skip whitespace up to a /n
@@ -2183,7 +1927,7 @@ static void Cmd_TokenizeString(char* text, bool macroExpand) {
 static void Cmd_ExecuteString(char* text) {
 	context.debug_log(string_from_cstring(text));
 
-	Cmd_TokenizeString(text, true);
+	Cmd_TokenizeString(text);
 
 	// execute the command line
 	if (!cmd_argc) {
@@ -2211,19 +1955,6 @@ static void Cmd_ExecuteString(char* text) {
 				return;
 			}
 			Cbuf_InsertText(a->value);
-			return;
-		}
-	}
-
-	// check cvar
-	{
-		cvar_t* v = Cvar_FindVar(Cmd_Argv(0));
-		if (v) {
-			if (cmd_argc == 1) {
-				add_line_to_console_log(string_from_cstring(v->string));
-			} else {
-				COM_SetCvar(v->name, Cmd_Argv(1));
-			}
 			return;
 		}
 	}
@@ -2300,12 +2031,6 @@ static void Cmd_ExecuteCbuf() {
 }
 
 static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
-	// fail if the command is a variable name
-	if (Cvar_VariableString(cmd_name)[0]) {
-		add_line_to_console_log(STR("already defined as a var"));
-		return;
-	}
-
 	// fail if the command already exists
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
 		if (!strcmp(cmd_name, cmd->name)) {
@@ -2402,26 +2127,6 @@ static void Cmd_Wait_f() {
 	cmd_wait = true;
 }
 
-static void Cmd_Cvar_Set_f() {
-	if (cmd_argc == 4) {
-		int flags = 0;
-		if (!strcmp(Cmd_Argv(3), "u")) {
-			flags = CVAR_USERINFO;
-		}
-		else if (!strcmp(Cmd_Argv(3), "s")) {
-			flags = CVAR_SERVERINFO;
-		} else {
-			add_line_to_console_log(STR("flags can only be 'u' or 's'"));
-			return;
-		}
-		COM_FullSetCvar (Cmd_Argv(1), Cmd_Argv(2), flags);
-	} else if (cmd_argc == 3) {
-		COM_SetCvar (Cmd_Argv(1), Cmd_Argv(2));
-	} else {
-		add_line_to_console_log(STR("usage: set <variable> <value> [u / s]"));
-	}
-}
-
 #define	MAX_INFO_KEY	64
 #define	MAX_INFO_VALUE	64
 #define	MAX_INFO_STRING	512
@@ -2468,137 +2173,6 @@ static char* Info_ValueForKey(char *s, char *key) {
 		s++;
 	}
 }
-
-static void Info_RemoveKey(char *s, char *key) {
-	char value[512];
-
-	if (strstr (key, "\\")) {
-		return;
-	}
-
-	char pkey[512];
-	for (;;) {
-		char* start = s;
-		if (*s == '\\') {
-			s++;
-		}
-		char* o = pkey;
-		while (*s != '\\') {
-			if (!*s) {
-				return;
-			}
-			*o++ = *s++;
-		}
-		*o = 0;
-		s++;
-
-		o = value;
-		while (*s != '\\' && *s) {
-			if (!*s) {
-				return;
-			}
-			*o++ = *s++;
-		}
-		*o = 0;
-
-		if (!strcmp (key, pkey)) {
-			strcpy (start, s); // remove this part
-			return;
-		}
-
-		if (!*s) {
-			return;
-		}
-	}
-}
-
-static void Info_SetValueForKey(char *s, char *key, char *value) {
-	if (strstr(key, "\\") || strstr (value, "\\")) {
-		add_line_to_console_log(STR("Can't use keys or values with a \\"));
-		return;
-	}
-
-	if (strstr(key, ";")) {
-		add_line_to_console_log(STR("Can't use keys or values with a semicolon"));
-		return;
-	}
-
-	if (strstr (key, "\"") || strstr (value, "\"")) {
-		add_line_to_console_log(STR("Can't use keys or values with a \""));
-		return;
-	}
-
-	if (strlen(key) > MAX_INFO_KEY-1 || strlen(value) > MAX_INFO_KEY-1) {
-		add_line_to_console_log(STR("Keys and values must be < 64 characters."));
-		return;
-	}
-	Info_RemoveKey(s, key);
-	if (!value || !strlen(value)) {
-		return;
-	}
-
-	char newi[MAX_INFO_STRING];
-	Com_sprintf(newi, sizeof(newi), "\\%s\\%s", key, value);
-
-	if (strlen(newi) + strlen(s) > MAX_INFO_STRING) {
-		add_line_to_console_log(STR("Info string length exceeded"));
-		return;
-	}
-
-	// only copy ascii values
-	s += strlen(s);
-	char* v = newi;
-	while (*v) {
-		int c = *v++;
-		c &= 127; // strip high bits
-		if (c >= 32 && c < 127)
-			*s++ = c;
-	}
-	*s = 0;
-}
-
-// Some characters are illegal in info strings because they can mess up the server's parsing
-static bool Info_Validate(char *s) {
-	if (strstr (s, "\"")) {
-		return false;
-	}
-	if (strstr (s, ";")) {
-		return false;
-	}
-	return true;
-}
-
-static char* Info_Cvar_Bit(int bit) {
-	static char	info[MAX_INFO_STRING] = {};
-	info[0] = 0;
-	for (cvar_t* var = cvar_vars; var; var = var->next) {
-		if (var->flags & bit) {
-			Info_SetValueForKey(info, var->name, var->string);
-		}
-	}
-	return info;
-}
-
-static char* Info_Cvar_User()	{return Info_Cvar_Bit(CVAR_USERINFO);}		// returns an info string containing all the CVAR_USERINFO cvars
-static char* Info_Cvar_Server()	{return Info_Cvar_Bit(CVAR_SERVERINFO);}	// returns an info string containing all the CVAR_SERVERINFO cvars
-
-// PCX files are used for as many images as possible
-
-typedef struct {
-	char	manufacturer;
-	char	version;
-	char	encoding;
-	char	bits_per_pixel;
-	unsigned short	xmin,ymin,xmax,ymax;
-	unsigned short	hres,vres;
-	unsigned char	palette[48];
-	char	reserved;
-	char	color_planes;
-	unsigned short	bytes_per_line;
-	unsigned short	palette_type;
-	char	filler[58];
-	unsigned char	data; // unbounded
-} pcx_t;
 
 
 // .MD2 triangle model file format
@@ -9089,8 +8663,7 @@ void SV_ReadLevelFile() {
 void SV_WriteServerFile (bool autosave)
 {
 	FILE	*f;
-	cvar_t	*var;
-	char	name[MAX_OSPATH], string[128];
+	char	name[MAX_OSPATH];
 	char	comment[32];
 	time_t	aclock;
 	struct tm	*newtime;
@@ -9124,24 +8697,6 @@ void SV_WriteServerFile (bool autosave)
 	// write the mapcmd
 	fwrite (svs.mapcmd, 1, sizeof(svs.mapcmd), f);
 
-	for (var = cvar_vars ; var ; var=var->next)
-	{
-		if (!(var->flags & CVAR_LATCH))
-			continue;
-		if (strlen(var->name) >= sizeof(name)-1
-			|| strlen(var->string) >= sizeof(string)-1)
-		{
-			add_line_to_console_log(STR("too long"));
-			continue;
-		}
-		memset (name, 0, sizeof(name));
-		memset (string, 0, sizeof(string));
-		strcpy (name, var->name);
-		strcpy (string, var->string);
-		fwrite (name, 1, sizeof(name), f);
-		fwrite (string, 1, sizeof(string), f);
-	}
-
 	fclose (f);
 
 	// write game state
@@ -9172,10 +8727,9 @@ void SV_ReadServerFile (void)
 
 	while (1)
 	{
-		if (!fread (name, 1, sizeof(name), f))
+		if(!fread (name, 1, sizeof(name), f))
 			break;
-		FS_Read (string, sizeof(string), f);
-		Com_ForceSetCvar (name, string);
+		FS_Read(string, sizeof(string), f);
 	}
 
 	fclose (f);
@@ -10274,9 +9828,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 			sv.state = previousState;
 		}
 	}
-
-	// set serverinfo variable
-	COM_FullSetCvar("mapname", sv.name, CVAR_SERVERINFO | CVAR_NOSET);
 }
 
 void CL_Disconnect(void);
@@ -10304,17 +9855,6 @@ void SV_InitGame(void) {
 		}
 
 		SCR_BeginLoadingPlaque ();
-	}
-
-	// get any latched variable changes
-	for (cvar_t* var = cvar_vars; var; var = var->next) {
-		if (!var->latched_string) {
-			continue;
-		}
-		tml_free(var->string);
-		var->string = var->latched_string;
-		var->latched_string = NULL;
-		var->value = atof(var->string);
 	}
 
 	svs.initialized = true;
@@ -10410,12 +9950,11 @@ static void SV_DropClient(client_t* drop) {
 // Builds the string that is sent as heartbeats and status replies
 char* SV_StatusString() {
 	char	player[1024];
-	static char	status[MAX_MSGLEN - 16];
 	int		statusLength;
 	int		playerLength;
 
-	strcpy (status, Info_Cvar_Server());
-	strcat (status, "\n");
+	static char	status[MAX_MSGLEN - 16] = {};
+	strcat(status, "\n");
 	statusLength = strlen(status);
 
 	if (svs.client.state == cs_connected || svs.client.state == cs_spawned) {
@@ -10525,7 +10064,7 @@ void SV_ConnectionlessPacket() {
 
 	s = MSG_ReadStringLine (&net_message);
 
-	Cmd_TokenizeString (s, false);
+	Cmd_TokenizeString(s);
 
 	c = Cmd_Argv(0);
 
@@ -11273,7 +10812,7 @@ void SV_ExecuteUserCommand (char *s)
 {
 	ucmd_t	*u;
 
-	Cmd_TokenizeString (s, true);
+	Cmd_TokenizeString(s);
 	sv_player = sv_client->edict;
 
 	for (u=ucmds ; u->name ; u++)
@@ -16306,7 +15845,7 @@ void CL_SendCmd (void)
 	{
 		userinfo_modified = false;
 		MSG_WriteByte(&cls.netchan.message, clc_userinfo);
-		MSG_WriteString(&cls.netchan.message, Info_Cvar_User());
+		MSG_WriteString(&cls.netchan.message, "");
 	}
 
 	SZ_Init (&buf, data, sizeof(data));
@@ -16487,7 +16026,7 @@ void CL_SendConnectPacket (void)
 
 	userinfo_modified = false;
 
-	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i \"%s\"\n", PROTOCOL_VERSION, cls.challenge, Info_Cvar_User());
+	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 }
 
 void CL_CheckForResend (void)
@@ -16712,9 +16251,9 @@ void CL_ConnectionlessPacket (void)
 	MSG_BeginReading (&net_message);
 	MSG_ReadLong (&net_message);	// skip the -1
 
-	s = MSG_ReadStringLine (&net_message);
+	s = MSG_ReadStringLine(&net_message);
 
-	Cmd_TokenizeString (s, false);
+	Cmd_TokenizeString (s);
 
 	c = Cmd_Argv(0);
 
@@ -23787,8 +23326,6 @@ extern	vec3_t	listener_right;
 extern	vec3_t	listener_up;
 extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
-
-extern cvar_t	*s_nosound;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
@@ -35884,11 +35421,6 @@ void SP_worldspawn (edict_t *ent)
 	level.pic_health = SV_ImageIndex ("i_health");
 	SV_ImageIndex ("help");
 	SV_ImageIndex ("field_3");
-
-	if (!st.gravity)
-		COM_SetCvar("sv_gravity", "800");
-	else
-		COM_SetCvar("sv_gravity", st.gravity);
 
 	snd_fry = SV_SoundIndex ("player/fry.wav");	// standing in lava / slime
 
@@ -53599,26 +53131,12 @@ The game can override any of the settings in place
 */
 void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 {
-	char	*s;
 	int		playernum;
-
-	// check for malformed or illegal info strings
-	if (!Info_Validate(userinfo))
-	{
-		strcpy (userinfo, "\\name\\badinfo\\skin\\male/grunt");
-	}
-
-	// set name
-	s = Info_ValueForKey (userinfo, "name");
-	strncpy (ent->client->pers.netname, s, sizeof(ent->client->pers.netname)-1);
-
-	// set skin
-	s = Info_ValueForKey (userinfo, "skin");
 
 	playernum = ent-g_edicts-1;
 
 	// combine name and skin into a configstring
-	PF_Configstring (CS_PLAYERSKINS+playernum, va("%s\\%s", ent->client->pers.netname, s) );
+	PF_Configstring (CS_PLAYERSKINS+playernum, ent->client->pers.netname);
 
 	ent->client->ps.fov = atoi(Info_ValueForKey(userinfo, "fov"));
 	if (ent->client->ps.fov < 1)
@@ -63375,7 +62893,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_AddCommand("exec", Cmd_Exec_f);
 		Cmd_AddCommand("alias", Cmd_Alias_f);
 		Cmd_AddCommand("wait",  Cmd_Wait_f);
-		Cmd_AddCommand("set", Cmd_Cvar_Set_f);
 		Cmd_AddCommand("bind", Key_Bind_f);
 		Cmd_AddCommand("unbind", Key_Unbind_f);
 		Cmd_AddCommand("unbindall", Key_Unbindall_f);
@@ -63599,7 +63116,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 				} else if (string_ends_with(info_name, STR(".pcx"))) {
 					// NOTE: Unpack PCX
-					pcx_t* pcx = (pcx_t*)file_content.ptr;
+					typedef struct {
+						u8 manufacturer;
+						u8 version;
+						u8 encoding;
+						u8 bits_per_pixel;
+						u16 xmin,ymin,xmax,ymax;
+						u16 hres,vres;
+						u8 palette[48];
+						i8 reserved;
+						i8 color_planes;
+						u16 bytes_per_line;
+						u16 palette_type;
+						u8 filler[58];
+						u8 data; // unbounded
+					} PCX_Header;
+
+					PCX_Header* pcx = (PCX_Header*)file_content.ptr;
 					assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
 
 					Named_Texture decomp = {
