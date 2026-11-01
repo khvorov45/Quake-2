@@ -1568,15 +1568,6 @@ static cvar_t* Cvar_FindVar(char* var_name) {
 	return NULL;
 }
 
-// returns 0 if not defined or non numeric
-static float Cvar_VariableValue(char* var_name) {
-	cvar_t* var = Cvar_FindVar(var_name);
-	if (!var) {
-		return 0;
-	}
-	return atof(var->string);
-}
-
 // returns an empty string if not defined
 static char* Cvar_VariableString(char* var_name) {
 	cvar_t* var = Cvar_FindVar(var_name);
@@ -4375,7 +4366,7 @@ static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 	int				length;
 	static unsigned	last_checksum;
 
-	if (!strcmp(map_name, name) && (clientload || !Cvar_VariableValue ("flushmap")) ) {
+	if (!strcmp(map_name, name)) {
 		*checksum = last_checksum;
 		if (!clientload) {
 			memset (portalopen, 0, sizeof(portalopen));
@@ -60013,7 +60004,6 @@ static void Mod_Free(model_t* mod) {
 void R_BeginRegistration (char *model)
 {
 	char	fullname[MAX_QPATH];
-	cvar_t	*flushmap;
 
 	registration_sequence++;
 	r_oldviewcluster = -1;		// force markleafs
@@ -60022,8 +60012,7 @@ void R_BeginRegistration (char *model)
 
 	// explicitly free the old map if different
 	// this guarantees that mod_known[0] is the world map
-	flushmap = COM_GetCvar ("flushmap", "0", 0);
-	if ( strcmp(mod_known[0].name, fullname) || flushmap->value)
+	if (strcmp(mod_known[0].name, fullname))
 		Mod_Free (&mod_known[0]);
 	r_worldmodel = Mod_ForName(fullname, true);
 
