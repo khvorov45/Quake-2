@@ -5395,16 +5395,6 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* run_pitch;
-static cvar_t* run_roll;
-static cvar_t* bob_up;
-static cvar_t* bob_pitch;
-static cvar_t* bob_roll;
-
-static cvar_t* flood_msgs;
-static cvar_t* flood_persecond;
-static cvar_t* flood_waitdelay;
-
 #define world	(&g_edicts[0])
 
 // item spawnflags
@@ -26556,82 +26546,6 @@ static void Cmd_Wave_f(edict_t* ent) {
 	}
 }
 
-void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
-{
-	int		i, j;
-	edict_t	*other;
-	char	*p;
-	char	text[2048];
-	gclient_t *cl;
-
-	if (cmd_argc < 2 && !arg0)
-		return;
-
-	if (team)
-		Com_sprintf (text, sizeof(text), "(%s): ", ent->client->pers.netname);
-	else
-		Com_sprintf (text, sizeof(text), "%s: ", ent->client->pers.netname);
-
-	if (arg0)
-	{
-		strcat (text, Cmd_Argv(0));
-		strcat (text, " ");
-		strcat (text, Cmd_Args());
-	}
-	else
-	{
-		p = Cmd_Args();
-
-		if (*p == '"')
-		{
-			p++;
-			p[strlen(p)-1] = 0;
-		}
-		strcat(text, p);
-	}
-
-	// don't let text be too long for malicious reasons
-	if (strlen(text) > 150)
-		text[150] = 0;
-
-	strcat(text, "\n");
-
-	if (flood_msgs->value) {
-		cl = ent->client;
-
-		if (level.time < cl->flood_locktill) {
-			PF_cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
-				(int)(cl->flood_locktill - level.time));
-			return;
-		}
-		i = cl->flood_whenhead - flood_msgs->value + 1;
-		if (i < 0)
-			i = (sizeof(cl->flood_when)/sizeof(cl->flood_when[0])) + i;
-		if (cl->flood_when[i] &&
-			level.time - cl->flood_when[i] < flood_persecond->value) {
-			cl->flood_locktill = level.time + flood_waitdelay->value;
-			return;
-		}
-		cl->flood_whenhead = (cl->flood_whenhead + 1) %
-			(sizeof(cl->flood_when)/sizeof(cl->flood_when[0]));
-		cl->flood_when[cl->flood_whenhead] = level.time;
-	}
-
-	for (j = 1; j <= 1; j++)
-	{
-		other = &g_edicts[j];
-		if (!other->inuse)
-			continue;
-		if (!other->client)
-			continue;
-		if (team)
-		{
-			if (!OnSameTeam(ent, other))
-				continue;
-		}
-	}
-}
-
 void ClientCommand (edict_t *ent)
 {
 	char	*cmd;
@@ -26646,17 +26560,6 @@ void ClientCommand (edict_t *ent)
 		Cmd_Players_f (ent);
 		return;
 	}
-	if (Q_stricmp (cmd, "say") == 0)
-	{
-		Cmd_Say_f (ent, false, false);
-		return;
-	}
-	if (Q_stricmp (cmd, "say_team") == 0)
-	{
-		Cmd_Say_f (ent, true, false);
-		return;
-	}
-	if (Q_stricmp (cmd, "help") == 0)
 	{
 		Cmd_Help_f (ent);
 		return;
@@ -34842,27 +34745,9 @@ static field_t clientfields[] = {
 };
 
 static void InitGame() {
-	// latched vars
-	COM_GetCvar("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
-	COM_GetCvar("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
-
-	run_pitch = COM_GetCvar ("run_pitch", "0.002", 0);
-	run_roll = COM_GetCvar ("run_roll", "0.005", 0);
-	bob_up  = COM_GetCvar ("bob_up", "0.005", 0);
-	bob_pitch = COM_GetCvar ("bob_pitch", "0.002", 0);
-	bob_roll = COM_GetCvar ("bob_roll", "0.002", 0);
-
-	// flood control
-	flood_msgs = COM_GetCvar ("flood_msgs", "4", 0);
-	flood_persecond = COM_GetCvar ("flood_persecond", "4", 0);
-	flood_waitdelay = COM_GetCvar ("flood_waitdelay", "10", 0);
-
-	// items
 	InitItems();
-
-	Com_sprintf (game.helpmessage1, sizeof(game.helpmessage1), "");
-
-	Com_sprintf (game.helpmessage2, sizeof(game.helpmessage2), "");
+	Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
+	Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
 
 	// initialize all entities for this game
 	game.maxentities = 1024;
@@ -54617,26 +54502,24 @@ void SV_CalcViewOffset (edict_t *ent)
 		// add angles based on velocity
 
 		delta = DotProduct (ent->velocity, forward);
-		angles[PITCH] += delta*run_pitch->value;
+		angles[PITCH] += delta * 0.002f;
 
 		delta = DotProduct (ent->velocity, right);
-		angles[ROLL] += delta*run_roll->value;
+		angles[ROLL] += delta * 0.005f;
 
 		// add angles based on bob
 
-		delta = bobfracsin * bob_pitch->value * xyspeed;
+		delta = bobfracsin * 0.002f * xyspeed;
 		if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 			delta *= 6;		// crouching
 		angles[PITCH] += delta;
-		delta = bobfracsin * bob_roll->value * xyspeed;
+		delta = bobfracsin * 0.002f * xyspeed;
 		if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 			delta *= 6;		// crouching
 		if (bobcycle & 1)
 			delta = -delta;
 		angles[ROLL] += delta;
 	}
-
-//===================================
 
 	// base origin
 
@@ -54655,7 +54538,7 @@ void SV_CalcViewOffset (edict_t *ent)
 
 	// add bob height
 
-	bob = bobfracsin * xyspeed * bob_up->value;
+	bob = bobfracsin * xyspeed * 0.005;
 	if (bob > 6)
 		bob = 6;
 	//gi.DebugGraph (bob *2, 255);
