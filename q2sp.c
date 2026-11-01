@@ -5395,12 +5395,9 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* filterban;
-
 static cvar_t* sv_maxvelocity;
 static cvar_t* sv_gravity;
 
-static cvar_t* sv_rollspeed;
 static cvar_t* sv_rollangle;
 
 static cvar_t* run_pitch;
@@ -34869,17 +34866,13 @@ static field_t clientfields[] = {
 // which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
 	//FIXME: sv_ prefix is wrong for these
-	sv_rollspeed = COM_GetCvar ("sv_rollspeed", "200", 0);
 	sv_rollangle = COM_GetCvar ("sv_rollangle", "2", 0);
 	sv_maxvelocity = COM_GetCvar ("sv_maxvelocity", "2000", 0);
 	sv_gravity = COM_GetCvar ("sv_gravity", "800", 0);
 
 	// latched vars
-	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
-	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
-
-	// change anytime vars
-	filterban = COM_GetCvar ("filterban", "1", 0);
+	COM_GetCvar("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
+	COM_GetCvar("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
 	run_pitch = COM_GetCvar ("run_pitch", "0.002", 0);
 	run_roll = COM_GetCvar ("run_roll", "0.005", 0);
@@ -54446,8 +54439,9 @@ static float SV_CalcRoll(vec3_t velocity) {
 
 	value = sv_rollangle->value;
 
-	if (side < sv_rollspeed->value)
-		side = side * value / sv_rollspeed->value;
+	float rollspeed = 200.0f;
+	if (side < rollspeed)
+		side = side * value / rollspeed;
 	else
 		side = value;
 
