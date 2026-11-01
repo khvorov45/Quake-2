@@ -5404,9 +5404,6 @@ static cvar_t* sv_gravity;
 
 static cvar_t* sv_rollspeed;
 static cvar_t* sv_rollangle;
-static cvar_t* gun_x;
-static cvar_t* gun_y;
-static cvar_t* gun_z;
 
 static cvar_t* run_pitch;
 static cvar_t* run_roll;
@@ -34873,10 +34870,6 @@ static field_t clientfields[] = {
 // This will be called when the dll is first loaded,
 // which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
-	gun_x = COM_GetCvar ("gun_x", "0", 0);
-	gun_y = COM_GetCvar ("gun_y", "0", 0);
-	gun_z = COM_GetCvar ("gun_z", "0", 0);
-
 	//FIXME: sv_ prefix is wrong for these
 	sv_rollspeed = COM_GetCvar ("sv_rollspeed", "200", 0);
 	sv_rollangle = COM_GetCvar ("sv_rollangle", "2", 0);
@@ -54783,15 +54776,6 @@ void SV_CalcGunOffset (edict_t *ent)
 
 	// gun height
 	VectorClear (ent->client->ps.gunoffset);
-//	ent->ps->gunorigin[2] += bob;
-
-	// gun_x / gun_y / gun_z are development tools
-	for (i=0 ; i<3 ; i++)
-	{
-		ent->client->ps.gunoffset[i] += forward[i]*(gun_y->value);
-		ent->client->ps.gunoffset[i] += right[i]*gun_x->value;
-		ent->client->ps.gunoffset[i] += up[i]* (-gun_z->value);
-	}
 }
 
 
