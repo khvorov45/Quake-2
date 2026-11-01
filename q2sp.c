@@ -779,7 +779,7 @@ typedef struct entity_state_s {
 
 #define NUMVERTEXNORMALS 162
 
-#define	MAX_EDICTS 1024	// must change protocol to increase more
+#define	MAX_EDICTS 1024
 
 // ms and light always sent, the others are optional
 #define	CM_ANGLE1 	(1<<0)
@@ -63849,13 +63849,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// TODO: Unglobal
 	// TODO: Move to an arena
 	SZ_Init(&cmd_text, cmd_text_buf, sizeof(cmd_text_buf));
-
-	// NOTE: Cvars
-	// TODO: Remove non-essentials
-	{
-		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
-		COM_GetCvar("in_initmouse", "1", CVAR_NOSET);
-	}
 
 	// NOTE: Server init
 	// TODO: Remove
