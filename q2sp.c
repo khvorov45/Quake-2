@@ -5395,9 +5395,6 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* sv_maxvelocity;
-static cvar_t* sv_gravity;
-
 static cvar_t* run_pitch;
 static cvar_t* run_roll;
 static cvar_t* bob_up;
@@ -33873,25 +33870,14 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 	return NULL;
 }
 
-
-/*
-================
-SV_CheckVelocity
-================
-*/
-void SV_CheckVelocity (edict_t *ent)
-{
-	int		i;
-
-//
-// bound velocity
-//
-	for (i=0 ; i<3 ; i++)
-	{
-		if (ent->velocity[i] > sv_maxvelocity->value)
-			ent->velocity[i] = sv_maxvelocity->value;
-		else if (ent->velocity[i] < -sv_maxvelocity->value)
-			ent->velocity[i] = -sv_maxvelocity->value;
+void SV_CheckVelocity (edict_t *ent) {
+	// bound velocity
+	for (i64 i=0 ; i<3 ; i++) {
+		float max_velocity = 2000.0f;
+		if (ent->velocity[i] > max_velocity)
+			ent->velocity[i] = max_velocity;
+		else if (ent->velocity[i] < -max_velocity)
+			ent->velocity[i] = -max_velocity;
 	}
 }
 
@@ -34109,16 +34095,11 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 	return blocked;
 }
 
+static float gravity_value = 800.0f;
 
-/*
-============
-SV_AddGravity
-
-============
-*/
 void SV_AddGravity (edict_t *ent)
 {
-	ent->velocity[2] -= ent->gravity * sv_gravity->value * FRAMETIME;
+	ent->velocity[2] -= ent->gravity * gravity_value * FRAMETIME;
 }
 
 /*
@@ -34636,7 +34617,7 @@ void SV_Physics_Step (edict_t *ent)
 		if (!(ent->flags & FL_FLY))
 			if (!((ent->flags & FL_SWIM) && (ent->waterlevel > 2)))
 			{
-				if (ent->velocity[2] < sv_gravity->value*-0.1)
+				if (ent->velocity[2] < gravity_value*-0.1)
 					hitsound = true;
 				if (ent->waterlevel == 0)
 					SV_AddGravity (ent);
@@ -34860,13 +34841,7 @@ static field_t clientfields[] = {
 	{NULL, 0, F_INT, 0}
 };
 
-// This will be called when the dll is first loaded,
-// which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
-	//FIXME: sv_ prefix is wrong for these
-	sv_maxvelocity = COM_GetCvar ("sv_maxvelocity", "2000", 0);
-	sv_gravity = COM_GetCvar ("sv_gravity", "800", 0);
-
 	// latched vars
 	COM_GetCvar("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	COM_GetCvar("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
@@ -53877,7 +53852,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		else
 			client->ps.pmove.pm_type = PM_NORMAL;
 
-		client->ps.pmove.gravity = sv_gravity->value;
+		client->ps.pmove.gravity = gravity_value;
 		pm.s = client->ps.pmove;
 
 		for (i=0 ; i<3 ; i++)
