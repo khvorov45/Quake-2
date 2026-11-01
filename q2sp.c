@@ -1525,7 +1525,6 @@ static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 
-#define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
 #define	CVAR_USERINFO	2	// added to userinfo  when changed
 #define	CVAR_SERVERINFO	4	// added to serverinfo when changed
 #define	CVAR_NOSET		8	// don't allow change from console at all, but can be set from the command line
@@ -1957,17 +1956,6 @@ static cvar_t* COM_FullSetCvar(char* var_name, char* value, int flags) {
 	var->flags = flags;
 
 	return var;
-}
-
-// converts value to string and sets as normal
-static void COM_SetValueCvar(char *var_name, float value) {
-	char val[32] = {};
-	if (value == (int)value) {
-		Com_sprintf (val, sizeof(val), "%i", (int)value);
-	} else {
-		Com_sprintf (val, sizeof(val), "%f", value);
-	}
-	COM_SetCvar (var_name, val);
 }
 
 unsigned	Com_BlockChecksum (void *buffer, int length);
@@ -16962,7 +16950,6 @@ static void CL_Precache_f() {
 	}
 }
 
-// Write key bindings and archived cvars to config file
 static void write_config() {
 	// TODO kinda wanna get rid of this condition
 	if (cls.state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
@@ -16975,13 +16962,6 @@ static void write_config() {
 			if (value_cstring && value_cstring[0]) {
 				char* key_cstring = Key_KeynumToString(ind);
 				string_builder_write_cstrings(&builder, CSTRS("bind ", key_cstring, " \"", value_cstring, "\"\n"));
-			}
-		}
-
-		// NOTE: Variables with "archive" flag
-		for (cvar_t* var = cvar_vars; var; var = var->next) {
-			if (var->flags & CVAR_ARCHIVE) {
-				string_builder_write_cstrings(&builder, CSTRS("set ", var->name, " \"", var->string, "\"\n"));
 			}
 		}
 
@@ -23369,14 +23349,10 @@ static void M_Menu_Video_f() {
 	M_PushMenu(VID_MenuDraw, VID_MenuKey);
 }
 
-static void StartGame( void )
-{
+static void StartGame() {
 	cl.servercount = -1;
-	M_ForceMenuOff ();
-
-	COM_SetValueCvar( "gamerules", 0 );		//PGM
-
-	Cbuf_AddText ("loading ; killserver ; wait ; newgame\n");
+	M_ForceMenuOff();
+	Cbuf_AddText("loading ; killserver ; wait ; newgame\n");
 	cls.key_dest = key_game;
 }
 
