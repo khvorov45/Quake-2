@@ -1828,12 +1828,12 @@ static void Cbuf_InsertText(char* text) {
 #define	MAX_ALIAS_NAME		32
 #define	ALIAS_LOOP_COUNT	16
 
-typedef void (*xcommand_t)(void);
+typedef void (*Command_Proc)(void);
 
 typedef struct cmd_function_s {
 	struct cmd_function_s*	next;
-	char*					name;
-	xcommand_t				function;
+	String name;
+	Command_Proc function;
 } cmd_function_t;
 
 typedef struct cmdalias_s {
@@ -1935,7 +1935,7 @@ static void Cmd_ExecuteString(char* text) {
 
 	// check functions
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
-		if (!Q_strcasecmp(cmd_argv[0],cmd->name)) {
+		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
 			if (!cmd->function) {
 				// forward to server command
 				Cmd_ExecuteString(va("cmd %s", text));
@@ -2029,17 +2029,14 @@ static void Cmd_ExecuteCbuf() {
 	}
 }
 
-static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
+static void Cmd_AddCommand(String name, Command_Proc function) {
 	// fail if the command already exists
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
-		if (!strcmp(cmd_name, cmd->name)) {
-			add_line_to_console_log(STR("already defined"));
-			return;
-		}
+		assert(!streq(name, cmd->name));
 	}
 
 	cmd_function_t* cmd = tml_alloc(sizeof(cmd_function_t));
-	cmd->name = cmd_name;
+	cmd->name = name;
 	cmd->function = function;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
@@ -2048,7 +2045,7 @@ static void Cmd_AddCommand(char* cmd_name, xcommand_t function) {
 static void Cmd_List_f() {
 	int i = 0;
 	for (cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next, i++) {
-		add_line_to_console_log(string_from_cstring(cmd->name));
+		add_line_to_console_log(cmd->name);
 	}
 }
 
@@ -62872,95 +62869,95 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-	// NOTE: Console commands
+	// NOTE: Commands
 	{
-		Cmd_AddCommand("write_config", write_config);
-		Cmd_AddCommand("quit", context.exit_process);
-		Cmd_AddCommand("cmdlist", Cmd_List_f);
+		Cmd_AddCommand(STR("write_config"), write_config);
+		Cmd_AddCommand(STR("quit"), context.exit_process);
+		Cmd_AddCommand(STR("cmdlist"), Cmd_List_f);
 
 		// TODO: Remove non-essentials
-		Cmd_AddCommand("exec", Cmd_Exec_f);
-		Cmd_AddCommand("alias", Cmd_Alias_f);
-		Cmd_AddCommand("wait",  Cmd_Wait_f);
-		Cmd_AddCommand("bind", Key_Bind_f);
-		Cmd_AddCommand("unbind", Key_Unbind_f);
-		Cmd_AddCommand("unbindall", Key_Unbindall_f);
-		Cmd_AddCommand("bindlist", Key_Bindlist_f);
-		Cmd_AddCommand("map", SV_Map_f);
-		Cmd_AddCommand("gamemap", SV_GameMap_f);
-		Cmd_AddCommand("save", SV_Savegame_f);
-		Cmd_AddCommand("load", SV_Loadgame_f);
-		Cmd_AddCommand("killserver", SV_KillServer_f);
-		Cmd_AddCommand("toggleconsole", Con_ToggleConsole_f);
-		Cmd_AddCommand("gun_model", V_Gun_Model_f);
-		Cmd_AddCommand("menu_main", M_Menu_Main_f);
-		Cmd_AddCommand("menu_game", M_Menu_Game_f);
-		Cmd_AddCommand("menu_loadgame", M_Menu_LoadGame_f);
-		Cmd_AddCommand("menu_savegame", M_Menu_SaveGame_f);
-		Cmd_AddCommand("menu_video", M_Menu_Video_f);
-		Cmd_AddCommand("menu_options", M_Menu_Options_f);
-		Cmd_AddCommand("menu_keys", M_Menu_Keys_f);
-		Cmd_AddCommand("menu_quit", M_Menu_Quit_f);
-		Cmd_AddCommand("loading",SCR_Loading_f);
-		Cmd_AddCommand("sky",SCR_Sky_f);
-		Cmd_AddCommand("cmd", CL_ForwardToServer_f);
-		Cmd_AddCommand("changing", CL_Changing_f);
-		Cmd_AddCommand("connect", CL_Connect_f);
-		Cmd_AddCommand("reconnect", CL_Reconnect_f);
-		Cmd_AddCommand("precache", CL_Precache_f);
-		Cmd_AddCommand("wave", NULL);
-		Cmd_AddCommand("inven", NULL);
-		Cmd_AddCommand("kill", NULL);
-		Cmd_AddCommand("use", NULL);
-		Cmd_AddCommand("drop", NULL);
-		Cmd_AddCommand("say", NULL);
-		Cmd_AddCommand("say_team", NULL);
-		Cmd_AddCommand("info", NULL);
-		Cmd_AddCommand("prog", NULL);
-		Cmd_AddCommand("give", NULL);
-		Cmd_AddCommand("god", NULL);
-		Cmd_AddCommand("notarget", NULL);
-		Cmd_AddCommand("noclip", NULL);
-		Cmd_AddCommand("invuse", NULL);
-		Cmd_AddCommand("invprev", NULL);
-		Cmd_AddCommand("invnext", NULL);
-		Cmd_AddCommand("invdrop", NULL);
-		Cmd_AddCommand("weapnext", NULL);
-		Cmd_AddCommand("weapprev", NULL);
-		Cmd_AddCommand("centerview",IN_CenterView);
-		Cmd_AddCommand("+moveup",IN_UpDown);
-		Cmd_AddCommand("-moveup",IN_UpUp);
-		Cmd_AddCommand("+movedown",IN_DownDown);
-		Cmd_AddCommand("-movedown",IN_DownUp);
-		Cmd_AddCommand("+left",IN_LeftDown);
-		Cmd_AddCommand("-left",IN_LeftUp);
-		Cmd_AddCommand("+right",IN_RightDown);
-		Cmd_AddCommand("-right",IN_RightUp);
-		Cmd_AddCommand("+forward",IN_ForwardDown);
-		Cmd_AddCommand("-forward",IN_ForwardUp);
-		Cmd_AddCommand("+back",IN_BackDown);
-		Cmd_AddCommand("-back",IN_BackUp);
-		Cmd_AddCommand("+lookup", IN_LookupDown);
-		Cmd_AddCommand("-lookup", IN_LookupUp);
-		Cmd_AddCommand("+lookdown", IN_LookdownDown);
-		Cmd_AddCommand("-lookdown", IN_LookdownUp);
-		Cmd_AddCommand("+moveleft", IN_MoveleftDown);
-		Cmd_AddCommand("-moveleft", IN_MoveleftUp);
-		Cmd_AddCommand("+moveright", IN_MoverightDown);
-		Cmd_AddCommand("-moveright", IN_MoverightUp);
-		Cmd_AddCommand("+speed", IN_SpeedDown);
-		Cmd_AddCommand("-speed", IN_SpeedUp);
-		Cmd_AddCommand("+attack", IN_AttackDown);
-		Cmd_AddCommand("-attack", IN_AttackUp);
-		Cmd_AddCommand("+use", IN_UseDown);
-		Cmd_AddCommand("-use", IN_UseUp);
-		Cmd_AddCommand("impulse", IN_Impulse);
-		Cmd_AddCommand("+klook", IN_KLookDown);
-		Cmd_AddCommand("-klook", IN_KLookUp);
-		Cmd_AddCommand("+mlook", IN_MLookDown);
-		Cmd_AddCommand("-mlook", IN_MLookUp);
-		Cmd_AddCommand("play", S_Play);
-		Cmd_AddCommand("stopsound", S_StopAllSounds);
+		Cmd_AddCommand(STR("exec"), Cmd_Exec_f);
+		Cmd_AddCommand(STR("alias"), Cmd_Alias_f);
+		Cmd_AddCommand(STR("wait"),  Cmd_Wait_f);
+		Cmd_AddCommand(STR("bind"), Key_Bind_f);
+		Cmd_AddCommand(STR("unbind"), Key_Unbind_f);
+		Cmd_AddCommand(STR("unbindall"), Key_Unbindall_f);
+		Cmd_AddCommand(STR("bindlist"), Key_Bindlist_f);
+		Cmd_AddCommand(STR("map"), SV_Map_f);
+		Cmd_AddCommand(STR("gamemap"), SV_GameMap_f);
+		Cmd_AddCommand(STR("save"), SV_Savegame_f);
+		Cmd_AddCommand(STR("load"), SV_Loadgame_f);
+		Cmd_AddCommand(STR("killserver"), SV_KillServer_f);
+		Cmd_AddCommand(STR("toggleconsole"), Con_ToggleConsole_f);
+		Cmd_AddCommand(STR("gun_model"), V_Gun_Model_f);
+		Cmd_AddCommand(STR("menu_main"), M_Menu_Main_f);
+		Cmd_AddCommand(STR("menu_game"), M_Menu_Game_f);
+		Cmd_AddCommand(STR("menu_loadgame"), M_Menu_LoadGame_f);
+		Cmd_AddCommand(STR("menu_savegame"), M_Menu_SaveGame_f);
+		Cmd_AddCommand(STR("menu_video"), M_Menu_Video_f);
+		Cmd_AddCommand(STR("menu_options"), M_Menu_Options_f);
+		Cmd_AddCommand(STR("menu_keys"), M_Menu_Keys_f);
+		Cmd_AddCommand(STR("menu_quit"), M_Menu_Quit_f);
+		Cmd_AddCommand(STR("loading"),SCR_Loading_f);
+		Cmd_AddCommand(STR("sky"),SCR_Sky_f);
+		Cmd_AddCommand(STR("cmd"), CL_ForwardToServer_f);
+		Cmd_AddCommand(STR("changing"), CL_Changing_f);
+		Cmd_AddCommand(STR("connect"), CL_Connect_f);
+		Cmd_AddCommand(STR("reconnect"), CL_Reconnect_f);
+		Cmd_AddCommand(STR("precache"), CL_Precache_f);
+		Cmd_AddCommand(STR("wave"), NULL);
+		Cmd_AddCommand(STR("inven"), NULL);
+		Cmd_AddCommand(STR("kill"), NULL);
+		Cmd_AddCommand(STR("use"), NULL);
+		Cmd_AddCommand(STR("drop"), NULL);
+		Cmd_AddCommand(STR("say"), NULL);
+		Cmd_AddCommand(STR("say_team"), NULL);
+		Cmd_AddCommand(STR("info"), NULL);
+		Cmd_AddCommand(STR("prog"), NULL);
+		Cmd_AddCommand(STR("give"), NULL);
+		Cmd_AddCommand(STR("god"), NULL);
+		Cmd_AddCommand(STR("notarget"), NULL);
+		Cmd_AddCommand(STR("noclip"), NULL);
+		Cmd_AddCommand(STR("invuse"), NULL);
+		Cmd_AddCommand(STR("invprev"), NULL);
+		Cmd_AddCommand(STR("invnext"), NULL);
+		Cmd_AddCommand(STR("invdrop"), NULL);
+		Cmd_AddCommand(STR("weapnext"), NULL);
+		Cmd_AddCommand(STR("weapprev"), NULL);
+		Cmd_AddCommand(STR("centerview"),IN_CenterView);
+		Cmd_AddCommand(STR("+moveup"),IN_UpDown);
+		Cmd_AddCommand(STR("-moveup"),IN_UpUp);
+		Cmd_AddCommand(STR("+movedown"),IN_DownDown);
+		Cmd_AddCommand(STR("-movedown"),IN_DownUp);
+		Cmd_AddCommand(STR("+left"),IN_LeftDown);
+		Cmd_AddCommand(STR("-left"),IN_LeftUp);
+		Cmd_AddCommand(STR("+right"),IN_RightDown);
+		Cmd_AddCommand(STR("-right"),IN_RightUp);
+		Cmd_AddCommand(STR("+forward"),IN_ForwardDown);
+		Cmd_AddCommand(STR("-forward"),IN_ForwardUp);
+		Cmd_AddCommand(STR("+back"),IN_BackDown);
+		Cmd_AddCommand(STR("-back"),IN_BackUp);
+		Cmd_AddCommand(STR("+lookup"), IN_LookupDown);
+		Cmd_AddCommand(STR("-lookup"), IN_LookupUp);
+		Cmd_AddCommand(STR("+lookdown"), IN_LookdownDown);
+		Cmd_AddCommand(STR("-lookdown"), IN_LookdownUp);
+		Cmd_AddCommand(STR("+moveleft"), IN_MoveleftDown);
+		Cmd_AddCommand(STR("-moveleft"), IN_MoveleftUp);
+		Cmd_AddCommand(STR("+moveright"), IN_MoverightDown);
+		Cmd_AddCommand(STR("-moveright"), IN_MoverightUp);
+		Cmd_AddCommand(STR("+speed"), IN_SpeedDown);
+		Cmd_AddCommand(STR("-speed"), IN_SpeedUp);
+		Cmd_AddCommand(STR("+attack"), IN_AttackDown);
+		Cmd_AddCommand(STR("-attack"), IN_AttackUp);
+		Cmd_AddCommand(STR("+use"), IN_UseDown);
+		Cmd_AddCommand(STR("-use"), IN_UseUp);
+		Cmd_AddCommand(STR("impulse"), IN_Impulse);
+		Cmd_AddCommand(STR("+klook"), IN_KLookDown);
+		Cmd_AddCommand(STR("-klook"), IN_KLookUp);
+		Cmd_AddCommand(STR("+mlook"), IN_MLookDown);
+		Cmd_AddCommand(STR("-mlook"), IN_MLookUp);
+		Cmd_AddCommand(STR("play"), S_Play);
+		Cmd_AddCommand(STR("stopsound"), S_StopAllSounds);
 	}
 
 	// NOTE: Command buffer
