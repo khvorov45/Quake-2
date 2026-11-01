@@ -5416,7 +5416,6 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* password;
 static cvar_t* maxentities;
 
 static cvar_t* filterban;
@@ -34936,7 +34935,6 @@ static void InitGame() {
 	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
-	password = COM_GetCvar ("password", "", CVAR_USERINFO);
 	filterban = COM_GetCvar ("filterban", "1", 0);
 
 	run_pitch = COM_GetCvar ("run_pitch", "0.002", 0);
@@ -36223,136 +36221,6 @@ void SP_worldspawn (edict_t *ent)
 
 	// 63 testing
 	PF_Configstring(CS_LIGHTS+63, "a");
-}
-
-/* ============ end source: game/g_spawn.c ============ */
-/* ============ begin source: game/g_svcmds.c ============ */
-
-
-/* already inlined above: game/g_local.h */
-
-
-void	Svcmd_Test_f (void)
-{
-	PF_cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
-}
-
-/*
-==============================================================================
-
-PACKET FILTERING
-
-
-You can add or remove addresses from the filter list with:
-
-addip <ip>
-removeip <ip>
-
-The ip address is specified in dot format, and any unspecified digits will match any value, so you can specify an entire class C network with "addip 192.246.40".
-
-Removeip will only remove an address specified exactly the same way.  You cannot addip a subnet, then removeip a single host.
-
-listip
-Prints the current list of filters.
-
-writeip
-Dumps "addip <ip>" commands to listip.cfg so it can be execed at a later date.  The filter lists are not saved and restored by default, because I beleive it would cause too much confusion.
-
-filterban <0 or 1>
-
-If 1 (the default), then ip addresses matching the current list will be prohibited from entering the game.  This is the default setting.
-
-If 0, then only addresses matching the list will be allowed.  This lets you easily set up a private game, or a game that only allows players from your local network.
-
-
-==============================================================================
-*/
-
-typedef struct
-{
-	unsigned	mask;
-	unsigned	compare;
-} ipfilter_t;
-
-#define	MAX_IPFILTERS	1024
-
-ipfilter_t	ipfilters[MAX_IPFILTERS];
-int			numipfilters;
-
-bool SV_FilterPacket (char *from)
-{
-	int		i;
-	unsigned	in;
-	u8 m[4];
-	char *p;
-
-	i = 0;
-	p = from;
-	while (*p && i < 4) {
-		m[i] = 0;
-		while (*p >= '0' && *p <= '9') {
-			m[i] = m[i]*10 + (*p - '0');
-			p++;
-		}
-		if (!*p || *p == ':')
-			break;
-		i++, p++;
-	}
-
-	in = *(unsigned *)m;
-
-	for (i=0 ; i<numipfilters ; i++)
-		if ( (in & ipfilters[i].mask) == ipfilters[i].compare)
-			return (int)filterban->value;
-
-	return (int)!filterban->value;
-}
-
-/*
-=================
-SV_ListIP_f
-=================
-*/
-void SVCmd_ListIP_f (void)
-{
-	int		i;
-	u8	b[4];
-
-	PF_cprintf (NULL, PRINT_HIGH, "Filter list:\n");
-	for (i=0 ; i<numipfilters ; i++)
-	{
-		*(unsigned *)b = ipfilters[i].compare;
-		PF_cprintf (NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n", b[0], b[1], b[2], b[3]);
-	}
-}
-
-void SVCmd_WriteIP_f (void)
-{
-	FILE	*f;
-	char	name[MAX_OSPATH];
-	u8	b[4];
-	int		i;
-
-	sprintf(name, "%s/listip.cfg", GAMEVERSION);
-
-	PF_cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
-
-	f = fopen (name, "wb");
-	if (!f)
-	{
-		PF_cprintf (NULL, PRINT_HIGH, "Couldn't open %s\n", name);
-		return;
-	}
-
-	fprintf(f, "set filterban %d\n", (int)filterban->value);
-
-	for (i=0 ; i<numipfilters ; i++)
-	{
-		*(unsigned *)b = ipfilters[i].compare;
-		fprintf (f, "sv addip %i.%i.%i.%i\n", b[0], b[1], b[2], b[3]);
-	}
-
-	fclose (f);
 }
 
 static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
