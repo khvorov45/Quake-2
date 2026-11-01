@@ -1525,7 +1525,6 @@ static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 
-static bool	userinfo_modified; // this is set each time a CVAR_USERINFO variable is changed so that the client knows to send it to the server
 static int server_state;
 
 #define	MAX_MSGLEN	1400
@@ -15840,14 +15839,6 @@ void CL_SendCmd (void)
 		return;
 	}
 
-	// send a userinfo update if needed
-	if (userinfo_modified)
-	{
-		userinfo_modified = false;
-		MSG_WriteByte(&cls.netchan.message, clc_userinfo);
-		MSG_WriteString(&cls.netchan.message, "");
-	}
-
 	SZ_Init (&buf, data, sizeof(data));
 
 	// begin a client move command
@@ -16023,8 +16014,6 @@ void CL_SendConnectPacket (void)
 	}
 	if (adr.port == 0)
 		adr.port = BigShort (PORT_SERVER);
-
-	userinfo_modified = false;
 
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 }
