@@ -5398,8 +5398,6 @@ static edict_t* g_edicts;
 static cvar_t* sv_maxvelocity;
 static cvar_t* sv_gravity;
 
-static cvar_t* sv_rollangle;
-
 static cvar_t* run_pitch;
 static cvar_t* run_roll;
 static cvar_t* bob_up;
@@ -34866,7 +34864,6 @@ static field_t clientfields[] = {
 // which only happens when a new game is started or a save game is loaded.
 static void InitGame() {
 	//FIXME: sv_ prefix is wrong for these
-	sv_rollangle = COM_GetCvar ("sv_rollangle", "2", 0);
 	sv_maxvelocity = COM_GetCvar ("sv_maxvelocity", "2000", 0);
 	sv_gravity = COM_GetCvar ("sv_gravity", "800", 0);
 
@@ -54409,14 +54406,6 @@ edict_t *PlayerTrail_LastSpot (void)
 {
 	return trail[PREV(trail_head)];
 }
-/* ============ end source: game/p_trail.c ============ */
-/* ============ begin source: game/p_view.c ============ */
-
-
-/* already inlined above: game/g_local.h */
-/* already inlined above: game/m_player.h */
-
-
 
 static	edict_t		*current_player;
 static	gclient_t	*current_client;
@@ -54429,16 +54418,11 @@ int		bobcycle;		// odd cycles are right foot going forward
 float	bobfracsin;		// sin(bobfrac*M_PI)
 
 static float SV_CalcRoll(vec3_t velocity) {
-	float	sign;
-	float	side;
-	float	value;
-
-	side = DotProduct (velocity, right);
-	sign = side < 0 ? -1 : 1;
+	float side = DotProduct (velocity, right);
+	float sign = side < 0 ? -1 : 1;
 	side = fabs(side);
 
-	value = sv_rollangle->value;
-
+	float value = 2.0f;
 	float rollspeed = 200.0f;
 	if (side < rollspeed)
 		side = side * value / rollspeed;
@@ -54446,7 +54430,6 @@ static float SV_CalcRoll(vec3_t velocity) {
 		side = value;
 
 	return side*sign;
-
 }
 
 
