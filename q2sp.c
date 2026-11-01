@@ -5395,8 +5395,6 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* maxentities;
-
 static cvar_t* filterban;
 
 static cvar_t* sv_maxvelocity;
@@ -34880,8 +34878,6 @@ static void InitGame() {
 	COM_GetCvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	COM_GetCvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
-	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
-
 	// change anytime vars
 	filterban = COM_GetCvar ("filterban", "1", 0);
 
@@ -34904,7 +34900,7 @@ static void InitGame() {
 	Com_sprintf (game.helpmessage2, sizeof(game.helpmessage2), "");
 
 	// initialize all entities for this game
-	game.maxentities = maxentities->value;
+	game.maxentities = 1024;
 	g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
 	// initialize all clients for this game
@@ -35332,7 +35328,7 @@ void ReadLevel (char *filename)
 	tml_free_all (TAG_LEVEL);
 
 	// wipe all the entities
-	memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));
+	memset (g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
 	global_num_edicts = 2;
 
 	// check edict size
@@ -35875,8 +35871,8 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 	tml_free_all (TAG_LEVEL);
 
-	memset (&level, 0, sizeof(level));
-	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
+	memset(&level, 0, sizeof(level));
+	memset(g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
 
 	strncpy (level.mapname, mapname, sizeof(level.mapname)-1);
 	strncpy (game.spawnpoint, spawnpoint, sizeof(game.spawnpoint)-1);
