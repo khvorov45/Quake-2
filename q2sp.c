@@ -1525,13 +1525,6 @@ static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 
-// cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly in C code.
-// The user can access cvars from the console in three ways:
-// r_draworder			prints the current value
-// r_draworder 0		sets the current value to 0
-// set r_draworder 0	as above, but creates the cvar if not present
-// Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
-
 #define	CVAR_ARCHIVE	1	// set to cause it to be saved to vars.rc
 #define	CVAR_USERINFO	2	// added to userinfo  when changed
 #define	CVAR_SERVERINFO	4	// added to serverinfo when changed
@@ -5425,7 +5418,6 @@ static edict_t* g_edicts;
 
 static cvar_t* password;
 static cvar_t* maxentities;
-static cvar_t* g_select_empty;
 
 static cvar_t* filterban;
 
@@ -34947,8 +34939,6 @@ static void InitGame() {
 	password = COM_GetCvar ("password", "", CVAR_USERINFO);
 	filterban = COM_GetCvar ("filterban", "1", 0);
 
-	g_select_empty = COM_GetCvar ("g_select_empty", "0", CVAR_ARCHIVE);
-
 	run_pitch = COM_GetCvar ("run_pitch", "0.002", 0);
 	run_roll = COM_GetCvar ("run_roll", "0.005", 0);
 	bob_up  = COM_GetCvar ("bob_up", "0.005", 0);
@@ -55897,37 +55887,25 @@ void Think_Weapon (edict_t *ent)
 	}
 }
 
-
-/*
-================
-Use_Weapon
-
-Make the weapon ready if there is ammo
-================
-*/
-void Use_Weapon (edict_t *ent, gitem_t *item)
-{
-	int			ammo_index;
-	gitem_t		*ammo_item;
-
+// Make the weapon ready if there is ammo
+void Use_Weapon(edict_t* ent, gitem_t* item) {
 	// see if we're already using it
-	if (item == ent->client->pers.weapon)
+	if (item == ent->client->pers.weapon) {
 		return;
+	}
 
-	if (item->ammo && !g_select_empty->value && !(item->flags & IT_AMMO))
-	{
-		ammo_item = FindItem(item->ammo);
-		ammo_index = ITEM_INDEX(ammo_item);
+	if (item->ammo && !(item->flags & IT_AMMO)) {
+		gitem_t* ammo_item = FindItem(item->ammo);
+		i32 ammo_index = ITEM_INDEX(ammo_item);
 
-		if (!ent->client->pers.inventory[ammo_index])
-		{
-			PF_cprintf (ent, PRINT_HIGH, "No %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
+		i32 ammo_held = ent->client->pers.inventory[ammo_index];
+		if (!ammo_held) {
+			PF_cprintf(ent, PRINT_HIGH, "No %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
 			return;
 		}
 
-		if (ent->client->pers.inventory[ammo_index] < item->quantity)
-		{
-			PF_cprintf (ent, PRINT_HIGH, "Not enough %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
+		if (ammo_held < item->quantity) {
+			PF_cprintf(ent, PRINT_HIGH, "Not enough %s for %s.\n", ammo_item->pickup_name, item->pickup_name);
 			return;
 		}
 	}
@@ -55935,8 +55913,6 @@ void Use_Weapon (edict_t *ent, gitem_t *item)
 	// change to this weapon when down
 	ent->client->newweapon = item;
 }
-
-
 
 /*
 ================
