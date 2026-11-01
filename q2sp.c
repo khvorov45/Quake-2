@@ -3970,7 +3970,6 @@ typedef struct {
 	int	floodvalid;
 } carea_t;
 
-static cvar_t*			map_noareas;
 static char				map_name[MAX_QPATH];
 static bool			portalopen[MAX_MAP_AREAPORTALS];
 static cmodel_t			map_cmodels[MAX_MAP_MODELS];
@@ -4382,8 +4381,6 @@ void CMod_LoadEntityString (lump_t *l)
 static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 	int				length;
 	static unsigned	last_checksum;
-
-	map_noareas = COM_GetCvar("map_noareas", "0", 0);
 
 	if (!strcmp(map_name, name) && (clientload || !Cvar_VariableValue ("flushmap")) ) {
 		*checksum = last_checksum;
@@ -6695,9 +6692,6 @@ static void CM_SetAreaPortalState(int portalnum, bool open) {
 }
 
 static bool CM_AreasConnected(int area1, int area2) {
-	if (map_noareas->value) {
-		return true;
-	}
 	assert(area1 >= 0 && area1 <= numareas && area2 >= 0 && area2 <= numareas);
 	bool result = map_areas[area1].floodnum == map_areas[area2].floodnum;
 	return result;
@@ -6722,20 +6716,13 @@ int CM_WriteAreaBits (u8 *buffer, int area)
 
 	bytes = (numareas+7)>>3;
 
-	if (map_noareas->value)
-	{	// for debugging, send everything
-		memset (buffer, 255, bytes);
-	}
-	else
-	{
-		memset (buffer, 0, bytes);
+	memset (buffer, 0, bytes);
 
-		floodnum = map_areas[area].floodnum;
-		for (i=0 ; i<numareas ; i++)
-		{
-			if (map_areas[i].floodnum == floodnum || !area)
-				buffer[i>>3] |= 1<<(i&7);
-		}
+	floodnum = map_areas[area].floodnum;
+	for (i=0 ; i<numareas ; i++)
+	{
+		if (map_areas[i].floodnum == floodnum || !area)
+			buffer[i>>3] |= 1<<(i&7);
 	}
 
 	return bytes;
@@ -17040,60 +17027,7 @@ static void write_config() {
 	}}
 }
 
-typedef struct {
-	char	*name;
-	char	*value;
-	cvar_t	*var;
-} cheatvar_t;
-
-static cheatvar_t cheatvars[] = {
-	{"cl_testlights", "0", 0},
-	{"r_drawflat", "0", 0},
-	{"sw_draworder", "0", 0},
-	{NULL, NULL, 0},
-};
-
-int		numcheatvars;
-
-void CL_FixCvarCheats (void)
-{
-	int			i;
-	cheatvar_t	*var;
-
-	if ( !strcmp(cl.configstrings[CS_MAXCLIENTS], "1")
-		|| !cl.configstrings[CS_MAXCLIENTS][0] )
-		return;		// single player can cheat
-
-	// find all the cvars if we haven't done it yet
-	if (!numcheatvars)
-	{
-		while (cheatvars[numcheatvars].name)
-		{
-			cheatvars[numcheatvars].var = COM_GetCvar (cheatvars[numcheatvars].name,
-					cheatvars[numcheatvars].value, 0);
-			numcheatvars++;
-		}
-	}
-
-	// make sure they are all set to the proper values
-	for (i=0, var = cheatvars ; i<numcheatvars ; i++, var++)
-	{
-		if ( strcmp (var->var->string, var->value) )
-		{
-			COM_SetCvar (var->name, var->value);
-		}
-	}
-}
-
-//============================================================================
-
-extern cparticle_t	*active_particles, *free_particles;
-extern cparticle_t	particles[MAX_PARTICLES];
-extern int			cl_numparticles;
-
-
 extern void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
-
 
 /*
 ======
@@ -63431,16 +63365,6 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	return result;
 }
 
-static cvar_t *sw_mode;
-
-/*
-====================================================================
-
-MENU INTERACTION
-
-====================================================================
-*/
-
 static menuframework_s	s_opengl_menu;
 
 static menuaction_s		s_cancel_action;
@@ -63463,11 +63387,6 @@ static void CancelChanges(void* unused) {
 }
 
 static void VID_MenuInit() {
-
-	if (!sw_mode) {
-		sw_mode = COM_GetCvar("sw_mode", "0", 0);
-	}
-
 	s_opengl_menu.x = viddef.width * 0.50;
 	s_opengl_menu.nitems = 0;
 
@@ -63594,7 +63513,6 @@ static void CL_Frame(int msec) {
 
 	// send a new command message to the server
 	Cmd_ExecuteCbuf();
-	CL_FixCvarCheats();
 	CL_SendCmd();
 	CL_CheckForResend();
 
