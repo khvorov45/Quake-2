@@ -4731,24 +4731,6 @@ void Pmove (pmove_t *pmove);
 #define	STAT_FLASHES			15		// cleared each frame, 1 = health, 2 = armor
 #define	MAX_STATS				32
 
-// dmflags->value flags
-#define	DF_NO_HEALTH		0x00000001	// 1
-#define	DF_NO_ITEMS			0x00000002	// 2
-#define	DF_WEAPONS_STAY		0x00000004	// 4
-#define	DF_NO_FALLING		0x00000008	// 8
-#define	DF_INSTANT_ITEMS	0x00000010	// 16
-#define	DF_SAME_LEVEL		0x00000020	// 32
-#define DF_SKINTEAMS		0x00000040	// 64
-#define DF_MODELTEAMS		0x00000080	// 128
-#define DF_NO_FRIENDLY_FIRE	0x00000100	// 256
-#define	DF_SPAWN_FARTHEST	0x00000200	// 512
-#define DF_FORCE_RESPAWN	0x00000400	// 1024
-#define DF_NO_ARMOR			0x00000800	// 2048
-#define DF_ALLOW_EXIT		0x00001000	// 4096
-#define DF_INFINITE_AMMO	0x00002000	// 8192
-#define DF_QUAD_DROP		0x00004000	// 16384
-#define DF_FIXED_FOV		0x00008000	// 32768
-
 // RAFAEL
 #define	DF_QUADFIRE_DROP	0x00010000	// 65536
 
@@ -5441,7 +5423,6 @@ static edict_t* g_edicts;
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
 
-static cvar_t* dmflags;
 static cvar_t* password;
 static cvar_t* maxentities;
 static cvar_t* g_select_empty;
@@ -26052,9 +26033,6 @@ void ai_run (edict_t* self, float dist)
 
 #define MODEL_SCALE		1.000000
 
-/* ============ end inlined header: game/m_player.h ============ */
-
-
 char *ClientTeam (edict_t *ent)
 {
 	char		*p;
@@ -26070,13 +26048,6 @@ char *ClientTeam (edict_t *ent)
 	if (!p)
 		return value;
 
-	if ((int)(dmflags->value) & DF_MODELTEAMS)
-	{
-		*p = 0;
-		return value;
-	}
-
-	// if ((int)(dmflags->value) & DF_SKINTEAMS)
 	return ++p;
 }
 
@@ -26084,9 +26055,6 @@ bool OnSameTeam (edict_t *ent1, edict_t *ent2)
 {
 	char	ent1Team [512];
 	char	ent2Team [512];
-
-	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
-		return false;
 
 	strcpy (ent1Team, ClientTeam (ent1));
 	strcpy (ent2Team, ClientTeam (ent2));
@@ -26665,9 +26633,6 @@ void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 
 	if (cmd_argc < 2 && !arg0)
 		return;
-
-	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
-		team = false;
 
 	if (team)
 		Com_sprintf (text, sizeof(text), "(%s): ", ent->client->pers.netname);
@@ -29762,9 +29727,7 @@ bool Pickup_Ammo (edict_t *ent, edict_t* other)
 	bool	weapon;
 
 	weapon = (ent->item->flags & IT_WEAPON);
-	if ( (weapon) && ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		count = 1000;
-	else if (ent->count)
+	if (ent->count)
 		count = ent->count;
 	else
 		count = ent->item->quantity;
@@ -34981,7 +34944,6 @@ static void InitGame() {
 	maxentities = COM_GetCvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
-	dmflags = COM_GetCvar ("dmflags", "0", CVAR_SERVERINFO);
 	password = COM_GetCvar ("password", "", CVAR_USERINFO);
 	filterban = COM_GetCvar ("filterban", "1", 0);
 
@@ -55790,23 +55752,13 @@ bool Pickup_Weapon (edict_t *ent, edict_t* other)
 
 	index = ITEM_INDEX(ent->item);
 
-	if ( ( ((int)(dmflags->value) & DF_WEAPONS_STAY))
-		&& other->client->pers.inventory[index])
-	{
-		if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM) ) )
-			return false;	// leave the weapon for others to pickup
-	}
-
 	other->client->pers.inventory[index]++;
 
 	if (!(ent->spawnflags & DROPPED_ITEM) )
 	{
 		// give them some ammo with it
 		ammo = FindItem (ent->item->ammo);
-		if ( (int)dmflags->value & DF_INFINITE_AMMO )
-			Add_Ammo (other, ammo, 1000);
-		else
-			Add_Ammo (other, ammo, ammo->quantity);
+		Add_Ammo (other, ammo, ammo->quantity);
 	}
 
 	if (other->client->pers.weapon != ent->item && (other->client->pers.inventory[index] == 1))
@@ -55994,9 +55946,6 @@ Drop_Weapon
 void Drop_Weapon (edict_t *ent, gitem_t *item)
 {
 	int		index;
-
-	if ((int)(dmflags->value) & DF_WEAPONS_STAY)
-		return;
 
 	index = ITEM_INDEX(item);
 	// see if we're already using it
@@ -56210,8 +56159,7 @@ void weapon_grenade_fire (edict_t *ent, bool held)
 	speed = GRENADE_MINSPEED + (GRENADE_TIMER - timer) * ((GRENADE_MAXSPEED - GRENADE_MINSPEED) / GRENADE_TIMER);
 	fire_grenade2 (ent, start, forward, damage, speed, timer, radius, held);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 
 	ent->client->grenade_time = level.time + 1.0;
 
@@ -56381,8 +56329,7 @@ void weapon_grenadelauncher_fire (edict_t *ent)
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 void Weapon_GrenadeLauncher (edict_t *ent)
@@ -56437,8 +56384,7 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 void Weapon_RocketLauncher (edict_t *ent)
@@ -56532,8 +56478,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 				effect = 0;
 			damage = 20;
 			Blaster_Fire (ent, offset, damage, true, effect);
-			if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-				ent->client->pers.inventory[ent->client->ammo_index]--;
+			ent->client->pers.inventory[ent->client->ammo_index]--;
 
 			ent->client->anim_priority = ANIM_ATTACK;
 			if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -56644,8 +56589,7 @@ void Machinegun_Fire (edict_t *ent)
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 
 	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -56780,8 +56724,7 @@ void Chaingun_Fire (edict_t *ent)
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index] -= shots;
+	ent->client->pers.inventory[ent->client->ammo_index] -= shots;
 }
 
 
@@ -56841,8 +56784,7 @@ void weapon_shotgun_fire (edict_t *ent)
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 void Weapon_Shotgun (edict_t *ent)
@@ -56895,8 +56837,7 @@ void weapon_supershotgun_fire (edict_t *ent)
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index] -= 2;
+	ent->client->pers.inventory[ent->client->ammo_index] -= 2;
 }
 
 void Weapon_SuperShotgun (edict_t *ent)
@@ -56942,8 +56883,7 @@ void weapon_railgun_fire (edict_t *ent)
 	ent->client->ps.gunframe++;
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index]--;
+	ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 
@@ -57006,8 +56946,7 @@ void weapon_bfg_fire (edict_t *ent)
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index] -= 50;
+	ent->client->pers.inventory[ent->client->ammo_index] -= 50;
 }
 
 void Weapon_BFG (edict_t *ent)
@@ -63914,7 +63853,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Cvars
 	// TODO: Remove non-essentials
 	{
-		COM_GetCvar("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
 		COM_GetCvar("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_NOSET);;
 		COM_GetCvar("in_initmouse", "1", CVAR_NOSET);
 	}
