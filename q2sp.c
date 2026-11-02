@@ -1969,9 +1969,7 @@ static void Cmd_TokenizeString(char* text) {
 
 }
 
-static String_Command_Context string_command_context;
-
-static void Cmd_ExecuteString(char* text) {
+static void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	context.debug_log(string_from_cstring(text));
 
 	Cmd_TokenizeString(text);
@@ -1982,13 +1980,13 @@ static void Cmd_ExecuteString(char* text) {
 	}
 
 	// check functions
-	for (String_Command* cmd = string_command_context.builtin.ptr; cmd - string_command_context.builtin.ptr < string_command_context.builtin.len; cmd++) {
+	for (String_Command* cmd = ctx->builtin.ptr; cmd - ctx->builtin.ptr < ctx->builtin.len; cmd++) {
 		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
 			if (!cmd->proc) {
 				// forward to server command
-				Cmd_ExecuteString(va("cmd %s", text));
+				Cmd_ExecuteString(ctx, va("cmd %s", text));
 			} else {
-				cmd->proc(&string_command_context);
+				cmd->proc(ctx);
 			}
 			return;
 		}
@@ -2028,7 +2026,7 @@ static void Cmd_ExecuteString(char* text) {
 // Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
-static void Cmd_ExecuteCbuf() {
+static void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 	char line[1024] = {};
 
 	alias_count = 0; // don't allow infinite alias loops
@@ -2066,8 +2064,7 @@ static void Cmd_ExecuteCbuf() {
 			memmove (text, text+i, cmd_text.cursize);
 		}
 
-		// execute the command line
-		Cmd_ExecuteString(line);
+		Cmd_ExecuteString(ctx, line);
 
 		if (cmd_wait) {
 			// skip out while text still remains in buffer, leaving it for next frame
@@ -17838,7 +17835,9 @@ void CL_ParseStartSoundPacket(void)
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
 }
 
-void CL_ParseServerMessage (void)
+static String_Command_Context string_command_context;
+
+void CL_ParseServerMessage ()
 {
 	int			cmd;
 	char		*s;
@@ -17889,7 +17888,7 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_serverdata:
-			Cmd_ExecuteCbuf ();		// make sure any stuffed commands are done
+			Cmd_ExecuteCbuf(&string_command_context);		// make sure any stuffed commands are done
 			CL_ParseServerData ();
 			break;
 
@@ -22711,7 +22710,7 @@ static void CustomizeControlsFunc(void* unused) {
 static void ControlsResetDefaultsFunc(void* unused) {
 	UNUSED(unused);
 	Cbuf_AddText("exec default.cfg\n");
-	Cmd_ExecuteCbuf();
+	Cmd_ExecuteCbuf(&string_command_context);
 }
 
 static void ConsoleFunc(void* unused) {
@@ -62546,7 +62545,7 @@ static void CL_Frame(int msec) {
 	CL_ReadPackets();
 
 	// send a new command message to the server
-	Cmd_ExecuteCbuf();
+	Cmd_ExecuteCbuf(&string_command_context);
 	CL_SendCmd();
 	CL_CheckForResend();
 
@@ -63337,7 +63336,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cbuf_AddText("exec default.cfg\n");
 		Cbuf_AddText("exec config.cfg\n");
 
-		Cmd_ExecuteCbuf();
+		Cmd_ExecuteCbuf(&string_command_context);
 	}
 
 	// NOTE: Game window resolution
@@ -63634,7 +63633,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	Cbuf_AddText("exec autoexec.cfg\n");
-	Cmd_ExecuteCbuf();
+	Cmd_ExecuteCbuf(&string_command_context);
 
 	// NOTE: Mainloop
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
@@ -63663,7 +63662,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		assert(delta_time_msec >= 1);
-		Cmd_ExecuteCbuf();
+		Cmd_ExecuteCbuf(&string_command_context);
 
 		if (svs.initialized) {
 			svs.realtime += delta_time_msec;
