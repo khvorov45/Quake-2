@@ -270,117 +270,119 @@ typedef struct {
 	int keynum;
 } keyname_t;
 
-#define K_TAB 9
-#define K_ENTER 13
-#define K_ESCAPE 27
-#define K_SPACE 32
-#define K_BACKSPACE 127
-#define K_UPARROW 128
-#define K_DOWNARROW 129
-#define K_LEFTARROW 130
-#define K_RIGHTARROW 131
-#define K_ALT 132
-#define K_CTRL 133
-#define K_SHIFT 134
-#define K_F1 135
-#define K_F2 136
-#define K_F3 137
-#define K_F4 138
-#define K_F5 139
-#define K_F6 140
-#define K_F7 141
-#define K_F8 142
-#define K_F9 143
-#define K_F10 144
-#define K_F11 145
-#define K_F12 146
-#define K_INS 147
-#define K_DEL 148
-#define K_PGDN 149
-#define K_PGUP 150
-#define K_HOME 151
-#define K_END 152
-#define K_KP_HOME 160
-#define K_KP_UPARROW 161
-#define K_KP_PGUP 162
-#define K_KP_LEFTARROW 163
-#define K_KP_5 164
-#define K_KP_RIGHTARROW 165
-#define K_KP_END 166
-#define K_KP_DOWNARROW 167
-#define K_KP_PGDN 168
-#define K_KP_ENTER 169
-#define K_KP_INS 170
-#define K_KP_DEL 171
-#define K_KP_SLASH 172
-#define K_KP_MINUS 173
-#define K_KP_PLUS 174
-#define K_MOUSE1 200
-#define K_MOUSE2 201
-#define K_MOUSE3 202
-#define K_MWHEELDOWN 239
-#define K_MWHEELUP 240
-#define K_PAUSE 255
+typedef enum {
+	Key_Code_Tab = 9,
+	Key_Code_Enter = 13,
+	Key_Code_Escape = 27,
+	Key_Code_Space = 32,
+	Key_Code_Backspace = 127,
+	Key_Code_Up = 128,
+	Key_Code_Down = 129,
+	Key_Code_Left = 130,
+	Key_Code_Right = 131,
+	Key_Code_Alt = 132,
+	Key_Code_Ctrl = 133,
+	Key_Code_Shift = 134,
+	Key_Code_F1 = 135,
+	Key_Code_F2 = 136,
+	Key_Code_F3 = 137,
+	Key_Code_F4 = 138,
+	Key_Code_F5 = 139,
+	Key_Code_F6 = 140,
+	Key_Code_F7 = 141,
+	Key_Code_F8 = 142,
+	Key_Code_F9 = 143,
+	Key_Code_F10 = 144,
+	Key_Code_F11 = 145,
+	Key_Code_F12 = 146,
+	Key_Code_Insert = 147,
+	Key_Code_Delete = 148,
+	Key_Code_Pagedown = 149,
+	Key_Code_Pageup = 150,
+	Key_Code_Home = 151,
+	Key_Code_End = 152,
+	Key_Code_Keypad_Home = 160,
+	Key_Code_Keypad_Up = 161,
+	Key_Code_Keypad_Pageup = 162,
+	Key_Code_Keypad_Left = 163,
+	Key_Code_Keypad_5 = 164,
+	Key_Code_Keypad_Right = 165,
+	Key_Code_Keypad_End = 166,
+	Key_Code_Keypad_Down = 167,
+	Key_Code_Keypad_Pagedown = 168,
+	Key_Code_Keypad_Enter = 169,
+	Key_Code_Keypad_Insert = 170,
+	Key_Code_Keypad_Delete = 171,
+	Key_Code_Keypad_Slash = 172,
+	Key_Code_Keypad_Minus = 173,
+	Key_Code_Keypad_Plus = 174,
+	Key_Code_Keypad_Mouse1 = 200,
+	Key_Code_Keypad_Mouse2 = 201,
+	Key_Code_Keypad_Mouse3 = 202,
+	Key_Code_Keypad_Mouse_Wheel_Down = 239,
+	Key_Code_Keypad_Mouse_Wheel_Up = 240,
+	Key_Code_Pause = 255,
+} Key_Code;
 
 keyname_t keynames[] = {
-	{"TAB", K_TAB},
-	{"ENTER", K_ENTER},
-	{"ESCAPE", K_ESCAPE},
-	{"SPACE", K_SPACE},
-	{"BACKSPACE", K_BACKSPACE},
-	{"UPARROW", K_UPARROW},
-	{"DOWNARROW", K_DOWNARROW},
-	{"LEFTARROW", K_LEFTARROW},
-	{"RIGHTARROW", K_RIGHTARROW},
+	{"TAB", Key_Code_Tab},
+	{"ENTER", Key_Code_Enter},
+	{"ESCAPE", Key_Code_Escape},
+	{"SPACE", Key_Code_Space},
+	{"BACKSPACE", Key_Code_Backspace},
+	{"UPARROW", Key_Code_Up},
+	{"DOWNARROW", Key_Code_Down},
+	{"LEFTARROW", Key_Code_Left},
+	{"RIGHTARROW", Key_Code_Right},
 
-	{"ALT", K_ALT},
-	{"CTRL", K_CTRL},
-	{"SHIFT", K_SHIFT},
+	{"ALT", Key_Code_Alt},
+	{"CTRL", Key_Code_Ctrl},
+	{"SHIFT", Key_Code_Shift},
 
-	{"F1", K_F1},
-	{"F2", K_F2},
-	{"F3", K_F3},
-	{"F4", K_F4},
-	{"F5", K_F5},
-	{"F6", K_F6},
-	{"F7", K_F7},
-	{"F8", K_F8},
-	{"F9", K_F9},
-	{"F10", K_F10},
-	{"F11", K_F11},
-	{"F12", K_F12},
+	{"F1", Key_Code_F1},
+	{"F2", Key_Code_F2},
+	{"F3", Key_Code_F3},
+	{"F4", Key_Code_F4},
+	{"F5", Key_Code_F5},
+	{"F6", Key_Code_F6},
+	{"F7", Key_Code_F7},
+	{"F8", Key_Code_F8},
+	{"F9", Key_Code_F9},
+	{"F10", Key_Code_F10},
+	{"F11", Key_Code_F11},
+	{"F12", Key_Code_F12},
 
-	{"INS", K_INS},
-	{"DEL", K_DEL},
-	{"PGDN", K_PGDN},
-	{"PGUP", K_PGUP},
-	{"HOME", K_HOME},
-	{"END", K_END},
+	{"INS", Key_Code_Insert},
+	{"DEL", Key_Code_Delete},
+	{"PGDN", Key_Code_Pagedown},
+	{"PGUP", Key_Code_Pageup},
+	{"HOME", Key_Code_Home},
+	{"END", Key_Code_End},
 
-	{"MOUSE1", K_MOUSE1},
-	{"MOUSE2", K_MOUSE2},
-	{"MOUSE3", K_MOUSE3},
+	{"MOUSE1", Key_Code_Keypad_Mouse1},
+	{"MOUSE2", Key_Code_Keypad_Mouse2},
+	{"MOUSE3", Key_Code_Keypad_Mouse3},
 
-	{"KP_HOME",			K_KP_HOME },
-	{"KP_UPARROW",		K_KP_UPARROW },
-	{"KP_PGUP",			K_KP_PGUP },
-	{"KP_LEFTARROW",	K_KP_LEFTARROW },
-	{"KP_5",			K_KP_5 },
-	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
-	{"KP_END",			K_KP_END },
-	{"KP_DOWNARROW",	K_KP_DOWNARROW },
-	{"KP_PGDN",			K_KP_PGDN },
-	{"KP_ENTER",		K_KP_ENTER },
-	{"KP_INS",			K_KP_INS },
-	{"KP_DEL",			K_KP_DEL },
-	{"KP_SLASH",		K_KP_SLASH },
-	{"KP_MINUS",		K_KP_MINUS },
-	{"KP_PLUS",			K_KP_PLUS },
+	{"KP_HOME",			Key_Code_Keypad_Home },
+	{"KP_UPARROW",		Key_Code_Keypad_Up },
+	{"KP_PGUP",			Key_Code_Keypad_Pageup },
+	{"KP_LEFTARROW",	Key_Code_Keypad_Left },
+	{"KP_5",			Key_Code_Keypad_5 },
+	{"KP_RIGHTARROW",	Key_Code_Keypad_Right },
+	{"KP_END",			Key_Code_Keypad_End },
+	{"KP_DOWNARROW",	Key_Code_Keypad_Down },
+	{"KP_PGDN",			Key_Code_Keypad_Pagedown },
+	{"KP_ENTER",		Key_Code_Keypad_Enter },
+	{"KP_INS",			Key_Code_Keypad_Insert },
+	{"KP_DEL",			Key_Code_Keypad_Delete },
+	{"KP_SLASH",		Key_Code_Keypad_Slash },
+	{"KP_MINUS",		Key_Code_Keypad_Minus },
+	{"KP_PLUS",			Key_Code_Keypad_Plus },
 
-	{"MWHEELUP", K_MWHEELUP },
-	{"MWHEELDOWN", K_MWHEELDOWN },
+	{"MWHEELUP", Key_Code_Keypad_Mouse_Wheel_Up },
+	{"MWHEELDOWN", Key_Code_Keypad_Mouse_Wheel_Down },
 
-	{"PAUSE", K_PAUSE},
+	{"PAUSE", Key_Code_Pause},
 
 	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
 
@@ -21224,23 +21226,23 @@ void Key_Console(int key) {
 
 	// NOTE: Keypad remapping
 	switch (key) {
-		case K_KP_SLASH: key = '/'; break;
-		case K_KP_MINUS: key = '-'; break;
-		case K_KP_PLUS: key = '+'; break;
-		case K_KP_HOME: key = '7'; break;
-		case K_KP_UPARROW: key = '8'; break;
-		case K_KP_PGUP: key = '9'; break;
-		case K_KP_LEFTARROW: key = '4'; break;
-		case K_KP_5: key = '5'; break;
-		case K_KP_RIGHTARROW: key = '6'; break;
-		case K_KP_END: key = '1'; break;
-		case K_KP_DOWNARROW: key = '2'; break;
-		case K_KP_PGDN: key = '3'; break;
-		case K_KP_INS: key = '0'; break;
-		case K_KP_DEL: key = '.'; break;
+		case Key_Code_Keypad_Slash: key = '/'; break;
+		case Key_Code_Keypad_Minus: key = '-'; break;
+		case Key_Code_Keypad_Plus: key = '+'; break;
+		case Key_Code_Keypad_Home: key = '7'; break;
+		case Key_Code_Keypad_Up: key = '8'; break;
+		case Key_Code_Keypad_Pageup: key = '9'; break;
+		case Key_Code_Keypad_Left: key = '4'; break;
+		case Key_Code_Keypad_5: key = '5'; break;
+		case Key_Code_Keypad_Right: key = '6'; break;
+		case Key_Code_Keypad_End: key = '1'; break;
+		case Key_Code_Keypad_Down: key = '2'; break;
+		case Key_Code_Keypad_Pagedown: key = '3'; break;
+		case Key_Code_Keypad_Insert: key = '0'; break;
+		case Key_Code_Keypad_Delete: key = '.'; break;
 	}
 
-	if (key == K_ENTER || key == K_KP_ENTER) {
+	if (key == Key_Code_Enter || key == Key_Code_Keypad_Enter) {
 
 		i64 to_skip = console_input.ptr[1] == '\\' || console_input.ptr[1] == '/' ? 1 : 0;
 		Cbuf_AddText(console_input.ptr + to_skip);
@@ -21253,7 +21255,7 @@ void Key_Console(int key) {
 			SCR_UpdateScreen(); // force an update, because the command may take some time
 		}
 
-	} else if (key == K_BACKSPACE) {
+	} else if (key == Key_Code_Backspace) {
 		console_input.len = max(console_input.len - 1, 0);
 		console_input.ptr[console_input.len] = 0;
 
@@ -21418,12 +21420,12 @@ void Key_Event (int key, bool down, unsigned time)
 	if (down)
 	{
 		key_repeats[key]++;
-		if (key != K_BACKSPACE
-			&& key != K_PAUSE
-			&& key != K_PGUP
-			&& key != K_KP_PGUP
-			&& key != K_PGDN
-			&& key != K_KP_PGDN
+		if (key != Key_Code_Backspace
+			&& key != Key_Code_Pause
+			&& key != Key_Code_Pageup
+			&& key != Key_Code_Keypad_Pageup
+			&& key != Key_Code_Pagedown
+			&& key != Key_Code_Keypad_Pagedown
 			&& key_repeats[key] > 1)
 			return;	// ignore most autorepeats
 
@@ -21436,7 +21438,7 @@ void Key_Event (int key, bool down, unsigned time)
 		key_repeats[key] = 0;
 	}
 
-	if (key == K_SHIFT)
+	if (key == Key_Code_Shift)
 		shift_down = down;
 
 	// console key is hardcoded, so the user can never unbind it
@@ -21449,7 +21451,7 @@ void Key_Event (int key, bool down, unsigned time)
 	}
 
 	// menu key is hardcoded, so the user can never unbind it
-	if (key == K_ESCAPE)
+	if (key == Key_Code_Escape)
 	{
 		if (!down)
 			return;
@@ -21729,28 +21731,28 @@ static void M_PopMenu() {
 static bool Field_Key(menufield_s *field, int key_passed) {
 	int key = key_passed;
 	switch (key_passed) {
-		case K_KP_SLASH: {key = '/';} break;
-		case K_KP_MINUS: {key = '-';} break;
-		case K_KP_PLUS: {key = '+';} break;
-		case K_KP_HOME: {key = '7';} break;
-		case K_KP_UPARROW: {key = '8';} break;
-		case K_KP_PGUP: {key = '9';} break;
-		case K_KP_LEFTARROW: {key = '4';} break;
-		case K_KP_5: {key = '5';} break;
-		case K_KP_RIGHTARROW: {key = '6';} break;
-		case K_KP_END: {key = '1';} break;
-		case K_KP_DOWNARROW: {key = '2';} break;
-		case K_KP_PGDN: {key = '3';} break;
-		case K_KP_INS: {key = '0';} break;
-		case K_KP_DEL: {key = '.';} break;
+		case Key_Code_Keypad_Slash: {key = '/';} break;
+		case Key_Code_Keypad_Minus: {key = '-';} break;
+		case Key_Code_Keypad_Plus: {key = '+';} break;
+		case Key_Code_Keypad_Home: {key = '7';} break;
+		case Key_Code_Keypad_Up: {key = '8';} break;
+		case Key_Code_Keypad_Pageup: {key = '9';} break;
+		case Key_Code_Keypad_Left: {key = '4';} break;
+		case Key_Code_Keypad_5: {key = '5';} break;
+		case Key_Code_Keypad_Right: {key = '6';} break;
+		case Key_Code_Keypad_End: {key = '1';} break;
+		case Key_Code_Keypad_Down: {key = '2';} break;
+		case Key_Code_Keypad_Pagedown: {key = '3';} break;
+		case Key_Code_Keypad_Insert: {key = '0';} break;
+		case Key_Code_Keypad_Delete: {key = '.';} break;
 	}
 
 	bool handled = false;
 	bool key_is_ascii = key <= 127;
-	if (key_is_ascii && key != K_KP_ENTER && key != K_ENTER && key != K_ESCAPE && key != K_TAB) {
+	if (key_is_ascii && key != Key_Code_Keypad_Enter && key != Key_Code_Enter && key != Key_Code_Escape && key != Key_Code_Tab) {
 		handled = true;
 
-		if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((( key == K_INS) || (key == K_KP_INS)) && keydown[K_SHIFT])) {
+		if ((toupper(key) == 'V' && keydown[Key_Code_Ctrl]) || ((( key == Key_Code_Insert) || (key == Key_Code_Keypad_Insert)) && keydown[Key_Code_Shift])) {
 			// support pasting from the clipboard
 			char* clipboard_data = Sys_GetClipboardData();
 			if (clipboard_data) {
@@ -21764,9 +21766,9 @@ static bool Field_Key(menufield_s *field, int key_passed) {
 		} else {
 
 			switch (key) {
-				case K_KP_LEFTARROW:
-				case K_LEFTARROW:
-				case K_BACKSPACE: {
+				case Key_Code_Keypad_Left:
+				case Key_Code_Left:
+				case Key_Code_Backspace: {
 					if (field->cursor > 0) {
 						memmove(&field->buffer[field->cursor-1], &field->buffer[field->cursor], strlen(&field->buffer[field->cursor]) + 1);
 						field->cursor--;
@@ -21776,8 +21778,8 @@ static bool Field_Key(menufield_s *field, int key_passed) {
 					}
 				} break;
 
-				case K_KP_DEL:
-				case K_DEL: {
+				case Key_Code_Keypad_Delete:
+				case Key_Code_Delete: {
 					char* dest = field->buffer + field->cursor;
 					char* src = dest + 1;
 					memmove(dest, src, strlen(src) + 1);
@@ -21901,13 +21903,13 @@ static char* Default_MenuKey(menuframework_s* m, int key) {
 	char* sound = 0;
 	if (!handled_by_field_key) {
 		switch (key) {
-			case K_ESCAPE: {
+			case Key_Code_Escape: {
 				M_PopMenu();
 				sound = menu_out_sound;
 			} break;
 
-			case K_KP_UPARROW:
-			case K_UPARROW: {
+			case Key_Code_Keypad_Up:
+			case Key_Code_Up: {
 				if (m) {
 					m->cursor--;
 					place_cursor_in_nearest_valid_position(m, -1);
@@ -21915,7 +21917,7 @@ static char* Default_MenuKey(menuframework_s* m, int key) {
 				}
 			} break;
 
-			case K_TAB: {
+			case Key_Code_Tab: {
 				if (m) {
 					m->cursor++;
 					place_cursor_in_nearest_valid_position(m, 1);
@@ -21923,8 +21925,8 @@ static char* Default_MenuKey(menuframework_s* m, int key) {
 				}
 			} break;
 
-			case K_KP_DOWNARROW:
-			case K_DOWNARROW: {
+			case Key_Code_Keypad_Down:
+			case Key_Code_Down: {
 				if (m) {
 					m->cursor++;
 					place_cursor_in_nearest_valid_position(m, 1);
@@ -21932,27 +21934,27 @@ static char* Default_MenuKey(menuframework_s* m, int key) {
 				}
 			} break;
 
-			case K_KP_LEFTARROW:
-			case K_LEFTARROW: {
+			case Key_Code_Keypad_Left:
+			case Key_Code_Left: {
 				if (m) {
 					Menu_SlideItem( m, -1 );
 					sound = menu_move_sound;
 				}
 			} break;
 
-			case K_KP_RIGHTARROW:
-			case K_RIGHTARROW: {
+			case Key_Code_Keypad_Right:
+			case Key_Code_Right: {
 				if (m) {
 					Menu_SlideItem(m, 1);
 					sound = menu_move_sound;
 				}
 			} break;
 
-			case K_MOUSE1:
-			case K_MOUSE2:
-			case K_MOUSE3:
-			case K_KP_ENTER:
-			case K_ENTER: {
+			case Key_Code_Keypad_Mouse1:
+			case Key_Code_Keypad_Mouse2:
+			case Key_Code_Keypad_Mouse3:
+			case Key_Code_Keypad_Enter:
+			case Key_Code_Enter: {
 				if (m) {
 					Menu_SelectItem( m );
 					sound = menu_move_sound;
@@ -22644,7 +22646,7 @@ static char* Keys_MenuKey( int key )
 
 	if ( bind_grab )
 	{
-		if ( key != K_ESCAPE && key != '`' )
+		if ( key != Key_Code_Escape && key != '`' )
 		{
 			char cmd[1024];
 
@@ -22659,13 +22661,13 @@ static char* Keys_MenuKey( int key )
 
 	switch ( key )
 	{
-	case K_KP_ENTER:
-	case K_ENTER:
+	case Key_Code_Keypad_Enter:
+	case Key_Code_Enter:
 		KeyBindingFunc( item );
 		return menu_in_sound;
-	case K_BACKSPACE:		// delete bindings
-	case K_DEL:				// delete bindings
-	case K_KP_DEL:
+	case Key_Code_Backspace:		// delete bindings
+	case Key_Code_Delete:				// delete bindings
+	case Key_Code_Keypad_Delete:
 		M_UnbindCommand( bindnames[item->generic.localdata[0]][0] );
 		return menu_out_sound;
 	default:
@@ -22937,7 +22939,7 @@ static void LoadGame_MenuDraw( void )
 
 static char* LoadGame_MenuKey( int key )
 {
-	if ( key == K_ESCAPE || key == K_ENTER )
+	if ( key == Key_Code_Escape || key == Key_Code_Enter )
 	{
 		s_savegame_menu.cursor = s_loadgame_menu.cursor - 1;
 		if ( s_savegame_menu.cursor < 0 )
@@ -22995,7 +22997,7 @@ static void SaveGame_MenuDraw() {
 }
 
 static char* SaveGame_MenuKey(int key) {
-	if (key == K_ENTER || key == K_ESCAPE) {
+	if (key == Key_Code_Enter || key == Key_Code_Escape) {
 		s_loadgame_menu.cursor = s_savegame_menu.cursor - 1;
 		if (s_loadgame_menu.cursor < 0) {
 			s_loadgame_menu.cursor = 0;
@@ -23089,7 +23091,7 @@ static void M_Menu_Game_f(void* data) {
 
 static char* M_Quit_Key(int key) {
 	switch (key){
-		case K_ESCAPE:
+		case Key_Code_Escape:
 		case 'n':
 		case 'N': {M_PopMenu();} break;
 
@@ -23117,24 +23119,24 @@ static char* M_Main_Key(int key) {
 
 	switch (key)
 	{
-	case K_ESCAPE:
+	case Key_Code_Escape:
 		M_PopMenu ();
 		break;
 
-	case K_KP_DOWNARROW:
-	case K_DOWNARROW:
+	case Key_Code_Keypad_Down:
+	case Key_Code_Down:
 		if (++m_main_cursor >= main_items)
 			m_main_cursor = 0;
 		return sound;
 
-	case K_KP_UPARROW:
-	case K_UPARROW:
+	case Key_Code_Keypad_Up:
+	case Key_Code_Up:
 		if (--m_main_cursor < 0)
 			m_main_cursor = main_items - 1;
 		return sound;
 
-	case K_KP_ENTER:
-	case K_ENTER:
+	case Key_Code_Keypad_Enter:
+	case Key_Code_Enter:
 		m_entersound = true;
 
 		switch (m_main_cursor)
@@ -61758,13 +61760,13 @@ void IN_MouseEvent (int mstate)
 		if ( (mstate & (1<<i)) &&
 			!(mouse_oldbuttonstate & (1<<i)) )
 		{
-			Key_Event (K_MOUSE1 + i, true, sys_msg_time);
+			Key_Event (Key_Code_Keypad_Mouse1 + i, true, sys_msg_time);
 		}
 
 		if ( !(mstate & (1<<i)) &&
 			(mouse_oldbuttonstate & (1<<i)) )
 		{
-				Key_Event (K_MOUSE1 + i, false, sys_msg_time);
+				Key_Event (Key_Code_Keypad_Mouse1 + i, false, sys_msg_time);
 		}
 	}
 
@@ -62210,17 +62212,17 @@ u8        scantokey[128] =
 //  0           1       2       3       4       5       6       7
 //  8           9       A       B       C       D       E       F
 	0  ,    27,     '1',    '2',    '3',    '4',    '5',    '6',
-	'7',    '8',    '9',    '0',    '-',    '=',    K_BACKSPACE, 9, // 0
+	'7',    '8',    '9',    '0',    '-',    '=',    Key_Code_Backspace, 9, // 0
 	'q',    'w',    'e',    'r',    't',    'y',    'u',    'i',
-	'o',    'p',    '[',    ']',    13 ,    K_CTRL,'a',  's',      // 1
+	'o',    'p',    '[',    ']',    13 ,    Key_Code_Ctrl,'a',  's',      // 1
 	'd',    'f',    'g',    'h',    'j',    'k',    'l',    ';',
-	'\'' ,    '`',    K_SHIFT,'\\',  'z',    'x',    'c',    'v',      // 2
-	'b',    'n',    'm',    ',',    '.',    '/',    K_SHIFT,'*',
-	K_ALT,' ',   0  ,    K_F1, K_F2, K_F3, K_F4, K_F5,   // 3
-	K_F6, K_F7, K_F8, K_F9, K_F10,  K_PAUSE,    0  , K_HOME,
-	K_UPARROW,K_PGUP,K_KP_MINUS,K_LEFTARROW,K_KP_5,K_RIGHTARROW, K_KP_PLUS,K_END, //4
-	K_DOWNARROW,K_PGDN,K_INS,K_DEL,0,0,             0,              K_F11,
-	K_F12,0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 5
+	'\'' ,    '`',    Key_Code_Shift,'\\',  'z',    'x',    'c',    'v',      // 2
+	'b',    'n',    'm',    ',',    '.',    '/',    Key_Code_Shift,'*',
+	Key_Code_Alt,' ',   0  ,    Key_Code_F1, Key_Code_F2, Key_Code_F3, Key_Code_F4, Key_Code_F5,   // 3
+	Key_Code_F6, Key_Code_F7, Key_Code_F8, Key_Code_F9, Key_Code_F10,  Key_Code_Pause,    0  , Key_Code_Home,
+	Key_Code_Up,Key_Code_Pageup,Key_Code_Keypad_Minus,Key_Code_Left,Key_Code_Keypad_5,Key_Code_Right, Key_Code_Keypad_Plus,Key_Code_End, //4
+	Key_Code_Down,Key_Code_Pagedown,Key_Code_Insert,Key_Code_Delete,0,0,             0,              Key_Code_F11,
+	Key_Code_F12,0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 5
 	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
 	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 6
 	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
@@ -62252,26 +62254,26 @@ int MapKey (int key)
 	{
 		switch ( result )
 		{
-		case K_HOME:
-			return K_KP_HOME;
-		case K_UPARROW:
-			return K_KP_UPARROW;
-		case K_PGUP:
-			return K_KP_PGUP;
-		case K_LEFTARROW:
-			return K_KP_LEFTARROW;
-		case K_RIGHTARROW:
-			return K_KP_RIGHTARROW;
-		case K_END:
-			return K_KP_END;
-		case K_DOWNARROW:
-			return K_KP_DOWNARROW;
-		case K_PGDN:
-			return K_KP_PGDN;
-		case K_INS:
-			return K_KP_INS;
-		case K_DEL:
-			return K_KP_DEL;
+		case Key_Code_Home:
+			return Key_Code_Keypad_Home;
+		case Key_Code_Up:
+			return Key_Code_Keypad_Up;
+		case Key_Code_Pageup:
+			return Key_Code_Keypad_Pageup;
+		case Key_Code_Left:
+			return Key_Code_Keypad_Left;
+		case Key_Code_Right:
+			return Key_Code_Keypad_Right;
+		case Key_Code_End:
+			return Key_Code_Keypad_End;
+		case Key_Code_Down:
+			return Key_Code_Keypad_Down;
+		case Key_Code_Pagedown:
+			return Key_Code_Keypad_Pagedown;
+		case Key_Code_Insert:
+			return Key_Code_Keypad_Insert;
+		case Key_Code_Delete:
+			return Key_Code_Keypad_Delete;
 		default:
 			return result;
 		}
@@ -62281,11 +62283,11 @@ int MapKey (int key)
 		switch ( result )
 		{
 		case 0x0D:
-			return K_KP_ENTER;
+			return Key_Code_Keypad_Enter;
 		case 0x2F:
-			return K_KP_SLASH;
+			return Key_Code_Keypad_Slash;
 		case 0xAF:
-			return K_KP_PLUS;
+			return Key_Code_Keypad_Plus;
 		}
 		return result;
 	}
@@ -62297,11 +62299,11 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	switch (uMsg) {
 		case WM_MOUSEWHEEL: {
 			if ((short)HIWORD(wParam) > 0) {
-				Key_Event( K_MWHEELUP, true, sys_msg_time );
-				Key_Event( K_MWHEELUP, false, sys_msg_time );
+				Key_Event( Key_Code_Keypad_Mouse_Wheel_Up, true, sys_msg_time );
+				Key_Event( Key_Code_Keypad_Mouse_Wheel_Up, false, sys_msg_time );
 			} else {
-				Key_Event( K_MWHEELDOWN, true, sys_msg_time );
-				Key_Event( K_MWHEELDOWN, false, sys_msg_time );
+				Key_Event( Key_Code_Keypad_Mouse_Wheel_Down, true, sys_msg_time );
+				Key_Event( Key_Code_Keypad_Mouse_Wheel_Down, false, sys_msg_time );
 			}
 		} break;
 
@@ -62438,35 +62440,35 @@ static char* VID_MenuKey(int key) {
 	menuframework_s *m = &s_opengl_menu;
 
 	switch (key) {
-		case K_ESCAPE: {
+		case Key_Code_Escape: {
 			ApplyChanges(0);
 			return NULL;
 		}
 
-		case K_KP_UPARROW:
-		case K_UPARROW: {
+		case Key_Code_Keypad_Up:
+		case Key_Code_Up: {
 			m->cursor--;
 			place_cursor_in_nearest_valid_position(m, -1);
 		} break;
 
-		case K_KP_DOWNARROW:
-		case K_DOWNARROW: {
+		case Key_Code_Keypad_Down:
+		case Key_Code_Down: {
 			m->cursor++;
 			place_cursor_in_nearest_valid_position(m, 1);
 		} break;
 
-		case K_KP_LEFTARROW:
-		case K_LEFTARROW: {
+		case Key_Code_Keypad_Left:
+		case Key_Code_Left: {
 			Menu_SlideItem(m, -1);
 		} break;
 
-		case K_KP_RIGHTARROW:
-		case K_RIGHTARROW: {
+		case Key_Code_Keypad_Right:
+		case Key_Code_Right: {
 			Menu_SlideItem( m, 1 );
 		} break;
 
-		case K_KP_ENTER:
-		case K_ENTER: {
+		case Key_Code_Keypad_Enter:
+		case Key_Code_Enter: {
 			if (!Menu_SelectItem( m )) {
 				ApplyChanges( NULL );
 			}
@@ -62757,34 +62759,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			consolekeys[i] = true;
 		}
 
-		consolekeys[K_ENTER] = true;
-		consolekeys[K_KP_ENTER] = true;
-		consolekeys[K_TAB] = true;
-		consolekeys[K_LEFTARROW] = true;
-		consolekeys[K_KP_LEFTARROW] = true;
-		consolekeys[K_RIGHTARROW] = true;
-		consolekeys[K_KP_RIGHTARROW] = true;
-		consolekeys[K_UPARROW] = true;
-		consolekeys[K_KP_UPARROW] = true;
-		consolekeys[K_DOWNARROW] = true;
-		consolekeys[K_KP_DOWNARROW] = true;
-		consolekeys[K_BACKSPACE] = true;
-		consolekeys[K_HOME] = true;
-		consolekeys[K_KP_HOME] = true;
-		consolekeys[K_END] = true;
-		consolekeys[K_KP_END] = true;
-		consolekeys[K_PGUP] = true;
-		consolekeys[K_KP_PGUP] = true;
-		consolekeys[K_PGDN] = true;
-		consolekeys[K_KP_PGDN] = true;
-		consolekeys[K_SHIFT] = true;
-		consolekeys[K_INS] = true;
-		consolekeys[K_KP_INS] = true;
-		consolekeys[K_KP_DEL] = true;
-		consolekeys[K_KP_SLASH] = true;
-		consolekeys[K_KP_PLUS] = true;
-		consolekeys[K_KP_MINUS] = true;
-		consolekeys[K_KP_5] = true;
+		consolekeys[Key_Code_Enter] = true;
+		consolekeys[Key_Code_Keypad_Enter] = true;
+		consolekeys[Key_Code_Tab] = true;
+		consolekeys[Key_Code_Left] = true;
+		consolekeys[Key_Code_Keypad_Left] = true;
+		consolekeys[Key_Code_Right] = true;
+		consolekeys[Key_Code_Keypad_Right] = true;
+		consolekeys[Key_Code_Up] = true;
+		consolekeys[Key_Code_Keypad_Up] = true;
+		consolekeys[Key_Code_Down] = true;
+		consolekeys[Key_Code_Keypad_Down] = true;
+		consolekeys[Key_Code_Backspace] = true;
+		consolekeys[Key_Code_Home] = true;
+		consolekeys[Key_Code_Keypad_Home] = true;
+		consolekeys[Key_Code_End] = true;
+		consolekeys[Key_Code_Keypad_End] = true;
+		consolekeys[Key_Code_Pageup] = true;
+		consolekeys[Key_Code_Keypad_Pageup] = true;
+		consolekeys[Key_Code_Pagedown] = true;
+		consolekeys[Key_Code_Keypad_Pagedown] = true;
+		consolekeys[Key_Code_Shift] = true;
+		consolekeys[Key_Code_Insert] = true;
+		consolekeys[Key_Code_Keypad_Insert] = true;
+		consolekeys[Key_Code_Keypad_Delete] = true;
+		consolekeys[Key_Code_Keypad_Slash] = true;
+		consolekeys[Key_Code_Keypad_Plus] = true;
+		consolekeys[Key_Code_Keypad_Minus] = true;
+		consolekeys[Key_Code_Keypad_5] = true;
 
 		consolekeys['`'] = false;
 		consolekeys['~'] = false;
@@ -62818,9 +62820,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		keyshift['`'] = '~';
 		keyshift['\\'] = '|';
 
-		menubound[K_ESCAPE] = true;
+		menubound[Key_Code_Escape] = true;
 		for (int i = 0; i < 12; i++) {
-			menubound[K_F1+i] = true;
+			menubound[Key_Code_F1+i] = true;
 		}
 	}
 
