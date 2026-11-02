@@ -270,8 +270,10 @@ typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
 
 typedef struct String_Command_Data {
-	String_Commands* builtin_cmds;
+	void* _placeholder;
 } String_Command_Data;
+
+typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
 
 // TODO: Move the builtin procs here
 
@@ -1935,7 +1937,7 @@ static void Cmd_TokenizeString(char* text) {
 
 }
 
-static String_Commands builtin_string_commands;
+static String_Command_Context string_command_context;
 
 static void Cmd_ExecuteString(char* text) {
 	context.debug_log(string_from_cstring(text));
@@ -1948,13 +1950,13 @@ static void Cmd_ExecuteString(char* text) {
 	}
 
 	// check functions
-	for (String_Command* cmd = builtin_string_commands.ptr; cmd - builtin_string_commands.ptr < builtin_string_commands.len; cmd++) {
+	for (String_Command* cmd = string_command_context.builtin.ptr; cmd - string_command_context.builtin.ptr < string_command_context.builtin.len; cmd++) {
 		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
 			if (!cmd->proc) {
 				// forward to server command
 				Cmd_ExecuteString(va("cmd %s", text));
 			} else {
-				cmd->proc(0);
+				cmd->proc(&string_command_context);
 			}
 			return;
 		}
@@ -2043,9 +2045,9 @@ static void Cmd_ExecuteCbuf() {
 	}
 }
 
-static void Cmd_List_f(void* data) {
-	String_Commands* cmds = ((String_Command_Data*)data)->builtin_cmds;
-	for (String_Command* cmd = cmds->ptr; cmd - cmds->ptr < cmds->len; cmd++) {
+static void Cmd_List_f(void* ctx) {
+	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
+	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
@@ -62925,7 +62927,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
-		copy_slice(&context.memory.perm, &builtin_string_commands, &temp_cmds, String_Command);
+		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds, String_Command);
 	}
 
 	// NOTE: Command buffer
