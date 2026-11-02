@@ -262,14 +262,14 @@ typedef struct {
 typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 
 //
-// SECTION Console commands
+// SECTION String commands
 //
 
-typedef void (*Console_Command_Proc)(void);
+typedef void (*String_Command_Proc)(void);
 typedef struct {
 	String name;
-	Console_Command_Proc proc;
-} Console_Command;
+	String_Command_Proc proc;
+} String_Command;
 
 //
 // SECTION OG code
@@ -1926,7 +1926,7 @@ static void Cmd_TokenizeString(char* text) {
 
 }
 
-static struct {Console_Command* ptr; i64 len;} builtin_console_commands;
+static struct {String_Command* ptr; i64 len;} builtin_string_commands;
 
 static void Cmd_ExecuteString(char* text) {
 	context.debug_log(string_from_cstring(text));
@@ -1939,7 +1939,7 @@ static void Cmd_ExecuteString(char* text) {
 	}
 
 	// check functions
-	for (Console_Command* cmd = builtin_console_commands.ptr; cmd - builtin_console_commands.ptr < builtin_console_commands.len; cmd++) {
+	for (String_Command* cmd = builtin_string_commands.ptr; cmd - builtin_string_commands.ptr < builtin_string_commands.len; cmd++) {
 		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
 			if (!cmd->proc) {
 				// forward to server command
@@ -2035,7 +2035,7 @@ static void Cmd_ExecuteCbuf() {
 }
 
 static void Cmd_List_f() {
-	for (Console_Command* cmd = builtin_console_commands.ptr; cmd - builtin_console_commands.ptr < builtin_console_commands.len; cmd++) {
+	for (String_Command* cmd = builtin_string_commands.ptr; cmd - builtin_string_commands.ptr < builtin_string_commands.len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
@@ -62809,97 +62809,97 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-	// NOTE: Console commands
+	// NOTE: String commands
 	// TODO: Unglobal
 	temp_memory_block(&context.memory.temp) {
-		struct {Console_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, Console_Command, 1024);
+		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("write_config"), write_config}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("quit"), context.exit_process}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("cmdlist"), Cmd_List_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), write_config}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), context.exit_process}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), Cmd_List_f}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("exec"), Cmd_Exec_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("alias"), Cmd_Alias_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("wait"),  Cmd_Wait_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("bind"), Key_Bind_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("unbind"), Key_Unbind_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("unbindall"), Key_Unbindall_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("bindlist"), Key_Bindlist_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("map"), SV_Map_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("gamemap"), SV_GameMap_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("save"), SV_Savegame_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("load"), SV_Loadgame_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("killserver"), SV_KillServer_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("gun_model"), V_Gun_Model_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_main"), M_Menu_Main_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_game"), M_Menu_Game_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_loadgame"), M_Menu_LoadGame_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_savegame"), M_Menu_SaveGame_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_video"), M_Menu_Video_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_options"), M_Menu_Options_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_keys"), M_Menu_Keys_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("menu_quit"), M_Menu_Quit_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("loading"),SCR_Loading_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("sky"),SCR_Sky_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("cmd"), CL_ForwardToServer_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("changing"), CL_Changing_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("connect"), CL_Connect_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("reconnect"), CL_Reconnect_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("precache"), CL_Precache_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("inven"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("kill"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("use"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("drop"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("info"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("prog"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("give"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("god"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("notarget"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("noclip"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("invuse"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("invprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("invnext"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("invdrop"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("weapnext"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("weapprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("centerview"), IN_CenterView}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+moveup"), IN_UpDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-moveup"), IN_UpUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+movedown"), IN_DownDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-movedown"), IN_DownUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+left"), IN_LeftDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-left"), IN_LeftUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+right"), IN_RightDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-right"), IN_RightUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+forward"), IN_ForwardDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-forward"), IN_ForwardUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+back"), IN_BackDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-back"), IN_BackUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+lookup"), IN_LookupDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-lookup"), IN_LookupUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+lookdown"), IN_LookdownDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-lookdown"), IN_LookdownUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+moveleft"), IN_MoveleftDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-moveleft"), IN_MoveleftUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+moveright"), IN_MoverightDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-moveright"), IN_MoverightUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+speed"), IN_SpeedDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-speed"), IN_SpeedUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+attack"), IN_AttackDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-attack"), IN_AttackUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+use"), IN_UseDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-use"), IN_UseUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("impulse"), IN_Impulse}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+klook"), IN_KLookDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-klook"), IN_KLookUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("+mlook"), IN_MLookDown}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("-mlook"), IN_MLookUp}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("play"), S_Play}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("stopsound"), S_StopAllSounds}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("exec"), Cmd_Exec_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("alias"), Cmd_Alias_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), Key_Bind_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), Key_Unbind_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), Key_Unbindall_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("save"), SV_Savegame_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("load"), SV_Loadgame_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("killserver"), SV_KillServer_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), M_Menu_Game_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_loadgame"), M_Menu_LoadGame_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_savegame"), M_Menu_SaveGame_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), M_Menu_Video_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), M_Menu_Options_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), M_Menu_Keys_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), M_Menu_Quit_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"),SCR_Loading_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"),SCR_Sky_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), CL_ForwardToServer_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("changing"), CL_Changing_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("connect"), CL_Connect_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("reconnect"), CL_Reconnect_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), CL_Precache_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("use"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("drop"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("info"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("prog"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("give"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("god"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("notarget"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("noclip"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invuse"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invprev"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invnext"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), NULL}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("centerview"), IN_CenterView}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveup"), IN_UpDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveup"), IN_UpUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+movedown"), IN_DownDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-movedown"), IN_DownUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+left"), IN_LeftDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-left"), IN_LeftUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+right"), IN_RightDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-right"), IN_RightUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+forward"), IN_ForwardDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-forward"), IN_ForwardUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+back"), IN_BackDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-back"), IN_BackUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookup"), IN_LookupDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookup"), IN_LookupUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookdown"), IN_LookdownDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookdown"), IN_LookdownUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveleft"), IN_MoveleftDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveleft"), IN_MoveleftUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveright"), IN_MoverightDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveright"), IN_MoverightUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+speed"), IN_SpeedDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-speed"), IN_SpeedUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+attack"), IN_AttackDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-attack"), IN_AttackUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), IN_UseDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), IN_UseUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("impulse"), IN_Impulse}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+klook"), IN_KLookDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-klook"), IN_KLookUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+mlook"), IN_MLookDown}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-mlook"), IN_MLookUp}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
-		copy_slice(&context.memory.perm, &builtin_console_commands, &temp_cmds, Console_Command);
+		copy_slice(&context.memory.perm, &builtin_string_commands, &temp_cmds, String_Command);
 	}
 
 	// NOTE: Command buffer
