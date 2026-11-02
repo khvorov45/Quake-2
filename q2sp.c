@@ -257,11 +257,6 @@ typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 // SECTION Input
 //
 
-typedef struct {
-	char* name;
-	int keynum;
-} keyname_t;
-
 typedef enum {
 	Key_Code_Tab = 9,
 	Key_Code_Enter = 13,
@@ -376,6 +371,11 @@ static String get_key_code_string(Key_Code key_code) {
 	assert(result.ptr && result.len > 0);
 	return result;
 }
+
+typedef struct {
+	char* name;
+	int keynum;
+} keyname_t;
 
 keyname_t keynames[] = {
 	{"TAB", Key_Code_Tab},
