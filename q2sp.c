@@ -265,9 +265,20 @@ typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 // SECTION String commands
 //
 
-typedef void (*String_Command_Proc)(void);
+typedef void (*String_Command_Proc)(void*);
 typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
+
+typedef struct String_Command_Data {
+	String_Commands* builtin_cmds;
+} String_Command_Data;
+
+// TODO: Move the builtin procs here
+
+static void builtin_string_command_quit(void* data) {
+	UNUSED(data);
+	context.exit_process();
+}
 
 //
 // SECTION OG code
@@ -1943,7 +1954,7 @@ static void Cmd_ExecuteString(char* text) {
 				// forward to server command
 				Cmd_ExecuteString(va("cmd %s", text));
 			} else {
-				cmd->proc();
+				cmd->proc(0);
 			}
 			return;
 		}
@@ -2032,13 +2043,16 @@ static void Cmd_ExecuteCbuf() {
 	}
 }
 
-static void Cmd_List_f() {
-	for (String_Command* cmd = builtin_string_commands.ptr; cmd - builtin_string_commands.ptr < builtin_string_commands.len; cmd++) {
+static void Cmd_List_f(void* data) {
+	String_Commands* cmds = ((String_Command_Data*)data)->builtin_cmds;
+	for (String_Command* cmd = cmds->ptr; cmd - cmds->ptr < cmds->len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
 
-static void Cmd_Exec_f() {
+static void Cmd_Exec_f(void* data) {
+	UNUSED(data);
+
 	if (cmd_argc != 2) {
 		add_line_to_console_log(STR("exec <filename> : execute a script file"));
 		return;
@@ -2063,7 +2077,9 @@ static void Cmd_Exec_f() {
 }
 
 // Creates a new command that executes a command string (possibly ; seperated)
-static void Cmd_Alias_f() {
+static void Cmd_Alias_f(void* data) {
+	UNUSED(data);
+
 	char cmd[1024] = {};
 
 	if (cmd_argc == 1) {
@@ -2108,7 +2124,8 @@ static void Cmd_Alias_f() {
 	a->value = CopyString(cmd);
 }
 
-static void Cmd_Wait_f() {
+static void Cmd_Wait_f(void* data) {
+	UNUSED(data);
 	cmd_wait = true;
 }
 
@@ -8733,7 +8750,9 @@ void SV_ReadServerFile (void)
 
 // Saves the state of the map just being exited and goes to a new map.
 // If the initial character of the map string is '*', the next map is in a new unit, so the current savegame directory is cleared of map files.
-static void SV_GameMap_f() {
+static void SV_GameMap_f(void* data) {
+	UNUSED(data);
+
 	char		*map;
 	int			i;
 	client_t	*cl;
@@ -8791,7 +8810,9 @@ static void SV_GameMap_f() {
 
 // Goes directly to a given map without any savegame archiving.
 // For development work
-static void SV_Map_f() {
+static void SV_Map_f(void* data) {
+	UNUSED(data);
+
 	// make sure the level exists
 	char* map = Cmd_Argv(1);
 	if (!strstr(map, ".")) {
@@ -8805,10 +8826,12 @@ static void SV_Map_f() {
 
 	sv.state = ss_dead; // don't save current level when changing
 	SV_WipeSavegame("current");
-	SV_GameMap_f();
+	SV_GameMap_f(data);
 }
 
-static void SV_Loadgame_f() {
+static void SV_Loadgame_f(void* data) {
+	UNUSED(data);
+
 	char	name[MAX_OSPATH];
 	FILE	*f;
 	char	*dir;
@@ -8845,7 +8868,9 @@ static void SV_Loadgame_f() {
 	SV_Map(svs.mapcmd, true);
 }
 
-static void SV_Savegame_f() {
+static void SV_Savegame_f(void* data) {
+	UNUSED(data);
+
 	char	*dir;
 
 	if (sv.state != ss_game)
@@ -8895,7 +8920,9 @@ static void SV_Savegame_f() {
 }
 
 // Kick everyone off, possibly in preparation for a new game
-void SV_KillServer_f() {
+void SV_KillServer_f(void* data) {
+	UNUSED(data);
+
 	if (!svs.initialized)
 		return;
 	SV_Shutdown ("Server was killed.\n", false);
@@ -12009,8 +12036,6 @@ void CL_ReadPackets (void);
 int  CL_ReadFromServer (void);
 void CL_WriteToServer (usercmd_t *cmd);
 void CL_BaseMove (usercmd_t *cmd);
-
-void IN_CenterView (void);
 
 float CL_KeyState (kbutton_t *key);
 char *Key_KeynumToString (int keynum);
@@ -15582,39 +15607,35 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-void IN_KLookDown (void) {KeyDown(&in_klook);}
-void IN_KLookUp (void) {KeyUp(&in_klook);}
-void IN_UpDown(void) {KeyDown(&in_up);}
-void IN_UpUp(void) {KeyUp(&in_up);}
-void IN_DownDown(void) {KeyDown(&in_down);}
-void IN_DownUp(void) {KeyUp(&in_down);}
-void IN_LeftDown(void) {KeyDown(&in_left);}
-void IN_LeftUp(void) {KeyUp(&in_left);}
-void IN_RightDown(void) {KeyDown(&in_right);}
-void IN_RightUp(void) {KeyUp(&in_right);}
-void IN_ForwardDown(void) {KeyDown(&in_forward);}
-void IN_ForwardUp(void) {KeyUp(&in_forward);}
-void IN_BackDown(void) {KeyDown(&in_back);}
-void IN_BackUp(void) {KeyUp(&in_back);}
-void IN_LookupDown(void) {KeyDown(&in_lookup);}
-void IN_LookupUp(void) {KeyUp(&in_lookup);}
-void IN_LookdownDown(void) {KeyDown(&in_lookdown);}
-void IN_LookdownUp(void) {KeyUp(&in_lookdown);}
-void IN_MoveleftDown(void) {KeyDown(&in_moveleft);}
-void IN_MoveleftUp(void) {KeyUp(&in_moveleft);}
-void IN_MoverightDown(void) {KeyDown(&in_moveright);}
-void IN_MoverightUp(void) {KeyUp(&in_moveright);}
-
-void IN_SpeedDown(void) {KeyDown(&in_speed);}
-void IN_SpeedUp(void) {KeyUp(&in_speed);}
-
-void IN_AttackDown(void) {KeyDown(&in_attack);}
-void IN_AttackUp(void) {KeyUp(&in_attack);}
-
-void IN_UseDown (void) {KeyDown(&in_use);}
-void IN_UseUp (void) {KeyUp(&in_use);}
-
-void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
+static void IN_KLookDown(void* data) {UNUSED(data); KeyDown(&in_klook);}
+static void IN_KLookUp(void* data) {UNUSED(data); KeyUp(&in_klook);}
+static void IN_UpDown(void* data) {UNUSED(data); KeyDown(&in_up);}
+static void IN_UpUp(void* data) {UNUSED(data); KeyUp(&in_up);}
+static void IN_DownDown(void* data) {UNUSED(data); KeyDown(&in_down);}
+static void IN_DownUp(void* data) {UNUSED(data); KeyUp(&in_down);}
+static void IN_LeftDown(void* data) {UNUSED(data); KeyDown(&in_left);}
+static void IN_LeftUp(void* data) {UNUSED(data); KeyUp(&in_left);}
+static void IN_RightDown(void* data) {UNUSED(data); KeyDown(&in_right);}
+static void IN_RightUp(void* data) {UNUSED(data); KeyUp(&in_right);}
+static void IN_ForwardDown(void* data) {UNUSED(data); KeyDown(&in_forward);}
+static void IN_ForwardUp(void* data) {UNUSED(data); KeyUp(&in_forward);}
+static void IN_BackDown(void* data) {UNUSED(data); KeyDown(&in_back);}
+static void IN_BackUp(void* data) {UNUSED(data); KeyUp(&in_back);}
+static void IN_LookupDown(void* data) {UNUSED(data); KeyDown(&in_lookup);}
+static void IN_LookupUp(void* data) {UNUSED(data); KeyUp(&in_lookup);}
+static void IN_LookdownDown(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
+static void IN_LookdownUp(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
+static void IN_MoveleftDown(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
+static void IN_MoveleftUp(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
+static void IN_MoverightDown(void* data) {UNUSED(data); KeyDown(&in_moveright);}
+static void IN_MoverightUp(void* data) {UNUSED(data); KeyUp(&in_moveright);}
+static void IN_SpeedDown(void* data) {UNUSED(data); KeyDown(&in_speed);}
+static void IN_SpeedUp(void* data) {UNUSED(data); KeyUp(&in_speed);}
+static void IN_AttackDown(void* data) {UNUSED(data); KeyDown(&in_attack);}
+static void IN_AttackUp(void* data) {UNUSED(data); KeyUp(&in_attack);}
+static void IN_UseDown(void* data) {UNUSED(data); KeyDown(&in_use);}
+static void IN_UseUp(void* data) {UNUSED(data); KeyUp(&in_use);}
+static void IN_Impulse(void* data) {UNUSED(data); in_impulse=atoi(Cmd_Argv(1));}
 
 /*
 ===============
@@ -15790,8 +15811,8 @@ usercmd_t CL_CreateCmd (void)
 	return cmd;
 }
 
-void IN_CenterView (void)
-{
+void IN_CenterView(void* data) {
+	UNUSED(data);
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
@@ -15971,8 +15992,10 @@ centity_t		cl_entities[MAX_EDICTS];
 
 entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
-void CL_ForwardToServer_f (void)
+void CL_ForwardToServer_f (void* data)
 {
+	UNUSED(data);
+
 	if (cls.state != ca_connected && cls.state != ca_active)
 	{
 		add_line_to_console_log(STR("not connected"));
@@ -16042,8 +16065,9 @@ void CL_CheckForResend (void)
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "getchallenge\n");
 }
 
-void CL_Connect_f (void)
+void CL_Connect_f (void* data)
 {
+	UNUSED(data);
 	char	*server;
 
 	if (cmd_argc != 2)
@@ -16070,13 +16094,13 @@ void CL_Connect_f (void)
 	cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
 }
 
-static void S_StopAllSounds();
+static void S_StopAllSounds(void* data);
 
 void CL_ClearState (void)
 {
-	S_StopAllSounds ();
-	CL_ClearEffects ();
-	CL_ClearTEnts ();
+	S_StopAllSounds(0);
+	CL_ClearEffects();
+	CL_ClearTEnts();
 
 	// wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
@@ -16172,7 +16196,9 @@ void CL_Packet_f (void)
 }
 
 // Just sent as a hint to the client that they should drop to full console
-void CL_Changing_f(void) {
+void CL_Changing_f(void* data) {
+	UNUSED(data);
+
 	//if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
 	if (cls.download)
 		return;
@@ -16183,14 +16209,14 @@ void CL_Changing_f(void) {
 }
 
 // The server is changing levels
-void CL_Reconnect_f (void)
+void CL_Reconnect_f (void* data)
 {
 	//ZOID
 	//if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
 	if (cls.download)
 		return;
 
-	S_StopAllSounds ();
+	S_StopAllSounds(data);
 	if (cls.state == ca_connected) {
 		add_line_to_console_log(STR("reconnecting..."));
 		cls.state = ca_connected;
@@ -16365,7 +16391,9 @@ u8 *precache_model; // used for skin checking in alias models
 #define TEXTURE_CNT (ENV_CNT+13)
 
 // The server will send this command right before allowing the client into the server
-static void CL_Precache_f() {
+static void CL_Precache_f(void* data) {
+	UNUSED(data);
+
 	precache_check = CS_MODELS;
 	precache_spawncount = atoi(Cmd_Argv(1));
 	precache_model = 0;
@@ -16432,7 +16460,9 @@ static void CL_Precache_f() {
 	}
 }
 
-static void write_config() {
+static void write_config(void* data) {
+	UNUSED(data);
+
 	// TODO kinda wanna get rid of this condition
 	if (cls.state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
 		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
@@ -18126,8 +18156,6 @@ vrect_t		scr_vrect;		// position of render window on screen
 char		crosshair_pic[MAX_QPATH];
 int			crosshair_width, crosshair_height;
 
-void SCR_Loading_f (void);
-
 typedef struct
 {
 	float	value;
@@ -18263,8 +18291,10 @@ static void SCR_CalcVrect() {
 void R_SetSky(char *name, float rotate, vec3_t axis);
 
 // Set a specific sky and rotation speed
-void SCR_Sky_f (void)
+void SCR_Sky_f (void* data)
 {
+	UNUSED(data);
+
 	float	rotate;
 	vec3_t	axis;
 
@@ -18418,7 +18448,7 @@ static void SCR_DrawConsole() {
 
 void SCR_BeginLoadingPlaque (void)
 {
-	S_StopAllSounds ();
+	S_StopAllSounds(0);
 	cl.sound_prepped = false;		// don't play ambients
 	if (cls.disable_screen)
 		return;
@@ -18432,9 +18462,9 @@ void SCR_BeginLoadingPlaque (void)
 	cls.disable_servercount = cl.servercount;
 }
 
-void SCR_Loading_f (void)
-{
-	SCR_BeginLoadingPlaque ();
+void SCR_Loading_f(void* data) {
+	UNUSED(data);
+	SCR_BeginLoadingPlaque();
 }
 
 int entitycmpfnc( const Entity *a, const Entity *b )
@@ -20953,9 +20983,10 @@ float CalcFov (float fov_x, float width, float height)
 	return a;
 }
 
-void V_Gun_Model_f (void)
-{
-	char	name[MAX_QPATH];
+void V_Gun_Model_f (void* data) {
+	UNUSED(data);
+
+	char name[MAX_QPATH];
 
 	if (cmd_argc != 2)
 	{
@@ -21049,7 +21080,9 @@ static void clear_console_input() {
 	console_input.ptr[0] = 0;
 }
 
-static void Con_ToggleConsole_f() {
+static void Con_ToggleConsole_f(void* data) {
+	UNUSED(data);
+
 	SCR_EndLoadingPlaque();
 
 	clear_console_input();
@@ -21279,13 +21312,10 @@ void Key_SetBinding (int keynum, char *binding)
 	keybindings[keynum] = new;
 }
 
-/*
-===================
-Key_Unbind_f
-===================
-*/
-void Key_Unbind_f (void)
+void Key_Unbind_f (void* data)
 {
+	UNUSED(data);
+
 	int		b;
 
 	if (cmd_argc != 2)
@@ -21304,8 +21334,10 @@ void Key_Unbind_f (void)
 	Key_SetBinding (b, "");
 }
 
-void Key_Unbindall_f (void)
+void Key_Unbindall_f (void* data)
 {
+	UNUSED(data);
+
 	int		i;
 
 	for (i=0 ; i<256 ; i++)
@@ -21313,14 +21345,10 @@ void Key_Unbindall_f (void)
 			Key_SetBinding (i, "");
 }
 
-
-/*
-===================
-Key_Bind_f
-===================
-*/
-void Key_Bind_f (void)
+void Key_Bind_f(void* data)
 {
+	UNUSED(data);
+
 	int			i, c, b;
 	char		cmd[1024];
 
@@ -21360,7 +21388,8 @@ void Key_Bind_f (void)
 	Key_SetBinding (b, cmd);
 }
 
-void Key_Bindlist_f() {
+static void Key_Bindlist_f(void* data) {
+	UNUSED(data);
 	for (i64 i = 0; i < 256; i++) {
 		if (keybindings[i] && keybindings[i][0]) {
 			add_line_to_console_log(concatenate_strings(&context.memory.perm, STRS(string_from_cstring(Key_KeynumToString(i)), STR(" "), string_from_cstring(keybindings[i]))));
@@ -21415,7 +21444,7 @@ void Key_Event (int key, bool down, unsigned time)
 	{
 		if (!down)
 			return;
-		Con_ToggleConsole_f ();
+		Con_ToggleConsole_f(0);
 		return;
 	}
 
@@ -21437,8 +21466,8 @@ void Key_Event (int key, bool down, unsigned time)
 			break;
 		case key_game:
 		case key_console:
-			void M_Menu_Main_f();
-			M_Menu_Main_f();
+			void M_Menu_Main_f(void*);
+			M_Menu_Main_f(0);
 			break;
 		default: assert(!"unreachable");
 		}
@@ -22655,14 +22684,15 @@ static char* Keys_MenuKey( int key )
 	}
 }
 
-static void M_Menu_Keys_f() {
+static void M_Menu_Keys_f(void* data) {
+	UNUSED(data);
 	Keys_MenuInit();
 	M_PushMenu(Keys_MenuDraw, Keys_MenuKey);
 }
 
 static void CustomizeControlsFunc(void* unused) {
 	UNUSED(unused);
-	M_Menu_Keys_f();
+	M_Menu_Keys_f(0);
 }
 
 static void ControlsResetDefaultsFunc(void* unused) {
@@ -22817,12 +22847,14 @@ static char* Options_MenuKey(int key) {
 	return Default_MenuKey(&s_options_menu, key);
 }
 
-static void M_Menu_Options_f() {
+static void M_Menu_Options_f(void* data) {
+	UNUSED(data);
 	Options_MenuInit();
 	M_PushMenu(Options_MenuDraw, Options_MenuKey);
 }
 
-static void M_Menu_Video_f() {
+static void M_Menu_Video_f(void* data) {
+	UNUSED(data);
 	VID_MenuInit();
 	char* VID_MenuKey(int key);
 	M_PushMenu(VID_MenuDraw, VID_MenuKey);
@@ -22926,15 +22958,16 @@ static char* LoadGame_MenuKey( int key )
 }
 
 
-static void M_Menu_LoadGame_f (void)
+static void M_Menu_LoadGame_f (void* data)
 {
+	UNUSED(data);
 	LoadGame_MenuInit();
 	M_PushMenu( LoadGame_MenuDraw, LoadGame_MenuKey);
 }
 
 static void LoadGameFunc(void* unused) {
 	UNUSED(unused);
-	M_Menu_LoadGame_f ();
+	M_Menu_LoadGame_f (0);
 }
 
 static void SaveGameCallback(void* self) {
@@ -22982,7 +23015,8 @@ static char* SaveGame_MenuKey(int key) {
 	return Default_MenuKey(&s_savegame_menu, key);
 }
 
-static void M_Menu_SaveGame_f() {
+static void M_Menu_SaveGame_f(void* data) {
+	UNUSED(data);
 	if (server_state) {
 		SaveGame_MenuInit();
 		M_PushMenu(SaveGame_MenuDraw, SaveGame_MenuKey);
@@ -22992,7 +23026,7 @@ static void M_Menu_SaveGame_f() {
 
 static void SaveGameFunc(void* unused) {
 	UNUSED(unused);
-	M_Menu_SaveGame_f();
+	M_Menu_SaveGame_f(0);
 }
 
 static void Game_MenuInit() {
@@ -23057,7 +23091,8 @@ static char* Game_MenuKey(int key) {
 	return Default_MenuKey(&s_game_menu, key);
 }
 
-static void M_Menu_Game_f() {
+static void M_Menu_Game_f(void* data) {
+	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
 	m_game_cursor = 1;
@@ -23082,7 +23117,8 @@ static void M_Quit_Draw() {
 	Draw_Pic( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
-static void M_Menu_Quit_f() {
+static void M_Menu_Quit_f(void* data) {
+	UNUSED(data);
 	M_PushMenu(M_Quit_Draw, M_Quit_Key);
 }
 
@@ -23115,19 +23151,19 @@ static char* M_Main_Key(int key) {
 		switch (m_main_cursor)
 		{
 		case 0:
-			M_Menu_Game_f ();
+			M_Menu_Game_f(0);
 			break;
 
 		case 1:
-			M_Menu_Options_f ();
+			M_Menu_Options_f(0);
 			break;
 
 		case 2:
-			M_Menu_Video_f ();
+			M_Menu_Video_f(0);
 			break;
 
 		case 3:
-			M_Menu_Quit_f ();
+			M_Menu_Quit_f(0);
 			break;
 		}
 	}
@@ -23135,8 +23171,9 @@ static char* M_Main_Key(int key) {
 	return NULL;
 }
 
-static void M_Menu_Main_f (void)
+static void M_Menu_Main_f (void* data)
 {
+	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
 }
 
@@ -23312,9 +23349,6 @@ void S_IssuePlaysound (playsound_t *ps);
 void S_Spatialize(channel_t *ch);
 
 #endif	// SND_LOC_H
-
-void S_Play(void);
-
 
 // =======================================================================
 // Internal sound data & structures
@@ -23949,7 +23983,9 @@ void S_AddLoopSounds (void)
 	}
 }
 
-static void S_StopAllSounds() {
+static void S_StopAllSounds(void* data) {
+	UNUSED(data);
+
 	zero_memory(s_playsounds, sizeof(s_playsounds));
 	s_freeplays.next = s_freeplays.prev = &s_freeplays;
 	s_pendingplays.next = s_pendingplays.prev = &s_pendingplays;
@@ -23968,16 +24004,10 @@ static void S_StopAllSounds() {
 	S_ClearBuffer();
 }
 
-/*
-===============================================================================
-
-console functions
-
-===============================================================================
-*/
-
-void S_Play(void)
+void S_Play(void* data)
 {
+	UNUSED(data);
+
 	int 	i;
 	char name[256];
 	sfx_t	*sfx;
@@ -61640,10 +61670,8 @@ bool	in_appactive;
 
 bool	mlooking;
 
-void IN_MLookDown (void) { mlooking = true; }
-void IN_MLookUp (void) {
-	mlooking = false;
-}
+static void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
+static void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
 
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
@@ -62567,7 +62595,7 @@ static void CL_Frame(int msec) {
 						// time to chop things off to avoid 32 bit limits
 						buffers = 0;
 						paintedtime = fullsamples;
-						S_StopAllSounds();
+						S_StopAllSounds(0);
 					}
 				}
 				oldsamplepos = samplepos;
@@ -62813,7 +62841,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), write_config}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), context.exit_process}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), builtin_string_command_quit}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), Cmd_List_f}));
 
 		// TODO: Remove non-essentials
@@ -62839,8 +62867,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), M_Menu_Options_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), M_Menu_Keys_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), M_Menu_Quit_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"),SCR_Loading_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"),SCR_Sky_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"), SCR_Loading_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"), SCR_Sky_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), CL_ForwardToServer_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("changing"), CL_Changing_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("connect"), CL_Connect_f}));
@@ -63563,7 +63591,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		num_sfx = 0;
 		soundtime = 0;
 		paintedtime = 0;
-		S_StopAllSounds();
+		S_StopAllSounds(0);
 	}
 
 	// NOTE: Net message
