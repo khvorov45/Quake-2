@@ -25814,12 +25814,6 @@ void Cmd_Drop_f (edict_t *ent)
 	it->drop (ent, it);
 }
 
-
-/*
-=================
-Cmd_Inven_f
-=================
-*/
 void Cmd_Inven_f (edict_t *ent)
 {
 	int			i;
@@ -26029,6 +26023,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_Players_f (ent);
 		return;
 	}
+
+	if (Q_stricmp (cmd, "help") == 0)
 	{
 		Cmd_Help_f (ent);
 		return;
@@ -62856,8 +62852,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("kill"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("use"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("drop"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("say"), NULL}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("say_team"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("info"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("prog"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("give"), NULL}));
