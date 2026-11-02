@@ -261,6 +261,170 @@ typedef struct {
 } Pak_File_Info;
 typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 
+//
+// SECTION Input
+//
+
+typedef struct {
+	char* name;
+	int keynum;
+} keyname_t;
+
+#define K_TAB 9
+#define K_ENTER 13
+#define K_ESCAPE 27
+#define K_SPACE 32
+#define K_BACKSPACE 127
+#define K_UPARROW 128
+#define K_DOWNARROW 129
+#define K_LEFTARROW 130
+#define K_RIGHTARROW 131
+#define K_ALT 132
+#define K_CTRL 133
+#define K_SHIFT 134
+#define K_F1 135
+#define K_F2 136
+#define K_F3 137
+#define K_F4 138
+#define K_F5 139
+#define K_F6 140
+#define K_F7 141
+#define K_F8 142
+#define K_F9 143
+#define K_F10 144
+#define K_F11 145
+#define K_F12 146
+#define K_INS 147
+#define K_DEL 148
+#define K_PGDN 149
+#define K_PGUP 150
+#define K_HOME 151
+#define K_END 152
+#define K_KP_HOME 160
+#define K_KP_UPARROW 161
+#define K_KP_PGUP 162
+#define K_KP_LEFTARROW 163
+#define K_KP_5 164
+#define K_KP_RIGHTARROW 165
+#define K_KP_END 166
+#define K_KP_DOWNARROW 167
+#define K_KP_PGDN 168
+#define K_KP_ENTER 169
+#define K_KP_INS 170
+#define K_KP_DEL 171
+#define K_KP_SLASH 172
+#define K_KP_MINUS 173
+#define K_KP_PLUS 174
+#define K_MOUSE1 200
+#define K_MOUSE2 201
+#define K_MOUSE3 202
+#define K_MWHEELDOWN 239
+#define K_MWHEELUP 240
+#define K_PAUSE 255
+
+keyname_t keynames[] = {
+	{"TAB", K_TAB},
+	{"ENTER", K_ENTER},
+	{"ESCAPE", K_ESCAPE},
+	{"SPACE", K_SPACE},
+	{"BACKSPACE", K_BACKSPACE},
+	{"UPARROW", K_UPARROW},
+	{"DOWNARROW", K_DOWNARROW},
+	{"LEFTARROW", K_LEFTARROW},
+	{"RIGHTARROW", K_RIGHTARROW},
+
+	{"ALT", K_ALT},
+	{"CTRL", K_CTRL},
+	{"SHIFT", K_SHIFT},
+
+	{"F1", K_F1},
+	{"F2", K_F2},
+	{"F3", K_F3},
+	{"F4", K_F4},
+	{"F5", K_F5},
+	{"F6", K_F6},
+	{"F7", K_F7},
+	{"F8", K_F8},
+	{"F9", K_F9},
+	{"F10", K_F10},
+	{"F11", K_F11},
+	{"F12", K_F12},
+
+	{"INS", K_INS},
+	{"DEL", K_DEL},
+	{"PGDN", K_PGDN},
+	{"PGUP", K_PGUP},
+	{"HOME", K_HOME},
+	{"END", K_END},
+
+	{"MOUSE1", K_MOUSE1},
+	{"MOUSE2", K_MOUSE2},
+	{"MOUSE3", K_MOUSE3},
+
+	{"KP_HOME",			K_KP_HOME },
+	{"KP_UPARROW",		K_KP_UPARROW },
+	{"KP_PGUP",			K_KP_PGUP },
+	{"KP_LEFTARROW",	K_KP_LEFTARROW },
+	{"KP_5",			K_KP_5 },
+	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
+	{"KP_END",			K_KP_END },
+	{"KP_DOWNARROW",	K_KP_DOWNARROW },
+	{"KP_PGDN",			K_KP_PGDN },
+	{"KP_ENTER",		K_KP_ENTER },
+	{"KP_INS",			K_KP_INS },
+	{"KP_DEL",			K_KP_DEL },
+	{"KP_SLASH",		K_KP_SLASH },
+	{"KP_MINUS",		K_KP_MINUS },
+	{"KP_PLUS",			K_KP_PLUS },
+
+	{"MWHEELUP", K_MWHEELUP },
+	{"MWHEELDOWN", K_MWHEELDOWN },
+
+	{"PAUSE", K_PAUSE},
+
+	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
+
+	{NULL,0}
+};
+
+// Returns a string (either a single ascii char, or a K_* name) for the
+// given keynum.
+// FIXME: handle quote special (general escape sequence?)
+static char* Key_KeynumToString(int keynum) {
+	keyname_t	*kn;
+	static	char	tinystr[2];
+
+	if (keynum == -1)
+		return "<KEY NOT FOUND>";
+	if (keynum > 32 && keynum < 127)
+	{	// printable ascii
+		tinystr[0] = keynum;
+		tinystr[1] = 0;
+		return tinystr;
+	}
+
+	for (kn=keynames ; kn->name ; kn++)
+		if (keynum == kn->keynum)
+			return kn->name;
+
+	return "<UNKNOWN KEYNUM>";
+}
+
+typedef struct {
+	char* values[256];
+} Keybindings;
+
+//
+// SECTION Game
+//
+
+typedef enum {
+	ca_uninitialized,
+	ca_disconnected, 	// not talking to a server
+	ca_connecting,		// sending request packets to the server
+	ca_connected,		// netchan_t established, waiting for svc_serverdata
+	ca_active			// game views should be displayed
+} Client_State;
 
 //
 // SECTION String commands
@@ -269,19 +433,6 @@ typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 typedef void (*String_Command_Proc)(void*);
 typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
-
-// TODO: sort this out
-typedef enum {
-	ca_uninitialized,
-	ca_disconnected, 	// not talking to a server
-	ca_connecting,		// sending request packets to the server
-	ca_connected,		// netchan_t established, waiting for svc_serverdata
-	ca_active			// game views should be displayed
-} Client_State;
-char *Key_KeynumToString(int keynum);
-typedef struct {
-	char* values[256];
-} Keybindings;
 
 typedef struct String_Command_Data {
 	Client_State* client_state;
@@ -11728,73 +11879,6 @@ void IN_Frame (void);
 void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
 
-
-//
-// these are the key numbers that should be passed to Key_Event
-//
-#define	K_TAB			9
-#define	K_ENTER			13
-#define	K_ESCAPE		27
-#define	K_SPACE			32
-
-// normal keys should be passed as lowercased ascii
-
-#define	K_BACKSPACE		127
-#define	K_UPARROW		128
-#define	K_DOWNARROW		129
-#define	K_LEFTARROW		130
-#define	K_RIGHTARROW	131
-
-#define	K_ALT			132
-#define	K_CTRL			133
-#define	K_SHIFT			134
-#define	K_F1			135
-#define	K_F2			136
-#define	K_F3			137
-#define	K_F4			138
-#define	K_F5			139
-#define	K_F6			140
-#define	K_F7			141
-#define	K_F8			142
-#define	K_F9			143
-#define	K_F10			144
-#define	K_F11			145
-#define	K_F12			146
-#define	K_INS			147
-#define	K_DEL			148
-#define	K_PGDN			149
-#define	K_PGUP			150
-#define	K_HOME			151
-#define	K_END			152
-
-#define K_KP_HOME		160
-#define K_KP_UPARROW	161
-#define K_KP_PGUP		162
-#define	K_KP_LEFTARROW	163
-#define K_KP_5			164
-#define K_KP_RIGHTARROW	165
-#define K_KP_END		166
-#define K_KP_DOWNARROW	167
-#define K_KP_PGDN		168
-#define	K_KP_ENTER		169
-#define K_KP_INS   		170
-#define	K_KP_DEL		171
-#define K_KP_SLASH		172
-#define K_KP_MINUS		173
-#define K_KP_PLUS		174
-
-#define K_PAUSE			255
-
-//
-// mouse buttons generate virtual keys
-//
-#define	K_MOUSE1		200
-#define	K_MOUSE2		201
-#define	K_MOUSE3		202
-
-#define K_MWHEELDOWN	239
-#define K_MWHEELUP		240
-
 extern	int		key_repeats[256];
 
 extern	int	anykeydown;
@@ -21136,78 +21220,6 @@ int		keyshift[256];		// key to map to if shift held down in console
 int		key_repeats[256];	// if > 1, it is autorepeating
 bool	keydown[256];
 
-typedef struct
-{
-	char	*name;
-	int		keynum;
-} keyname_t;
-
-keyname_t keynames[] =
-{
-	{"TAB", K_TAB},
-	{"ENTER", K_ENTER},
-	{"ESCAPE", K_ESCAPE},
-	{"SPACE", K_SPACE},
-	{"BACKSPACE", K_BACKSPACE},
-	{"UPARROW", K_UPARROW},
-	{"DOWNARROW", K_DOWNARROW},
-	{"LEFTARROW", K_LEFTARROW},
-	{"RIGHTARROW", K_RIGHTARROW},
-
-	{"ALT", K_ALT},
-	{"CTRL", K_CTRL},
-	{"SHIFT", K_SHIFT},
-
-	{"F1", K_F1},
-	{"F2", K_F2},
-	{"F3", K_F3},
-	{"F4", K_F4},
-	{"F5", K_F5},
-	{"F6", K_F6},
-	{"F7", K_F7},
-	{"F8", K_F8},
-	{"F9", K_F9},
-	{"F10", K_F10},
-	{"F11", K_F11},
-	{"F12", K_F12},
-
-	{"INS", K_INS},
-	{"DEL", K_DEL},
-	{"PGDN", K_PGDN},
-	{"PGUP", K_PGUP},
-	{"HOME", K_HOME},
-	{"END", K_END},
-
-	{"MOUSE1", K_MOUSE1},
-	{"MOUSE2", K_MOUSE2},
-	{"MOUSE3", K_MOUSE3},
-
-	{"KP_HOME",			K_KP_HOME },
-	{"KP_UPARROW",		K_KP_UPARROW },
-	{"KP_PGUP",			K_KP_PGUP },
-	{"KP_LEFTARROW",	K_KP_LEFTARROW },
-	{"KP_5",			K_KP_5 },
-	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
-	{"KP_END",			K_KP_END },
-	{"KP_DOWNARROW",	K_KP_DOWNARROW },
-	{"KP_PGDN",			K_KP_PGDN },
-	{"KP_ENTER",		K_KP_ENTER },
-	{"KP_INS",			K_KP_INS },
-	{"KP_DEL",			K_KP_DEL },
-	{"KP_SLASH",		K_KP_SLASH },
-	{"KP_MINUS",		K_KP_MINUS },
-	{"KP_PLUS",			K_KP_PLUS },
-
-	{"MWHEELUP", K_MWHEELUP },
-	{"MWHEELDOWN", K_MWHEELDOWN },
-
-	{"PAUSE", K_PAUSE},
-
-	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
-
-	{NULL,0}
-};
-
 void Key_Console(int key) {
 
 	// NOTE: Keypad remapping
@@ -21275,30 +21287,6 @@ int Key_StringToKeynum (char *str)
 			return kn->keynum;
 	}
 	return -1;
-}
-
-// Returns a string (either a single ascii char, or a K_* name) for the
-// given keynum.
-// FIXME: handle quote special (general escape sequence?)
-char* Key_KeynumToString (int keynum)
-{
-	keyname_t	*kn;
-	static	char	tinystr[2];
-
-	if (keynum == -1)
-		return "<KEY NOT FOUND>";
-	if (keynum > 32 && keynum < 127)
-	{	// printable ascii
-		tinystr[0] = keynum;
-		tinystr[1] = 0;
-		return tinystr;
-	}
-
-	for (kn=keynames ; kn->name ; kn++)
-		if (keynum == kn->keynum)
-			return kn->name;
-
-	return "<UNKNOWN KEYNUM>";
 }
 
 void Key_SetBinding (int keynum, char *binding)
@@ -21604,18 +21592,7 @@ void Key_ClearStates (void)
 #define MTYPE_SEPARATOR  	4
 #define MTYPE_FIELD			5
 
-#define	K_TAB			9
-#define	K_ENTER			13
-#define	K_ESCAPE		27
-#define	K_SPACE			32
-
 // normal keys should be passed as lowercased ascii
-
-#define	K_BACKSPACE		127
-#define	K_UPARROW		128
-#define	K_DOWNARROW		129
-#define	K_LEFTARROW		130
-#define	K_RIGHTARROW	131
 
 #define QMF_LEFT_JUSTIFY	0x00000001
 #define QMF_GRAYED			0x00000002
