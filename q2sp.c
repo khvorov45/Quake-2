@@ -266,10 +266,8 @@ typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 //
 
 typedef void (*String_Command_Proc)(void);
-typedef struct {
-	String name;
-	String_Command_Proc proc;
-} String_Command;
+typedef struct {String name; String_Command_Proc proc;} String_Command;
+typedef struct {String_Command* ptr; i64 len;} String_Commands;
 
 //
 // SECTION OG code
@@ -1926,7 +1924,7 @@ static void Cmd_TokenizeString(char* text) {
 
 }
 
-static struct {String_Command* ptr; i64 len;} builtin_string_commands;
+static String_Commands builtin_string_commands;
 
 static void Cmd_ExecuteString(char* text) {
 	context.debug_log(string_from_cstring(text));
