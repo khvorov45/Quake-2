@@ -26015,51 +26015,6 @@ static void Cmd_Players_f(edict_t* ent) {
 	PF_cprintf(ent, PRINT_HIGH, "%s\n 1 player\n", print_info);
 }
 
-static void Cmd_Wave_f(edict_t* ent) {
-	int		i;
-
-	i = atoi (Cmd_Argv(1));
-
-	// can't wave when ducked
-	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
-		return;
-
-	if (ent->client->anim_priority > ANIM_WAVE)
-		return;
-
-	ent->client->anim_priority = ANIM_WAVE;
-
-	switch (i)
-	{
-	case 0:
-		PF_cprintf (ent, PRINT_HIGH, "flipoff\n");
-		ent->s.frame = 72-1;
-		ent->client->anim_end = 83;
-		break;
-	case 1:
-		PF_cprintf (ent, PRINT_HIGH, "salute\n");
-		ent->s.frame = 84-1;
-		ent->client->anim_end = 94;
-		break;
-	case 2:
-		PF_cprintf (ent, PRINT_HIGH, "taunt\n");
-		ent->s.frame = 95-1;
-		ent->client->anim_end = 111;
-		break;
-	case 3:
-		PF_cprintf (ent, PRINT_HIGH, "wave\n");
-		ent->s.frame = 112-1;
-		ent->client->anim_end = 122;
-		break;
-	case 4:
-	default:
-		PF_cprintf (ent, PRINT_HIGH, "point\n");
-		ent->s.frame = 123-1;
-		ent->client->anim_end = 134;
-		break;
-	}
-}
-
 void ClientCommand (edict_t *ent)
 {
 	char	*cmd;
@@ -26122,8 +26077,6 @@ void ClientCommand (edict_t *ent)
 		Cmd_Kill_f (ent);
 	else if (Q_stricmp (cmd, "putaway") == 0)
 		Cmd_PutAway_f (ent);
-	else if (Q_stricmp (cmd, "wave") == 0)
-		Cmd_Wave_f (ent);
 }
 
 // Returns true if the inflictor can directly damage the target.
@@ -62899,7 +62852,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("connect"), CL_Connect_f}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("reconnect"), CL_Reconnect_f}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("precache"), CL_Precache_f}));
-		append_fixed_cap(&temp_cmds, ((Console_Command){STR("wave"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("inven"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("kill"), NULL}));
 		append_fixed_cap(&temp_cmds, ((Console_Command){STR("use"), NULL}));
