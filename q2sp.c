@@ -312,7 +312,7 @@ typedef enum {
 	Key_Code_Count,
 } Partial_Key_Code;
 
-static String key_code_strings[Key_Code_Count] = {
+static String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Tab] = STR("Tab"),
 	[Key_Code_Enter] = STR("Enter"),
 	[Key_Code_Escape] = STR("Escape"),
@@ -462,106 +462,13 @@ static String key_code_strings[Key_Code_Count] = {
 
 static String get_key_code_string(i64 key_code) {
 	assert(key_code >= 0 && key_code < Key_Code_Count);
-	String result = key_code_strings[key_code];
+	String result = Key_Code_Strings[key_code];
 	assert(result.ptr && result.len > 0);
 	return result;
 }
 
 typedef struct {
-	char* name;
-	int keynum;
-} keyname_t;
-
-keyname_t keynames[] = {
-	{"TAB", Key_Code_Tab},
-	{"ENTER", Key_Code_Enter},
-	{"ESCAPE", Key_Code_Escape},
-	{"SPACE", Key_Code_Space},
-	{"BACKSPACE", Key_Code_Backspace},
-	{"UPARROW", Key_Code_Up},
-	{"DOWNARROW", Key_Code_Down},
-	{"LEFTARROW", Key_Code_Left},
-	{"RIGHTARROW", Key_Code_Right},
-
-	{"ALT", Key_Code_Alt},
-	{"CTRL", Key_Code_Ctrl},
-	{"SHIFT", Key_Code_Shift},
-
-	{"F1", Key_Code_F1},
-	{"F2", Key_Code_F2},
-	{"F3", Key_Code_F3},
-	{"F4", Key_Code_F4},
-	{"F5", Key_Code_F5},
-	{"F6", Key_Code_F6},
-	{"F7", Key_Code_F7},
-	{"F8", Key_Code_F8},
-	{"F9", Key_Code_F9},
-	{"F10", Key_Code_F10},
-	{"F11", Key_Code_F11},
-	{"F12", Key_Code_F12},
-
-	{"INS", Key_Code_Insert},
-	{"DEL", Key_Code_Delete},
-	{"PGDN", Key_Code_Pagedown},
-	{"PGUP", Key_Code_Pageup},
-	{"HOME", Key_Code_Home},
-	{"END", Key_Code_End},
-
-	{"MOUSE1", Key_Code_Mouse1},
-	{"MOUSE2", Key_Code_Mouse2},
-	{"MOUSE3", Key_Code_Mouse3},
-
-	{"KP_HOME",			Key_Code_Keypad_Home },
-	{"KP_UPARROW",		Key_Code_Keypad_Up },
-	{"KP_PGUP",			Key_Code_Keypad_Pageup },
-	{"KP_LEFTARROW",	Key_Code_Keypad_Left },
-	{"KP_5",			Key_Code_Keypad_5 },
-	{"KP_RIGHTARROW",	Key_Code_Keypad_Right },
-	{"KP_END",			Key_Code_Keypad_End },
-	{"KP_DOWNARROW",	Key_Code_Keypad_Down },
-	{"KP_PGDN",			Key_Code_Keypad_Pagedown },
-	{"KP_ENTER",		Key_Code_Keypad_Enter },
-	{"KP_INS",			Key_Code_Keypad_Insert },
-	{"KP_DEL",			Key_Code_Keypad_Delete },
-	{"KP_SLASH",		Key_Code_Keypad_Slash },
-	{"KP_MINUS",		Key_Code_Keypad_Minus },
-	{"KP_PLUS",			Key_Code_Keypad_Plus },
-
-	{"MWHEELUP", Key_Code_Mouse_Wheel_Up },
-	{"MWHEELDOWN", Key_Code_Mouse_Wheel_Down },
-
-	{"PAUSE", Key_Code_Pause},
-
-	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
-
-	{NULL,0}
-};
-
-// Returns a string (either a single ascii char, or a K_* name) for the
-// given keynum.
-// FIXME: handle quote special (general escape sequence?)
-static char* Key_KeynumToString(int keynum) {
-	keyname_t	*kn;
-	static	char	tinystr[2];
-
-	if (keynum == -1)
-		return "<KEY NOT FOUND>";
-	if (keynum > 32 && keynum < 127)
-	{	// printable ascii
-		tinystr[0] = keynum;
-		tinystr[1] = 0;
-		return tinystr;
-	}
-
-	for (kn=keynames ; kn->name ; kn++)
-		if (keynum == kn->keynum)
-			return kn->name;
-
-	return "<UNKNOWN KEYNUM>";
-}
-
-typedef struct {
-	char* values[256];
+	char* values[Key_Code_Count];
 } Keybindings;
 
 //
@@ -16234,10 +16141,10 @@ void CL_DrawInventory (void)
 		// search for a binding
 		Com_sprintf (binding, sizeof(binding), "use %s", cl.configstrings[CS_ITEMS+item]);
 		bind = "";
-		for (j=0 ; j<256 ; j++)
+		for (j=0 ; j<Key_Code_Count ; j++)
 			if (keybindings.values[j] && !Q_stricmp (keybindings.values[j], binding))
 			{
-				bind = Key_KeynumToString(j);
+				bind = get_key_code_string(j).ptr;
 				break;
 			}
 
@@ -21416,15 +21323,76 @@ void Key_Console(int key) {
 	} // NOTE: ignore anything else
 }
 
-/*
-===================
-Key_StringToKeynum
+typedef struct {
+	char* name;
+	int keynum;
+} keyname_t;
 
-Returns a key number to be used to index keybindings[] by looking at
-the given string.  Single ascii characters return themselves, while
-the K_* names are matched up.
-===================
-*/
+keyname_t keynames[] = {
+	{"TAB", Key_Code_Tab},
+	{"ENTER", Key_Code_Enter},
+	{"ESCAPE", Key_Code_Escape},
+	{"SPACE", Key_Code_Space},
+	{"BACKSPACE", Key_Code_Backspace},
+	{"UPARROW", Key_Code_Up},
+	{"DOWNARROW", Key_Code_Down},
+	{"LEFTARROW", Key_Code_Left},
+	{"RIGHTARROW", Key_Code_Right},
+
+	{"ALT", Key_Code_Alt},
+	{"CTRL", Key_Code_Ctrl},
+	{"SHIFT", Key_Code_Shift},
+
+	{"F1", Key_Code_F1},
+	{"F2", Key_Code_F2},
+	{"F3", Key_Code_F3},
+	{"F4", Key_Code_F4},
+	{"F5", Key_Code_F5},
+	{"F6", Key_Code_F6},
+	{"F7", Key_Code_F7},
+	{"F8", Key_Code_F8},
+	{"F9", Key_Code_F9},
+	{"F10", Key_Code_F10},
+	{"F11", Key_Code_F11},
+	{"F12", Key_Code_F12},
+
+	{"INS", Key_Code_Insert},
+	{"DEL", Key_Code_Delete},
+	{"PGDN", Key_Code_Pagedown},
+	{"PGUP", Key_Code_Pageup},
+	{"HOME", Key_Code_Home},
+	{"END", Key_Code_End},
+
+	{"MOUSE1", Key_Code_Mouse1},
+	{"MOUSE2", Key_Code_Mouse2},
+	{"MOUSE3", Key_Code_Mouse3},
+
+	{"KP_HOME",			Key_Code_Keypad_Home },
+	{"KP_UPARROW",		Key_Code_Keypad_Up },
+	{"KP_PGUP",			Key_Code_Keypad_Pageup },
+	{"KP_LEFTARROW",	Key_Code_Keypad_Left },
+	{"KP_5",			Key_Code_Keypad_5 },
+	{"KP_RIGHTARROW",	Key_Code_Keypad_Right },
+	{"KP_END",			Key_Code_Keypad_End },
+	{"KP_DOWNARROW",	Key_Code_Keypad_Down },
+	{"KP_PGDN",			Key_Code_Keypad_Pagedown },
+	{"KP_ENTER",		Key_Code_Keypad_Enter },
+	{"KP_INS",			Key_Code_Keypad_Insert },
+	{"KP_DEL",			Key_Code_Keypad_Delete },
+	{"KP_SLASH",		Key_Code_Keypad_Slash },
+	{"KP_MINUS",		Key_Code_Keypad_Minus },
+	{"KP_PLUS",			Key_Code_Keypad_Plus },
+
+	{"MWHEELUP", Key_Code_Mouse_Wheel_Up },
+	{"MWHEELDOWN", Key_Code_Mouse_Wheel_Down },
+
+	{"PAUSE", Key_Code_Pause},
+
+	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
+
+	{NULL,0}
+};
+
 int Key_StringToKeynum (char *str)
 {
 	keyname_t	*kn;
@@ -21543,9 +21511,10 @@ void Key_Bind_f(void* data)
 
 static void Key_Bindlist_f(void* data) {
 	UNUSED(data);
-	for (i64 i = 0; i < 256; i++) {
+	for (i64 i = 0; i < Key_Code_Count; i++) {
 		if (keybindings.values[i] && keybindings.values[i][0]) {
-			add_line_to_console_log(concatenate_strings(&context.memory.perm, STRS(string_from_cstring(Key_KeynumToString(i)), STR(" "), string_from_cstring(keybindings.values[i]))));
+			String_Slice line = STRS(get_key_code_string(i), STR(" "), string_from_cstring(keybindings.values[i]));
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, line));
 		}
 	}
 }
@@ -22331,7 +22300,7 @@ static void DrawKeyBindingFunc( void *self )
 		int x;
 		const char *name;
 
-		name = Key_KeynumToString (keys[0]);
+		name = get_key_code_string(keys[0]).ptr;
 
 		Menu_DrawString( a->generic.x + a->generic.parent->x + 16, a->generic.y + a->generic.parent->y, name );
 
@@ -22340,7 +22309,7 @@ static void DrawKeyBindingFunc( void *self )
 		if (keys[1] != -1)
 		{
 			Menu_DrawString( a->generic.x + a->generic.parent->x + 24 + x, a->generic.y + a->generic.parent->y, "or" );
-			Menu_DrawString( a->generic.x + a->generic.parent->x + 48 + x, a->generic.y + a->generic.parent->y, Key_KeynumToString (keys[1]) );
+			Menu_DrawString( a->generic.x + a->generic.parent->x + 48 + x, a->generic.y + a->generic.parent->y, get_key_code_string(keys[1]).ptr );
 		}
 	}
 }
@@ -22801,7 +22770,7 @@ static char* Keys_MenuKey( int key )
 		{
 			char cmd[1024];
 
-			Com_sprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString(key), bindnames[item->generic.localdata[0]][0]);
+			Com_sprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", get_key_code_string(key).ptr, bindnames[item->generic.localdata[0]][0]);
 			Cbuf_InsertText (cmd);
 		}
 
