@@ -16200,38 +16200,6 @@ void CL_SendConnectPacket() {
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 }
 
-void CL_CheckForResend (void) {
-	// if the local server is running and we aren't
-	// then connect
-	if (cls.state == ca_disconnected && server_state )
-	{
-		cls.state = ca_connecting;
-		strncpy (cls.servername, "localhost", sizeof(cls.servername)-1);
-		// we don't need a challenge on the localhost
-		CL_SendConnectPacket ();
-		return;
-	}
-
-	// resend if we haven't gotten a reply yet
-	if (cls.state != ca_connecting)
-		return;
-
-	if (cls.realtime - cls.connect_time < 3000)
-		return;
-
-	netadr_t adr = {};
-	NET_StringToAdr(cls.servername, &adr);
-	if (adr.port == 0) {
-		adr.port = BigShort (PORT_SERVER);
-	}
-
-	cls.connect_time = cls.realtime; // for retransmit requests
-
-	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Connecting to"), string_from_cstring(cls.servername))));
-
-	Netchan_OutOfBandPrint(NS_CLIENT, adr, "getchallenge\n");
-}
-
 void CL_Connect_f (void* data)
 {
 	UNUSED(data);
@@ -16258,7 +16226,7 @@ void CL_Connect_f (void* data)
 
 	cls.state = ca_connecting;
 	strncpy (cls.servername, server, sizeof(cls.servername)-1);
-	cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
+	cls.connect_time = -99999;
 }
 
 static void S_StopAllSounds(void* data);
@@ -17995,7 +17963,7 @@ void CL_ParseServerMessage ()
 				cls.download = NULL;
 			}
 			cls.state = ca_connecting;
-			cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
+			cls.connect_time = -99999;
 			break;
 
 		case svc_print:
@@ -62411,7 +62379,14 @@ static void CL_Frame(int msec) {
 	// send a new command message to the server
 	Cmd_ExecuteCbuf(&string_command_context);
 	CL_SendCmd();
-	CL_CheckForResend();
+
+	if (cls.state == ca_disconnected && server_state) {
+		cls.state = ca_connecting;
+		strncpy(cls.servername, "localhost", sizeof(cls.servername)-1);
+		CL_SendConnectPacket();
+	} else {
+		assert(cls.state == ca_connected);
+	}
 
 	// predict all unacknowledged movements
 	CL_PredictMovement();
