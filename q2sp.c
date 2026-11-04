@@ -16074,16 +16074,6 @@ void CL_ForwardToServer_f (void* data)
 	}
 }
 
-// We have gotten a challenge from the server, so try and connect.
-void CL_SendConnectPacket() {
-	netadr_t adr = {};
-	NET_StringToAdr(&adr);
-	if (adr.port == 0) {
-		adr.port = BigShort (PORT_SERVER);
-	}
-	Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
-}
-
 static void S_StopAllSounds(void* data);
 
 void CL_ClearState (void)
@@ -62087,7 +62077,7 @@ static void CL_Frame(int msec) {
 
 	if (cls.state == ca_disconnected && server_state) {
 		cls.state = ca_connecting;
-		CL_SendConnectPacket();
+		Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 	} else {
 		assert(cls.state == ca_connected || cls.state == ca_active);
 	}
