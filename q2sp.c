@@ -764,12 +764,6 @@ static void Key_Unbind_f(void* data) {
 // SECTION OG code
 //
 
-static short BigShort(short l){
-	u8 b1 = l&255;
-	u8 b2 = (l>>8)&255;
-	return (b1<<8) + b2;
-}
-
 static short LittleShort(short l) {return l;}
 static int LittleLong(int l) {return l;}
 static float LittleFloat(float l) {return l;}
@@ -8598,19 +8592,6 @@ typedef struct {
 // getting kicked off by the server operator
 // a program error, like an overflowed reliable buffer
 
-// MAX_CHALLENGES is made large to prevent a denial
-// of service attack that could cycle all of them
-// out before legitimate users connected
-#define	MAX_CHALLENGES	1024
-
-typedef struct
-{
-	netadr_t	adr;
-	int			challenge;
-	int			time;
-} challenge_t;
-
-
 typedef struct
 {
 	bool	initialized;				// sv_init has completed
@@ -8618,18 +8599,13 @@ typedef struct
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base
 
-	int			spawncount;					// incremented each server start
-											// used to check late spawns
+	int			spawncount;					// incremented each server start, used to check late spawns
 
 	client_t	client;
 	int			num_client_entities;		// UPDATE_BACKUP * MAX_PACKET_ENTITIES
 	int			next_client_entities;		// next client_entity to use
 	entity_state_t	*client_entities;		// [num_client_entities]
-
-	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
-
-//=============================================================================
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
@@ -16140,11 +16116,6 @@ void CL_Packet_f (void)
 		add_line_to_console_log(STR("packet <destination> <contents>"));
 		return;
 	}
-
-	netadr_t adr = {};
-	NET_StringToAdr(&adr);
-	if (!adr.port)
-		adr.port = BigShort (PORT_SERVER);
 
 	in = Cmd_Argv(2);
 	out = send+4;
