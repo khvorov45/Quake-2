@@ -572,7 +572,6 @@ static struct {
 	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
 
 	// connection information
-	char		servername[MAX_OSPATH];	// name of server from original connect
 	float		connect_time;			// for connection retransmits
 	netchan_t	netchan;
 	int			challenge;				// from the server to use for connecting
@@ -1992,7 +1991,7 @@ u8		net_message_buffer[MAX_MSGLEN];
 bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
 void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
 
-void NET_StringToAdr(char *s, netadr_t *a);
+void NET_StringToAdr(netadr_t* a);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
@@ -16193,40 +16192,11 @@ void CL_ForwardToServer_f (void* data)
 // We have gotten a challenge from the server, so try and connect.
 void CL_SendConnectPacket() {
 	netadr_t adr = {};
-	NET_StringToAdr(cls.servername, &adr);
+	NET_StringToAdr(&adr);
 	if (adr.port == 0) {
 		adr.port = BigShort (PORT_SERVER);
 	}
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
-}
-
-void CL_Connect_f (void* data)
-{
-	UNUSED(data);
-	char	*server;
-
-	if (cmd_argc != 2)
-	{
-		add_line_to_console_log(STR("usage: connect <server>"));
-		return;
-	}
-
-	if (server_state) {
-		// if running a local server, kill it and reissue
-		SV_Shutdown ("Server quit\n", false);
-	}
-	else
-	{
-		CL_Disconnect ();
-	}
-
-	server = Cmd_Argv (1);
-
-	CL_Disconnect ();
-
-	cls.state = ca_connecting;
-	strncpy (cls.servername, server, sizeof(cls.servername)-1);
-	cls.connect_time = -99999;
 }
 
 static void S_StopAllSounds(void* data);
@@ -16303,7 +16273,7 @@ void CL_Packet_f (void)
 	}
 
 	netadr_t adr = {};
-	NET_StringToAdr(Cmd_Argv(1), &adr);
+	NET_StringToAdr(&adr);
 	if (!adr.port)
 		adr.port = BigShort (PORT_SERVER);
 
@@ -16338,35 +16308,6 @@ void CL_Changing_f(void* data) {
 	SCR_BeginLoadingPlaque ();
 	cls.state = ca_connected;	// not active anymore, but not disconnected
 	add_line_to_console_log(STR("\nChanging map..."));
-}
-
-// The server is changing levels
-void CL_Reconnect_f (void* data)
-{
-	//ZOID
-	//if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
-	if (cls.download)
-		return;
-
-	S_StopAllSounds(data);
-	if (cls.state == ca_connected) {
-		add_line_to_console_log(STR("reconnecting..."));
-		cls.state = ca_connected;
-		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message, "new");
-		return;
-	}
-
-	if (*cls.servername) {
-		if (cls.state >= ca_connected) {
-			CL_Disconnect();
-			cls.connect_time = cls.realtime - 1500;
-		} else
-			cls.connect_time = -99999; // fire immediately
-
-		cls.state = ca_connecting;
-		add_line_to_console_log(STR("reconnecting..."));
-	}
 }
 
 static void CL_ConnectionlessPacket() {
@@ -61710,8 +61651,7 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-static void NET_StringToAdr(char *s, netadr_t *a) {
-	assert(!strcmp (s, "localhost"));
+static void NET_StringToAdr(netadr_t *a) {
 	*a = (netadr_t){.type = NA_LOOPBACK};
 }
 
@@ -62289,7 +62229,6 @@ static void CL_Frame(int msec) {
 
 	if (cls.state == ca_disconnected && server_state) {
 		cls.state = ca_connecting;
-		strncpy(cls.servername, "localhost", sizeof(cls.servername)-1);
 		CL_SendConnectPacket();
 	} else {
 		assert(cls.state == ca_connected || cls.state == ca_active);
@@ -62633,8 +62572,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"), SCR_Sky_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), CL_ForwardToServer_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("changing"), CL_Changing_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("connect"), CL_Connect_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("reconnect"), CL_Reconnect_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), CL_Precache_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
