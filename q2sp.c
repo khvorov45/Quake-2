@@ -16369,115 +16369,22 @@ void CL_Reconnect_f (void* data)
 	}
 }
 
-// Handle a reply from a ping
-static void CL_ParseStatusMessage() {
-	char* s = MSG_ReadString(&net_message);
-	add_line_to_console_log(string_from_cstring(s));
+static void CL_ConnectionlessPacket() {
+	MSG_BeginReading(&net_message);
+	MSG_ReadLong(&net_message); // skip the -1
+
+	char* line = MSG_ReadStringLine(&net_message);
+	Cmd_TokenizeString(line);
+
+	assert(!strcmp(cmd_argv[0], "client_connect"));
+	assert(cls.state != ca_connected);
+
+	Netchan_Setup(NS_CLIENT, &cls.netchan, net_from);
+	MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
+	MSG_WriteString(&cls.netchan.message, "new");
+	cls.state = ca_connected;
 }
 
-// Responses to broadcasts, etc
-void CL_ConnectionlessPacket (void)
-{
-	char	*s;
-	char	*c;
-
-	MSG_BeginReading (&net_message);
-	MSG_ReadLong (&net_message);	// skip the -1
-
-	s = MSG_ReadStringLine(&net_message);
-
-	Cmd_TokenizeString (s);
-
-	c = Cmd_Argv(0);
-
-	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("loopback: "), string_from_cstring(c))));
-
-	// server connection
-	if (!strcmp(c, "client_connect"))
-	{
-		if (cls.state == ca_connected)
-		{
-			add_line_to_console_log(STR("Dup connect received.  Ignored."));
-			return;
-		}
-		Netchan_Setup(NS_CLIENT, &cls.netchan, net_from);
-		MSG_WriteChar (&cls.netchan.message, clc_stringcmd);
-		MSG_WriteString (&cls.netchan.message, "new");
-		cls.state = ca_connected;
-		return;
-	}
-
-	// server responding to a status broadcast
-	if (!strcmp(c, "info"))
-	{
-		CL_ParseStatusMessage ();
-		return;
-	}
-
-	// remote command from gui front end
-	if (!strcmp(c, "cmd"))
-	{
-		Sys_AppActivate ();
-		s = MSG_ReadString (&net_message);
-		Cbuf_AddText (s);
-		Cbuf_AddText ("\n");
-		return;
-	}
-	// print command from somewhere
-	if (!strcmp(c, "print"))
-	{
-		s = MSG_ReadString (&net_message);
-		add_line_to_console_log(string_from_cstring(s));
-		return;
-	}
-
-	// ping from somewhere
-	if (!strcmp(c, "ping"))
-	{
-		Netchan_OutOfBandPrint (NS_CLIENT, net_from, "ack");
-		return;
-	}
-
-	// challenge from the server we are connecting to
-	if (!strcmp(c, "challenge"))
-	{
-		cls.challenge = atoi(Cmd_Argv(1));
-		CL_SendConnectPacket ();
-		return;
-	}
-
-	// echo request from server
-	if (!strcmp(c, "echo"))
-	{
-		Netchan_OutOfBandPrint (NS_CLIENT, net_from, "%s", Cmd_Argv(1) );
-		return;
-	}
-
-	add_line_to_console_log(STR("Unknown command."));
-}
-
-
-/*
-=================
-CL_DumpPackets
-
-A vain attempt to help bad TCP stacks that cause problems
-when they overflow
-=================
-*/
-void CL_DumpPackets (void)
-{
-	while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
-	{
-		add_line_to_console_log(STR("dumnping a packet"));
-	}
-}
-
-/*
-=================
-CL_ReadPackets
-=================
-*/
 void CL_ReadPackets (void)
 {
 	while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
