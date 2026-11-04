@@ -15870,79 +15870,62 @@ void Draw_Pic(int x, int y, char *pic);
 
 static Key_Bindings* temp_global_key_bindings;
 
-void CL_DrawInventory (void)
-{
-	int		i;
-	int		num, selected_num, item;
-	int		index[MAX_ITEMS];
-	char	string[1024];
-	int		x, y;
-	char	binding[1024];
-	char	*bind;
-	int		selected;
-	int		top;
+static void CL_DrawInventory() {
+	char string[1024];
+	char binding[1024];
 
-	selected = cl.frame.playerstate.stats[STAT_SELECTED_ITEM];
+	i64 selected_item_id = cl.frame.playerstate.stats[STAT_SELECTED_ITEM];
 
-	num = 0;
-	selected_num = 0;
-	for (i=0 ; i<MAX_ITEMS ; i++)
-	{
-		if (i==selected)
-			selected_num = num;
-		if (cl.inventory[i])
-		{
-			index[num] = i;
-			num++;
+	i64 inventory_item_ids[MAX_ITEMS] = {};
+	i64 inventory_item_count = 0;
+	i64 inventory_selected_index = 0;
+	for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
+		if (item_id == selected_item_id) {
+			inventory_selected_index = inventory_item_count;
+		}
+		if (cl.inventory[item_id]) {
+			inventory_item_ids[inventory_item_count++] = item_id;
 		}
 	}
 
-	// determine scroll point
-	#define	DISPLAY_ITEMS 17
-	top = selected_num - DISPLAY_ITEMS/2;
-	if (num - top < DISPLAY_ITEMS)
-		top = num - DISPLAY_ITEMS;
-	if (top < 0)
-		top = 0;
+	i64 display_items = 17;
+	i64 top = max(min(inventory_selected_index - display_items/2, inventory_item_count - display_items), 0);
 
-	x = (viddef.width-256)/2;
-	y = (viddef.height-240)/2;
-
-	Draw_Pic (x, y+8, "inventory");
+	i64 x = (viddef.width - 256) / 2;
+	i64 y = (viddef.height - 240) / 2;
+	Draw_Pic(x, y + 8, "inventory");
 
 	y += 24;
 	x += 24;
-	Inv_DrawString (x, y, "hotkey ### item");
-	Inv_DrawString (x, y+8, "------ --- ----");
+	Inv_DrawString(x, y, "hotkey ### item");
+	Inv_DrawString(x, y + 8, "------ --- ----");
 	y += 16;
-	for (i=top ; i<num && i < top+DISPLAY_ITEMS ; i++) {
-		item = index[i];
+
+	for (i64 i = top; i < inventory_item_count && i < top + display_items; i++) {
+		i64 item = inventory_item_ids[i];
 		// search for a binding
-		Com_sprintf (binding, sizeof(binding), "use %s", cl.configstrings[CS_ITEMS+item]);
-		bind = "";
+		Com_sprintf(binding, sizeof(binding), "use %s", cl.configstrings[CS_ITEMS + item]);
+		char* bind = "";
 		for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 			Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
-			if (this_binding->len && !Q_stricmp(this_binding->buf, binding))
-			{
+			if (this_binding->len && !Q_stricmp(this_binding->buf, binding)) {
 				bind = Key_Code_Strings[key_code].ptr;
 				break;
 			}
 		}
 
-		Com_sprintf (string, sizeof(string), "%6s %3i %s", bind, cl.inventory[item],
-			cl.configstrings[CS_ITEMS+item] );
-		if (item != selected)
-			SetStringHighBit (string);
-		else	// draw a blinky cursor by the selected item
-		{
-			if ( (int)(cls.realtime*10) & 1)
-				Draw_Char (x-8, y, 15);
+		Com_sprintf(string, sizeof(string), "%6s %3i %s", bind, cl.inventory[item], cl.configstrings[CS_ITEMS+item] );
+		if (item != selected_item_id) {
+			SetStringHighBit(string);
+		} else {
+			// draw a blinky cursor by the selected item
+			if ((i64)(cls.realtime * 10) & 1) {
+				Draw_Char(x-8, y, 15);
+			}
 		}
-		Inv_DrawString (x, y, string);
+		Inv_DrawString(x, y, string);
 		y += 8;
 	}
-
-
 }
 
 centity_t		cl_entities[MAX_EDICTS];
