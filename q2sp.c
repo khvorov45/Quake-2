@@ -10213,50 +10213,6 @@ static void SV_DropClient(client_t* drop) {
 	drop->name[0] = 0;
 }
 
-// Builds the string that is sent as heartbeats and status replies
-char* SV_StatusString() {
-	char	player[1024];
-	int		statusLength;
-	int		playerLength;
-
-	static char	status[MAX_MSGLEN - 16] = {};
-	strcat(status, "\n");
-	statusLength = strlen(status);
-
-	if (svs.client.state == cs_connected || svs.client.state == cs_spawned) {
-		Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n", svs.client.edict->client->ps.stats[STAT_FRAGS], svs.client.ping, svs.client.name);
-		playerLength = strlen(player);
-		if (statusLength + playerLength < (int)sizeof(status) ) {
-			strcpy (status + statusLength, player);
-			statusLength += playerLength;
-		}
-	}
-
-	return status;
-}
-
-// Responds with all the info that qplug or qspy can see
-void SVC_Status (void) {
-	Netchan_OutOfBandPrint (NS_SERVER, net_from, "print\n%s", SV_StatusString());
-}
-
-/*
-================
-SVC_Ping
-
-Just responds with an acknowledgement
-================
-*/
-void SVC_Ping (void)
-{
-	Netchan_OutOfBandPrint (NS_SERVER, net_from, "ack");
-}
-
-static void SVC_GetChallenge() {
-	Netchan_OutOfBandPrint(NS_SERVER, net_from, "challenge %i", svs.challenges[0].challenge);
-}
-
-// A connection request that did not come from the master
 static void SVC_DirectConnect() {
 	sv_client = &svs.client;
 	i32 edictnum = 1;
@@ -10277,31 +10233,15 @@ static void SVC_DirectConnect() {
 	svs.client.lastconnect = svs.realtime;
 }
 
-// A connectionless packet has four leading 0xff characters to distinguish it from a game channel.
-// Clients that are in the game can still send connectionless packets.
 void SV_ConnectionlessPacket() {
-	char	*s;
-	char	*c;
+	MSG_BeginReading(&net_message);
+	MSG_ReadLong(&net_message); // skip the -1 marker
 
-	MSG_BeginReading (&net_message);
-	MSG_ReadLong (&net_message);		// skip the -1 marker
+	char* line = MSG_ReadStringLine(&net_message);
+	Cmd_TokenizeString(line);
 
-	s = MSG_ReadStringLine (&net_message);
-
-	Cmd_TokenizeString(s);
-
-	c = Cmd_Argv(0);
-
-	if (!strcmp(c, "ping"))
-		SVC_Ping ();
-	else if (!strcmp(c,"status"))
-		SVC_Status ();
-	else if (!strcmp(c,"getchallenge"))
-		SVC_GetChallenge ();
-	else if (!strcmp(c,"connect"))
-		SVC_DirectConnect ();
-	else
-		assert(!"unreachable");
+	assert(!strcmp(cmd_argv[0],"connect"));
+	SVC_DirectConnect();
 }
 
 // Updates the cl->ping variables
