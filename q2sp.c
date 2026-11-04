@@ -1969,15 +1969,13 @@ netadr_t	net_from;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
 
-bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
-void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
+bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
+void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
 void NET_StringToAdr(netadr_t* a);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
-void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, u8 *data);
-void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...);
 bool Netchan_Process (netchan_t *chan, sizebuf_t *msg);
 
 bool Netchan_CanReliable (netchan_t *chan);
@@ -7105,37 +7103,22 @@ then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
 
-/*
-===============
-Netchan_OutOfBand
-
-Sends an out-of-band datagram
-================
-*/
-void Netchan_OutOfBand (int net_socket, netadr_t adr, int length, u8 *data)
+void Netchan_OutOfBand(int net_socket, int length, u8 *data)
 {
 	sizebuf_t	send;
 	u8		send_buf[MAX_MSGLEN];
 
-// write the packet header
-	SZ_Init (&send, send_buf, sizeof(send_buf));
+	// write the packet header
+	SZ_Init(&send, send_buf, sizeof(send_buf));
 
-	MSG_WriteLong (&send, -1);	// -1 sequence means out of band
-	SZ_Write (&send, data, length);
+	MSG_WriteLong(&send, -1);	// -1 sequence means out of band
+	SZ_Write(&send, data, length);
 
-// send the datagram
-	NET_SendPacket (net_socket, send.cursize, send.data, adr);
+	// send the datagram
+	NET_SendLoopPacket(net_socket, send.cursize, send.data);
 }
 
-/*
-===============
-Netchan_OutOfBandPrint
-
-Sends a text message in an out-of-band datagram
-================
-*/
-void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...)
-{
+void Netchan_OutOfBandPrint(int net_socket, char *format, ...) {
 	va_list		argptr;
 	static char		string[MAX_MSGLEN - 4];
 
@@ -7143,7 +7126,7 @@ void Netchan_OutOfBandPrint (int net_socket, netadr_t adr, char *format, ...)
 	vsprintf (string, format,argptr);
 	va_end (argptr);
 
-	Netchan_OutOfBand (net_socket, adr, strlen(string), (u8 *)string);
+	Netchan_OutOfBand(net_socket, strlen(string), (u8*)string);
 }
 
 // called to open a channel to a remote system
@@ -7244,7 +7227,7 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 		add_line_to_console_log(STR("Netchan_Transmit: dumped unreliable"));
 
 	// send the datagram
-	NET_SendPacket (chan->sock, send.cursize, send.data, chan->remote_address);
+	NET_SendLoopPacket(chan->sock, send.cursize, send.data);
 }
 
 /*
@@ -10222,7 +10205,7 @@ static void SVC_DirectConnect() {
 	bool client_connect_result = ClientConnect(ent);
 	assert(client_connect_result);
 
-	Netchan_OutOfBandPrint(NS_SERVER, net_from, "client_connect");
+	Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
 	Netchan_Setup(NS_SERVER, &svs.client.netchan , net_from);
 
 	svs.client.state = cs_connected;
@@ -10281,7 +10264,7 @@ void SV_ReadPackets (void)
 	int			i;
 	client_t	*cl;
 
-	while (NET_GetPacket (NS_SERVER, &net_from, &net_message))
+	while (NET_GetLoopPacket (NS_SERVER, &net_from, &net_message))
 	{
 		// check for connectionless packet (0xffffffff) first
 		if (*(int *)net_message.data == -1)
@@ -16098,7 +16081,7 @@ void CL_SendConnectPacket() {
 	if (adr.port == 0) {
 		adr.port = BigShort (PORT_SERVER);
 	}
-	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
+	Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 }
 
 static void S_StopAllSounds(void* data);
@@ -16190,7 +16173,7 @@ void CL_Packet_f (void)
 	}
 	*out = 0;
 
-	NET_SendPacket (NS_CLIENT, out-send, send, adr);
+	NET_SendLoopPacket(NS_CLIENT, out-send, send);
 }
 
 // Just sent as a hint to the client that they should drop to full console
@@ -16220,7 +16203,7 @@ static void CL_ConnectionlessPacket() {
 
 void CL_ReadPackets (void)
 {
-	while (NET_GetPacket (NS_CLIENT, &net_from, &net_message))
+	while (NET_GetLoopPacket (NS_CLIENT, &net_from, &net_message))
 	{
 		//
 		// remote command packet
@@ -61566,9 +61549,7 @@ bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_messag
 
 }
 
-static void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t to) {
-	UNUSED(to);
-
+static void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
 	int		i;
 	loopback_t	*loop;
 
@@ -61579,16 +61560,6 @@ static void NET_SendLoopPacket (netsrc_t sock, int length, void *data, netadr_t 
 
 	memcpy (loop->msgs[i].data, data, length);
 	loop->msgs[i].datalen = length;
-}
-
-static bool NET_GetPacket(netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message) {
-	bool result = NET_GetLoopPacket(sock, net_from, net_message);
-	return result;
-}
-
-static void NET_SendPacket(netsrc_t sock, int length, void *data, netadr_t to) {
-	assert(to.type == NA_LOOPBACK);
-	NET_SendLoopPacket(sock, length, data, to);
 }
 
 #include <fcntl.h>
