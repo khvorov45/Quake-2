@@ -8578,7 +8578,6 @@ typedef struct
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
-extern	client_t	*sv_client;
 extern	edict_t		*sv_player;
 
 void SV_FinalMessage (char *message, bool reconnect);
@@ -10112,7 +10111,7 @@ void SV_Map(char* levelstring, bool loadgame) {
 	SV_BroadcastCommand ("reconnect\n");
 }
 
-client_t	*sv_client;			// current client
+
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 bool ClientConnect(edict_t* ent);
@@ -10138,26 +10137,6 @@ static void SV_DropClient(client_t* drop) {
 
 	drop->state = cs_zombie;
 	drop->name[0] = 0;
-}
-
-static void SVC_DirectConnect() {
-	sv_client = &svs.client;
-	i32 edictnum = 1;
-	edict_t* ent = EDICT_NUM(edictnum);
-	svs.client.edict = ent;
-
-	bool client_connect_result = ClientConnect(ent);
-	assert(client_connect_result);
-
-	Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
-	Netchan_Setup(NS_SERVER, &svs.client.netchan);
-
-	svs.client.state = cs_connected;
-
-	SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
-	svs.client.datagram.allowoverflow = true;
-	svs.client.lastmessage = svs.realtime;
-	svs.client.lastconnect = svs.realtime;
 }
 
 // Updates the cl->ping variables
@@ -10192,6 +10171,8 @@ void SV_CalcPings() {
 	}
 }
 
+client_t* sv_client;
+
 static void SV_ReadPackets() {
 	while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
 		if (*(i32*)net_message.data == -1) {
@@ -10202,7 +10183,26 @@ static void SV_ReadPackets() {
 			Cmd_TokenizeString(line);
 
 			assert(!strcmp(cmd_argv[0],"connect"));
-			SVC_DirectConnect();
+
+			sv_client = &svs.client;
+
+			i32 edictnum = 1;
+			edict_t* ent = EDICT_NUM(edictnum);
+			svs.client.edict = ent;
+
+			bool client_connect_result = ClientConnect(ent);
+			assert(client_connect_result);
+
+			Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
+			Netchan_Setup(NS_SERVER, &svs.client.netchan);
+
+			svs.client.state = cs_connected;
+
+			SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
+			svs.client.datagram.allowoverflow = true;
+			svs.client.lastmessage = svs.realtime;
+			svs.client.lastconnect = svs.realtime;
+
 
 		} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 			svs.client.lastmessage = svs.realtime;
