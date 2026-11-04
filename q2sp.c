@@ -7111,15 +7111,15 @@ void Netchan_OutOfBandPrint(int net_socket, char *format, ...) {
 }
 
 // called to open a channel to a remote system
-void Netchan_Setup(netsrc_t sock, netchan_t *chan) {
-	memset (chan, 0, sizeof(*chan));
+static void Netchan_Setup(netsrc_t sock, netchan_t* chan) {
+	*chan = (netchan_t){
+		.sock = sock,
+		.last_received = curtime,
+		.incoming_sequence = 0,
+		.outgoing_sequence = 1,
+	};
 
-	chan->sock = sock;
-	chan->last_received = curtime;
-	chan->incoming_sequence = 0;
-	chan->outgoing_sequence = 1;
-
-	SZ_Init (&chan->message, chan->message_buf, sizeof(chan->message_buf));
+	SZ_Init(&chan->message, chan->message_buf, sizeof(chan->message_buf));
 	chan->message.allowoverflow = true;
 }
 
@@ -12053,8 +12053,6 @@ extern 	kbutton_t 	in_speed;
 void CL_SendCmd (void);
 void CL_SendMove (usercmd_t *cmd);
 
-void CL_ReadPackets (void);
-
 int  CL_ReadFromServer (void);
 void CL_WriteToServer (usercmd_t *cmd);
 void CL_BaseMove (usercmd_t *cmd);
@@ -16128,32 +16126,24 @@ void CL_Changing_f(void* data) {
 	add_line_to_console_log(STR("\nChanging map..."));
 }
 
-static void CL_ConnectionlessPacket() {
-	MSG_BeginReading(&net_message);
-	MSG_ReadLong(&net_message); // skip the -1
+static void CL_ReadPackets() {
+	while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
+		if (*(int *)net_message.data == -1) {
 
-	char* line = MSG_ReadStringLine(&net_message);
-	Cmd_TokenizeString(line);
+			MSG_BeginReading(&net_message);
+			MSG_ReadLong(&net_message); // skip the -1
 
-	assert(!strcmp(cmd_argv[0], "client_connect"));
-	assert(cls.state != ca_connected);
+			char* line = MSG_ReadStringLine(&net_message);
+			Cmd_TokenizeString(line);
 
-	Netchan_Setup(NS_CLIENT, &cls.netchan);
-	MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
-	MSG_WriteString(&cls.netchan.message, "new");
-	cls.state = ca_connected;
-}
+			assert(!strcmp(cmd_argv[0], "client_connect"));
+			assert(cls.state != ca_connected);
 
-void CL_ReadPackets (void)
-{
-	while (NET_GetLoopPacket(NS_CLIENT, &net_message))
-	{
-		//
-		// remote command packet
-		//
-		if (*(int *)net_message.data == -1)
-		{
-			CL_ConnectionlessPacket ();
+			Netchan_Setup(NS_CLIENT, &cls.netchan);
+			MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
+			MSG_WriteString(&cls.netchan.message, "new");
+			cls.state = ca_connected;
+
 			continue;
 		}
 
