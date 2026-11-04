@@ -8590,8 +8590,6 @@ void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
 void SV_ExecuteUserCommand (char *s);
 
 void SV_SendServerinfo (client_t *client);
-void SV_UserinfoChanged (client_t *cl);
-
 void Master_Packet (void);
 
 void SV_InitGame (void);
@@ -8607,7 +8605,7 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					float attenuation, float timeofs);
 void SV_BroadcastCommand (char *fmt, ...);
 
-void SV_ExecuteClientMessage (client_t *cl);
+void SV_ExecuteClientMessage();
 
 //
 // sv_ents.c
@@ -10120,23 +10118,23 @@ void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 
-static void SV_DropClient(client_t* drop) {
+static void SV_DropClient() {
 	// add the disconnect
-	MSG_WriteByte(&drop->netchan.message, svc_disconnect);
+	MSG_WriteByte(&svs.client.netchan.message, svc_disconnect);
 
-	if (drop->state == cs_spawned) {
+	if (svs.client.state == cs_spawned) {
 		// call the prog function for removing a client
 		// this will remove the body, among other things
-		ClientDisconnect (drop->edict);
+		ClientDisconnect (svs.client.edict);
 	}
 
-	if (drop->download) {
-		FS_FreeFile (drop->download);
-		drop->download = NULL;
+	if (svs.client.download) {
+		FS_FreeFile (svs.client.download);
+		svs.client.download = NULL;
 	}
 
-	drop->state = cs_zombie;
-	drop->name[0] = 0;
+	svs.client.state = cs_zombie;
+	svs.client.name[0] = 0;
 }
 
 // Updates the cl->ping variables
@@ -10171,8 +10169,6 @@ void SV_CalcPings() {
 	}
 }
 
-client_t* sv_client;
-
 static void SV_ReadPackets() {
 	while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
 		if (*(i32*)net_message.data == -1) {
@@ -10183,8 +10179,6 @@ static void SV_ReadPackets() {
 			Cmd_TokenizeString(line);
 
 			assert(!strcmp(cmd_argv[0],"connect"));
-
-			sv_client = &svs.client;
 
 			i32 edictnum = 1;
 			edict_t* ent = EDICT_NUM(edictnum);
@@ -10206,7 +10200,7 @@ static void SV_ReadPackets() {
 
 		} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 			svs.client.lastmessage = svs.realtime;
-			SV_ExecuteClientMessage(&svs.client);
+			SV_ExecuteClientMessage();
 		}
 	}
 }
@@ -10243,22 +10237,22 @@ void SV_RunGameFrame() {
 }
 
 // Pull specific info from a newly changed userinfo string into a more C freindly form.
-void SV_UserinfoChanged(client_t* cl) {
+void SV_UserinfoChanged() {
 	// call prog code to allow overrides
-	ClientUserinfoChanged(cl->edict, cl->userinfo);
+	ClientUserinfoChanged(svs.client.edict, svs.client.userinfo);
 
 	// name for C code
-	strncpy(cl->name, Info_ValueForKey(cl->userinfo, "name"), sizeof(cl->name)-1);
+	strncpy(svs.client.name, Info_ValueForKey(svs.client.userinfo, "name"), sizeof(svs.client.name)-1);
 
 	// mask off high bit
-	for (int i = 0; i < (int)sizeof(cl->name) ; i++) {
-		cl->name[i] &= 127;
+	for (int i = 0; i < (int)sizeof(svs.client.name) ; i++) {
+		svs.client.name[i] &= 127;
 	}
 
 	// msg command
-	char* val = Info_ValueForKey(cl->userinfo, "msg");
+	char* val = Info_ValueForKey(svs.client.userinfo, "msg");
 	if (strlen(val)) {
-		cl->messagelevel = atoi(val);
+		svs.client.messagelevel = atoi(val);
 	}
 
 }
@@ -10626,22 +10620,22 @@ void SV_New_f (void)
 	edict_t		*ent;
 
 
-	if (sv_client->state != cs_connected)
+	if (svs.client.state != cs_connected)
 	{
 		add_line_to_console_log(STR("New not valid -- already spawned"));
 		return;
 	}
 
 	// send the serverdata
-	MSG_WriteByte (&sv_client->netchan.message, svc_serverdata);
-	MSG_WriteLong (&sv_client->netchan.message, PROTOCOL_VERSION);
-	MSG_WriteLong (&sv_client->netchan.message, svs.spawncount);
+	MSG_WriteByte (&svs.client.netchan.message, svc_serverdata);
+	MSG_WriteLong (&svs.client.netchan.message, PROTOCOL_VERSION);
+	MSG_WriteLong (&svs.client.netchan.message, svs.spawncount);
 
-	playernum = sv_client - &svs.client;
-	MSG_WriteShort (&sv_client->netchan.message, playernum);
+	playernum = 0;
+	MSG_WriteShort (&svs.client.netchan.message, playernum);
 
 	// send full levelname
-	MSG_WriteString (&sv_client->netchan.message, sv.configstrings[CS_NAME]);
+	MSG_WriteString (&svs.client.netchan.message, sv.configstrings[CS_NAME]);
 
 	//
 	// game server
@@ -10651,12 +10645,12 @@ void SV_New_f (void)
 		// set up the entity for the client
 		ent = EDICT_NUM(playernum+1);
 		ent->s.number = playernum+1;
-		sv_client->edict = ent;
-		memset (&sv_client->lastcmd, 0, sizeof(sv_client->lastcmd));
+		svs.client.edict = ent;
+		memset (&svs.client.lastcmd, 0, sizeof(svs.client.lastcmd));
 
 		// begin fetching configstrings
-		MSG_WriteByte (&sv_client->netchan.message, svc_stufftext);
-		MSG_WriteString (&sv_client->netchan.message, va("cmd configstrings %i 0\n",svs.spawncount) );
+		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
+		MSG_WriteString (&svs.client.netchan.message, va("cmd configstrings %i 0\n",svs.spawncount) );
 	}
 
 }
@@ -10671,7 +10665,7 @@ void SV_Configstrings_f (void)
 	int			start;
 
 
-	if (sv_client->state != cs_connected)
+	if (svs.client.state != cs_connected)
 	{
 		add_line_to_console_log(STR("configstrings not valid -- already spawned"));
 		return;
@@ -10689,14 +10683,14 @@ void SV_Configstrings_f (void)
 
 	// write a packet full of data
 
-	while ( sv_client->netchan.message.cursize < MAX_MSGLEN/2
+	while ( svs.client.netchan.message.cursize < MAX_MSGLEN/2
 		&& start < MAX_CONFIGSTRINGS)
 	{
 		if (sv.configstrings[start][0])
 		{
-			MSG_WriteByte (&sv_client->netchan.message, svc_configstring);
-			MSG_WriteShort (&sv_client->netchan.message, start);
-			MSG_WriteString (&sv_client->netchan.message, sv.configstrings[start]);
+			MSG_WriteByte (&svs.client.netchan.message, svc_configstring);
+			MSG_WriteShort (&svs.client.netchan.message, start);
+			MSG_WriteString (&svs.client.netchan.message, sv.configstrings[start]);
 		}
 		start++;
 	}
@@ -10705,13 +10699,13 @@ void SV_Configstrings_f (void)
 
 	if (start == MAX_CONFIGSTRINGS)
 	{
-		MSG_WriteByte (&sv_client->netchan.message, svc_stufftext);
-		MSG_WriteString (&sv_client->netchan.message, va("cmd baselines %i 0\n",svs.spawncount) );
+		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
+		MSG_WriteString (&svs.client.netchan.message, va("cmd baselines %i 0\n",svs.spawncount) );
 	}
 	else
 	{
-		MSG_WriteByte (&sv_client->netchan.message, svc_stufftext);
-		MSG_WriteString (&sv_client->netchan.message, va("cmd configstrings %i %i\n",svs.spawncount, start) );
+		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
+		MSG_WriteString (&svs.client.netchan.message, va("cmd configstrings %i %i\n",svs.spawncount, start) );
 	}
 }
 
@@ -10727,7 +10721,7 @@ void SV_Baselines_f (void)
 	entity_state_t	*base;
 
 
-	if (sv_client->state != cs_connected)
+	if (svs.client.state != cs_connected)
 	{
 		add_line_to_console_log(STR("baselines not valid -- already spawned"));
 		return;
@@ -10747,14 +10741,14 @@ void SV_Baselines_f (void)
 
 	// write a packet full of data
 
-	while ( sv_client->netchan.message.cursize <  MAX_MSGLEN/2
+	while ( svs.client.netchan.message.cursize <  MAX_MSGLEN/2
 		&& start < MAX_EDICTS)
 	{
 		base = &sv.baselines[start];
 		if (base->modelindex || base->sound || base->effects)
 		{
-			MSG_WriteByte (&sv_client->netchan.message, svc_spawnbaseline);
-			MSG_WriteDeltaEntity (&nullstate, base, &sv_client->netchan.message, true, true);
+			MSG_WriteByte (&svs.client.netchan.message, svc_spawnbaseline);
+			MSG_WriteDeltaEntity (&nullstate, base, &svs.client.netchan.message, true, true);
 		}
 		start++;
 	}
@@ -10763,13 +10757,13 @@ void SV_Baselines_f (void)
 
 	if (start == MAX_EDICTS)
 	{
-		MSG_WriteByte (&sv_client->netchan.message, svc_stufftext);
-		MSG_WriteString (&sv_client->netchan.message, va("precache %i\n", svs.spawncount) );
+		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
+		MSG_WriteString (&svs.client.netchan.message, va("precache %i\n", svs.spawncount) );
 	}
 	else
 	{
-		MSG_WriteByte (&sv_client->netchan.message, svc_stufftext);
-		MSG_WriteString (&sv_client->netchan.message, va("cmd baselines %i %i\n",svs.spawncount, start) );
+		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
+		MSG_WriteString (&svs.client.netchan.message, va("cmd baselines %i %i\n",svs.spawncount, start) );
 	}
 }
 
@@ -10789,7 +10783,7 @@ void SV_Begin_f (void)
 		return;
 	}
 
-	sv_client->state = cs_spawned;
+	svs.client.state = cs_spawned;
 
 	// call the game begin function
 	ClientBegin (sv_player);
@@ -10811,36 +10805,36 @@ void SV_NextDownload_f (void)
 	int		percent;
 	int		size;
 
-	if (!sv_client->download)
+	if (!svs.client.download)
 		return;
 
-	r = sv_client->downloadsize - sv_client->downloadcount;
+	r = svs.client.downloadsize - svs.client.downloadcount;
 	if (r > 1024)
 		r = 1024;
 
-	MSG_WriteByte (&sv_client->netchan.message, svc_download);
-	MSG_WriteShort (&sv_client->netchan.message, r);
+	MSG_WriteByte (&svs.client.netchan.message, svc_download);
+	MSG_WriteShort (&svs.client.netchan.message, r);
 
-	sv_client->downloadcount += r;
-	size = sv_client->downloadsize;
+	svs.client.downloadcount += r;
+	size = svs.client.downloadsize;
 	if (!size)
 		size = 1;
-	percent = sv_client->downloadcount*100/size;
-	MSG_WriteByte (&sv_client->netchan.message, percent);
-	SZ_Write (&sv_client->netchan.message,
-		sv_client->download + sv_client->downloadcount - r, r);
+	percent = svs.client.downloadcount*100/size;
+	MSG_WriteByte (&svs.client.netchan.message, percent);
+	SZ_Write (&svs.client.netchan.message,
+		svs.client.download + svs.client.downloadcount - r, r);
 
-	if (sv_client->downloadcount != sv_client->downloadsize)
+	if (svs.client.downloadcount != svs.client.downloadsize)
 		return;
 
-	FS_FreeFile (sv_client->download);
-	sv_client->download = NULL;
+	FS_FreeFile (svs.client.download);
+	svs.client.download = NULL;
 }
 
 static void SV_BeginDownload_f() {
-	MSG_WriteByte(&sv_client->netchan.message, svc_download);
-	MSG_WriteShort(&sv_client->netchan.message, -1);
-	MSG_WriteByte(&sv_client->netchan.message, 0);
+	MSG_WriteByte(&svs.client.netchan.message, svc_download);
+	MSG_WriteShort(&svs.client.netchan.message, -1);
+	MSG_WriteByte(&svs.client.netchan.message, 0);
 }
 
 typedef struct {
@@ -10867,7 +10861,7 @@ void SV_ExecuteUserCommand (char *s)
 	ucmd_t	*u;
 
 	Cmd_TokenizeString(s);
-	sv_player = sv_client->edict;
+	sv_player = svs.client.edict;
 
 	for (u=ucmds ; u->name ; u++)
 		if (!strcmp (Cmd_Argv(0), u->name) )
@@ -10887,7 +10881,7 @@ static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
 #define	MAX_STRINGCMDS	8
 
 // The current net_message is parsed for the given client
-void SV_ExecuteClientMessage (client_t *cl)
+void SV_ExecuteClientMessage()
 {
 	int		c;
 	char	*s;
@@ -10901,8 +10895,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 	bool	move_issued;
 	int		lastframe;
 
-	sv_client = cl;
-	sv_player = sv_client->edict;
+	sv_player = svs.client.edict;
 
 	// only allow one move command
 	move_issued = false;
@@ -10913,7 +10906,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 		if (net_message.readcount > net_message.cursize)
 		{
 			add_line_to_console_log(STR("SV_ReadClientMessage: badread"));
-			SV_DropClient (cl);
+			SV_DropClient();
 			return;
 		}
 
@@ -10925,15 +10918,15 @@ void SV_ExecuteClientMessage (client_t *cl)
 		{
 		default:
 			add_line_to_console_log(STR("SV_ReadClientMessage: unknown command char"));
-			SV_DropClient (cl);
+			SV_DropClient();
 			return;
 
 		case clc_nop:
 			break;
 
 		case clc_userinfo:
-			strncpy (cl->userinfo, MSG_ReadString (&net_message), sizeof(cl->userinfo)-1);
-			SV_UserinfoChanged (cl);
+			strncpy(svs.client.userinfo, MSG_ReadString(&net_message), sizeof(svs.client.userinfo)-1);
+			SV_UserinfoChanged();
 			break;
 
 		case clc_move:
@@ -10944,11 +10937,11 @@ void SV_ExecuteClientMessage (client_t *cl)
 			checksumIndex = net_message.readcount;
 			checksum = MSG_ReadByte (&net_message);
 			lastframe = MSG_ReadLong (&net_message);
-			if (lastframe != cl->lastframe) {
-				cl->lastframe = lastframe;
-				if (cl->lastframe > 0) {
-					cl->frame_latency[cl->lastframe&(LATENCY_COUNTS-1)] =
-						svs.realtime - cl->frames[cl->lastframe & UPDATE_MASK].senttime;
+			if (lastframe != svs.client.lastframe) {
+				svs.client.lastframe = lastframe;
+				if (svs.client.lastframe > 0) {
+					svs.client.frame_latency[svs.client.lastframe&(LATENCY_COUNTS-1)] =
+						svs.realtime - svs.client.frames[svs.client.lastframe & UPDATE_MASK].senttime;
 				}
 			}
 
@@ -10957,9 +10950,9 @@ void SV_ExecuteClientMessage (client_t *cl)
 			MSG_ReadDeltaUsercmd (&net_message, &oldest, &oldcmd);
 			MSG_ReadDeltaUsercmd (&net_message, &oldcmd, &newcmd);
 
-			if ( cl->state != cs_spawned )
+			if ( svs.client.state != cs_spawned )
 			{
-				cl->lastframe = -1;
+				svs.client.lastframe = -1;
 				break;
 			}
 
@@ -10967,32 +10960,32 @@ void SV_ExecuteClientMessage (client_t *cl)
 			calculatedChecksum = COM_BlockSequenceCRCByte (
 				net_message.data + checksumIndex + 1,
 				net_message.readcount - checksumIndex - 1,
-				cl->netchan.incoming_sequence);
+				svs.client.netchan.incoming_sequence);
 
 			if (calculatedChecksum != checksum)
 			{
 				return;
 			}
 
-			net_drop = cl->netchan.dropped;
+			net_drop = svs.client.netchan.dropped;
 			if (net_drop < 20)
 			{
 				while (net_drop > 2)
 				{
-					SV_ClientThink (cl, &cl->lastcmd);
+					SV_ClientThink (&svs.client, &svs.client.lastcmd);
 
 					net_drop--;
 				}
 				if (net_drop > 1)
-					SV_ClientThink (cl, &oldest);
+					SV_ClientThink (&svs.client, &oldest);
 
 				if (net_drop > 0)
-					SV_ClientThink (cl, &oldcmd);
+					SV_ClientThink (&svs.client, &oldcmd);
 
 			}
-			SV_ClientThink (cl, &newcmd);
+			SV_ClientThink (&svs.client, &newcmd);
 
-			cl->lastcmd = newcmd;
+			svs.client.lastcmd = newcmd;
 			break;
 
 		case clc_stringcmd:
@@ -11002,7 +10995,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 			if (++stringCmdCount < MAX_STRINGCMDS)
 				SV_ExecuteUserCommand (s);
 
-			if (cl->state == cs_zombie)
+			if (svs.client.state == cs_zombie)
 				return;	// disconnect command
 			break;
 		}
