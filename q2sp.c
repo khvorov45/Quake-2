@@ -499,12 +499,6 @@ typedef enum {
 
 // TODO sort out this mess
 
-#define	MAX_OSPATH 128 // max length of a filesystem pathname
-
-#define	MAX_MSGLEN	1400
-#define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
-#define	MAX_LATENT	32
-
 typedef enum {
 	NS_CLIENT,
 	NS_SERVER
@@ -514,7 +508,6 @@ typedef struct {
 	enum {
 		NA_LOOPBACK,
 	} type;
-
 	u8			ip[4];
 	u8			ipx[10];
 	unsigned short	port;
@@ -529,6 +522,7 @@ typedef struct {
 	i32 readcount;
 } sizebuf_t;
 
+#define	MAX_MSGLEN	1400
 typedef struct {
 	bool	fatal_error;
 	netsrc_t	sock;
@@ -575,19 +569,6 @@ static struct {
 	float		connect_time;			// for connection retransmits
 	netchan_t	netchan;
 	int			challenge;				// from the server to use for connecting
-	FILE*		download;				// file transfer from server
-	char		downloadtempname[MAX_OSPATH];
-	char		downloadname[MAX_OSPATH];
-	int			downloadnumber;
-
-	enum {
-		dl_none,
-		dl_model,
-		dl_sound,
-		dl_skin,
-		dl_single
-	} downloadtype;
-	int downloadpercent;
 } cls;
 
 //
@@ -6674,32 +6655,13 @@ u8 COM_BlockSequenceCRCByte(u8 *base, int length, int sequence)
 	return crc;
 }
 
-// if a packfile directory differs from this, it is assumed to be hacked
-// Full version
-#define	PAK0_CHECKSUM	0x40e614e0
-// Demo
-//#define	PAK0_CHECKSUM	0xb2c6d7ea
-// OEM
-//#define	PAK0_CHECKSUM	0x78e135c
-
-/*
-=============================================================================
-
-QUAKE FILESYSTEM
-
-=============================================================================
-*/
-
-
-//
-// in memory
-//
-
 typedef struct
 {
 	char	name[MAX_QPATH];
 	int		filepos, filelen;
 } packfile_t;
+
+#define	MAX_OSPATH 128 // max length of a filesystem pathname
 
 typedef struct pack_s
 {
@@ -16240,12 +16202,6 @@ void CL_Disconnect() {
 
 		CL_ClearState();
 
-		// stop download
-		if (cls.download) {
-			fclose(cls.download);
-			cls.download = NULL;
-		}
-
 		cls.state = ca_disconnected;
 	}
 }
@@ -16300,10 +16256,6 @@ void CL_Packet_f (void)
 // Just sent as a hint to the client that they should drop to full console
 void CL_Changing_f(void* data) {
 	UNUSED(data);
-
-	//if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
-	if (cls.download)
-		return;
 
 	SCR_BeginLoadingPlaque ();
 	cls.state = ca_connected;	// not active anymore, but not disconnected
@@ -17805,11 +17757,6 @@ void CL_ParseServerMessage ()
 
 		case svc_reconnect:
 			add_line_to_console_log(STR("Server disconnected, reconnecting"));
-			if (cls.download) {
-				//ZOID, close download
-				fclose (cls.download);
-				cls.download = NULL;
-			}
 			cls.state = ca_connecting;
 			cls.connect_time = -99999;
 			break;
