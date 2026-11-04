@@ -95,6 +95,12 @@ static void* arena_alloc_bytes(Arena* arena, i64 size) {
 	return result;
 }
 
+static void* arena_alloc_bytes_zeroed(Arena* arena, i64 size) {
+	void* result = arena_alloc_bytes(arena, size);
+	zero_memory(result, size);
+	return result;
+}
+
 typedef struct {
 	Arena* arena;
 	i64 used_when_started;
@@ -130,6 +136,7 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 	arena->used += bytes_to_keep;
 }
 
+#define arena_alloc_one(arena, type) (type*)arena_alloc_bytes_zeroed(arena, sizeof(type))
 #define arena_alloc_slice(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), (count)}
 #define arena_alloc_fixed_cap(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), 0, (count)}
 #define append_fixed_cap(arr, val) do {assert((arr)->len < (arr)->cap); (arr)->ptr[(arr)->len++] = val;} while(0)
@@ -138,6 +145,13 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 //
 // SECTION Strings
 //
+
+typedef struct {char buf[1024]; i64 len;} Fixed_String;
+
+static String string_from_fixed_string(Fixed_String* fstr) {
+	String result = {fstr->buf, fstr->len};
+	return result;
+}
 
 // NOTE: STR("text") is the string literal for our String type
 #define STR(text) ((String){.ptr = (char*)(text), .len = sizeof(text) - 1})
@@ -311,6 +325,7 @@ typedef enum {
 	Key_Code_Pause = 255,
 	Key_Code_Count,
 } Partial_Key_Code;
+typedef struct {Fixed_String values[Key_Code_Count];} Key_Bindings;
 
 static String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Tab] = STR("Tab"),
@@ -460,18 +475,10 @@ static String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Pause] = STR("Pause"),
 };
 
-static String get_key_code_string(i64 key_code) {
-	assert(key_code >= 0 && key_code < Key_Code_Count);
-	String result = Key_Code_Strings[key_code];
-	assert(result.ptr && result.len > 0);
-	return result;
-}
-
 static u8 get_key_code_number(String string) {
 	u8 result = 0;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
-		String key_code_string = Key_Code_Strings[key_code];
-		if (streq(string, key_code_string)) {
+		if (streq(string, Key_Code_Strings[key_code])) {
 			result = (u8)key_code;
 			break;
 		}
@@ -479,11 +486,13 @@ static u8 get_key_code_number(String string) {
 	return result;
 }
 
-typedef struct {
-	char* values[Key_Code_Count];
-} Keybindings;
-
-static Keybindings keybindings;
+static void set_key_binding(Key_Bindings* key_bindings, u8 key_code, String binding) {
+	Fixed_String* fstr = key_bindings->values + key_code;
+	assert((i64)carray_count(fstr->buf) > binding.len);
+	fstr->len = binding.len;
+	copy_bytes(fstr->buf, binding.ptr, binding.len);
+	fstr->buf[fstr->len] = 0;
+}
 
 //
 // SECTION Game
@@ -565,7 +574,7 @@ static struct {
 // SECTION Console log
 //
 
-typedef struct {char buf[1024]; i64 len; float timestamp;} Console_Line;
+typedef struct {Fixed_String fstr; float timestamp;} Console_Line;
 typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log;
 static struct {
 	Console_Log log; // NOTE: Circular buffer
@@ -585,7 +594,7 @@ static Log_Line get_log_line(i64 recency_index) {
 	}
 	assert(actual_index >= 0 && actual_index < console.log.cap);
 	Console_Line* line = console.log.ptr + actual_index;
-	Log_Line result = {.text = {line->buf, line->len}, .timestamp = line->timestamp};
+	Log_Line result = {.text = string_from_fixed_string(&line->fstr), .timestamp = line->timestamp};
 	return result;
 }
 
@@ -595,10 +604,10 @@ static void add_line_to_console_log(String line) {
 	Console_Line* console_line = console.log.ptr + console.log.head;
 	console.log.head = (console.log.head + 1) % console.log.cap;
 
-	assert((i64)carray_count(console_line->buf) > line.len);
-	copy_bytes(console_line->buf, line.ptr, line.len);
-	console_line->len = line.len;
-	console_line->buf[console_line->len] = 0;
+	assert((i64)carray_count(console_line->fstr.buf) > line.len);
+	copy_bytes(console_line->fstr.buf, line.ptr, line.len);
+	console_line->fstr.len = line.len;
+	console_line->fstr.buf[console_line->fstr.len] = 0;
 	console_line->timestamp = cls.realtime;
 }
 
@@ -612,19 +621,19 @@ typedef struct {String_Command* ptr; i64 len;} String_Commands;
 
 typedef struct String_Command_Data {
 	Client_State* client_state;
-	Keybindings* key_bindings;
+	Key_Bindings* key_bindings;
 } String_Command_Data;
 
 typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
 
-static void builtin_string_command_quit(void* data) {
-	UNUSED(data);
+static void builtin_string_command_quit(void* ctx) {
+	UNUSED(ctx);
 	context.exit_process();
 }
 
 static void builtin_string_command_write_config(void* ctx) {
 	Client_State* client_state = ((String_Command_Context*)ctx)->data.client_state;
-	Keybindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 
 	// TODO kinda wanna get rid of this condition
 	if (*client_state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
@@ -632,11 +641,11 @@ static void builtin_string_command_write_config(void* ctx) {
 		string_builder_write_string(&builder, STR("// generated by quake, do not modify\n"));
 
 		// NOTE: Keybindings
-		for (i64 ind = 0; ind < Key_Code_Count; ind++) {
-			char* value_cstring = key_bindings->values[ind];
-			if (value_cstring && value_cstring[0]) {
-				String key_string = get_key_code_string(ind);
-				String strs[] = {STR("bind "), key_string, STR(" \""), string_from_cstring(value_cstring), STR("\"\n")};
+		for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+			String value = string_from_fixed_string(key_bindings->values + key_code);
+			if (value.len) {
+				String key = Key_Code_Strings[key_code];
+				String strs[] = {STR("bind "), key, STR(" \""), value, STR("\"\n")};
 				for (String* str = strs; str - strs < (i64)carray_count(strs); str++) {
 					string_builder_write_string(&builder, *str);
 				}
@@ -648,8 +657,22 @@ static void builtin_string_command_write_config(void* ctx) {
 	}}
 }
 
-// TODO sort out this mess
+static void builtin_string_command_cmdlist(void* ctx) {
+	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
+	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
+		add_line_to_console_log(cmd->name);
+	}
+}
 
+static void builtin_string_command_unbindall(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	for (Fixed_String* fstr = key_bindings->values; fstr - key_bindings->values < Key_Code_Count; fstr++) {
+		fstr->len = 0;
+		fstr->buf[fstr->len] = 0;
+	}
+}
+
+// TODO remove
 #define	MAX_STRING_CHARS 1024
 #define	MAX_STRING_TOKENS 80
 #define	MAX_ALIAS_NAME 32
@@ -658,6 +681,28 @@ static void builtin_string_command_write_config(void* ctx) {
 static int cmd_argc;
 static char* cmd_argv[MAX_STRING_TOKENS];
 static char cmd_args[MAX_STRING_CHARS];
+
+static void builtin_string_command_unbind(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+
+	if (cmd_argc != 2) {
+		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
+		return;
+	}
+
+	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
+	if (key_code) {
+		set_key_binding(key_bindings, key_code, STR(""));
+	} else {
+		add_line_to_console_log(STR("invalid key"));
+	}
+}
+
+// TODO: Move the builtin procs here
+
+//
+// SECTION OG code
+//
 
 #define	TAGGED_MALLOC_MAGIC 0x1d1d
 
@@ -708,51 +753,6 @@ static void* tml_alloc_with_tag(i32 size, i32 tag) {
 }
 
 static void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
-
-void Key_SetBinding (int keynum, char *binding)
-{
-	char	*new;
-	int		l;
-
-	if (keynum == -1)
-		return;
-
-	// free old bindings
-	if (keybindings.values[keynum])
-	{
-		tml_free (keybindings.values[keynum]);
-		keybindings.values[keynum] = NULL;
-	}
-
-	// allocate memory for new binding
-	l = strlen (binding);
-	new = tml_alloc (l+1);
-	strcpy (new, binding);
-	new[l] = 0;
-	keybindings.values[keynum] = new;
-}
-
-static void Key_Unbind_f(void* data) {
-	UNUSED(data);
-
-	if (cmd_argc != 2) {
-		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
-		return;
-	}
-
-	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
-	if (key_code) {
-		Key_SetBinding(key_code, "");
-	} else {
-		add_line_to_console_log(STR("invalid key"));
-	}
-}
-
-// TODO: Move the builtin procs here
-
-//
-// SECTION OG code
-//
 
 static short LittleShort(short l) {return l;}
 static int LittleLong(int l) {return l;}
@@ -2291,13 +2291,6 @@ static void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 			cmd_wait = false;
 			break;
 		}
-	}
-}
-
-static void Cmd_List_f(void* ctx) {
-	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
-	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
-		add_line_to_console_log(cmd->name);
 	}
 }
 
@@ -15875,9 +15868,11 @@ void SetStringHighBit (char *s)
 
 void Draw_Pic(int x, int y, char *pic);
 
+static Key_Bindings* temp_global_key_bindings;
+
 void CL_DrawInventory (void)
 {
-	int		i, j;
+	int		i;
 	int		num, selected_num, item;
 	int		index[MAX_ITEMS];
 	char	string[1024];
@@ -15920,18 +15915,19 @@ void CL_DrawInventory (void)
 	Inv_DrawString (x, y, "hotkey ### item");
 	Inv_DrawString (x, y+8, "------ --- ----");
 	y += 16;
-	for (i=top ; i<num && i < top+DISPLAY_ITEMS ; i++)
-	{
+	for (i=top ; i<num && i < top+DISPLAY_ITEMS ; i++) {
 		item = index[i];
 		// search for a binding
 		Com_sprintf (binding, sizeof(binding), "use %s", cl.configstrings[CS_ITEMS+item]);
 		bind = "";
-		for (j=0 ; j<Key_Code_Count ; j++)
-			if (keybindings.values[j] && !Q_stricmp (keybindings.values[j], binding))
+		for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+			Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
+			if (this_binding->len && !Q_stricmp(this_binding->buf, binding))
 			{
-				bind = get_key_code_string(j).ptr;
+				bind = Key_Code_Strings[key_code].ptr;
 				break;
 			}
+		}
 
 		Com_sprintf (string, sizeof(string), "%6s %3i %s", bind, cl.inventory[item],
 			cl.configstrings[CS_ITEMS+item] );
@@ -20859,19 +20855,8 @@ void Key_Console(int key) {
 	} // NOTE: ignore anything else
 }
 
-static void Key_Unbindall_f (void* data) {
-	UNUSED(data);
-
-	int		i;
-
-	for (i=0 ; i<256 ; i++)
-		if (keybindings.values[i])
-			Key_SetBinding (i, "");
-}
-
-static void Key_Bind_f(void* data)
-{
-	UNUSED(data);
+static void builtin_string_command_bind(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 
 	int			i;
 	char		cmd[1024];
@@ -20889,8 +20874,8 @@ static void Key_Bind_f(void* data)
 
 	if (cmd_argc == 2)
 	{
-		if (keybindings.values[key_code]) {
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_cstring(keybindings.values[key_code]))));
+		if (key_bindings->values[key_code].len) {
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code))));
 		} else {
 			add_line_to_console_log(STR("key not bound"));
 		}
@@ -20906,14 +20891,14 @@ static void Key_Bind_f(void* data)
 			strcat (cmd, " ");
 	}
 
-	Key_SetBinding (key_code, cmd);
+	set_key_binding(key_bindings, key_code, string_from_cstring(cmd));
 }
 
-static void Key_Bindlist_f(void* data) {
-	UNUSED(data);
-	for (i64 i = 0; i < Key_Code_Count; i++) {
-		if (keybindings.values[i] && keybindings.values[i][0]) {
-			String_Slice line = STRS(get_key_code_string(i), STR(" "), string_from_cstring(keybindings.values[i]));
+static void Key_Bindlist_f(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+		if (key_bindings->values[key_code].len) {
+			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
 			add_line_to_console_log(concatenate_strings(&context.memory.temp, line));
 		}
 	}
@@ -20925,7 +20910,7 @@ void Key_Event (int key, bool down, unsigned time)
 {
 	void M_Keydown (int key);
 
-	char	*kb;
+	char	*kb = 0;
 	char	cmd[1024];
 
 	// hack for modal presses
@@ -20949,7 +20934,7 @@ void Key_Event (int key, bool down, unsigned time)
 			&& key_repeats[key] > 1)
 			return;	// ignore most autorepeats
 
-		if (key >= 200 && !keybindings.values[key]) {
+		if (key >= 200 && !temp_global_key_bindings->values[key].len) {
 			add_line_to_console_log(STR("unbound, hit F4 to bind"));
 		}
 	}
@@ -21010,16 +20995,16 @@ void Key_Event (int key, bool down, unsigned time)
 			anykeydown = 0;
 	}
 
-//
-// key up events only generate commands if the game key binding is
-// a button command (leading + sign).  These will occur even in console mode,
-// to keep the character from continuing an action started before a console
-// switch.  Button commands include the kenum as a parameter, so multiple
-// downs can be matched with ups
-//
+	//
+	// key up events only generate commands if the game key binding is
+	// a button command (leading + sign).  These will occur even in console mode,
+	// to keep the character from continuing an action started before a console
+	// switch.  Button commands include the kenum as a parameter, so multiple
+	// downs can be matched with ups
+	//
 	if (!down)
 	{
-		kb = keybindings.values[key];
+		kb = temp_global_key_bindings->values[key].buf;
 		if (kb && kb[0] == '+')
 		{
 			Com_sprintf (cmd, sizeof(cmd), "-%s %i %i\n", kb+1, key, time);
@@ -21027,7 +21012,7 @@ void Key_Event (int key, bool down, unsigned time)
 		}
 		if (keyshift[key] != key)
 		{
-			kb = keybindings.values[keyshift[key]];
+			kb = temp_global_key_bindings->values[keyshift[key]].buf;
 			if (kb && kb[0] == '+')
 			{
 				Com_sprintf (cmd, sizeof(cmd), "-%s %i %i\n", kb+1, key, time);
@@ -21037,14 +21022,14 @@ void Key_Event (int key, bool down, unsigned time)
 		return;
 	}
 
-//
-// if not a consolekey, send to the interpreter no matter what mode is
-//
+	//
+	// if not a consolekey, send to the interpreter no matter what mode is
+	//
 	if ( (cls.key_dest == key_menu && menubound[key])
 	|| (cls.key_dest == key_console && !consolekeys[key])
 	|| (cls.key_dest == key_game && ( cls.state == ca_active || !consolekeys[key] ) ) )
 	{
-		kb = keybindings.values[key];
+		kb = temp_global_key_bindings->values[key].buf;
 		if (kb)
 		{
 			if (kb[0] == '+')
@@ -21627,7 +21612,7 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 	int		count;
 	int		j;
 	int		l;
-	char	*b;
+	char	*b = 0;
 
 	twokeys[0] = twokeys[1] = -1;
 	l = strlen(command);
@@ -21635,7 +21620,7 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 
 	for (j=0 ; j<256 ; j++)
 	{
-		b = keybindings.values[j];
+		b = temp_global_key_bindings->values[j].buf;
 		if (!b)
 			continue;
 		if (!strncmp (b, command, l) )
@@ -21700,7 +21685,7 @@ static void DrawKeyBindingFunc( void *self )
 		int x;
 		const char *name;
 
-		name = get_key_code_string(keys[0]).ptr;
+		name = Key_Code_Strings[keys[0]].ptr;
 
 		Menu_DrawString( a->generic.x + a->generic.parent->x + 16, a->generic.y + a->generic.parent->y, name );
 
@@ -21709,7 +21694,7 @@ static void DrawKeyBindingFunc( void *self )
 		if (keys[1] != -1)
 		{
 			Menu_DrawString( a->generic.x + a->generic.parent->x + 24 + x, a->generic.y + a->generic.parent->y, "or" );
-			Menu_DrawString( a->generic.x + a->generic.parent->x + 48 + x, a->generic.y + a->generic.parent->y, get_key_code_string(keys[1]).ptr );
+			Menu_DrawString( a->generic.x + a->generic.parent->x + 48 + x, a->generic.y + a->generic.parent->y, Key_Code_Strings[keys[1]].ptr );
 		}
 	}
 }
@@ -22131,17 +22116,18 @@ static void M_UnbindCommand (char *command)
 {
 	int		j;
 	int		l;
-	char	*b;
+	char	*b = 0;
 
 	l = strlen(command);
 
-	for (j=0 ; j<256 ; j++)
-	{
-		b = keybindings.values[j];
-		if (!b)
+	for (j=0 ; j<256 ; j++) {
+		b = temp_global_key_bindings->values[j].buf;
+		if (!b) {
 			continue;
-		if (!strncmp (b, command, l) )
-			Key_SetBinding (j, "");
+		}
+		if (!strncmp (b, command, l) ) {
+			set_key_binding(temp_global_key_bindings, j, STR(""));
+		}
 	}
 }
 
@@ -22170,7 +22156,7 @@ static char* Keys_MenuKey( int key )
 		{
 			char cmd[1024];
 
-			Com_sprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", get_key_code_string(key).ptr, bindnames[item->generic.localdata[0]][0]);
+			Com_sprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_Code_Strings[key].ptr, bindnames[item->generic.localdata[0]][0]);
 			Cbuf_InsertText (cmd);
 		}
 
@@ -62177,7 +62163,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	tagged_malloc_head.next = tagged_malloc_head.prev = &tagged_malloc_head;
 
 	// NOTE: Key Init
+	Key_Bindings* key_bindings = arena_alloc_one(&context.memory.perm, Key_Bindings);
 	// TODO: unglobal
+	temp_global_key_bindings = key_bindings;
 	{
 		console_input = (Console_Input)arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
 		clear_console_input();
@@ -62258,22 +62246,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	temp_memory_block(&context.memory.temp) {
 		string_command_context.data = (String_Command_Data){
 			.client_state = &cls.state,
-			.key_bindings = &keybindings,
+			.key_bindings = key_bindings,
 		};
 
 		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), builtin_string_command_write_config}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), builtin_string_command_quit}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), Cmd_List_f}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), builtin_string_command_write_config}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), builtin_string_command_cmdlist}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), builtin_string_command_bind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 
 		// TODO: Remove non-essentials
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("exec"), Cmd_Exec_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("alias"), Cmd_Alias_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), Key_Bind_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), Key_Unbind_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), Key_Unbindall_f}));
+
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
