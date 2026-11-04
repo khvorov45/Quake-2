@@ -505,15 +505,6 @@ typedef enum {
 } netsrc_t;
 
 typedef struct {
-	enum {
-		NA_LOOPBACK,
-	} type;
-	u8			ip[4];
-	u8			ipx[10];
-	unsigned short	port;
-} netadr_t;
-
-typedef struct {
 	bool allowoverflow;
 	bool overflowed;		// set to true if the buffer size failed
 	u8* data;
@@ -529,7 +520,6 @@ typedef struct {
 	int			dropped;			// between last packet and previous
 	int			last_received;
 	int			last_sent;			// for retransmits
-	netadr_t	remote_address;
 	int			incoming_sequence;
 	int			incoming_acknowledged;
 	int			incoming_reliable_acknowledged;	// single bit
@@ -1959,14 +1949,11 @@ static void FS_FreeFile(void* buffer);
 
 static int server_state;
 
-netadr_t	net_from;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
 
-bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
+bool NET_GetLoopPacket (netsrc_t sock, sizebuf_t *net_message);
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
-
-void NET_StringToAdr(netadr_t* a);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
@@ -7124,12 +7111,10 @@ void Netchan_OutOfBandPrint(int net_socket, char *format, ...) {
 }
 
 // called to open a channel to a remote system
-void Netchan_Setup (netsrc_t sock, netchan_t *chan, netadr_t adr)
-{
+void Netchan_Setup(netsrc_t sock, netchan_t *chan) {
 	memset (chan, 0, sizeof(*chan));
 
 	chan->sock = sock;
-	chan->remote_address = adr;
 	chan->last_received = curtime;
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
@@ -10182,7 +10167,7 @@ static void SVC_DirectConnect() {
 	assert(client_connect_result);
 
 	Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
-	Netchan_Setup(NS_SERVER, &svs.client.netchan , net_from);
+	Netchan_Setup(NS_SERVER, &svs.client.netchan);
 
 	svs.client.state = cs_connected;
 
@@ -10240,7 +10225,7 @@ void SV_ReadPackets (void)
 	int			i;
 	client_t	*cl;
 
-	while (NET_GetLoopPacket (NS_SERVER, &net_from, &net_message))
+	while (NET_GetLoopPacket (NS_SERVER, &net_message))
 	{
 		// check for connectionless packet (0xffffffff) first
 		if (*(int *)net_message.data == -1)
@@ -11944,9 +11929,6 @@ extern	cdlight_t	cl_dlights[MAX_DLIGHTS];
 #define	MAX_PARSE_ENTITIES	1024
 extern	entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
-//=============================================================================
-
-extern	netadr_t	net_from;
 extern	sizebuf_t	net_message;
 
 void DrawString (int x, int y, char *s);
@@ -16156,7 +16138,7 @@ static void CL_ConnectionlessPacket() {
 	assert(!strcmp(cmd_argv[0], "client_connect"));
 	assert(cls.state != ca_connected);
 
-	Netchan_Setup(NS_CLIENT, &cls.netchan, net_from);
+	Netchan_Setup(NS_CLIENT, &cls.netchan);
 	MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
 	MSG_WriteString(&cls.netchan.message, "new");
 	cls.state = ca_connected;
@@ -16164,7 +16146,7 @@ static void CL_ConnectionlessPacket() {
 
 void CL_ReadPackets (void)
 {
-	while (NET_GetLoopPacket (NS_CLIENT, &net_from, &net_message))
+	while (NET_GetLoopPacket(NS_CLIENT, &net_message))
 	{
 		//
 		// remote command packet
@@ -61482,11 +61464,7 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-static void NET_StringToAdr(netadr_t *a) {
-	*a = (netadr_t){.type = NA_LOOPBACK};
-}
-
-bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
+bool NET_GetLoopPacket(netsrc_t sock, sizebuf_t *net_message)
 {
 	int		i;
 	loopback_t	*loop;
@@ -61499,13 +61477,12 @@ bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_messag
 	if (loop->get >= loop->send)
 		return false;
 
-	i = loop->get & (MAX_LOOPBACK-1);
+	i = loop->get & (MAX_LOOPBACK - 1);
 	loop->get++;
 
-	memcpy (net_message->data, loop->msgs[i].data, loop->msgs[i].datalen);
+	memcpy(net_message->data, loop->msgs[i].data, loop->msgs[i].datalen);
 	net_message->cursize = loop->msgs[i].datalen;
-	memset (net_from, 0, sizeof(*net_from));
-	net_from->type = NA_LOOPBACK;
+
 	return true;
 
 }
