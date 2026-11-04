@@ -497,6 +497,8 @@ typedef enum {
 	ca_active			// game views should be displayed
 } Client_State;
 
+// TODO sort out this mess
+
 #define	MAX_OSPATH 128 // max length of a filesystem pathname
 
 #define	MAX_MSGLEN	1400
@@ -511,10 +513,6 @@ typedef enum {
 typedef struct {
 	enum {
 		NA_LOOPBACK,
-		NA_BROADCAST,
-		NA_IP,
-		NA_IPX,
-		NA_BROADCAST_IPX
 	} type;
 
 	u8			ip[4];
@@ -1994,10 +1992,7 @@ u8		net_message_buffer[MAX_MSGLEN];
 bool	NET_GetPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message);
 void		NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to);
 
-bool	NET_CompareAdr (netadr_t a, netadr_t b);
-bool	NET_CompareBaseAdr (netadr_t a, netadr_t b);
-char		*NET_AdrToString (netadr_t a);
-bool	NET_StringToAdr (char *s, netadr_t *a);
+void NET_StringToAdr(char *s, netadr_t *a);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
@@ -10296,50 +10291,8 @@ void SVC_Ping (void)
 	Netchan_OutOfBandPrint (NS_SERVER, net_from, "ack");
 }
 
-
-/*
-=================
-SVC_GetChallenge
-
-Returns a challenge number that can be used
-in a subsequent client_connect command.
-We do this to prevent denial of service attacks that
-flood the server with invalid connection IPs.  With a
-challenge, they must give a valid IP address.
-=================
-*/
-void SVC_GetChallenge (void)
-{
-	int		i;
-	int		oldest;
-	int		oldestTime;
-
-	oldest = 0;
-	oldestTime = 0x7fffffff;
-
-	// see if we already have a challenge for this ip
-	for (i = 0 ; i < MAX_CHALLENGES ; i++)
-	{
-		if (NET_CompareBaseAdr (net_from, svs.challenges[i].adr))
-			break;
-		if (svs.challenges[i].time < oldestTime)
-		{
-			oldestTime = svs.challenges[i].time;
-			oldest = i;
-		}
-	}
-
-	if (i == MAX_CHALLENGES)
-	{
-		// overwrite the oldest
-		svs.challenges[oldest].challenge = rand() & 0x7fff;
-		svs.challenges[oldest].adr = net_from;
-		svs.challenges[oldest].time = curtime;
-		i = oldest;
-	}
-
-	// send it back
-	Netchan_OutOfBandPrint (NS_SERVER, net_from, "challenge %i", svs.challenges[i].challenge);
+static void SVC_GetChallenge() {
+	Netchan_OutOfBandPrint(NS_SERVER, net_from, "challenge %i", svs.challenges[0].challenge);
 }
 
 // A connection request that did not come from the master
@@ -10440,8 +10393,6 @@ void SV_ReadPackets (void)
 		for (i=0, cl=&svs.client ; i<1 ; i++,cl++)
 		{
 			if (cl->state == cs_free)
-				continue;
-			if (!NET_CompareBaseAdr (net_from, cl->netchan.remote_address))
 				continue;
 
 			if (Netchan_Process(&cl->netchan, &net_message))
@@ -16240,26 +16191,16 @@ void CL_ForwardToServer_f (void* data)
 }
 
 // We have gotten a challenge from the server, so try and connect.
-void CL_SendConnectPacket (void)
-{
-	netadr_t	adr;
-
-	if (!NET_StringToAdr (cls.servername, &adr))
-	{
-		add_line_to_console_log(STR("Bad server address"));
-		cls.connect_time = 0;
-		return;
-	}
-	if (adr.port == 0)
+void CL_SendConnectPacket() {
+	netadr_t adr = {};
+	NET_StringToAdr(cls.servername, &adr);
+	if (adr.port == 0) {
 		adr.port = BigShort (PORT_SERVER);
-
+	}
 	Netchan_OutOfBandPrint(NS_CLIENT, adr, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
 }
 
-void CL_CheckForResend (void)
-{
-	netadr_t	adr;
-
+void CL_CheckForResend (void) {
 	// if the local server is running and we aren't
 	// then connect
 	if (cls.state == ca_disconnected && server_state )
@@ -16278,16 +16219,13 @@ void CL_CheckForResend (void)
 	if (cls.realtime - cls.connect_time < 3000)
 		return;
 
-	if (!NET_StringToAdr (cls.servername, &adr))
-	{
-		add_line_to_console_log(STR("Bad server address"));
-		cls.state = ca_disconnected;
-		return;
-	}
-	if (adr.port == 0)
+	netadr_t adr = {};
+	NET_StringToAdr(cls.servername, &adr);
+	if (adr.port == 0) {
 		adr.port = BigShort (PORT_SERVER);
+	}
 
-	cls.connect_time = cls.realtime;	// for retransmit requests
+	cls.connect_time = cls.realtime; // for retransmit requests
 
 	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Connecting to"), string_from_cstring(cls.servername))));
 
@@ -16388,7 +16326,7 @@ void CL_Packet_f (void)
 	char	send[2048];
 	int		i, l;
 	char	*in, *out;
-	netadr_t	adr;
+
 
 	if (cmd_argc != 3)
 	{
@@ -16396,11 +16334,8 @@ void CL_Packet_f (void)
 		return;
 	}
 
-	if (!NET_StringToAdr (Cmd_Argv(1), &adr))
-	{
-		add_line_to_console_log(STR("Bad address"));
-		return;
-	}
+	netadr_t adr = {};
+	NET_StringToAdr(Cmd_Argv(1), &adr);
 	if (!adr.port)
 		adr.port = BigShort (PORT_SERVER);
 
@@ -16487,7 +16422,7 @@ void CL_ConnectionlessPacket (void)
 
 	c = Cmd_Argv(0);
 
-	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(string_from_cstring(NET_AdrToString(net_from)), STR(": "), string_from_cstring(c))));
+	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("loopback: "), string_from_cstring(c))));
 
 	// server connection
 	if (!strcmp(c, "client_connect"))
@@ -16593,13 +16528,6 @@ void CL_ReadPackets (void)
 
 		assert(net_message.cursize >= 8);
 
-		//
-		// packet from server
-		//
-		if (!NET_CompareAdr (net_from, cls.netchan.remote_address))
-		{
-			continue;
-		}
 		if (!Netchan_Process(&cls.netchan, &net_message))
 			continue;		// wasn't accepted for some reason
 		CL_ParseServerMessage ();
@@ -61907,90 +61835,10 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-bool	NET_CompareAdr (netadr_t a, netadr_t b)
-{
-	if (a.type != b.type)
-		return false;
-
-	if (a.type == NA_LOOPBACK)
-		return TRUE;
-
-	if (a.type == NA_IP)
-	{
-		if (a.ip[0] == b.ip[0] && a.ip[1] == b.ip[1] && a.ip[2] == b.ip[2] && a.ip[3] == b.ip[3] && a.port == b.port)
-			return true;
-		return false;
-	}
-
-	if (a.type == NA_IPX)
-	{
-		if ((memcmp(a.ipx, b.ipx, 10) == 0) && a.port == b.port)
-			return true;
-		return false;
-	}
-
-	return false;
-}
-
-/*
-===================
-NET_CompareBaseAdr
-
-Compares without the port
-===================
-*/
-bool	NET_CompareBaseAdr (netadr_t a, netadr_t b)
-{
-	if (a.type != b.type)
-		return false;
-
-	if (a.type == NA_LOOPBACK)
-		return TRUE;
-
-	if (a.type == NA_IP)
-	{
-		if (a.ip[0] == b.ip[0] && a.ip[1] == b.ip[1] && a.ip[2] == b.ip[2] && a.ip[3] == b.ip[3])
-			return true;
-		return false;
-	}
-
-	if (a.type == NA_IPX)
-	{
-		if ((memcmp(a.ipx, b.ipx, 10) == 0))
-			return true;
-		return false;
-	}
-
-	return false;
-}
-
-char	*NET_AdrToString (netadr_t a)
-{
-	static	char	s[64];
-
-	if (a.type == NA_LOOPBACK)
-		Com_sprintf (s, sizeof(s), "loopback");
-	else if (a.type == NA_IP)
-		Com_sprintf (s, sizeof(s), "%i.%i.%i.%i:%i", a.ip[0], a.ip[1], a.ip[2], a.ip[3], ntohs(a.port));
-	else
-		Com_sprintf (s, sizeof(s), "%02x%02x%02x%02x:%02x%02x%02x%02x%02x%02x:%i", a.ipx[0], a.ipx[1], a.ipx[2], a.ipx[3], a.ipx[4], a.ipx[5], a.ipx[6], a.ipx[7], a.ipx[8], a.ipx[9], ntohs(a.port));
-
-	return s;
-}
-
-static bool NET_StringToAdr(char *s, netadr_t *a) {
+static void NET_StringToAdr(char *s, netadr_t *a) {
 	assert(!strcmp (s, "localhost"));
 	*a = (netadr_t){.type = NA_LOOPBACK};
-	return true;
 }
-
-/*
-=============================================================================
-
-LOOPBACK BUFFERS FOR LOCAL PLAYER
-
-=============================================================================
-*/
 
 bool	NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, sizebuf_t *net_message)
 {
