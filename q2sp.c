@@ -1957,7 +1957,6 @@ void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
 bool Netchan_NeedReliable (netchan_t *chan);
 void Netchan_Transmit (netchan_t *chan, int length, u8 *data);
-bool Netchan_Process (netchan_t *chan, sizebuf_t *msg);
 
 bool Netchan_CanReliable (netchan_t *chan);
 
@@ -7209,20 +7208,12 @@ void Netchan_Transmit (netchan_t *chan, int length, u8 *data)
 	NET_SendLoopPacket(chan->sock, send.cursize, send.data);
 }
 
-/*
-=================
-Netchan_Process
-
-called when the current net_message is from remote_address
-modifies net_message so that it points to the packet payload
-=================
-*/
 bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 {
 	unsigned	sequence, sequence_ack;
 	unsigned	reliable_ack, reliable_message;
 
-// get sequence numbers
+	// get sequence numbers
 	MSG_BeginReading (msg);
 	sequence = MSG_ReadLong (msg);
 	sequence_ack = MSG_ReadLong (msg);
@@ -7239,9 +7230,9 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 		return false;
 	}
 
-//
-// dropped packets don't keep the message from being used
-//
+	//
+	// dropped packets don't keep the message from being used
+	//
 	chan->dropped = sequence - (chan->incoming_sequence+1);
 
 	// if the current outgoing reliable message has been acknowledged clear the buffer to make way for the next
@@ -7262,14 +7253,6 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 
 	return true;
 }
-
-/* ============ end source: qcommon/net_chan.c ============ */
-/* ============ begin source: qcommon/pmove.c ============ */
-
-
-/* already inlined above: qcommon/qcommon.h */
-
-
 
 #define	STEPSIZE	18
 
@@ -10220,50 +10203,18 @@ void SV_CalcPings() {
 	}
 }
 
-void SV_ReadPackets (void)
-{
-	int			i;
-	client_t	*cl;
-
-	while (NET_GetLoopPacket (NS_SERVER, &net_message))
-	{
-		// check for connectionless packet (0xffffffff) first
-		if (*(int *)net_message.data == -1)
-		{
-			SV_ConnectionlessPacket ();
-			continue;
+static void SV_ReadPackets() {
+	while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
+		if (*(i32*)net_message.data == -1) {
+			SV_ConnectionlessPacket();
+		} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
+			svs.client.lastmessage = svs.realtime;
+			SV_ExecuteClientMessage(&svs.client);
 		}
-
-		// check for packets from connected clients
-		for (i=0, cl=&svs.client ; i<1 ; i++,cl++)
-		{
-			if (cl->state == cs_free)
-				continue;
-
-			if (Netchan_Process(&cl->netchan, &net_message))
-			{	// this is a valid, sequenced packet, so process it
-				if (cl->state != cs_zombie)
-				{
-					cl->lastmessage = svs.realtime;
-					SV_ExecuteClientMessage (cl);
-				}
-			}
-			break;
-		}
-
-		if (i != 1)
-			continue;
 	}
 }
 
-/*
-================
-SV_PrepWorldFrame
-
-This has to be done before the world logic, because
-player processing happens outside RunWorldFrame
-================
-*/
+// This has to be done before the world logic, because player processing happens outside RunWorldFrame
 void SV_PrepWorldFrame (void)
 {
 	edict_t	*ent;
@@ -16128,7 +16079,7 @@ void CL_Changing_f(void* data) {
 
 static void CL_ReadPackets() {
 	while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
-		if (*(int *)net_message.data == -1) {
+		if (*(i32*)net_message.data == -1) {
 
 			MSG_BeginReading(&net_message);
 			MSG_ReadLong(&net_message); // skip the -1
@@ -16144,17 +16095,12 @@ static void CL_ReadPackets() {
 			MSG_WriteString(&cls.netchan.message, "new");
 			cls.state = ca_connected;
 
-			continue;
+		} else if (cls.state != ca_disconnected && cls.state != ca_connecting) {
+			assert(net_message.cursize >= 8);
+			if (Netchan_Process(&cls.netchan, &net_message)) {
+				CL_ParseServerMessage ();
+			}
 		}
-
-		if (cls.state == ca_disconnected || cls.state == ca_connecting)
-			continue;		// dump it if not connected
-
-		assert(net_message.cursize >= 8);
-
-		if (!Netchan_Process(&cls.netchan, &net_message))
-			continue;		// wasn't accepted for some reason
-		CL_ParseServerMessage ();
 	}
 }
 
