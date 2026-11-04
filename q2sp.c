@@ -60,7 +60,7 @@ typedef struct {
 
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
-typedef void (*Debug_Log_Proc)(String text);
+typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
 
 // Platform is responsible for initialising this
@@ -467,9 +467,23 @@ static String get_key_code_string(i64 key_code) {
 	return result;
 }
 
+static u8 get_key_code_number(String string) {
+	u8 result = 0;
+	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+		String key_code_string = Key_Code_Strings[key_code];
+		if (streq(string, key_code_string)) {
+			result = (u8)key_code;
+			break;
+		}
+	}
+	return result;
+}
+
 typedef struct {
 	char* values[Key_Code_Count];
 } Keybindings;
+
+static Keybindings keybindings;
 
 //
 // SECTION Game
@@ -482,6 +496,143 @@ typedef enum {
 	ca_connected,		// netchan_t established, waiting for svc_serverdata
 	ca_active			// game views should be displayed
 } Client_State;
+
+#define	MAX_OSPATH 128 // max length of a filesystem pathname
+
+#define	MAX_MSGLEN	1400
+#define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
+#define	MAX_LATENT	32
+
+typedef enum {
+	NS_CLIENT,
+	NS_SERVER
+} netsrc_t;
+
+typedef struct {
+	enum {
+		NA_LOOPBACK,
+		NA_BROADCAST,
+		NA_IP,
+		NA_IPX,
+		NA_BROADCAST_IPX
+	} type;
+
+	u8			ip[4];
+	u8			ipx[10];
+	unsigned short	port;
+} netadr_t;
+
+typedef struct {
+	bool allowoverflow;
+	bool overflowed;		// set to true if the buffer size failed
+	u8* data;
+	i32 maxsize;
+	i32 cursize;
+	i32 readcount;
+} sizebuf_t;
+
+typedef struct {
+	bool	fatal_error;
+	netsrc_t	sock;
+	int			dropped;			// between last packet and previous
+	int			last_received;
+	int			last_sent;			// for retransmits
+	netadr_t	remote_address;
+	int			incoming_sequence;
+	int			incoming_acknowledged;
+	int			incoming_reliable_acknowledged;	// single bit
+	int			incoming_reliable_sequence;		// single bit, maintained local
+	int			outgoing_sequence;
+	int			reliable_sequence;			// single bit
+	int			last_reliable_sequence;		// sequence number of last send
+
+	//  reliable staging and holding areas
+	sizebuf_t	message;						// writing buffer to send to server
+	u8		message_buf[MAX_MSGLEN - 16];		// leave space for header
+
+	// message is copied to this buffer when it is first transfered
+	int			reliable_length;
+	u8		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
+} netchan_t;
+
+// Persistant through an arbitrary number of server connections
+static struct {
+	Client_State state;
+
+	enum {
+		key_game,
+		key_console,
+		key_menu
+	} key_dest;
+
+	int			framecount;
+	int			realtime;			// always increasing, no clamping, etc
+	float		frametime;			// seconds since last frame
+
+	// screen rendering information
+	float		disable_screen;			// showing loading plaque between levels or changing rendering dlls if time gets > 30 seconds ahead, break it
+	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
+
+	// connection information
+	char		servername[MAX_OSPATH];	// name of server from original connect
+	float		connect_time;			// for connection retransmits
+	netchan_t	netchan;
+	int			challenge;				// from the server to use for connecting
+	FILE*		download;				// file transfer from server
+	char		downloadtempname[MAX_OSPATH];
+	char		downloadname[MAX_OSPATH];
+	int			downloadnumber;
+
+	enum {
+		dl_none,
+		dl_model,
+		dl_sound,
+		dl_skin,
+		dl_single
+	} downloadtype;
+	int downloadpercent;
+} cls;
+
+//
+// SECTION Console log
+//
+
+typedef struct {char buf[1024]; i64 len; float timestamp;} Console_Line;
+typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log;
+static struct {
+	Console_Log log; // NOTE: Circular buffer
+
+	// TODO these should be somewhere else probably
+	i64 char_width_px;
+	i64 char_height_px;
+} console;
+
+// index 0 is most recent, 1 is second most recent, etc.
+typedef struct {String text; float timestamp;} Log_Line;
+static Log_Line get_log_line(i64 recency_index) {
+	assert(recency_index >= 0 && recency_index < console.log.cap);
+	i64 actual_index = console.log.head - 1 - recency_index;
+	if (actual_index < 0) {
+		actual_index += console.log.cap;
+	}
+	assert(actual_index >= 0 && actual_index < console.log.cap);
+	Console_Line* line = console.log.ptr + actual_index;
+	Log_Line result = {.text = {line->buf, line->len}, .timestamp = line->timestamp};
+	return result;
+}
+
+static void add_line_to_console_log(String line) {
+	context.debug_log(STR("CONSOLE"), line);
+
+	Console_Line* console_line = console.log.ptr + console.log.head;
+	console.log.head = (console.log.head + 1) % console.log.cap;
+
+	assert((i64)carray_count(console_line->buf) > line.len);
+	copy_bytes(console_line->buf, line.ptr, line.len);
+	console_line->len = line.len;
+	console_line->buf[console_line->len] = 0;
+	console_line->timestamp = cls.realtime;
+}
 
 //
 // SECTION String commands
@@ -527,6 +678,106 @@ static void builtin_string_command_write_config(void* ctx) {
 		String config_string = string_builder_end(&builder);
 		context.write_config_string(config_string);
 	}}
+}
+
+// TODO sort out this mess
+
+#define	MAX_STRING_CHARS 1024
+#define	MAX_STRING_TOKENS 80
+#define	MAX_ALIAS_NAME 32
+#define	ALIAS_LOOP_COUNT 16
+
+static int cmd_argc;
+static char* cmd_argv[MAX_STRING_TOKENS];
+static char cmd_args[MAX_STRING_CHARS];
+
+#define	TAGGED_MALLOC_MAGIC 0x1d1d
+
+typedef struct Tagged_Malloc_Entry {
+	struct Tagged_Malloc_Entry* prev;
+	struct Tagged_Malloc_Entry* next;
+	i16 magic;
+	i16 tag; // for group free
+} Tagged_Malloc_Entry;
+
+static Tagged_Malloc_Entry tagged_malloc_head;
+
+static void tml_free(void* ptr) {
+	Tagged_Malloc_Entry* entry = ((Tagged_Malloc_Entry*)ptr) - 1;
+	assert(entry->magic == TAGGED_MALLOC_MAGIC);
+
+	entry->prev->next = entry->next;
+	entry->next->prev = entry->prev;
+
+	free(entry);
+}
+
+static void tml_free_all(i16 tag) {
+	for (Tagged_Malloc_Entry* entry = tagged_malloc_head.next; entry != &tagged_malloc_head;) {
+		Tagged_Malloc_Entry* next = entry->next;
+		if (entry->tag == tag) {
+			tml_free((void*)(entry + 1));
+		}
+		entry = next;
+	}
+}
+
+static void* tml_alloc_with_tag(i32 size, i32 tag) {
+	size = size + sizeof(Tagged_Malloc_Entry);
+	Tagged_Malloc_Entry* entry = malloc(size);
+	assert(entry);
+	memset(entry, 0, size);
+	entry->magic = TAGGED_MALLOC_MAGIC;
+	entry->tag = tag;
+
+	entry->next = tagged_malloc_head.next;
+	entry->prev = &tagged_malloc_head;
+	tagged_malloc_head.next->prev = entry;
+	tagged_malloc_head.next = entry;
+
+	void* result = entry + 1;
+	return result;
+}
+
+static void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
+
+void Key_SetBinding (int keynum, char *binding)
+{
+	char	*new;
+	int		l;
+
+	if (keynum == -1)
+		return;
+
+	// free old bindings
+	if (keybindings.values[keynum])
+	{
+		tml_free (keybindings.values[keynum]);
+		keybindings.values[keynum] = NULL;
+	}
+
+	// allocate memory for new binding
+	l = strlen (binding);
+	new = tml_alloc (l+1);
+	strcpy (new, binding);
+	new[l] = 0;
+	keybindings.values[keynum] = new;
+}
+
+static void Key_Unbind_f(void* data) {
+	UNUSED(data);
+
+	if (cmd_argc != 2) {
+		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
+		return;
+	}
+
+	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
+	if (key_code) {
+		Key_SetBinding(key_code, "");
+	} else {
+		add_line_to_console_log(STR("invalid key"));
+	}
 }
 
 // TODO: Move the builtin procs here
@@ -834,65 +1085,6 @@ static unsigned short CRC_Block(u8* start, int count) {
 	return crc;
 }
 
-#define	TAGGED_MALLOC_MAGIC 0x1d1d
-
-typedef struct Tagged_Malloc_Entry {
-	struct Tagged_Malloc_Entry* prev;
-	struct Tagged_Malloc_Entry* next;
-	i16 magic;
-	i16 tag; // for group free
-} Tagged_Malloc_Entry;
-
-static Tagged_Malloc_Entry tagged_malloc_head;
-
-static void tml_free(void* ptr) {
-	Tagged_Malloc_Entry* entry = ((Tagged_Malloc_Entry*)ptr) - 1;
-	assert(entry->magic == TAGGED_MALLOC_MAGIC);
-
-	entry->prev->next = entry->next;
-	entry->next->prev = entry->prev;
-
-	free(entry);
-}
-
-static void tml_free_all(i16 tag) {
-	for (Tagged_Malloc_Entry* entry = tagged_malloc_head.next; entry != &tagged_malloc_head;) {
-		Tagged_Malloc_Entry* next = entry->next;
-		if (entry->tag == tag) {
-			tml_free((void*)(entry + 1));
-		}
-		entry = next;
-	}
-}
-
-static void* tml_alloc_with_tag(i32 size, i32 tag) {
-	size = size + sizeof(Tagged_Malloc_Entry);
-	Tagged_Malloc_Entry* entry = malloc(size);
-	assert(entry);
-	memset(entry, 0, size);
-	entry->magic = TAGGED_MALLOC_MAGIC;
-	entry->tag = tag;
-
-	entry->next = tagged_malloc_head.next;
-	entry->prev = &tagged_malloc_head;
-	tagged_malloc_head.next->prev = entry;
-	tagged_malloc_head.next = entry;
-
-	void* result = entry + 1;
-	return result;
-}
-
-static void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
-
-typedef struct {
-	bool allowoverflow;
-	bool overflowed;		// set to true if the buffer size failed
-	u8* data;
-	i32 maxsize;
-	i32 cursize;
-	i32 readcount;
-} sizebuf_t;
-
 static void SZ_Init(sizebuf_t* buf, u8* data, int length) {
 	*buf = (sizebuf_t){.data = data, .maxsize = length};
 }
@@ -987,12 +1179,6 @@ static char* va(char *format, ...) {
 	va_end (argptr);
 	return string;
 }
-
-typedef enum {
-	key_game,
-	key_console,
-	key_menu
-} keydest_t;
 
 enum clc_ops_e {
 	clc_bad,
@@ -1801,53 +1987,6 @@ static void FS_FreeFile(void* buffer);
 
 static int server_state;
 
-#define	MAX_MSGLEN	1400
-#define	OLD_AVG		0.99 // total = oldtotal*OLD_AVG + new*(1-OLD_AVG)
-#define	MAX_LATENT	32
-
-typedef enum {
-	NS_CLIENT,
-	NS_SERVER
-} netsrc_t;
-
-typedef struct {
-	enum {
-		NA_LOOPBACK,
-		NA_BROADCAST,
-		NA_IP,
-		NA_IPX,
-		NA_BROADCAST_IPX
-	} type;
-
-	u8			ip[4];
-	u8			ipx[10];
-	unsigned short	port;
-} netadr_t;
-
-typedef struct {
-	bool	fatal_error;
-	netsrc_t	sock;
-	int			dropped;			// between last packet and previous
-	int			last_received;
-	int			last_sent;			// for retransmits
-	netadr_t	remote_address;
-	int			incoming_sequence;
-	int			incoming_acknowledged;
-	int			incoming_reliable_acknowledged;	// single bit
-	int			incoming_reliable_sequence;		// single bit, maintained local
-	int			outgoing_sequence;
-	int			reliable_sequence;			// single bit
-	int			last_reliable_sequence;		// sequence number of last send
-
-	//  reliable staging and holding areas
-	sizebuf_t	message;						// writing buffer to send to server
-	u8		message_buf[MAX_MSGLEN - 16];		// leave space for header
-
-	// message is copied to this buffer when it is first transfered
-	int			reliable_length;
-	u8		reliable_buf[MAX_MSGLEN - 16];	// unacked reliable message
-} netchan_t;
-
 netadr_t	net_from;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
@@ -1868,76 +2007,8 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg);
 
 bool Netchan_CanReliable (netchan_t *chan);
 
-#define	MAX_OSPATH 128 // max length of a filesystem pathname
-
-// Persistant through an arbitrary number of server connections
-static struct {
-	Client_State state;
-
-	keydest_t	key_dest;
-	int			framecount;
-	int			realtime;			// always increasing, no clamping, etc
-	float		frametime;			// seconds since last frame
-
-	// screen rendering information
-	float		disable_screen;			// showing loading plaque between levels or changing rendering dlls if time gets > 30 seconds ahead, break it
-	int			disable_servercount;	// when we receive a frame and cl.servercount > cls.disable_servercount, clear disable_screen
-
-	// connection information
-	char		servername[MAX_OSPATH];	// name of server from original connect
-	float		connect_time;			// for connection retransmits
-	netchan_t	netchan;
-	int			challenge;				// from the server to use for connecting
-	FILE*		download;				// file transfer from server
-	char		downloadtempname[MAX_OSPATH];
-	char		downloadname[MAX_OSPATH];
-	int			downloadnumber;
-
-	enum {
-		dl_none,
-		dl_model,
-		dl_sound,
-		dl_skin,
-		dl_single
-	} downloadtype;
-	int downloadpercent;
-} cls;
-
 #define	PRINT_MEDIUM	1	// death messages
 #define	PRINT_HIGH		2	// critical messages
-
-typedef struct {char buf[1024]; i64 len; float timestamp;} Console_Line;
-typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log;
-static struct {
-	Console_Log log; // NOTE: Circular buffer
-	i64 char_width_px;
-	i64 char_height_px;
-} console;
-
-// index 0 is most recent, 1 is second most recent, etc.
-typedef struct {String text; float timestamp;} Log_Line;
-static Log_Line get_log_line(i64 recency_index) {
-	assert(recency_index >= 0 && recency_index < console.log.cap);
-	i64 actual_index = console.log.head - 1 - recency_index;
-	if (actual_index < 0) {
-		actual_index += console.log.cap;
-	}
-	assert(actual_index >= 0 && actual_index < console.log.cap);
-	Console_Line* line = console.log.ptr + actual_index;
-	Log_Line result = {.text = {line->buf, line->len}, .timestamp = line->timestamp};
-	return result;
-}
-
-static void add_line_to_console_log(String line) {
-	Console_Line* console_line = console.log.ptr + console.log.head;
-	console.log.head = (console.log.head + 1) % console.log.cap;
-
-	assert((i64)carray_count(console_line->buf) > line.len);
-	copy_bytes(console_line->buf, line.ptr, line.len);
-	console_line->len = line.len;
-	console_line->buf[console_line->len] = 0;
-	console_line->timestamp = cls.realtime;
-}
 
 #define	MAXPRINTMSG		4096
 #define	MAX_TOKEN_CHARS	128		// max length of an individual token
@@ -2088,26 +2159,11 @@ static void Cbuf_InsertText(char* text) {
 	}
 }
 
-// Command execution takes a null terminated string, breaks it into tokens,
-// then searches for a command or variable that matches the first token.
-
-#define	MAX_STRING_CHARS	1024	// max length of a string passed to Cmd_TokenizeString
-#define	MAX_STRING_TOKENS	80		// max tokens resulting from Cmd_TokenizeString
-#define	MAX_ALIAS_NAME		32
-#define	ALIAS_LOOP_COUNT	16
-
 typedef struct cmdalias_s {
 	struct cmdalias_s*	next;
 	char	name[MAX_ALIAS_NAME];
 	char*	value;
 } cmdalias_t;
-
-// Functions that execute commands get the parameters from here
-static	int		cmd_argc;
-static	char*	cmd_argv[MAX_STRING_TOKENS];
-
-// a single string containing argv(1) to argv(argc()-1)
-static	char	cmd_args[MAX_STRING_CHARS];
 
 // Causes execution of the remainder of the command buffer to be delayed until next frame.
 // This allows commands like:
@@ -2181,7 +2237,7 @@ static void Cmd_TokenizeString(char* text) {
 }
 
 static void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
-	context.debug_log(string_from_cstring(text));
+	context.debug_log(STR("EXECUTE"), string_from_cstring(text));
 
 	Cmd_TokenizeString(text);
 
@@ -11947,7 +12003,6 @@ extern	int chat_bufferlen;
 extern	bool	chat_team;
 
 void Key_Event (int key, bool down, unsigned time);
-void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
 
 void Con_DrawNotify (void);
@@ -16087,8 +16142,6 @@ void SetStringHighBit (char *s)
 
 
 void Draw_Pic(int x, int y, char *pic);
-
-static Keybindings keybindings;
 
 void CL_DrawInventory (void)
 {
@@ -21323,140 +21376,7 @@ void Key_Console(int key) {
 	} // NOTE: ignore anything else
 }
 
-typedef struct {
-	char* name;
-	int keynum;
-} keyname_t;
-
-keyname_t keynames[] = {
-	{"TAB", Key_Code_Tab},
-	{"ENTER", Key_Code_Enter},
-	{"ESCAPE", Key_Code_Escape},
-	{"SPACE", Key_Code_Space},
-	{"BACKSPACE", Key_Code_Backspace},
-	{"UPARROW", Key_Code_Up},
-	{"DOWNARROW", Key_Code_Down},
-	{"LEFTARROW", Key_Code_Left},
-	{"RIGHTARROW", Key_Code_Right},
-
-	{"ALT", Key_Code_Alt},
-	{"CTRL", Key_Code_Ctrl},
-	{"SHIFT", Key_Code_Shift},
-
-	{"F1", Key_Code_F1},
-	{"F2", Key_Code_F2},
-	{"F3", Key_Code_F3},
-	{"F4", Key_Code_F4},
-	{"F5", Key_Code_F5},
-	{"F6", Key_Code_F6},
-	{"F7", Key_Code_F7},
-	{"F8", Key_Code_F8},
-	{"F9", Key_Code_F9},
-	{"F10", Key_Code_F10},
-	{"F11", Key_Code_F11},
-	{"F12", Key_Code_F12},
-
-	{"INS", Key_Code_Insert},
-	{"DEL", Key_Code_Delete},
-	{"PGDN", Key_Code_Pagedown},
-	{"PGUP", Key_Code_Pageup},
-	{"HOME", Key_Code_Home},
-	{"END", Key_Code_End},
-
-	{"MOUSE1", Key_Code_Mouse1},
-	{"MOUSE2", Key_Code_Mouse2},
-	{"MOUSE3", Key_Code_Mouse3},
-
-	{"KP_HOME",			Key_Code_Keypad_Home },
-	{"KP_UPARROW",		Key_Code_Keypad_Up },
-	{"KP_PGUP",			Key_Code_Keypad_Pageup },
-	{"KP_LEFTARROW",	Key_Code_Keypad_Left },
-	{"KP_5",			Key_Code_Keypad_5 },
-	{"KP_RIGHTARROW",	Key_Code_Keypad_Right },
-	{"KP_END",			Key_Code_Keypad_End },
-	{"KP_DOWNARROW",	Key_Code_Keypad_Down },
-	{"KP_PGDN",			Key_Code_Keypad_Pagedown },
-	{"KP_ENTER",		Key_Code_Keypad_Enter },
-	{"KP_INS",			Key_Code_Keypad_Insert },
-	{"KP_DEL",			Key_Code_Keypad_Delete },
-	{"KP_SLASH",		Key_Code_Keypad_Slash },
-	{"KP_MINUS",		Key_Code_Keypad_Minus },
-	{"KP_PLUS",			Key_Code_Keypad_Plus },
-
-	{"MWHEELUP", Key_Code_Mouse_Wheel_Up },
-	{"MWHEELDOWN", Key_Code_Mouse_Wheel_Down },
-
-	{"PAUSE", Key_Code_Pause},
-
-	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
-
-	{NULL,0}
-};
-
-int Key_StringToKeynum (char *str)
-{
-	keyname_t	*kn;
-
-	if (!str || !str[0])
-		return -1;
-	if (!str[1])
-		return str[0];
-
-	for (kn=keynames ; kn->name ; kn++)
-	{
-		if (!Q_strcasecmp(str,kn->name))
-			return kn->keynum;
-	}
-	return -1;
-}
-
-void Key_SetBinding (int keynum, char *binding)
-{
-	char	*new;
-	int		l;
-
-	if (keynum == -1)
-		return;
-
-// free old bindings
-	if (keybindings.values[keynum])
-	{
-		tml_free (keybindings.values[keynum]);
-		keybindings.values[keynum] = NULL;
-	}
-
-// allocate memory for new binding
-	l = strlen (binding);
-	new = tml_alloc (l+1);
-	strcpy (new, binding);
-	new[l] = 0;
-	keybindings.values[keynum] = new;
-}
-
-void Key_Unbind_f (void* data)
-{
-	UNUSED(data);
-
-	int		b;
-
-	if (cmd_argc != 2)
-	{
-		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
-		return;
-	}
-
-	b = Key_StringToKeynum (Cmd_Argv(1));
-	if (b==-1)
-	{
-		add_line_to_console_log(STR("invalid key"));
-		return;
-	}
-
-	Key_SetBinding (b, "");
-}
-
-void Key_Unbindall_f (void* data)
-{
+static void Key_Unbindall_f (void* data) {
 	UNUSED(data);
 
 	int		i;
@@ -21466,31 +21386,28 @@ void Key_Unbindall_f (void* data)
 			Key_SetBinding (i, "");
 }
 
-void Key_Bind_f(void* data)
+static void Key_Bind_f(void* data)
 {
 	UNUSED(data);
 
-	int			i, c, b;
+	int			i;
 	char		cmd[1024];
 
-	c = cmd_argc;
-
-	if (c < 2)
-	{
+	if (cmd_argc < 2) {
 		add_line_to_console_log(STR("bind <key> [command] : attach a command to a key"));
 		return;
 	}
-	b = Key_StringToKeynum (Cmd_Argv(1));
-	if (b==-1)
-	{
-		add_line_to_console_log(STR("invalid key"));
+	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
+	if (!key_code) {
+		String_Slice line = STRS(STR("invalid key: "), string_from_cstring(cmd_argv[1]));
+		add_line_to_console_log(concatenate_strings(&context.memory.temp, line));
 		return;
 	}
 
-	if (c == 2)
+	if (cmd_argc == 2)
 	{
-		if (keybindings.values[b]) {
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_cstring(keybindings.values[b]))));
+		if (keybindings.values[key_code]) {
+			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_cstring(keybindings.values[key_code]))));
 		} else {
 			add_line_to_console_log(STR("key not bound"));
 		}
@@ -21499,14 +21416,14 @@ void Key_Bind_f(void* data)
 
 	// copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
-	for (i=2 ; i< c ; i++)
+	for (i=2 ; i< cmd_argc ; i++)
 	{
 		strcat (cmd, Cmd_Argv(i));
-		if (i != (c-1))
+		if (i != (cmd_argc-1))
 			strcat (cmd, " ");
 	}
 
-	Key_SetBinding (b, cmd);
+	Key_SetBinding (key_code, cmd);
 }
 
 static void Key_Bindlist_f(void* data) {
@@ -62779,9 +62696,9 @@ static void windows_write_config_string(String text) {
 	CloseHandle(file_handle);
 }
 
-static void windows_debug_log(String text) { temp_memory_block(&context.memory.temp) {
+static void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
-	String text_null_terminated = concatenate_strings(&context.memory.temp, STRS(text, STR("\n")));
+	String text_null_terminated = concatenate_strings(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
@@ -63431,7 +63348,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Startup command execution
 	// TODO: Simplify
-	{
+	temp_memory_block(&context.memory.temp) {
 		Cbuf_AddText("exec default.cfg\n");
 		Cbuf_AddText("exec config.cfg\n");
 
