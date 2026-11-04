@@ -62385,7 +62385,7 @@ static void CL_Frame(int msec) {
 		strncpy(cls.servername, "localhost", sizeof(cls.servername)-1);
 		CL_SendConnectPacket();
 	} else {
-		assert(cls.state == ca_connected);
+		assert(cls.state == ca_connected || cls.state == ca_active);
 	}
 
 	// predict all unacknowledged movements
