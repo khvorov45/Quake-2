@@ -10160,17 +10160,6 @@ static void SVC_DirectConnect() {
 	svs.client.lastconnect = svs.realtime;
 }
 
-void SV_ConnectionlessPacket() {
-	MSG_BeginReading(&net_message);
-	MSG_ReadLong(&net_message); // skip the -1 marker
-
-	char* line = MSG_ReadStringLine(&net_message);
-	Cmd_TokenizeString(line);
-
-	assert(!strcmp(cmd_argv[0],"connect"));
-	SVC_DirectConnect();
-}
-
 // Updates the cl->ping variables
 void SV_CalcPings() {
 	int			i, j;
@@ -10206,7 +10195,15 @@ void SV_CalcPings() {
 static void SV_ReadPackets() {
 	while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
 		if (*(i32*)net_message.data == -1) {
-			SV_ConnectionlessPacket();
+			MSG_BeginReading(&net_message);
+			MSG_ReadLong(&net_message); // skip the -1 marker
+
+			char* line = MSG_ReadStringLine(&net_message);
+			Cmd_TokenizeString(line);
+
+			assert(!strcmp(cmd_argv[0],"connect"));
+			SVC_DirectConnect();
+
 		} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 			svs.client.lastmessage = svs.realtime;
 			SV_ExecuteClientMessage(&svs.client);
