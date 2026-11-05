@@ -568,7 +568,6 @@ typedef struct {
 typedef struct {
 	bool	fatal_error;
 	netsrc_t	sock;
-	int			dropped;			// between last packet and previous
 	int			last_received;
 	int			last_sent;			// for retransmits
 	int			incoming_sequence;
@@ -7063,11 +7062,6 @@ bool Netchan_Process (netchan_t *chan, sizebuf_t *msg)
 		return false;
 	}
 
-	//
-	// dropped packets don't keep the message from being used
-	//
-	chan->dropped = sequence - (chan->incoming_sequence+1);
-
 	// if the current outgoing reliable message has been acknowledged clear the buffer to make way for the next
 	if ((int)reliable_ack == chan->reliable_sequence)
 		chan->reliable_length = 0;	// it has been received
@@ -10463,7 +10457,6 @@ static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
 void SV_ExecuteClientMessage()
 {
 	usercmd_t	oldest, oldcmd, newcmd;
-	int		net_drop;
 
 	for (bool done = false; !done;) {
 		assert(net_message.readcount <= net_message.cursize);
@@ -10473,10 +10466,10 @@ void SV_ExecuteClientMessage()
 			case clc_nop:
 				break;
 
-			case clc_userinfo:
+			case clc_userinfo: {
 				strncpy(svs.client.userinfo, MSG_ReadString(&net_message), sizeof(svs.client.userinfo)-1);
 				SV_UserinfoChanged();
-				break;
+			} break;
 
 			case clc_move:
 				usercmd_t nullcmd = {};
@@ -10488,21 +10481,6 @@ void SV_ExecuteClientMessage()
 					break;
 				}
 
-				net_drop = svs.client.netchan.dropped;
-				if (net_drop < 20) {
-					while (net_drop > 2)
-					{
-						SV_ClientThink (&svs.client, &svs.client.lastcmd);
-
-						net_drop--;
-					}
-					if (net_drop > 1)
-						SV_ClientThink (&svs.client, &oldest);
-
-					if (net_drop > 0)
-						SV_ClientThink (&svs.client, &oldcmd);
-
-				}
 				SV_ClientThink (&svs.client, &newcmd);
 
 				svs.client.lastcmd = newcmd;
