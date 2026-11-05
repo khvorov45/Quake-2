@@ -61074,27 +61074,20 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-bool NET_GetLoopPacket(netsrc_t sock, sizebuf_t *net_message)
-{
-	int		i;
-	loopback_t	*loop;
+static bool NET_GetLoopPacket(netsrc_t from, sizebuf_t* dest_msg) {
+	loopback_t* loop = loopbacks + from;
+	loop->get = max(loop->get, loop->send - MAX_LOOPBACK);
 
-	loop = &loopbacks[sock];
+	bool should_get_a_msg = loop->get < loop->send;
+	if (should_get_a_msg) {
+		i64 msg_ind = loop->get++ & (MAX_LOOPBACK - 1);
+		loopmsg_t* src_msg = loop->msgs + msg_ind;
 
-	if (loop->send - loop->get > MAX_LOOPBACK)
-		loop->get = loop->send - MAX_LOOPBACK;
+		memcpy(dest_msg->data, src_msg->data, src_msg->datalen);
+		dest_msg->cursize = src_msg->datalen;
+	}
 
-	if (loop->get >= loop->send)
-		return false;
-
-	i = loop->get & (MAX_LOOPBACK - 1);
-	loop->get++;
-
-	memcpy(net_message->data, loop->msgs[i].data, loop->msgs[i].datalen);
-	net_message->cursize = loop->msgs[i].datalen;
-
-	return true;
-
+	return should_get_a_msg;
 }
 
 static void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
