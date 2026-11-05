@@ -61918,12 +61918,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 							case clc_move: {
 								usercmd_t nullcmd = {};
-								usercmd_t oldest = {};
-								usercmd_t oldcmd = {};
 								usercmd_t newcmd = {};
-								MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &oldest);
-								MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
-								MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
+								MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &newcmd);
 
 								if (svs.client.state == cs_spawned) {
 									ClientThink(svs.client.edict, &newcmd);
@@ -62078,21 +62074,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					// begin a client move command
 					MSG_WriteByte(&buf, clc_move);
 
-					// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
-					i64 cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
+					i64 cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
 					usercmd_t* cmd = cl.cmds + cmd_index;
 					usercmd_t nullcmd = {};
 					MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
-					usercmd_t* oldcmd = cmd;
-
-					cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
-					cmd = cl.cmds + cmd_index;
-					MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-					oldcmd = cmd;
-
-					cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
-					cmd = &cl.cmds[cmd_index];
-					MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
 
 					Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
 				} break; // case active
