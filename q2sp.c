@@ -1966,8 +1966,6 @@ static int FS_LoadFile(char* path, void** buffer);
 
 static void FS_FreeFile(void* buffer);
 
-static int server_state;
-
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
 
@@ -9893,7 +9891,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 	svs.spawncount++;		// any partially connected client will be restarted
 	sv.state = ss_dead;
-	server_state = sv.state;
 
 	// wipe the entire per-level structure
 	memset (&sv, 0, sizeof(sv));
@@ -9948,7 +9945,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	// precache and static commands can be issued during
 	// map initialization
 	sv.state = ss_loading;
-	server_state = sv.state;
 
 	// load and spawn all other entities
 	void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
@@ -9960,7 +9956,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 	// all precaches are complete
 	sv.state = ss_game;
-	server_state = sv.state;
 
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
@@ -10246,7 +10241,6 @@ void SV_Shutdown (char *finalmsg, bool reconnect)
 
 	// free current level
 	memset(&sv, 0, sizeof(sv));
-	server_state = sv.state;
 
 	// free server static data
 	if (svs.client_entities)
@@ -22248,7 +22242,7 @@ static char* SaveGame_MenuKey(int key) {
 
 static void M_Menu_SaveGame_f(void* data) {
 	UNUSED(data);
-	if (server_state) {
+	if (sv.state != ss_dead) {
 		SaveGame_MenuInit();
 		M_PushMenu(SaveGame_MenuDraw, SaveGame_MenuKey);
 		Create_Savestrings();
