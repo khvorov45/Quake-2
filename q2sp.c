@@ -1138,7 +1138,6 @@ enum clc_ops_e {
 	clc_bad,
 	clc_nop,
 	clc_move,		// [[usercmd_t]
-	clc_userinfo,	// [[userinfo string]
 	clc_stringcmd	// [string] message
 };
 
@@ -2347,50 +2346,6 @@ static void Cmd_Wait_f(void* data) {
 #define	MAX_INFO_KEY	64
 #define	MAX_INFO_VALUE	64
 #define	MAX_INFO_STRING	512
-
-// Searches the string for the given key and returns the associated value, or an empty string.
-static char* Info_ValueForKey(char *s, char *key) {
-	static char value[2][512]; // use two buffers so compares work without stomping on each other
-	static int valueindex = 0;
-	valueindex ^= 1;
-
-	if (*s == '\\') {
-		s++;
-	}
-
-	char pkey[512] = {};
-	for (;;) {
-		char* o = pkey;
-		while (*s != '\\') {
-			if (!*s) {
-				return "";
-			}
-			*o++ = *s++;
-		}
-		*o = 0;
-		s++;
-
-		o = value[valueindex];
-
-		while (*s != '\\' && *s) {
-			if (!*s) {
-				return "";
-			}
-			*o++ = *s++;
-		}
-		*o = 0;
-
-		if (!strcmp(key, pkey)) {
-			return value[valueindex];
-		}
-
-		if (!*s) {
-			return "";
-		}
-		s++;
-	}
-}
-
 
 // .MD2 triangle model file format
 // the glcmd format:
@@ -5269,7 +5224,6 @@ void vectoangles (vec3_t vec, vec3_t angles);
 //
 // g_combat.c
 //
-bool OnSameTeam (edict_t *ent1, edict_t *ent2);
 bool CanDamage (edict_t *targ, edict_t* inflictor);
 void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod);
@@ -8349,12 +8303,9 @@ typedef struct {
 		cs_spawned,		// client is fully in game
 	} state;
 
-	char			userinfo[MAX_INFO_STRING];		// name, etc
-
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
-	char			name[32];			// extracted from userinfo, high bits masked
 	int				messagelevel;		// for filtering printed messages
 
 	// The datagram is written to by sound calls, prints, temp ents, etc.
@@ -9883,7 +9834,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 bool ClientConnect(edict_t* ent);
-void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
@@ -9917,27 +9867,6 @@ void SV_RunGameFrame() {
 	if ((i32)sv.time < svs.realtime) {
 		svs.realtime = sv.time;
 	}
-}
-
-// Pull specific info from a newly changed userinfo string into a more C freindly form.
-void SV_UserinfoChanged() {
-	// call prog code to allow overrides
-	ClientUserinfoChanged(svs.client.edict, svs.client.userinfo);
-
-	// name for C code
-	strncpy(svs.client.name, Info_ValueForKey(svs.client.userinfo, "name"), sizeof(svs.client.name)-1);
-
-	// mask off high bit
-	for (int i = 0; i < (int)sizeof(svs.client.name) ; i++) {
-		svs.client.name[i] &= 127;
-	}
-
-	// msg command
-	char* val = Info_ValueForKey(svs.client.userinfo, "msg");
-	if (strlen(val)) {
-		svs.client.messagelevel = atoi(val);
-	}
-
 }
 
 // Sends text across to be displayed if the level passes
@@ -10463,11 +10392,6 @@ void SV_ExecuteClientMessage()
 		switch (first_byte) {
 			case clc_nop:
 				break;
-
-			case clc_userinfo: {
-				strncpy(svs.client.userinfo, MSG_ReadString(&net_message), sizeof(svs.client.userinfo)-1);
-				SV_UserinfoChanged();
-			} break;
 
 			case clc_move:
 				usercmd_t nullcmd = {};
@@ -24284,38 +24208,6 @@ void ai_run (edict_t* self, float dist)
 
 
 #define MODEL_SCALE		1.000000
-
-char *ClientTeam (edict_t *ent)
-{
-	char		*p;
-	static char	value[512];
-
-	value[0] = 0;
-
-	if (!ent->client)
-		return value;
-
-	strcpy(value, Info_ValueForKey (ent->client->pers.userinfo, "skin"));
-	p = strchr(value, '/');
-	if (!p)
-		return value;
-
-	return ++p;
-}
-
-bool OnSameTeam (edict_t *ent1, edict_t *ent2)
-{
-	char	ent1Team [512];
-	char	ent2Team [512];
-
-	strcpy (ent1Team, ClientTeam (ent1));
-	strcpy (ent2Team, ClientTeam (ent2));
-
-	if (strcmp(ent1Team, ent2Team) == 0)
-		return true;
-	return false;
-}
-
 
 void SelectNextItem (edict_t *ent, int itflags)
 {
@@ -51470,8 +51362,6 @@ void SP_monster_tank (edict_t* self)
 		self->s.skinnum = 2;
 }
 
-void ClientUserinfoChanged (edict_t *ent, char *userinfo);
-
 void SP_misc_teleporter_dest (edict_t *ent);
 
 static void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
@@ -51781,12 +51671,7 @@ void PutClientInServer (edict_t *ent)
 	client->ps.pmove.origin[0] = spawn_origin[0]*8;
 	client->ps.pmove.origin[1] = spawn_origin[1]*8;
 	client->ps.pmove.origin[2] = spawn_origin[2]*8;
-	client->ps.fov = atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
-	if (client->ps.fov < 1)
-		client->ps.fov = 90;
-	else if (client->ps.fov > 160)
-		client->ps.fov = 160;
-
+	client->ps.fov = 90;
 	client->ps.gunindex = SV_ModelIndex(client->pers.weapon->view_model);
 
 	// clear entity state values
@@ -51858,35 +51743,6 @@ void ClientBegin (edict_t *ent)
 
 	// make sure all view stuff is valid
 	ClientEndServerFrame (ent);
-}
-
-/*
-===========
-ClientUserInfoChanged
-
-called whenever the player updates a userinfo variable.
-
-The game can override any of the settings in place
-(forcing skins or names, etc) before copying it off.
-============
-*/
-void ClientUserinfoChanged (edict_t *ent, char *userinfo)
-{
-	int		playernum;
-
-	playernum = ent-g_edicts-1;
-
-	// combine name and skin into a configstring
-	PF_Configstring (CS_PLAYERSKINS+playernum, ent->client->pers.netname);
-
-	ent->client->ps.fov = atoi(Info_ValueForKey(userinfo, "fov"));
-	if (ent->client->ps.fov < 1)
-		ent->client->ps.fov = 90;
-	else if (ent->client->ps.fov > 160)
-		ent->client->ps.fov = 160;
-
-	// save off the userinfo in case we want to check something later
-	strncpy (ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo)-1);
 }
 
 bool ClientConnect(edict_t *ent) {
