@@ -8360,7 +8360,6 @@ typedef struct {
 
 	char			userinfo[MAX_INFO_STRING];		// name, etc
 
-	int				lastframe;			// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	int				frame_latency[LATENCY_COUNTS];
@@ -9206,20 +9205,9 @@ void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg)
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-	if (client->lastframe <= 0)
 	{	// client is asking for a retransmit
 		oldframe = NULL;
 		lastframe = -1;
-	}
-	else if (sv.framenum - client->lastframe >= (UPDATE_BACKUP - 3) )
-	{	// client hasn't gotten a good message through in a long time
-		oldframe = NULL;
-		lastframe = -1;
-	}
-	else
-	{	// we have a valid message to delta from
-		oldframe = &client->frames[client->lastframe & UPDATE_MASK];
-		lastframe = client->lastframe;
 	}
 
 	MSG_WriteByte (msg, svc_frame);
@@ -9749,14 +9737,9 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 	strcpy (sv.name, server);
 
-	// leave slots at start for clients only
-	for (i=0 ; i<1 ; i++)
-	{
-		// needs to reconnect
-		if (svs.client.state > cs_connected) {
-			svs.client.state = cs_connected;
-		}
-		svs.client.lastframe = -1;
+	// needs to reconnect
+	if (svs.client.state > cs_connected) {
+		svs.client.state = cs_connected;
 	}
 
 	sv.time = 1000;
@@ -10586,21 +10569,12 @@ void SV_ExecuteClientMessage()
 				break;
 
 			case clc_move:
-				i32 lastframe = MSG_ReadLong(&net_message);
-				if (lastframe != svs.client.lastframe) {
-					svs.client.lastframe = lastframe;
-					if (svs.client.lastframe > 0) {
-						svs.client.frame_latency[svs.client.lastframe & (LATENCY_COUNTS - 1)] = svs.realtime - svs.client.frames[svs.client.lastframe & UPDATE_MASK].senttime;
-					}
-				}
-
 				usercmd_t nullcmd = {};
 				MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &oldest);
 				MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
 				MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
 
 				if (svs.client.state != cs_spawned) {
-					svs.client.lastframe = -1;
 					break;
 				}
 
@@ -62434,8 +62408,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 					// begin a client move command
 					MSG_WriteByte(&buf, clc_move);
-
-					MSG_WriteLong(&buf, -1); // no compression
 
 					// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
 					i64 cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
