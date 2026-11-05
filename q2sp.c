@@ -8347,8 +8347,6 @@ typedef struct
 	int					senttime;			// for ping calculations
 } client_frame_t;
 
-#define	LATENCY_COUNTS	16
-
 typedef struct {
 	enum {
 		cs_free,
@@ -8361,8 +8359,6 @@ typedef struct {
 
 	usercmd_t		lastcmd;			// for filling in big drops
 
-	int				frame_latency[LATENCY_COUNTS];
-
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	char			name[32];			// extracted from userinfo, high bits masked
 	int				messagelevel;		// for filtering printed messages
@@ -8373,10 +8369,6 @@ typedef struct {
 	u8			datagram_buf[MAX_MSGLEN];
 
 	client_frame_t	frames[UPDATE_BACKUP];	// updates can be delta'd from here
-
-	u8			*download;			// file being downloaded
-	int				downloadsize;		// total bytes (can't use EOF because of paks)
-	int				downloadcount;		// bytes sent
 
 	int				lastmessage;		// sv.framenum when packet was last received
 	int				lastconnect;
@@ -10430,51 +10422,6 @@ void SV_Begin_f (void)
 	defer_text_buf[0] = 0;
 }
 
-//=============================================================================
-
-/*
-==================
-SV_NextDownload_f
-==================
-*/
-void SV_NextDownload_f (void)
-{
-	int		r;
-	int		percent;
-	int		size;
-
-	if (!svs.client.download)
-		return;
-
-	r = svs.client.downloadsize - svs.client.downloadcount;
-	if (r > 1024)
-		r = 1024;
-
-	MSG_WriteByte (&svs.client.netchan.message, svc_download);
-	MSG_WriteShort (&svs.client.netchan.message, r);
-
-	svs.client.downloadcount += r;
-	size = svs.client.downloadsize;
-	if (!size)
-		size = 1;
-	percent = svs.client.downloadcount*100/size;
-	MSG_WriteByte (&svs.client.netchan.message, percent);
-	SZ_Write (&svs.client.netchan.message,
-		svs.client.download + svs.client.downloadcount - r, r);
-
-	if (svs.client.downloadcount != svs.client.downloadsize)
-		return;
-
-	FS_FreeFile (svs.client.download);
-	svs.client.download = NULL;
-}
-
-static void SV_BeginDownload_f() {
-	MSG_WriteByte(&svs.client.netchan.message, svc_download);
-	MSG_WriteShort(&svs.client.netchan.message, -1);
-	MSG_WriteByte(&svs.client.netchan.message, 0);
-}
-
 typedef struct {
 	char	*name;
 	void	(*func) (void);
@@ -10487,9 +10434,6 @@ static ucmd_t ucmds[] =
 	{"configstrings", SV_Configstrings_f},
 	{"baselines", SV_Baselines_f},
 	{"begin", SV_Begin_f},
-
-	{"download", SV_BeginDownload_f},
-	{"nextdl", SV_NextDownload_f},
 
 	{NULL, NULL}
 };
