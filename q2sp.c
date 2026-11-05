@@ -14983,54 +14983,20 @@ float CL_KeyState (kbutton_t *key)
 	return val;
 }
 
-void CL_AdjustAngles (void)
-{
-	float	speed;
-	float	up, down;
+void CL_AdjustAngles() {
+	float speed = cls.frametime * (1.5f * (float)(in_speed.state & 1));
 
-	if (in_speed.state & 1)
-		speed = cls.frametime * 1.5f;
-	else
-		speed = cls.frametime;
-
-	{
-		float yawspeed = 140.0f;
-		cl.viewangles[YAW] -= speed * yawspeed * CL_KeyState(&in_right);
-		cl.viewangles[YAW] += speed * yawspeed * CL_KeyState(&in_left);
-	}
+	float yawspeed = 140.0f;
+	cl.viewangles[YAW] -= speed * yawspeed * CL_KeyState(&in_right);
+	cl.viewangles[YAW] += speed * yawspeed * CL_KeyState(&in_left);
 
 	float pitchspeed = 150.0f;
 
-	up = CL_KeyState(&in_lookup);
-	down = CL_KeyState(&in_lookdown);
+	float up = CL_KeyState(&in_lookup);
+	float down = CL_KeyState(&in_lookdown);
 
 	cl.viewangles[PITCH] -= speed * pitchspeed * up;
 	cl.viewangles[PITCH] += speed * pitchspeed * down;
-}
-
-// Send the intended movement message to the server
-void CL_BaseMove(usercmd_t *cmd) {
-	CL_AdjustAngles();
-
-	*cmd = (usercmd_t){};
-	float speed = 200.0f;
-
-	VectorCopy (cl.viewangles, cmd->angles);
-
-	cmd->sidemove += speed * CL_KeyState (&in_moveright);
-	cmd->sidemove -= speed * CL_KeyState (&in_moveleft);
-
-	cmd->upmove += speed * CL_KeyState (&in_up);
-	cmd->upmove -= speed * CL_KeyState (&in_down);
-
-	cmd->forwardmove += speed * CL_KeyState (&in_forward);
-	cmd->forwardmove -= speed * CL_KeyState (&in_back);
-
-	if ((in_speed.state & 1)) {
-		cmd->forwardmove *= 2;
-		cmd->sidemove *= 2;
-		cmd->upmove *= 2;
-	}
 }
 
 void CL_ClampPitch (void)
@@ -62081,7 +62047,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				usercmd_t* cmd = cl.cmds + cmd_index;
 
 				frame_msec = clamp(sys_frame_time - old_sys_frame_time, 1, 200);
-				CL_BaseMove(cmd);
+				CL_AdjustAngles();
+
+				*cmd = (usercmd_t){};
+				float speed = 200.0f;
+
+				VectorCopy (cl.viewangles, cmd->angles);
+
+				cmd->sidemove += speed * CL_KeyState(&in_moveright);
+				cmd->sidemove -= speed * CL_KeyState(&in_moveleft);
+
+				cmd->upmove += speed * CL_KeyState(&in_up);
+				cmd->upmove -= speed * CL_KeyState(&in_down);
+
+				cmd->forwardmove += speed * CL_KeyState(&in_forward);
+				cmd->forwardmove -= speed * CL_KeyState(&in_back);
+
+				if (in_speed.state & 1) {
+					cmd->forwardmove *= 2;
+					cmd->sidemove *= 2;
+					cmd->upmove *= 2;
+				}
+
 				IN_Move(cmd);
 				CL_FinishMove(cmd);
 				old_sys_frame_time = sys_frame_time;
