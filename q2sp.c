@@ -4771,7 +4771,6 @@ typedef enum {
 typedef struct gclient_s {
 	// known to server
 	player_state_t	ps;				// communicated by server to clients
-	int				ping;
 
 	// private to game
 	client_persistant_t	pers;
@@ -8363,7 +8362,6 @@ typedef struct {
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	int				frame_latency[LATENCY_COUNTS];
-	int				ping;
 
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	char			name[32];			// extracted from userinfo, high bits masked
@@ -9903,38 +9901,6 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
-
-// Updates the cl->ping variables
-void SV_CalcPings() {
-	int			i, j;
-	client_t	*cl;
-	int			total, count;
-
-	for (i=0 ; i<1 ; i++)
-	{
-		cl = &svs.client;
-		if (cl->state != cs_spawned )
-			continue;
-
-		total = 0;
-		count = 0;
-		for (j=0 ; j<LATENCY_COUNTS ; j++)
-		{
-			if (cl->frame_latency[j] > 0)
-			{
-				count++;
-				total += cl->frame_latency[j];
-			}
-		}
-		if (!count)
-			cl->ping = 0;
-		else
-			cl->ping = total / count;
-
-		// let the game dll know about the ping
-		cl->edict->client->ping = cl->ping;
-	}
-}
 
 // This has to be done before the world logic, because player processing happens outside RunWorldFrame
 void SV_PrepWorldFrame (void)
@@ -62319,7 +62285,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// never let the time get too far off
 				svs.realtime = max(svs.realtime, (i32)sv.time - 100);
 			} else {
-				SV_CalcPings();
 				SV_RunGameFrame();
 				SV_SendClientMessages();
 				SV_PrepWorldFrame();
