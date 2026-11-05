@@ -4766,8 +4766,6 @@ char* Sys_GetClipboardData( void );
 
 void SCR_BeginLoadingPlaque (void);
 
-void SV_Shutdown (char *finalmsg, bool reconnect);
-
 // client data that stays across multiple level loads
 typedef struct {
 	char		userinfo[MAX_INFO_STRING];
@@ -8558,7 +8556,6 @@ extern	server_t		sv;					// local server
 
 extern	edict_t		*sv_player;
 
-void SV_FinalMessage (char *message, bool reconnect);
 int SV_ModelIndex (char *name);
 int SV_SoundIndex (char *name);
 int SV_ImageIndex (char *name);
@@ -10171,60 +10168,6 @@ void SV_UserinfoChanged() {
 		svs.client.messagelevel = atoi(val);
 	}
 
-}
-
-/*
-==================
-SV_FinalMessage
-
-Used by SV_Shutdown to send a final message to all
-connected clients before the server goes down.  The messages are sent immediately,
-not just stuck on the outgoing message list, because the server is going
-to totally exit after returning from this function.
-==================
-*/
-void SV_FinalMessage (char *message, bool reconnect)
-{
-	int			i;
-	client_t	*cl;
-
-	SZ_Clear (&net_message);
-	MSG_WriteByte (&net_message, svc_print);
-	MSG_WriteByte (&net_message, PRINT_HIGH);
-	MSG_WriteString (&net_message, message);
-
-	if (reconnect)
-		MSG_WriteByte (&net_message, svc_reconnect);
-	else
-		MSG_WriteByte (&net_message, svc_disconnect);
-
-	// send it twice
-	// stagger the packets to crutch operating system limited buffers
-
-	for (i=0, cl = &svs.client ; i<1 ; i++, cl++)
-		if (cl->state >= cs_connected)
-			Netchan_Transmit (&cl->netchan, net_message.cursize
-			, net_message.data);
-
-	for (i=0, cl = &svs.client ; i<1 ; i++, cl++)
-		if (cl->state >= cs_connected)
-			Netchan_Transmit (&cl->netchan, net_message.cursize
-			, net_message.data);
-}
-
-void SV_Shutdown (char *finalmsg, bool reconnect)
-{
-	SV_FinalMessage (finalmsg, reconnect);
-
-	SV_ShutdownGameProgs ();
-
-	// free current level
-	memset(&sv, 0, sizeof(sv));
-
-	// free server static data
-	if (svs.client_entities)
-		tml_free(svs.client_entities);
-	memset (&svs, 0, sizeof(svs));
 }
 
 // Sends text across to be displayed if the level passes
