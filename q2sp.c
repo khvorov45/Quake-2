@@ -15757,9 +15757,6 @@ void IN_CenterView(void* data) {
 }
 
 static void CL_SendCmd() {
-	u8		data[128];
-	usercmd_t	*oldcmd;
-
 	// build a command even if not connected
 
 	// save this command off for prediction
@@ -15780,6 +15777,7 @@ static void CL_SendCmd() {
 	}
 
 	sizebuf_t buf = {};
+	u8 data[128] = {};
 	SZ_Init(&buf, data, sizeof(data));
 
 	// begin a client move command
@@ -15796,7 +15794,7 @@ static void CL_SendCmd() {
 	cmd = cl.cmds + cmd_index;
 	usercmd_t nullcmd = {};
 	MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
-	oldcmd = cmd;
+	usercmd_t* oldcmd = cmd;
 
 	cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
 	cmd = cl.cmds + cmd_index;
