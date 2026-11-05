@@ -11717,10 +11717,6 @@ struct sfx_s *S_FindName (char *name, bool create);
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin (int ent, vec3_t org);
 
-void IN_Shutdown (void);
-
-void IN_Frame (void);
-
 void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
 
@@ -61300,41 +61296,11 @@ void IN_MouseMove (usercmd_t *cmd)
 		SetCursorPos (window_center_x, window_center_y);
 }
 
-void IN_Shutdown (void)
-{
-	IN_DeactivateMouse ();
-}
-
 // Called when the main window gains or loses focus.
 // The window may have been destroyed and recreated between a deactivate and an activate.
 void IN_Activate(bool active) {
 	in_appactive = active;
 	mouseactive = !active;
-}
-
-/*
-==================
-IN_Frame
-
-Called every frame, even if not generating commands
-==================
-*/
-void IN_Frame (void)
-{
-	if (!mouseinitialized)
-		return;
-
-	if (!in_appactive) {
-		IN_DeactivateMouse();
-		return;
-	}
-
-	if (!cl.refresh_prepped || cls.key_dest == key_console || cls.key_dest == key_menu) {
-		IN_DeactivateMouse();
-		return;
-	}
-
-	IN_ActivateMouse();
 }
 
 void IN_Move(usercmd_t* cmd) {
@@ -62962,7 +62928,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		float maxfps = 90.0f;
 		ms_since_last_client_update += delta_time_ms;
 		if (!(cls.state == ca_connected && ms_since_last_client_update < 100) && ms_since_last_client_update >= 1000.0f / maxfps) {
-			IN_Frame();
+
+			if (mouseinitialized) {
+				if (in_appactive && cl.refresh_prepped && cls.key_dest == key_game) {
+					IN_ActivateMouse();
+				} else {
+					IN_DeactivateMouse();
+				}
+			}
 
 			cls.frametime = min(ms_since_last_client_update / 1000.0f, 0.2f);
 			cl.time += ms_since_last_client_update;
