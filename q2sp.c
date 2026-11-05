@@ -10374,42 +10374,6 @@ void SV_ExecuteUserCommand (char *s)
 		ClientCommand(svs.client.edict);
 }
 
-// The current net_message is parsed for the given client
-void SV_ExecuteClientMessage()
-{
-	for (bool done = false; !done;) {
-		assert(net_message.readcount <= net_message.cursize);
-
-		i32 first_byte = MSG_ReadByte(&net_message);
-		switch (first_byte) {
-			case clc_nop: break;
-
-			case clc_move: {
-				usercmd_t nullcmd = {};
-				usercmd_t oldest = {};
-				usercmd_t oldcmd = {};
-				usercmd_t newcmd = {};
-				MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &oldest);
-				MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
-				MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
-
-				if (svs.client.state == cs_spawned) {
-					ClientThink(svs.client.edict, &newcmd);
-				}
-			} break;
-
-			case clc_stringcmd: {
-				char* cmd = MSG_ReadString(&net_message);
-				SV_ExecuteUserCommand(cmd);
-			} break;
-
-			case -1: done = true; break;
-			default: assert(!"unreachable"); break;
-		}
-
-	} // loop
-}
-
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
 // ent = STRUCT_FROM_LINK(link,entity_t,order)
 // FIXME: remove this mess!
@@ -60479,8 +60443,8 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-static bool NET_GetLoopPacket(netsrc_t from, sizebuf_t* dest_msg) {
-	loopback_t* loop = loopbacks + from;
+static bool NET_GetLoopPacket(netsrc_t for_, sizebuf_t* dest_msg) {
+	loopback_t* loop = loopbacks + for_;
 	loop->get = max(loop->get, loop->send - MAX_LOOPBACK);
 
 	bool should_get_a_msg = loop->get < loop->send;
@@ -62016,7 +61980,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// keep the random time dependent
 			rand();
 
-			// NOTE: Messages from client
+			// NOTE: Messages for server
 			while (NET_GetLoopPacket(NS_SERVER, &net_message)) {
 				if (*(i32*)net_message.data == Connect_Message_First_Int_Value) {
 
@@ -62042,7 +62006,37 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 				} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 					svs.client.lastmessage = svs.realtime;
-					SV_ExecuteClientMessage();
+
+					for (bool done = false; !done;) {
+						assert(net_message.readcount <= net_message.cursize);
+
+						i32 first_byte = MSG_ReadByte(&net_message);
+						switch (first_byte) {
+							case clc_nop: break;
+
+							case clc_move: {
+								usercmd_t nullcmd = {};
+								usercmd_t oldest = {};
+								usercmd_t oldcmd = {};
+								usercmd_t newcmd = {};
+								MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &oldest);
+								MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
+								MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
+
+								if (svs.client.state == cs_spawned) {
+									ClientThink(svs.client.edict, &newcmd);
+								}
+							} break;
+
+							case clc_stringcmd: {
+								char* cmd = MSG_ReadString(&net_message);
+								SV_ExecuteUserCommand(cmd);
+							} break;
+
+							case -1: done = true; break;
+							default: assert(!"unreachable"); break;
+						}
+					} // loop
 				}
 			}
 
@@ -62079,7 +62073,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				cls.netchan.last_received = Sys_Milliseconds();
 			}
 
-			// NOTE: Messages for the client
+			// NOTE: Messages for client
 			while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
 				if (*(i32*)net_message.data == Connect_Message_First_Int_Value) {
 					// NOTE: Connect message
