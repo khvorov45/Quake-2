@@ -2098,7 +2098,6 @@ static char* COM_Parse(char** data_p) {
 }
 
 unsigned	Com_BlockChecksum (void *buffer, int length);
-u8		COM_BlockSequenceCRCByte (u8 *base, int length, int sequence);
 
 // Any number of commands can be added in a frame, from several different sources.
 // Most commands come from either keybindings or console line input, but remote
@@ -11783,7 +11782,6 @@ static struct {
 
 	usercmd_t	cmd;
 	usercmd_t	cmds[CMD_BACKUP];	// each mesage will send several old cmds
-	int			cmd_time[CMD_BACKUP];	// time sent, for calculating pings
 	short		predicted_origins[CMD_BACKUP][3];	// for debug comparing against server
 
 	float		predicted_step;				// for stair up smoothing
@@ -15730,11 +15728,6 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->lightlevel = cl_lightlevel;
 }
 
-/*
-=================
-CL_CreateCmd
-=================
-*/
 usercmd_t CL_CreateCmd (void)
 {
 	usercmd_t	cmd;
@@ -15763,72 +15756,60 @@ void IN_CenterView(void* data) {
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
-void CL_SendCmd (void)
-{
-	sizebuf_t	buf;
+static void CL_SendCmd() {
 	u8		data[128];
-	int			i;
-	usercmd_t	*cmd, *oldcmd;
-	usercmd_t	nullcmd;
-	int			checksumIndex;
+	usercmd_t	*oldcmd;
 
 	// build a command even if not connected
 
 	// save this command off for prediction
-	i = cls.netchan.outgoing_sequence & (CMD_BACKUP-1);
-	cmd = &cl.cmds[i];
-	cl.cmd_time[i] = cls.realtime;	// for netgraph ping calculation
-
-	*cmd = CL_CreateCmd ();
-
+	i32 cmd_index = cls.netchan.outgoing_sequence & (CMD_BACKUP - 1);
+	usercmd_t* cmd = cl.cmds + cmd_index;
+	*cmd = CL_CreateCmd(); // TODO inline
 	cl.cmd = *cmd;
 
-	if (cls.state == ca_disconnected || cls.state == ca_connecting)
-		return;
-
-	if ( cls.state == ca_connected)
-	{
-		if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000 )
-			Netchan_Transmit (&cls.netchan, 0, buf.data);
+	if (cls.state == ca_disconnected || cls.state == ca_connecting) {
 		return;
 	}
 
-	SZ_Init (&buf, data, sizeof(data));
+	if (cls.state == ca_connected) {
+		if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
+			Netchan_Transmit(&cls.netchan, 0, 0);
+		}
+		return;
+	}
+
+	sizebuf_t buf = {};
+	SZ_Init(&buf, data, sizeof(data));
 
 	// begin a client move command
-	MSG_WriteByte (&buf, clc_move);
+	MSG_WriteByte(&buf, clc_move);
 
 	// save the position for a checksum u8
-	checksumIndex = buf.cursize;
-	MSG_WriteByte (&buf, 0);
+	i32 checksumIndex = buf.cursize;
+	MSG_WriteByte(&buf, 0);
 
 	MSG_WriteLong(&buf, -1); // no compression
 
-	// send this and the previous cmds in the message, so
-	// if the last packet was dropped, it can be recovered
-	i = (cls.netchan.outgoing_sequence-2) & (CMD_BACKUP-1);
-	cmd = &cl.cmds[i];
-	memset (&nullcmd, 0, sizeof(nullcmd));
-	MSG_WriteDeltaUsercmd (&buf, &nullcmd, cmd);
+	// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
+	cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
+	cmd = cl.cmds + cmd_index;
+	usercmd_t nullcmd = {};
+	MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
 	oldcmd = cmd;
 
-	i = (cls.netchan.outgoing_sequence-1) & (CMD_BACKUP-1);
-	cmd = &cl.cmds[i];
-	MSG_WriteDeltaUsercmd (&buf, oldcmd, cmd);
+	cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
+	cmd = cl.cmds + cmd_index;
+	MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
 	oldcmd = cmd;
 
-	i = (cls.netchan.outgoing_sequence) & (CMD_BACKUP-1);
-	cmd = &cl.cmds[i];
-	MSG_WriteDeltaUsercmd (&buf, oldcmd, cmd);
+	cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
+	cmd = &cl.cmds[cmd_index];
+	MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
 
 	// calculate a checksum over the move commands
-	buf.data[checksumIndex] = COM_BlockSequenceCRCByte(
-		buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1,
-		cls.netchan.outgoing_sequence);
+	buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
 
-	//
-	// deliver the message
-	//
 	Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
 }
 
