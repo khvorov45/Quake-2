@@ -61886,137 +61886,6 @@ static void GLimp_EndFrame() {
 	assert(swap_buffers_result);
 }
 
-static void CL_Frame(int delta_time_ms) {
-	static float ms_since_last_client_update = 0.0f;
-	float maxfps = 90.0f;
-	ms_since_last_client_update += delta_time_ms;
-
-	if (!(cls.state == ca_connected && ms_since_last_client_update < 100) && ms_since_last_client_update >= 1000.0f / maxfps) {
-
-		IN_Frame();
-
-		cls.frametime = min(ms_since_last_client_update / 1000.0f, 0.2f);
-		cl.time += ms_since_last_client_update;
-		cls.realtime = curtime;
-		ms_since_last_client_update = 0.0f;
-
-		if (delta_time_ms > 5000) {
-			cls.netchan.last_received = Sys_Milliseconds();
-		}
-
-		// fetch results from server
-		CL_ReadPackets();
-
-		// send a new command message to the server
-		Cmd_ExecuteCbuf(&temp_global_string_command_context);
-		CL_SendCmd();
-
-		if (cls.state == ca_disconnected && server_state) {
-			cls.state = ca_connecting;
-			Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
-		} else {
-			assert(cls.state == ca_connected || cls.state == ca_active);
-		}
-
-		// predict all unacknowledged movements
-		CL_PredictMovement();
-
-		if (!cl.refresh_prepped && cls.state == ca_active) {
-			CL_PrepRefresh();
-		}
-
-		// update the screen
-		SCR_UpdateScreen();
-
-		// NOTE: Sound update
-		if (!cls.disable_screen) {
-			VectorCopy(cl.refdef.vieworg, listener_origin);
-			VectorCopy(cl.v_forward, listener_forward);
-			VectorCopy(cl.v_right, listener_right);
-			VectorCopy(cl.v_up, listener_up);
-
-			// update spatialization for dynamic sounds
-			channel_t* ch = channels;
-			for (i64 ind = 0; ind < (i64)carray_count(channels); ind++, ch++) {
-				if (ch->sfx) {
-					if (ch->autosound) {
-						// autosounds are regenerated fresh each frame
-						*ch = (channel_t){};
-					} else {
-						S_Spatialize(ch); // respatialize channel
-						if (!ch->leftvol && !ch->rightvol) {
-							*ch = (channel_t){};
-						}
-					} // if-else autosound
-				} // if sfx
-			} // for channel
-
-			// add loopsounds
-			S_AddLoopSounds();
-
-			// mix some sound
-
-			SNDDMA_BeginPainting();
-			if (dma.buffer) {
-
-				// Updates DMA time
-				{
-					static i32 buffers = 0;
-					static i32 oldsamplepos = 0;
-
-					i32 fullsamples = dma.samples / dma.channels;
-
-					// it is possible to miscount buffers if it has wrapped twice.  Oh well.
-					i32 samplepos = SNDDMA_GetDMAPos();
-
-					if (samplepos < oldsamplepos) {
-						buffers++; // buffer wrapped
-
-						if (paintedtime > 0x40000000) {
-							// time to chop things off to avoid 32 bit limits
-							buffers = 0;
-							paintedtime = fullsamples;
-							S_StopAllSounds(0);
-						}
-					}
-					oldsamplepos = samplepos;
-
-					soundtime = buffers * fullsamples + samplepos / dma.channels;
-				}
-
-				// check to make sure that we haven't overshot
-				if (paintedtime < soundtime) {
-					paintedtime = soundtime;
-				}
-
-				// mix ahead of current position and to an even submission block size
-				float mixahead_01 = 0.2f;
-				u32 endtime = ((i32)(soundtime + mixahead_01 * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
-				i32 samps = dma.samples >> (dma.channels-1);
-				if ((i32)(endtime - soundtime) > samps) {
-					endtime = soundtime + samps;
-				}
-
-				S_PaintChannels(endtime);
-
-				SNDDMA_Submit();
-			}
-		} else {
-
-			// if the loading plaque is up, clear everything out to make sure we aren't looping a dirty dma buffer while loading
-			S_ClearBuffer();
-
-		} // sound update
-
-		// advance local effects for next frame
-		CL_RunDLights();
-		CL_RunLightStyles();
-		SCR_RunConsole();
-
-		cls.framecount++;
-	}
-}
-
 //
 // SECTION Platform (windows)
 //
@@ -63005,6 +62874,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
 	// NOTE: Mainloop
+	float ms_since_last_client_update = 0.0f;
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
 	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
 
@@ -63020,22 +62890,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		sys_frame_time = timeGetTime();
 
-		int delta_time_msec = 0;
+		int delta_time_ms = 0;
 		{
 			int newtime = 0;
-			while (delta_time_msec < 1) {
+			while (delta_time_ms < 1) {
 				newtime = Sys_Milliseconds();
-				delta_time_msec = newtime - oldtime;
+				delta_time_ms = newtime - oldtime;
 			}
 			oldtime = newtime;
 		}
 
-		assert(delta_time_msec >= 1);
+		assert(delta_time_ms >= 1);
 		Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
 		// NOTE: Server update
 		if (svs.initialized) {
-			svs.realtime += delta_time_msec;
+			svs.realtime += delta_time_ms;
 
 			// keep the random time dependent
 			rand();
@@ -63089,7 +62959,131 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		} // if server initialized
 
-		CL_Frame(delta_time_msec);
+		float maxfps = 90.0f;
+		ms_since_last_client_update += delta_time_ms;
+		if (!(cls.state == ca_connected && ms_since_last_client_update < 100) && ms_since_last_client_update >= 1000.0f / maxfps) {
+			IN_Frame();
+
+			cls.frametime = min(ms_since_last_client_update / 1000.0f, 0.2f);
+			cl.time += ms_since_last_client_update;
+			cls.realtime = curtime;
+			ms_since_last_client_update = 0.0f;
+
+			if (delta_time_ms > 5000) {
+				cls.netchan.last_received = Sys_Milliseconds();
+			}
+
+			// fetch results from server
+			CL_ReadPackets();
+
+			// send a new command message to the server
+			Cmd_ExecuteCbuf(&temp_global_string_command_context);
+			CL_SendCmd();
+
+			if (cls.state == ca_disconnected && server_state) {
+				cls.state = ca_connecting;
+				Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
+			} else {
+				assert(cls.state == ca_connected || cls.state == ca_active);
+			}
+
+			// predict all unacknowledged movements
+			CL_PredictMovement();
+
+			if (!cl.refresh_prepped && cls.state == ca_active) {
+				CL_PrepRefresh();
+			}
+
+			// update the screen
+			SCR_UpdateScreen();
+
+			// NOTE: Sound update
+			if (!cls.disable_screen) {
+				VectorCopy(cl.refdef.vieworg, listener_origin);
+				VectorCopy(cl.v_forward, listener_forward);
+				VectorCopy(cl.v_right, listener_right);
+				VectorCopy(cl.v_up, listener_up);
+
+				// update spatialization for dynamic sounds
+				channel_t* ch = channels;
+				for (i64 ind = 0; ind < (i64)carray_count(channels); ind++, ch++) {
+					if (ch->sfx) {
+						if (ch->autosound) {
+							// autosounds are regenerated fresh each frame
+							*ch = (channel_t){};
+						} else {
+							S_Spatialize(ch); // respatialize channel
+							if (!ch->leftvol && !ch->rightvol) {
+								*ch = (channel_t){};
+							}
+						} // if-else autosound
+					} // if sfx
+				} // for channel
+
+				// add loopsounds
+				S_AddLoopSounds();
+
+				// mix some sound
+
+				SNDDMA_BeginPainting();
+				if (dma.buffer) {
+
+					// Updates DMA time
+					{
+						static i32 buffers = 0;
+						static i32 oldsamplepos = 0;
+
+						i32 fullsamples = dma.samples / dma.channels;
+
+						// it is possible to miscount buffers if it has wrapped twice.  Oh well.
+						i32 samplepos = SNDDMA_GetDMAPos();
+
+						if (samplepos < oldsamplepos) {
+							buffers++; // buffer wrapped
+
+							if (paintedtime > 0x40000000) {
+								// time to chop things off to avoid 32 bit limits
+								buffers = 0;
+								paintedtime = fullsamples;
+								S_StopAllSounds(0);
+							}
+						}
+						oldsamplepos = samplepos;
+
+						soundtime = buffers * fullsamples + samplepos / dma.channels;
+					}
+
+					// check to make sure that we haven't overshot
+					if (paintedtime < soundtime) {
+						paintedtime = soundtime;
+					}
+
+					// mix ahead of current position and to an even submission block size
+					float mixahead_01 = 0.2f;
+					u32 endtime = ((i32)(soundtime + mixahead_01 * dma.speed) + dma.submission_chunk - 1) & ~(dma.submission_chunk-1);
+					i32 samps = dma.samples >> (dma.channels-1);
+					if ((i32)(endtime - soundtime) > samps) {
+						endtime = soundtime + samps;
+					}
+
+					S_PaintChannels(endtime);
+
+					SNDDMA_Submit();
+				}
+			} else {
+
+				// if the loading plaque is up, clear everything out to make sure we aren't looping a dirty dma buffer while loading
+				S_ClearBuffer();
+
+			} // sound update
+
+			// advance local effects for next frame
+			CL_RunDLights();
+			CL_RunLightStyles();
+			SCR_RunConsole();
+
+			cls.framecount++;
+		} // if client should update
 	}} // mainloop
 
 	// NOTE: never gets here
