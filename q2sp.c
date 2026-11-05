@@ -10067,25 +10067,6 @@ void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 
-static void SV_DropClient() {
-	// add the disconnect
-	MSG_WriteByte(&svs.client.netchan.message, svc_disconnect);
-
-	if (svs.client.state == cs_spawned) {
-		// call the prog function for removing a client
-		// this will remove the body, among other things
-		ClientDisconnect (svs.client.edict);
-	}
-
-	if (svs.client.download) {
-		FS_FreeFile (svs.client.download);
-		svs.client.download = NULL;
-	}
-
-	svs.client.state = cs_zombie;
-	svs.client.name[0] = 0;
-}
-
 // Updates the cl->ping variables
 void SV_CalcPings() {
 	int			i, j;
@@ -10740,7 +10721,6 @@ static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
 // The current net_message is parsed for the given client
 void SV_ExecuteClientMessage()
 {
-	int		c;
 	char	*s;
 
 	usercmd_t	nullcmd;
@@ -10758,105 +10738,94 @@ void SV_ExecuteClientMessage()
 	move_issued = false;
 	stringCmdCount = 0;
 
-	while (1)
-	{
-		if (net_message.readcount > net_message.cursize)
-		{
-			add_line_to_console_log(STR("SV_ReadClientMessage: badread"));
-			SV_DropClient();
-			return;
-		}
+	for (bool done = false; !done;) {
+		assert(net_message.readcount <= net_message.cursize);
 
-		c = MSG_ReadByte (&net_message);
-		if (c == -1)
-			break;
-
-		switch (c)
-		{
-		default:
-			add_line_to_console_log(STR("SV_ReadClientMessage: unknown command char"));
-			SV_DropClient();
-			return;
-
-		case clc_nop:
-			break;
-
-		case clc_userinfo:
-			strncpy(svs.client.userinfo, MSG_ReadString(&net_message), sizeof(svs.client.userinfo)-1);
-			SV_UserinfoChanged();
-			break;
-
-		case clc_move:
-			if (move_issued)
-				return;		// someone is trying to cheat...
-
-			move_issued = true;
-			checksumIndex = net_message.readcount;
-			checksum = MSG_ReadByte (&net_message);
-			lastframe = MSG_ReadLong (&net_message);
-			if (lastframe != svs.client.lastframe) {
-				svs.client.lastframe = lastframe;
-				if (svs.client.lastframe > 0) {
-					svs.client.frame_latency[svs.client.lastframe&(LATENCY_COUNTS-1)] =
-						svs.realtime - svs.client.frames[svs.client.lastframe & UPDATE_MASK].senttime;
-				}
-			}
-
-			memset (&nullcmd, 0, sizeof(nullcmd));
-			MSG_ReadDeltaUsercmd (&net_message, &nullcmd, &oldest);
-			MSG_ReadDeltaUsercmd (&net_message, &oldest, &oldcmd);
-			MSG_ReadDeltaUsercmd (&net_message, &oldcmd, &newcmd);
-
-			if ( svs.client.state != cs_spawned )
-			{
-				svs.client.lastframe = -1;
+		i32 first_byte = MSG_ReadByte(&net_message);
+		switch (first_byte) {
+			case clc_nop:
 				break;
-			}
 
-			// if the checksum fails, ignore the rest of the packet
-			calculatedChecksum = COM_BlockSequenceCRCByte (
-				net_message.data + checksumIndex + 1,
-				net_message.readcount - checksumIndex - 1,
-				svs.client.netchan.incoming_sequence);
+			case clc_userinfo:
+				strncpy(svs.client.userinfo, MSG_ReadString(&net_message), sizeof(svs.client.userinfo)-1);
+				SV_UserinfoChanged();
+				break;
 
-			if (calculatedChecksum != checksum)
-			{
-				return;
-			}
+			case clc_move:
+				if (move_issued)
+					return;		// someone is trying to cheat...
 
-			net_drop = svs.client.netchan.dropped;
-			if (net_drop < 20)
-			{
-				while (net_drop > 2)
-				{
-					SV_ClientThink (&svs.client, &svs.client.lastcmd);
-
-					net_drop--;
+				move_issued = true;
+				checksumIndex = net_message.readcount;
+				checksum = MSG_ReadByte (&net_message);
+				lastframe = MSG_ReadLong (&net_message);
+				if (lastframe != svs.client.lastframe) {
+					svs.client.lastframe = lastframe;
+					if (svs.client.lastframe > 0) {
+						svs.client.frame_latency[svs.client.lastframe&(LATENCY_COUNTS-1)] =
+							svs.realtime - svs.client.frames[svs.client.lastframe & UPDATE_MASK].senttime;
+					}
 				}
-				if (net_drop > 1)
-					SV_ClientThink (&svs.client, &oldest);
 
-				if (net_drop > 0)
-					SV_ClientThink (&svs.client, &oldcmd);
+				memset (&nullcmd, 0, sizeof(nullcmd));
+				MSG_ReadDeltaUsercmd (&net_message, &nullcmd, &oldest);
+				MSG_ReadDeltaUsercmd (&net_message, &oldest, &oldcmd);
+				MSG_ReadDeltaUsercmd (&net_message, &oldcmd, &newcmd);
 
-			}
-			SV_ClientThink (&svs.client, &newcmd);
+				if ( svs.client.state != cs_spawned )
+				{
+					svs.client.lastframe = -1;
+					break;
+				}
 
-			svs.client.lastcmd = newcmd;
-			break;
+				// if the checksum fails, ignore the rest of the packet
+				calculatedChecksum = COM_BlockSequenceCRCByte (
+					net_message.data + checksumIndex + 1,
+					net_message.readcount - checksumIndex - 1,
+					svs.client.netchan.incoming_sequence);
 
-		case clc_stringcmd:
-			s = MSG_ReadString (&net_message);
+				if (calculatedChecksum != checksum)
+				{
+					return;
+				}
 
-			// malicious users may try using too many string commands
-			if (++stringCmdCount < MAX_STRINGCMDS)
-				SV_ExecuteUserCommand (s);
+				net_drop = svs.client.netchan.dropped;
+				if (net_drop < 20)
+				{
+					while (net_drop > 2)
+					{
+						SV_ClientThink (&svs.client, &svs.client.lastcmd);
 
-			if (svs.client.state == cs_zombie)
-				return;	// disconnect command
-			break;
+						net_drop--;
+					}
+					if (net_drop > 1)
+						SV_ClientThink (&svs.client, &oldest);
+
+					if (net_drop > 0)
+						SV_ClientThink (&svs.client, &oldcmd);
+
+				}
+				SV_ClientThink (&svs.client, &newcmd);
+
+				svs.client.lastcmd = newcmd;
+				break;
+
+			case clc_stringcmd:
+				s = MSG_ReadString (&net_message);
+
+				// malicious users may try using too many string commands
+				if (++stringCmdCount < MAX_STRINGCMDS)
+					SV_ExecuteUserCommand (s);
+
+				if (svs.client.state == cs_zombie)
+					return;	// disconnect command
+				break;
+
+			case -1: done = true; break;
+			default: assert(!"unreachable"); break;
 		}
-	}
+
+	} // loop
 }
 
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
