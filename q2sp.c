@@ -1989,7 +1989,6 @@ static int server_state;
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
 
-bool NET_GetLoopPacket (netsrc_t sock, sizebuf_t *net_message);
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
 bool Netchan_NeedReliable (netchan_t *chan);
@@ -11979,7 +11978,6 @@ typedef struct
 extern	kbutton_t	in_mlook, in_klook;
 extern 	kbutton_t 	in_speed;
 
-void CL_SendCmd (void);
 void CL_SendMove (usercmd_t *cmd);
 
 int  CL_ReadFromServer (void);
@@ -16045,33 +16043,6 @@ void CL_Changing_f(void* data) {
 	SCR_BeginLoadingPlaque ();
 	cls.state = ca_connected;	// not active anymore, but not disconnected
 	add_line_to_console_log(STR("\nChanging map..."));
-}
-
-static void CL_ReadPackets() {
-	while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
-		if (*(i32*)net_message.data == -1) {
-
-			MSG_BeginReading(&net_message);
-			MSG_ReadLong(&net_message); // skip the -1
-
-			char* line = MSG_ReadStringLine(&net_message);
-			Cmd_TokenizeString(line);
-
-			assert(!strcmp(cmd_argv[0], "client_connect"));
-			assert(cls.state != ca_connected);
-
-			Netchan_Setup(NS_CLIENT, &cls.netchan);
-			MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
-			MSG_WriteString(&cls.netchan.message, "new");
-			cls.state = ca_connected;
-
-		} else if (cls.state != ca_disconnected && cls.state != ca_connecting) {
-			assert(net_message.cursize >= 8);
-			if (Netchan_Process(&cls.netchan, &net_message)) {
-				CL_ParseServerMessage ();
-			}
-		}
-	}
 }
 
 int precache_check; // for autodownload of precache items
@@ -62876,7 +62847,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// keep the random time dependent
 			rand();
 
-			// get packets from clients
+			// NOTE: Messages
 			while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
 				if (*(i32*)net_message.data == -1) {
 					// NOTE: Connect message
@@ -62905,7 +62876,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					svs.client.datagram.allowoverflow = true;
 					svs.client.lastmessage = svs.realtime;
 					svs.client.lastconnect = svs.realtime;
-
 
 				} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 					svs.client.lastmessage = svs.realtime;
@@ -62946,8 +62916,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				cls.netchan.last_received = Sys_Milliseconds();
 			}
 
-			// fetch results from server
-			CL_ReadPackets();
+			// NOTE: Messages
+			while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
+				if (*(i32*)net_message.data == -1) {
+					// NOTE: Connect message
+
+					MSG_BeginReading(&net_message);
+					MSG_ReadLong(&net_message); // skip the -1
+
+					char* line = MSG_ReadStringLine(&net_message);
+					Cmd_TokenizeString(line);
+
+					assert(!strcmp(cmd_argv[0], "client_connect"));
+					assert(cls.state != ca_connected);
+
+					Netchan_Setup(NS_CLIENT, &cls.netchan);
+					MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
+					MSG_WriteString(&cls.netchan.message, "new");
+					cls.state = ca_connected;
+
+				} else if (cls.state != ca_disconnected && cls.state != ca_connecting) {
+					assert(net_message.cursize >= 8);
+					if (Netchan_Process(&cls.netchan, &net_message)) {
+						CL_ParseServerMessage();
+					}
+				}
+			}
 
 			// send a new command message to the server
 			Cmd_ExecuteCbuf(&temp_global_string_command_context);
