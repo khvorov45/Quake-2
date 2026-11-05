@@ -11093,9 +11093,6 @@ struct sfx_s *S_FindName (char *name, bool create);
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin (int ent, vec3_t org);
 
-void IN_Move (usercmd_t *cmd);
-// add additional movement on top of the keyboard move cmd
-
 extern	int		key_repeats[256];
 
 extern	int	anykeydown;
@@ -60320,48 +60317,11 @@ void IN_MouseEvent (int mstate)
 	mouse_oldbuttonstate = mstate;
 }
 
-void IN_MouseMove (usercmd_t *cmd)
-{
-	UNUSED(cmd);
-
-	int		mx, my;
-
-	if (!mouseactive)
-		return;
-
-	// find mouse movement
-	if (!GetCursorPos (&current_pos))
-		return;
-
-	mx = current_pos.x - window_center_x;
-	my = current_pos.y - window_center_y;
-
-	mouse_x = mx;
-	mouse_y = my;
-
-	float sensitivity = 3.0f;
-	mouse_x *= sensitivity;
-	mouse_y *= sensitivity;
-
-	// add mouse X/Y movement to cmd
-	float pitch_and_yaw = 0.022;
-	cl.viewangles[YAW] -= pitch_and_yaw * mouse_x;
-	cl.viewangles[PITCH] += pitch_and_yaw * mouse_y;
-
-	// force the mouse to the center, so there's room to move
-	if (mx || my)
-		SetCursorPos (window_center_x, window_center_y);
-}
-
 // Called when the main window gains or loses focus.
 // The window may have been destroyed and recreated between a deactivate and an activate.
 void IN_Activate(bool active) {
 	in_appactive = active;
 	mouseactive = !active;
-}
-
-void IN_Move(usercmd_t* cmd) {
-	IN_MouseMove(cmd);
 }
 
 void IN_ClearStates (void)
@@ -62069,12 +62029,33 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					cmd->upmove *= 2;
 				}
 
-				IN_Move(cmd);
+				if (mouseactive && GetCursorPos(&current_pos)) {
+					i32 mx = current_pos.x - window_center_x;
+					i32 my = current_pos.y - window_center_y;
+
+					mouse_x = mx;
+					mouse_y = my;
+
+					float sensitivity = 3.0f;
+					mouse_x *= sensitivity;
+					mouse_y *= sensitivity;
+
+					// add mouse X/Y movement to cmd
+					float pitch_and_yaw = 0.022;
+					cl.viewangles[YAW] -= pitch_and_yaw * mouse_x;
+					cl.viewangles[PITCH] += pitch_and_yaw * mouse_y;
+
+					// force the mouse to the center, so there's room to move
+					if (mx || my) {
+						SetCursorPos (window_center_x, window_center_y);
+					}
+				}
+
 				CL_FinishMove(cmd);
 				old_sys_frame_time = sys_frame_time;
 
 				cl.cmd = *cmd;
-			}
+			} // build command
 
 			// NOTE Send commands
 			switch (cls.state) {
