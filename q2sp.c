@@ -8303,8 +8303,6 @@ typedef struct {
 		cs_spawned,		// client is fully in game
 	} state;
 
-	usercmd_t		lastcmd;			// for filling in big drops
-
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	int				messagelevel;		// for filtering printed messages
 
@@ -9780,7 +9778,6 @@ void SV_InitGame(void) {
 		ent = EDICT_NUM(1);
 		ent->s.number = 1;
 		svs.client.edict = ent;
-		memset(&svs.client.lastcmd, 0, sizeof(svs.client.lastcmd));
 	}
 }
 
@@ -10200,7 +10197,6 @@ void SV_New_f (void)
 		ent = EDICT_NUM(playernum+1);
 		ent->s.number = playernum+1;
 		svs.client.edict = ent;
-		memset (&svs.client.lastcmd, 0, sizeof(svs.client.lastcmd));
 
 		// begin fetching configstrings
 		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
@@ -10390,10 +10386,9 @@ void SV_ExecuteClientMessage()
 
 		i32 first_byte = MSG_ReadByte(&net_message);
 		switch (first_byte) {
-			case clc_nop:
-				break;
+			case clc_nop: break;
 
-			case clc_move:
+			case clc_move: {
 				usercmd_t nullcmd = {};
 				usercmd_t oldest = {};
 				usercmd_t oldcmd = {};
@@ -10402,14 +10397,10 @@ void SV_ExecuteClientMessage()
 				MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
 				MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
 
-				if (svs.client.state != cs_spawned) {
-					break;
+				if (svs.client.state == cs_spawned) {
+					SV_ClientThink(&svs.client, &newcmd);
 				}
-
-				SV_ClientThink(&svs.client, &newcmd);
-
-				svs.client.lastcmd = newcmd;
-				break;
+			} break;
 
 			case clc_stringcmd: {
 				char* cmd = MSG_ReadString(&net_message);
