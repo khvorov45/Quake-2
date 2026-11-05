@@ -10374,10 +10374,6 @@ void SV_ExecuteUserCommand (char *s)
 		ClientCommand(svs.client.edict);
 }
 
-static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
-	ClientThink(cl->edict, cmd);
-}
-
 // The current net_message is parsed for the given client
 void SV_ExecuteClientMessage()
 {
@@ -10398,7 +10394,7 @@ void SV_ExecuteClientMessage()
 				MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
 
 				if (svs.client.state == cs_spawned) {
-					SV_ClientThink(&svs.client, &newcmd);
+					ClientThink(svs.client.edict, &newcmd);
 				}
 			} break;
 
@@ -62083,7 +62079,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				cls.netchan.last_received = Sys_Milliseconds();
 			}
 
-			// NOTE: Messages from server
+			// NOTE: Messages for the client
 			while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
 				if (*(i32*)net_message.data == Connect_Message_First_Int_Value) {
 					// NOTE: Connect message
