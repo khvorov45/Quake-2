@@ -15748,50 +15748,54 @@ static void CL_SendCmd() {
 
 	cl.cmd = *cmd;
 
-	if (cls.state == ca_disconnected || cls.state == ca_connecting) {
-		return;
-	}
+	switch (cls.state) {
+		case ca_connected: {
+			if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
+				Netchan_Transmit(&cls.netchan, 0, 0);
+			}
+		} break;
 
-	if (cls.state == ca_connected) {
-		if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
-			Netchan_Transmit(&cls.netchan, 0, 0);
-		}
-		return;
-	}
+		case ca_active: {
+			sizebuf_t buf = {};
+			u8 data[128] = {};
+			SZ_Init(&buf, data, sizeof(data));
 
-	sizebuf_t buf = {};
-	u8 data[128] = {};
-	SZ_Init(&buf, data, sizeof(data));
+			// begin a client move command
+			MSG_WriteByte(&buf, clc_move);
 
-	// begin a client move command
-	MSG_WriteByte(&buf, clc_move);
+			// save the position for a checksum u8
+			i32 checksumIndex = buf.cursize;
+			MSG_WriteByte(&buf, 0);
 
-	// save the position for a checksum u8
-	i32 checksumIndex = buf.cursize;
-	MSG_WriteByte(&buf, 0);
+			MSG_WriteLong(&buf, -1); // no compression
 
-	MSG_WriteLong(&buf, -1); // no compression
+			// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
+			cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
+			cmd = cl.cmds + cmd_index;
+			usercmd_t nullcmd = {};
+			MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
+			usercmd_t* oldcmd = cmd;
 
-	// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
-	cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
-	cmd = cl.cmds + cmd_index;
-	usercmd_t nullcmd = {};
-	MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
-	usercmd_t* oldcmd = cmd;
+			cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
+			cmd = cl.cmds + cmd_index;
+			MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+			oldcmd = cmd;
 
-	cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
-	cmd = cl.cmds + cmd_index;
-	MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-	oldcmd = cmd;
+			cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
+			cmd = &cl.cmds[cmd_index];
+			MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
 
-	cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
-	cmd = &cl.cmds[cmd_index];
-	MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+			// calculate a checksum over the move commands
+			buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
 
-	// calculate a checksum over the move commands
-	buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
+			Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
+		} break; // case active
 
-	Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
+		case ca_uninitialized:
+		case ca_disconnected:
+		case ca_connecting:
+		default: break;
+	} // switch state
 }
 
 void CL_ParseInventory (void)
