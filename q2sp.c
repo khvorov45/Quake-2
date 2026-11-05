@@ -8635,8 +8635,6 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					float attenuation, float timeofs);
 void SV_BroadcastCommand (char *fmt, ...);
 
-void SV_ExecuteClientMessage();
-
 //
 // sv_ents.c
 //
@@ -10196,42 +10194,6 @@ void SV_CalcPings() {
 
 		// let the game dll know about the ping
 		cl->edict->client->ping = cl->ping;
-	}
-}
-
-static void SV_ReadPackets() {
-	while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
-		if (*(i32*)net_message.data == -1) {
-			MSG_BeginReading(&net_message);
-			MSG_ReadLong(&net_message); // skip the -1 marker
-
-			char* line = MSG_ReadStringLine(&net_message);
-			Cmd_TokenizeString(line);
-
-			assert(!strcmp(cmd_argv[0],"connect"));
-
-			i32 edictnum = 1;
-			edict_t* ent = EDICT_NUM(edictnum);
-			svs.client.edict = ent;
-
-			bool client_connect_result = ClientConnect(ent);
-			assert(client_connect_result);
-
-			Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
-			Netchan_Setup(NS_SERVER, &svs.client.netchan);
-
-			svs.client.state = cs_connected;
-
-			SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
-			svs.client.datagram.allowoverflow = true;
-			svs.client.lastmessage = svs.realtime;
-			svs.client.lastconnect = svs.realtime;
-
-
-		} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
-			svs.client.lastmessage = svs.realtime;
-			SV_ExecuteClientMessage();
-		}
 	}
 }
 
@@ -17542,7 +17504,7 @@ void CL_ParseStartSoundPacket(void)
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
 }
 
-static String_Command_Context string_command_context;
+static String_Command_Context temp_global_string_command_context;
 
 void CL_ParseServerMessage ()
 {
@@ -17590,7 +17552,7 @@ void CL_ParseServerMessage ()
 			break;
 
 		case svc_serverdata:
-			Cmd_ExecuteCbuf(&string_command_context);		// make sure any stuffed commands are done
+			Cmd_ExecuteCbuf(&temp_global_string_command_context);		// make sure any stuffed commands are done
 			CL_ParseServerData ();
 			break;
 
@@ -18091,7 +18053,7 @@ typedef struct {
 	i64 len; // NOTE: Does not include the null terminator
 	i64 cap; // NOTE: Does include the null terminator
 } Console_Input;
-static Console_Input console_input;
+static Console_Input temp_global_console_input;
 
 static void Con_DrawConsole(float frac) {
 	i64 lines_px = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
@@ -18122,8 +18084,8 @@ static void Con_DrawConsole(float frac) {
 			Draw_Char(current_x, ycoord, ']');
 
 			// NOTE: Actual input
-			for (i64 ind = 0; ind < console_input.len; ind++) {
-				char ch = console_input.ptr[ind];
+			for (i64 ind = 0; ind < temp_global_console_input.len; ind++) {
+				char ch = temp_global_console_input.ptr[ind];
 				current_x = (ind + 1) * temp_global_char_dim_px.x;
 				Draw_Char(current_x, ycoord, ch);
 			}
@@ -20789,9 +20751,9 @@ void DrawAltString (int x, int y, char *s)
 }
 
 static void clear_console_input() {
-	assert(console_input.cap > 1);
-	console_input.len = 0;
-	console_input.ptr[0] = 0;
+	assert(temp_global_console_input.cap > 1);
+	temp_global_console_input.len = 0;
+	temp_global_console_input.ptr[0] = 0;
 }
 
 static void Con_ToggleConsole_f(void* data) {
@@ -20860,10 +20822,10 @@ void Key_Console(int key) {
 
 	if (key == Key_Code_Enter || key == Key_Code_Keypad_Enter) {
 
-		i64 to_skip = console_input.ptr[1] == '\\' || console_input.ptr[1] == '/' ? 1 : 0;
-		Cbuf_AddText(console_input.ptr + to_skip);
+		i64 to_skip = temp_global_console_input.ptr[1] == '\\' || temp_global_console_input.ptr[1] == '/' ? 1 : 0;
+		Cbuf_AddText(temp_global_console_input.ptr + to_skip);
 		Cbuf_AddText("\n");
-		add_line_to_console_log((String){console_input.ptr, console_input.len});
+		add_line_to_console_log((String){temp_global_console_input.ptr, temp_global_console_input.len});
 
 		clear_console_input();
 
@@ -20872,12 +20834,12 @@ void Key_Console(int key) {
 		}
 
 	} else if (key == Key_Code_Backspace) {
-		console_input.len = max(console_input.len - 1, 0);
-		console_input.ptr[console_input.len] = 0;
+		temp_global_console_input.len = max(temp_global_console_input.len - 1, 0);
+		temp_global_console_input.ptr[temp_global_console_input.len] = 0;
 
-	} else if (key >= 32 && key <= 127 && console_input.len < console_input.cap - 1) {
-		console_input.ptr[console_input.len++] = key;
-		console_input.ptr[console_input.len] = 0;
+	} else if (key >= 32 && key <= 127 && temp_global_console_input.len < temp_global_console_input.cap - 1) {
+		temp_global_console_input.ptr[temp_global_console_input.len++] = key;
+		temp_global_console_input.ptr[temp_global_console_input.len] = 0;
 	} // NOTE: ignore anything else
 }
 
@@ -22221,7 +22183,7 @@ static void CustomizeControlsFunc(void* unused) {
 static void ControlsResetDefaultsFunc(void* unused) {
 	UNUSED(unused);
 	Cbuf_AddText("exec default.cfg\n");
-	Cmd_ExecuteCbuf(&string_command_context);
+	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 }
 
 static void ConsoleFunc(void* unused) {
@@ -61958,7 +61920,7 @@ static void CL_Frame(int msec) {
 	CL_ReadPackets();
 
 	// send a new command message to the server
-	Cmd_ExecuteCbuf(&string_command_context);
+	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 	CL_SendCmd();
 
 	if (cls.state == ca_disconnected && server_state) {
@@ -62193,7 +62155,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// TODO: unglobal
 	temp_global_key_bindings = key_bindings;
 	{
-		console_input = (Console_Input)arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
+		temp_global_console_input = (Console_Input)arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
 		clear_console_input();
 
 		// init ascii characters in console mode
@@ -62270,7 +62232,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: String commands
 	temp_memory_block(&context.memory.temp) {
-		string_command_context.data = (String_Command_Data){
+		temp_global_string_command_context.data = (String_Command_Data){
 			.client_state = &cls.state,
 			.key_bindings = key_bindings,
 		};
@@ -62361,7 +62323,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
-		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds, String_Command);
+		copy_slice(&context.memory.perm, &temp_global_string_command_context.builtin, &temp_cmds, String_Command);
 	}
 
 	// NOTE: Command buffer
@@ -62756,7 +62718,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cbuf_AddText("exec default.cfg\n");
 		Cbuf_AddText("exec config.cfg\n");
 
-		Cmd_ExecuteCbuf(&string_command_context);
+		Cmd_ExecuteCbuf(&temp_global_string_command_context);
 	}
 
 	// NOTE: Game window resolution
@@ -62838,15 +62800,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		glw_state.hGLRC = wglCreateContext(glw_state.hDC);
 		assert(glw_state.hGLRC);
 
-		{
-			BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
-			assert(make_current_result);
-		}
+		BOOL make_current_result = wglMakeCurrent(glw_state.hDC, glw_state.hGLRC);
+		assert(make_current_result);
 	}
 
 	// NOTE: Init GL procs that need context created beforehand
 	{
-		static BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
+		BOOL (WINAPI *wglSwapIntervalEXT)(int interval);
 		wglSwapIntervalEXT = (void*)wglGetProcAddress("wglSwapIntervalEXT");
 		assert(wglSwapIntervalEXT);
 		wglSwapIntervalEXT(1);
@@ -63053,7 +63013,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	Cbuf_AddText("exec autoexec.cfg\n");
-	Cmd_ExecuteCbuf(&string_command_context);
+	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
 	// NOTE: Mainloop
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
@@ -63082,8 +63042,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		assert(delta_time_msec >= 1);
-		Cmd_ExecuteCbuf(&string_command_context);
+		Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
+		// NOTE: Server update
 		if (svs.initialized) {
 			svs.realtime += delta_time_msec;
 
@@ -63091,27 +63052,53 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			rand();
 
 			// get packets from clients
-			SV_ReadPackets();
+			while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
+				if (*(i32*)net_message.data == -1) {
+					// NOTE: Connect message
+
+					MSG_BeginReading(&net_message);
+					MSG_ReadLong(&net_message); // skip the -1 marker
+
+					char* line = MSG_ReadStringLine(&net_message);
+					Cmd_TokenizeString(line);
+
+					assert(!strcmp(cmd_argv[0],"connect"));
+
+					i32 edictnum = 1;
+					edict_t* ent = EDICT_NUM(edictnum);
+					svs.client.edict = ent;
+
+					bool client_connect_result = ClientConnect(ent);
+					assert(client_connect_result);
+
+					Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
+					Netchan_Setup(NS_SERVER, &svs.client.netchan);
+
+					svs.client.state = cs_connected;
+
+					SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
+					svs.client.datagram.allowoverflow = true;
+					svs.client.lastmessage = svs.realtime;
+					svs.client.lastconnect = svs.realtime;
+
+
+				} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
+					svs.client.lastmessage = svs.realtime;
+					SV_ExecuteClientMessage();
+				}
+			}
 
 			// move autonomous things around if enough time has passed
 			if (svs.realtime < (i32)sv.time) {
 				// never let the time get too far off
 				svs.realtime = max(svs.realtime, (i32)sv.time - 100);
 			} else {
-				// update ping based on the last known frame from all clients
 				SV_CalcPings();
-
-				// let everything in the world think and move
 				SV_RunGameFrame();
-
-				// send messages back to the clients that had packets read this frame
 				SV_SendClientMessages();
-
-				// clear teleport flags, etc for next frame
 				SV_PrepWorldFrame();
-
 			}
-		}
+		} // if server initialized
 
 		CL_Frame(delta_time_msec);
 	}} // mainloop
