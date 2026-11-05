@@ -10721,7 +10721,6 @@ void SV_ExecuteClientMessage()
 {
 	usercmd_t	oldest, oldcmd, newcmd;
 	int		net_drop;
-	int		calculatedChecksum;
 
 	sv_player = svs.client.edict;
 
@@ -10739,10 +10738,7 @@ void SV_ExecuteClientMessage()
 				break;
 
 			case clc_move:
-				i32 checksumIndex = net_message.readcount;
-				i32 checksum = MSG_ReadByte(&net_message);
 				i32 lastframe = MSG_ReadLong(&net_message);
-
 				if (lastframe != svs.client.lastframe) {
 					svs.client.lastframe = lastframe;
 					if (svs.client.lastframe > 0) {
@@ -10758,16 +10754,6 @@ void SV_ExecuteClientMessage()
 				if (svs.client.state != cs_spawned) {
 					svs.client.lastframe = -1;
 					break;
-				}
-
-				// if the checksum fails, ignore the rest of the packet
-				calculatedChecksum = COM_BlockSequenceCRCByte(
-					net_message.data + checksumIndex + 1,
-					net_message.readcount - checksumIndex - 1,
-					svs.client.netchan.incoming_sequence);
-
-				if (calculatedChecksum != checksum) {
-					return;
 				}
 
 				net_drop = svs.client.netchan.dropped;
@@ -62601,10 +62587,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					// begin a client move command
 					MSG_WriteByte(&buf, clc_move);
 
-					// save the position for a checksum u8
-					i32 checksumIndex = buf.cursize;
-					MSG_WriteByte(&buf, 0);
-
 					MSG_WriteLong(&buf, -1); // no compression
 
 					// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
@@ -62622,9 +62604,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
 					cmd = &cl.cmds[cmd_index];
 					MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-
-					// calculate a checksum over the move commands
-					buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
 
 					Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
 				} break; // case active
