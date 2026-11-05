@@ -1877,23 +1877,6 @@ static char* MSG_ReadString(sizebuf_t* msg_read) {
 	return string;
 }
 
-static char* MSG_ReadStringLine(sizebuf_t* msg_read) {
-	static char	string[2048];
-
-	int l = 0;
-	do {
-		int c = MSG_ReadChar (msg_read);
-		if (c == -1 || c == 0 || c == '\n') {
-			break;
-		}
-		string[l] = c;
-		l++;
-	} while (l < (int)sizeof(string) - 1);
-
-	string[l] = 0;
-	return string;
-}
-
 static float MSG_ReadCoord(sizebuf_t* msg_read) {
 	return MSG_ReadShort(msg_read) * (1.0/8);
 }
@@ -7051,11 +7034,6 @@ unsigned Com_BlockChecksum (void *buffer, int length)
 
 	return val;
 }
-/* ============ end source: qcommon/md4.c ============ */
-/* ============ begin source: qcommon/net_chan.c ============ */
-
-
-/* already inlined above: qcommon/qcommon.h */
 
 /*
 
@@ -7101,30 +7079,12 @@ then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
 
-void Netchan_OutOfBand(int net_socket, int length, u8 *data)
-{
-	sizebuf_t	send;
-	u8		send_buf[MAX_MSGLEN];
-
-	// write the packet header
+void Netchan_OutOfBandPrint(int net_socket) {
+	sizebuf_t send = {};
+	u8 send_buf[MAX_MSGLEN] = {};
 	SZ_Init(&send, send_buf, sizeof(send_buf));
-
 	MSG_WriteLong(&send, -1);	// -1 sequence means out of band
-	SZ_Write(&send, data, length);
-
-	// send the datagram
 	NET_SendLoopPacket(net_socket, send.cursize, send.data);
-}
-
-void Netchan_OutOfBandPrint(int net_socket, char *format, ...) {
-	va_list		argptr;
-	static char		string[MAX_MSGLEN - 4];
-
-	va_start (argptr, format);
-	vsprintf (string, format,argptr);
-	va_end (argptr);
-
-	Netchan_OutOfBand(net_socket, strlen(string), (u8*)string);
 }
 
 // called to open a channel to a remote system
@@ -62662,18 +62622,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// keep the random time dependent
 			rand();
 
-			// NOTE: Messages
+			// NOTE: Messages from client
 			while (NET_GetLoopPacket(NS_SERVER, &net_message)) {
 				if (*(i32*)net_message.data == -1) {
 					// NOTE: Connect message
 
 					MSG_BeginReading(&net_message);
 					MSG_ReadLong(&net_message); // skip the -1 marker
-
-					char* line = MSG_ReadStringLine(&net_message);
-					Cmd_TokenizeString(line);
-
-					assert(!strcmp(cmd_argv[0], "connect"));
 
 					i32 edictnum = 1;
 					edict_t* ent = EDICT_NUM(edictnum);
@@ -62682,7 +62637,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					bool client_connect_result = ClientConnect(ent);
 					assert(client_connect_result);
 
-					Netchan_OutOfBandPrint(NS_SERVER, "client_connect");
+					Netchan_OutOfBandPrint(NS_SERVER);
 					Netchan_Setup(NS_SERVER, &svs.client.netchan);
 
 					svs.client.state = cs_connected;
@@ -62710,6 +62665,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			}
 		} // if server initialized
 
+		// NOTE Client update
 		float maxfps = 90.0f;
 		ms_since_last_client_update += delta_time_ms;
 		if (!(cls.state == ca_connected && ms_since_last_client_update < 100) && ms_since_last_client_update >= 1000.0f / maxfps) {
@@ -62731,7 +62687,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				cls.netchan.last_received = Sys_Milliseconds();
 			}
 
-			// NOTE: Messages
+			// NOTE: Messages from server
 			while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
 				if (*(i32*)net_message.data == -1) {
 					// NOTE: Connect message
@@ -62739,10 +62695,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					MSG_BeginReading(&net_message);
 					MSG_ReadLong(&net_message); // skip the -1
 
-					char* line = MSG_ReadStringLine(&net_message);
-					Cmd_TokenizeString(line);
-
-					assert(!strcmp(cmd_argv[0], "client_connect"));
 					assert(cls.state != ca_connected);
 
 					Netchan_Setup(NS_CLIENT, &cls.netchan);
@@ -62827,7 +62779,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			if (cls.state == ca_disconnected && server_state) {
 				cls.state = ca_connecting;
-				Netchan_OutOfBandPrint(NS_CLIENT, "connect");
+				Netchan_OutOfBandPrint(NS_CLIENT);
 			} else {
 				assert(cls.state == ca_connected || cls.state == ca_active);
 			}
