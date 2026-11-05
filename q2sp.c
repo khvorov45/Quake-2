@@ -8410,8 +8410,6 @@ typedef struct
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
 
-extern	edict_t		*sv_player;
-
 int SV_ModelIndex (char *name);
 int SV_SoundIndex (char *name);
 int SV_ImageIndex (char *name);
@@ -10305,8 +10303,6 @@ void SV_SendClientMessages() {
 	}
 }
 
-edict_t	*sv_player;
-
 // Sends the first message from the server to a connected client.
 // This will be sent on the initial connection and upon each server load.
 void SV_New_f (void)
@@ -10479,8 +10475,7 @@ void SV_Begin_f (void)
 
 	svs.client.state = cs_spawned;
 
-	// call the game begin function
-	ClientBegin (sv_player);
+	ClientBegin(svs.client.edict);
 
 	Cbuf_InsertText(defer_text_buf);
 	defer_text_buf[0] = 0;
@@ -10555,7 +10550,6 @@ void SV_ExecuteUserCommand (char *s)
 	ucmd_t	*u;
 
 	Cmd_TokenizeString(s);
-	sv_player = svs.client.edict;
 
 	for (u=ucmds ; u->name ; u++)
 		if (!strcmp (Cmd_Argv(0), u->name) )
@@ -10565,7 +10559,7 @@ void SV_ExecuteUserCommand (char *s)
 		}
 
 	if (!u->name && sv.state == ss_game)
-		ClientCommand (sv_player);
+		ClientCommand(svs.client.edict);
 }
 
 static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
@@ -10577,8 +10571,6 @@ void SV_ExecuteClientMessage()
 {
 	usercmd_t	oldest, oldcmd, newcmd;
 	int		net_drop;
-
-	sv_player = svs.client.edict;
 
 	for (bool done = false; !done;) {
 		assert(net_message.readcount <= net_message.cursize);
