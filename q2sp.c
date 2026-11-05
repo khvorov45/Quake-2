@@ -8326,7 +8326,6 @@ typedef struct {
 
 typedef struct
 {
-	bool	initialized;				// sv_init has completed
 	int			realtime;					// always increasing, no clamping, etc
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base
@@ -9761,12 +9760,9 @@ static void SCR_EndLoadingPlaque() {
 void SV_InitGame(void) {
 	edict_t	*ent;
 
-	assert(!svs.initialized);
 	assert(cls.state == ca_disconnected);
 
 	SCR_BeginLoadingPlaque ();
-
-	svs.initialized = true;
 
 	svs.spawncount = rand();
 	svs.num_client_entities = UPDATE_BACKUP * 64;
@@ -11355,14 +11351,13 @@ typedef struct
 	int			state;
 } kbutton_t;
 
-extern	kbutton_t	in_mlook, in_klook;
+extern	kbutton_t	in_mlook;
 extern 	kbutton_t 	in_speed;
 
 void CL_SendMove (usercmd_t *cmd);
 
 int  CL_ReadFromServer (void);
 void CL_WriteToServer (usercmd_t *cmd);
-void CL_BaseMove (usercmd_t *cmd);
 
 float CL_KeyState (kbutton_t *key);
 
@@ -14844,7 +14839,6 @@ Key_Event (int key, bool down, unsigned time);
 */
 
 
-kbutton_t	in_klook;
 kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_speed, in_use, in_attack;
@@ -14929,8 +14923,6 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-static void IN_KLookDown(void* data) {UNUSED(data); KeyDown(&in_klook);}
-static void IN_KLookUp(void* data) {UNUSED(data); KeyUp(&in_klook);}
 static void IN_UpDown(void* data) {UNUSED(data); KeyDown(&in_up);}
 static void IN_UpUp(void* data) {UNUSED(data); KeyUp(&in_up);}
 static void IN_DownDown(void* data) {UNUSED(data); KeyDown(&in_down);}
@@ -15008,11 +15000,6 @@ void CL_AdjustAngles (void)
 	}
 
 	float pitchspeed = 150.0f;
-	if (in_klook.state & 1)
-	{
-		cl.viewangles[PITCH] -= speed * pitchspeed * CL_KeyState(&in_forward);
-		cl.viewangles[PITCH] += speed * pitchspeed * CL_KeyState(&in_back);
-	}
 
 	up = CL_KeyState(&in_lookup);
 	down = CL_KeyState(&in_lookdown);
@@ -15022,12 +15009,10 @@ void CL_AdjustAngles (void)
 }
 
 // Send the intended movement message to the server
-void CL_BaseMove (usercmd_t *cmd)
-{
-	CL_AdjustAngles ();
+void CL_BaseMove(usercmd_t *cmd) {
+	CL_AdjustAngles();
 
-	memset (cmd, 0, sizeof(*cmd));
-
+	*cmd = (usercmd_t){};
 	float speed = 200.0f;
 
 	VectorCopy (cl.viewangles, cmd->angles);
@@ -15038,15 +15023,9 @@ void CL_BaseMove (usercmd_t *cmd)
 	cmd->upmove += speed * CL_KeyState (&in_up);
 	cmd->upmove -= speed * CL_KeyState (&in_down);
 
-	if (! (in_klook.state & 1) )
-	{
-		cmd->forwardmove += speed * CL_KeyState (&in_forward);
-		cmd->forwardmove -= speed * CL_KeyState (&in_back);
-	}
+	cmd->forwardmove += speed * CL_KeyState (&in_forward);
+	cmd->forwardmove -= speed * CL_KeyState (&in_back);
 
-	//
-	// adjust for speed key / running
-	//
 	if ((in_speed.state & 1)) {
 		cmd->forwardmove *= 2;
 		cmd->sidemove *= 2;
@@ -20812,7 +20791,6 @@ static char* bindnames[][2] = {
 	{"+lookdown", "look down"},
 	{"centerview", "center view"},
 	{"+mlook", "mouse look"},
-	{"+klook", "keyboard look"},
 	{"+moveup", "up / jump"},
 	{"+movedown", "down / crouch"},
 	{"inven", "inventory"},
@@ -61244,8 +61222,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), IN_UseDown}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), IN_UseUp}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("impulse"), IN_Impulse}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+klook"), IN_KLookDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-klook"), IN_KLookUp}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("+mlook"), IN_MLookDown}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("-mlook"), IN_MLookUp}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
@@ -61974,7 +61950,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
 		// NOTE: Server update
-		if (svs.initialized) {
+		{
 			svs.realtime += delta_time_ms;
 
 			// keep the random time dependent
