@@ -15733,71 +15733,6 @@ void IN_CenterView(void* data) {
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
 
-static void CL_SendCmd() {
-	// build a command even if not connected
-
-	// save this command off for prediction
-	i32 cmd_index = cls.netchan.outgoing_sequence & (CMD_BACKUP - 1);
-	usercmd_t* cmd = cl.cmds + cmd_index;
-
-	frame_msec = clamp(sys_frame_time - old_sys_frame_time, 1, 200);
-	CL_BaseMove(cmd);
-	IN_Move(cmd);
-	CL_FinishMove(cmd);
-	old_sys_frame_time = sys_frame_time;
-
-	cl.cmd = *cmd;
-
-	switch (cls.state) {
-		case ca_connected: {
-			if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
-				Netchan_Transmit(&cls.netchan, 0, 0);
-			}
-		} break;
-
-		case ca_active: {
-			sizebuf_t buf = {};
-			u8 data[128] = {};
-			SZ_Init(&buf, data, sizeof(data));
-
-			// begin a client move command
-			MSG_WriteByte(&buf, clc_move);
-
-			// save the position for a checksum u8
-			i32 checksumIndex = buf.cursize;
-			MSG_WriteByte(&buf, 0);
-
-			MSG_WriteLong(&buf, -1); // no compression
-
-			// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
-			cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
-			cmd = cl.cmds + cmd_index;
-			usercmd_t nullcmd = {};
-			MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
-			usercmd_t* oldcmd = cmd;
-
-			cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
-			cmd = cl.cmds + cmd_index;
-			MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-			oldcmd = cmd;
-
-			cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
-			cmd = &cl.cmds[cmd_index];
-			MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
-
-			// calculate a checksum over the move commands
-			buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
-
-			Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
-		} break; // case active
-
-		case ca_uninitialized:
-		case ca_disconnected:
-		case ca_connecting:
-		default: break;
-	} // switch state
-}
-
 void CL_ParseInventory (void)
 {
 	int		i;
@@ -62909,9 +62844,72 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				}
 			}
 
-			// send a new command message to the server
 			Cmd_ExecuteCbuf(&temp_global_string_command_context);
-			CL_SendCmd();
+
+			// build a command even if not connected
+			{
+				// save this command off for prediction
+				i32 cmd_index = cls.netchan.outgoing_sequence & (CMD_BACKUP - 1);
+				usercmd_t* cmd = cl.cmds + cmd_index;
+
+				frame_msec = clamp(sys_frame_time - old_sys_frame_time, 1, 200);
+				CL_BaseMove(cmd);
+				IN_Move(cmd);
+				CL_FinishMove(cmd);
+				old_sys_frame_time = sys_frame_time;
+
+				cl.cmd = *cmd;
+			}
+
+			// NOTE Send commands
+			switch (cls.state) {
+				case ca_connected: {
+					if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
+						Netchan_Transmit(&cls.netchan, 0, 0);
+					}
+				} break;
+
+				case ca_active: {
+					sizebuf_t buf = {};
+					u8 data[128] = {};
+					SZ_Init(&buf, data, sizeof(data));
+
+					// begin a client move command
+					MSG_WriteByte(&buf, clc_move);
+
+					// save the position for a checksum u8
+					i32 checksumIndex = buf.cursize;
+					MSG_WriteByte(&buf, 0);
+
+					MSG_WriteLong(&buf, -1); // no compression
+
+					// send this and the previous cmds in the message, so if the last packet was dropped, it can be recovered
+					i64 cmd_index = (cls.netchan.outgoing_sequence - 2) & (CMD_BACKUP - 1);
+					usercmd_t* cmd = cl.cmds + cmd_index;
+					usercmd_t nullcmd = {};
+					MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
+					usercmd_t* oldcmd = cmd;
+
+					cmd_index = (cls.netchan.outgoing_sequence - 1) & (CMD_BACKUP - 1);
+					cmd = cl.cmds + cmd_index;
+					MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+					oldcmd = cmd;
+
+					cmd_index = (cls.netchan.outgoing_sequence) & (CMD_BACKUP - 1);
+					cmd = &cl.cmds[cmd_index];
+					MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+
+					// calculate a checksum over the move commands
+					buf.data[checksumIndex] = COM_BlockSequenceCRCByte(buf.data + checksumIndex + 1, buf.cursize - checksumIndex - 1, cls.netchan.outgoing_sequence);
+
+					Netchan_Transmit (&cls.netchan, buf.cursize, buf.data);
+				} break; // case active
+
+				case ca_uninitialized:
+				case ca_disconnected:
+				case ca_connecting:
+				default: break;
+			} // switch state
 
 			if (cls.state == ca_disconnected && server_state) {
 				cls.state = ca_connecting;
@@ -62920,14 +62918,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				assert(cls.state == ca_connected || cls.state == ca_active);
 			}
 
-			// predict all unacknowledged movements
 			CL_PredictMovement();
-
 			if (!cl.refresh_prepped && cls.state == ca_active) {
 				CL_PrepRefresh();
 			}
-
-			// update the screen
 			SCR_UpdateScreen();
 
 			// NOTE: Sound update
@@ -62953,11 +62947,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					} // if sfx
 				} // for channel
 
-				// add loopsounds
 				S_AddLoopSounds();
 
-				// mix some sound
-
+				// NOTE Mix sound
 				SNDDMA_BeginPainting();
 				if (dma.buffer) {
 
