@@ -10456,8 +10456,6 @@ static void SV_ClientThink(client_t* cl, usercmd_t* cmd) {
 // The current net_message is parsed for the given client
 void SV_ExecuteClientMessage()
 {
-	usercmd_t	oldest, oldcmd, newcmd;
-
 	for (bool done = false; !done;) {
 		assert(net_message.readcount <= net_message.cursize);
 
@@ -10473,6 +10471,9 @@ void SV_ExecuteClientMessage()
 
 			case clc_move:
 				usercmd_t nullcmd = {};
+				usercmd_t oldest = {};
+				usercmd_t oldcmd = {};
+				usercmd_t newcmd = {};
 				MSG_ReadDeltaUsercmd(&net_message, &nullcmd, &oldest);
 				MSG_ReadDeltaUsercmd(&net_message, &oldest, &oldcmd);
 				MSG_ReadDeltaUsercmd(&net_message, &oldcmd, &newcmd);
@@ -10481,7 +10482,7 @@ void SV_ExecuteClientMessage()
 					break;
 				}
 
-				SV_ClientThink (&svs.client, &newcmd);
+				SV_ClientThink(&svs.client, &newcmd);
 
 				svs.client.lastcmd = newcmd;
 				break;
