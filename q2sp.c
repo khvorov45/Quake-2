@@ -22,6 +22,7 @@
 #define carray_count(a) (sizeof(a) / sizeof((a)[0]))
 #define UNUSED(x) ((x)=(x))
 #define clamp(x, min, max) ((x) > (max) ? max : (x) < (min) ? (min) : (x))
+#define swap(x, y) do {typeof(x) temp = (x); (x) = (y); (y) = temp;} while (0)
 #define assert(x) do {if (!(x)) __builtin_debugtrap();} while (0) // NOTE: the do/while is here because it's the only thing I found that generates correct debug info
 
 typedef uint8_t u8;
@@ -33,6 +34,8 @@ typedef int32_t i32;
 typedef int64_t i64;
 
 typedef struct {u8* ptr; i64 len;} u8_Slice;
+
+typedef struct {i64 x; i64 y;} v2i;
 
 #define Byte ((i64)1)
 #define Kilobyte ((i64)(1024 * Byte))
@@ -79,11 +82,12 @@ static struct {
 //
 
 static void copy_bytes(void* dest, void* src, i64 len) {
-	assert(dest && src && len >= 0);
+	assert(len == 0 || (len > 0 && dest && src));
 	while (len--) {*(u8*)dest++ = *(u8*)src++;}
 }
 
 static void zero_memory(void* dest, i64 len) {
+	assert(len == 0 || (len > 0 && dest));
 	while (len--) {*(u8*)dest++ = 0;}
 }
 
@@ -223,14 +227,18 @@ static void string_builder_write_string(String_Builder* builder, String text) {
 	builder->str.len += text.len;
 }
 
+static void string_builder_write_char(String_Builder* builder, char ch) {
+	string_builder_write_string(builder, (String){&ch, 1});
+}
+
 static String string_builder_end(String_Builder* builder) {
 	String result = builder->str;
-	string_builder_write_string(builder, STR("\0"));
+	string_builder_write_char(builder, '\0');
 	*builder = (String_Builder){};
 	return result;
 }
 
-static String concatenate_strings(Arena* arena, String_Slice strings) {
+static String concat(Arena* arena, String_Slice strings) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
 	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
@@ -238,6 +246,40 @@ static String concatenate_strings(Arena* arena, String_Slice strings) {
 		String str = strings.ptr[ind];
 		string_builder_write_string(&builder, str);
 	}
+	String result = string_builder_end(&builder);
+
+	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
+	return result;
+}
+
+static String int_to_string(Arena* arena, i64 val) {
+	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
+
+	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
+
+	i64 current_val = val;
+	if (current_val < 0) {
+		string_builder_write_char(&builder, '-');
+		current_val = -current_val;
+	}
+
+	for (;;) {
+		i64 radix = 10;
+		i64 this_digit = current_val % radix;
+		char this_digit_char = '0' + (char)this_digit;
+		string_builder_write_char(&builder, this_digit_char);
+
+		current_val /= radix;
+		if (current_val == 0) {
+			break;
+		}
+	}
+
+	for (i64 char_ind = 0; char_ind < builder.str.len / 2; char_ind++) {
+		i64 other_char_ind = builder.str.len - 1 - char_ind;
+		swap(builder.str.ptr[char_ind], builder.str.ptr[other_char_ind]);
+	}
+
 	String result = string_builder_end(&builder);
 
 	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
@@ -575,25 +617,20 @@ static struct {
 //
 
 typedef struct {Fixed_String fstr; float timestamp;} Console_Line;
-typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log;
-static struct {
-	Console_Log log; // NOTE: Circular buffer
+typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log; // NOTE: Circular buffer
 
-	// TODO these should be somewhere else probably
-	i64 char_width_px;
-	i64 char_height_px;
-} console;
+static Console_Log temp_global_console_log;
 
 // index 0 is most recent, 1 is second most recent, etc.
 typedef struct {String text; float timestamp;} Log_Line;
 static Log_Line get_log_line(i64 recency_index) {
-	assert(recency_index >= 0 && recency_index < console.log.cap);
-	i64 actual_index = console.log.head - 1 - recency_index;
+	assert(recency_index >= 0 && recency_index < temp_global_console_log.cap);
+	i64 actual_index = temp_global_console_log.head - 1 - recency_index;
 	if (actual_index < 0) {
-		actual_index += console.log.cap;
+		actual_index += temp_global_console_log.cap;
 	}
-	assert(actual_index >= 0 && actual_index < console.log.cap);
-	Console_Line* line = console.log.ptr + actual_index;
+	assert(actual_index >= 0 && actual_index < temp_global_console_log.cap);
+	Console_Line* line = temp_global_console_log.ptr + actual_index;
 	Log_Line result = {.text = string_from_fixed_string(&line->fstr), .timestamp = line->timestamp};
 	return result;
 }
@@ -601,8 +638,8 @@ static Log_Line get_log_line(i64 recency_index) {
 static void add_line_to_console_log(String line) {
 	context.debug_log(STR("CONSOLE"), line);
 
-	Console_Line* console_line = console.log.ptr + console.log.head;
-	console.log.head = (console.log.head + 1) % console.log.cap;
+	Console_Line* console_line = temp_global_console_log.ptr + temp_global_console_log.head;
+	temp_global_console_log.head = (temp_global_console_log.head + 1) % temp_global_console_log.cap;
 
 	assert((i64)carray_count(console_line->fstr.buf) > line.len);
 	copy_bytes(console_line->fstr.buf, line.ptr, line.len);
@@ -2328,7 +2365,7 @@ static void Cmd_Alias_f(void* data) {
 
 	if (cmd_argc == 1) {
 		for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value))));
+			add_line_to_console_log(concat(&context.memory.temp, STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value))));
 		}
 		return;
 	}
@@ -8798,7 +8835,7 @@ void SV_WriteLevelFile (void)
 	f = fopen(name, "wb");
 	if (!f)
 	{
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
+		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	fwrite (sv.configstrings, sizeof(sv.configstrings), 1, f);
@@ -8819,7 +8856,7 @@ void SV_ReadLevelFile() {
 	f = fopen(name, "rb");
 	if (!f)
 	{
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
+		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	FS_Read (sv.configstrings, sizeof(sv.configstrings), f);
@@ -8845,7 +8882,7 @@ void SV_WriteServerFile (bool autosave)
 	f = fopen (name, "wb");
 	if (!f)
 	{
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
+		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	// write the comment field
@@ -8889,7 +8926,7 @@ void SV_ReadServerFile (void)
 	f = fopen (name, "rb");
 	if (!f)
 	{
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
+		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	// read the comment field
@@ -8990,7 +9027,7 @@ static void SV_Map_f(void* data) {
 		char expanded[MAX_QPATH] = {};
 		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
 		if (FS_LoadFile (expanded, NULL) == -1) {
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
+			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
 			return;
 		}
 	}
@@ -9025,7 +9062,7 @@ static void SV_Loadgame_f(void* data) {
 	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", Cmd_Argv(1));
 	f = fopen(name, "rb");
 	if (!f) {
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
+		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
 		return;
 	}
 	fclose(f);
@@ -15848,83 +15885,89 @@ void CL_ParseInventory (void)
 }
 
 void Draw_Char (int x, int y, int num);
-void Inv_DrawString (int x, int y, char *string)
-{
-	while (*string)
-	{
-		Draw_Char (x, y, *string);
-		x+=8;
-		string++;
-	}
-}
-
-void SetStringHighBit (char *s)
-{
-	while (*s)
-		*s++ |= 128;
-}
-
-
-
 void Draw_Pic(int x, int y, char *pic);
 
 static Key_Bindings* temp_global_key_bindings;
+static v2i temp_global_char_dim_px = {8, 8};
 
-static void CL_DrawInventory() {
-	char string[1024];
-	char binding[1024];
+enum {
+	Inventory_Row_Layout_Hotkey,
+	Inventory_Row_Layout_Item_Count,
+	Inventory_Row_Layout_Item_Name,
+	Inventory_Row_Layout_Count,
+};
 
-	i64 selected_item_id = cl.frame.playerstate.stats[STAT_SELECTED_ITEM];
-
-	i64 inventory_item_ids[MAX_ITEMS] = {};
-	i64 inventory_item_count = 0;
-	i64 inventory_selected_index = 0;
-	for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
-		if (item_id == selected_item_id) {
-			inventory_selected_index = inventory_item_count;
+static void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
+	v2i current_topleft = topleft;
+	for (i64 ind = 0; ind < Inventory_Row_Layout_Count; ind++) {
+		String string = strings[ind];
+		if (string.len > 0) {
+			DrawString(current_topleft.x, current_topleft.y, string.ptr);
 		}
-		if (cl.inventory[item_id]) {
-			inventory_item_ids[inventory_item_count++] = item_id;
+		i64 pad_right_ch = widths[ind] - string.len;
+		assert(pad_right_ch >= 0);
+		i64 gap_ch = 1;
+		current_topleft.x += temp_global_char_dim_px.x * (string.len + pad_right_ch + gap_ch);
+	}
+}
+
+static void draw_inventory_table() {
+	// NOTE: Header
+	v2i header_topleft_px = temp_global_char_dim_px;
+
+	String header_strings[Inventory_Row_Layout_Count] = {
+		[Inventory_Row_Layout_Hotkey] = STR("hotkey"),
+		[Inventory_Row_Layout_Item_Count] = STR("###"),
+		[Inventory_Row_Layout_Item_Name] = STR("item"),
+	};
+
+	String longest_item_name = STR("Grenade Launcher");
+	i64 widths[Inventory_Row_Layout_Count] = {
+		[Inventory_Row_Layout_Hotkey] = header_strings[Inventory_Row_Layout_Hotkey].len,
+		[Inventory_Row_Layout_Item_Count] = header_strings[Inventory_Row_Layout_Item_Count].len,
+		[Inventory_Row_Layout_Item_Name] = longest_item_name.len,
+	};
+	draw_inventory_row(header_topleft_px, header_strings, widths);
+
+	// NOTE: Inventory state
+	i64 inventory_item_ids[MAX_ITEMS] = {};
+	i64 number_of_items_in_inventory = 0;
+	for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
+		i64 item_count_in_inventory = cl.inventory[item_id];
+		if (item_count_in_inventory > 0) {
+			inventory_item_ids[number_of_items_in_inventory++] = item_id;
 		}
 	}
 
-	i64 display_items = 17;
-	i64 top = max(min(inventory_selected_index - display_items/2, inventory_item_count - display_items), 0);
+	// NOTE: Inventory content
+	v2i current_item_topleft_px = {header_topleft_px.x, header_topleft_px.y + temp_global_char_dim_px.y * 2};
+	for (i64 inventory_item_ind = 0; inventory_item_ind < number_of_items_in_inventory; inventory_item_ind++) {
+		i64 item_id = inventory_item_ids[inventory_item_ind];
 
-	i64 x = (viddef.width - 256) / 2;
-	i64 y = (viddef.height - 240) / 2;
-	Draw_Pic(x, y + 8, "inventory");
-
-	y += 24;
-	x += 24;
-	Inv_DrawString(x, y, "hotkey ### item");
-	Inv_DrawString(x, y + 8, "------ --- ----");
-	y += 16;
-
-	for (i64 i = top; i < inventory_item_count && i < top + display_items; i++) {
-		i64 item = inventory_item_ids[i];
-		// search for a binding
-		Com_sprintf(binding, sizeof(binding), "use %s", cl.configstrings[CS_ITEMS + item]);
-		char* bind = "";
-		for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
-			Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
-			if (this_binding->len && !Q_stricmp(this_binding->buf, binding)) {
-				bind = Key_Code_Strings[key_code].ptr;
-				break;
+		String item_name = string_from_cstring(cl.configstrings[CS_ITEMS + item_id]);
+		String item_hotkey = {};
+		{
+			String use_this_item_cmd = concat(&context.memory.temp, STRS(STR("use "), item_name));
+			for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+				Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
+				if (streq(use_this_item_cmd, string_from_fixed_string(this_binding))) {
+					item_hotkey = Key_Code_Strings[key_code];
+					break;
+				}
 			}
 		}
 
-		Com_sprintf(string, sizeof(string), "%6s %3i %s", bind, cl.inventory[item], cl.configstrings[CS_ITEMS+item] );
-		if (item != selected_item_id) {
-			SetStringHighBit(string);
-		} else {
-			// draw a blinky cursor by the selected item
-			if ((i64)(cls.realtime * 10) & 1) {
-				Draw_Char(x-8, y, 15);
-			}
-		}
-		Inv_DrawString(x, y, string);
-		y += 8;
+		i64 item_count = cl.inventory[item_id];
+		String item_count_str = int_to_string(&context.memory.temp, item_count);
+
+		String row_strings[Inventory_Row_Layout_Count] = {
+			[Inventory_Row_Layout_Hotkey] = item_hotkey,
+			[Inventory_Row_Layout_Item_Count] = item_count_str,
+			[Inventory_Row_Layout_Item_Name] = item_name,
+		};
+
+		draw_inventory_row(current_item_topleft_px, row_strings, widths);
+		current_item_topleft_px.y += temp_global_char_dim_px.y;
 	}
 }
 
@@ -18060,12 +18103,12 @@ static void Con_DrawConsole(float frac) {
 
 		// NOTE: Log lines
 		i64 input_offset = 22;
-		for (i64 row = 0; row < console.log.cap; row++) {
+		for (i64 row = 0; row < temp_global_console_log.cap; row++) {
 			String line_str = get_log_line(row).text;
-			i64 ycoord = lines_px - input_offset - console.char_height_px - (row * console.char_height_px);
+			i64 ycoord = lines_px - input_offset - temp_global_char_dim_px.y - (row * temp_global_char_dim_px.y);
 			for (i64 column = 0; column < line_str.len; column++) {
 				char ch = line_str.ptr[column];
-				i64 xcoord = (column + 1) * console.char_width_px;
+				i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
 				Draw_Char(xcoord, ycoord, ch);
 			}
 		} // log lines
@@ -18081,13 +18124,13 @@ static void Con_DrawConsole(float frac) {
 			// NOTE: Actual input
 			for (i64 ind = 0; ind < console_input.len; ind++) {
 				char ch = console_input.ptr[ind];
-				current_x = (ind + 1) * console.char_width_px;
+				current_x = (ind + 1) * temp_global_char_dim_px.x;
 				Draw_Char(current_x, ycoord, ch);
 			}
 
 			// NOTE: Cursor
 			char block_char_code = 11;
-			Draw_Char(current_x + console.char_width_px, ycoord, block_char_code);
+			Draw_Char(current_x + temp_global_char_dim_px.x, ycoord, block_char_code);
 		} // draw input
 	} // if any lines
 }
@@ -18788,7 +18831,7 @@ static void SCR_UpdateScreen() {
 	}
 
 	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
-		CL_DrawInventory();
+		draw_inventory_table();
 	}
 
 	SCR_DrawNet();
@@ -20555,7 +20598,7 @@ static void CL_PrepRefresh() {
 	mapname[strlen(mapname)-4] = 0;		// cut off ".bsp"
 
 	// register models, pics, and skins
-	add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("Map: "), string_from_cstring(mapname))));
+	add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Map: "), string_from_cstring(mapname))));
 	SCR_UpdateScreen ();
 
 	void R_BeginRegistration (char *model);
@@ -20772,12 +20815,12 @@ void Con_DrawNotify() {
 	for (i64 row = 0; row < lines_to_draw; row++) {
 		Log_Line line = get_log_line(row);
 		float time_passed_since = cls.realtime - line.timestamp;
-		i64 ycoord = (lines_to_draw - row) * console.char_height_px;
+		i64 ycoord = (lines_to_draw - row) * temp_global_char_dim_px.y;
 		float keep_for_ms = 3000.0f;
 		if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
 			for (i64 column = 0; column < line.text.len; column++) {
 				char ch = line.text.ptr[column];
-				i64 xcoord = (column + 1) * console.char_width_px;
+				i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
 				Draw_Char(xcoord, ycoord, ch);
 			}
 		}
@@ -20851,14 +20894,14 @@ static void builtin_string_command_bind(void* ctx) {
 	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
 	if (!key_code) {
 		String_Slice line = STRS(STR("invalid key: "), string_from_cstring(cmd_argv[1]));
-		add_line_to_console_log(concatenate_strings(&context.memory.temp, line));
+		add_line_to_console_log(concat(&context.memory.temp, line));
 		return;
 	}
 
 	if (cmd_argc == 2)
 	{
 		if (key_bindings->values[key_code].len) {
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code))));
+			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code))));
 		} else {
 			add_line_to_console_log(STR("key not bound"));
 		}
@@ -20882,7 +20925,7 @@ static void Key_Bindlist_f(void* ctx) {
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
 			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
-			add_line_to_console_log(concatenate_strings(&context.memory.temp, line));
+			add_line_to_console_log(concat(&context.memory.temp, line));
 		}
 	}
 }
@@ -62058,7 +62101,7 @@ static void windows_write_config_string(String text) {
 
 static void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
-	String text_null_terminated = concatenate_strings(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
+	String text_null_terminated = concat(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
@@ -62335,9 +62378,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Console init
 	// TODO: Unglobal
 	{
-		console.log = (Console_Log)arena_alloc_fixed_cap(&context.memory.perm, Console_Line, 128);
-		console.char_width_px = 8;
-		console.char_height_px = 8;
+		temp_global_console_log = (Console_Log)arena_alloc_fixed_cap(&context.memory.perm, Console_Line, 128);
+		temp_global_char_dim_px.x = 8;
+		temp_global_char_dim_px.y = 8;
 	}
 
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
@@ -62399,11 +62442,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					loose_files_pak->infos.len += 1;
 					loose_files_header->info_section_len_bytes += sizeof(Pak_File_Info);
 					String file_name = string_from_cstring(find_data.cFileName);
-					String file_path_no_baseq2 = concatenate_strings(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
+					String file_path_no_baseq2 = concat(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
 					assert(file_path_no_baseq2.len < (i64)carray_count(file_info->name));
 					copy_bytes(file_info->name, file_path_no_baseq2.ptr, file_path_no_baseq2.len + 1); // NOTE: write the null terminator
 
-					String file_path = concatenate_strings(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
+					String file_path = concat(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
 					file_info->filepos = sizeof(Pak_File_Header) + file_contents_arena.used;
 					u8_Slice file_content = windows_read_entire_file(&file_contents_arena, file_path);
 					file_info->filelen = file_content.len;
