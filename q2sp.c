@@ -609,7 +609,6 @@ static struct {
 	// connection information
 	float		connect_time;			// for connection retransmits
 	netchan_t	netchan;
-	int			challenge;				// from the server to use for connecting
 } cls;
 
 //
@@ -8577,8 +8576,6 @@ typedef struct {
 
 	int				lastmessage;		// sv.framenum when packet was last received
 	int				lastconnect;
-
-	int				challenge;			// challenge of this user, randomly generated
 
 	netchan_t		netchan;
 } client_t;
@@ -62679,7 +62676,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			rand();
 
 			// NOTE: Messages
-			while (NET_GetLoopPacket (NS_SERVER, &net_message)) {
+			while (NET_GetLoopPacket(NS_SERVER, &net_message)) {
 				if (*(i32*)net_message.data == -1) {
 					// NOTE: Connect message
 
@@ -62689,7 +62686,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					char* line = MSG_ReadStringLine(&net_message);
 					Cmd_TokenizeString(line);
 
-					assert(!strcmp(cmd_argv[0],"connect"));
+					assert(!strcmp(cmd_argv[0], "connect"));
 
 					i32 edictnum = 1;
 					edict_t* ent = EDICT_NUM(edictnum);
@@ -62843,7 +62840,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			if (cls.state == ca_disconnected && server_state) {
 				cls.state = ca_connecting;
-				Netchan_OutOfBandPrint(NS_CLIENT, "connect %i %i\n", PROTOCOL_VERSION, cls.challenge);
+				Netchan_OutOfBandPrint(NS_CLIENT, "connect");
 			} else {
 				assert(cls.state == ca_connected || cls.state == ca_active);
 			}
