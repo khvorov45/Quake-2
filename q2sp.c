@@ -62732,6 +62732,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			// NOTE Send commands
 			switch (cls.state) {
+				case ca_disconnected: {
+					cls.state = ca_connecting;
+					write_connect_message(NS_CLIENT);
+				} break;
+
 				case ca_connected: {
 					if (cls.netchan.message.cursize	|| curtime - cls.netchan.last_sent > 1000) {
 						Netchan_Transmit(&cls.netchan, 0, 0);
@@ -62775,17 +62780,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				} break; // case active
 
 				case ca_uninitialized:
-				case ca_disconnected:
 				case ca_connecting:
 				default: break;
 			} // switch state
-
-			if (cls.state == ca_disconnected && server_state) {
-				cls.state = ca_connecting;
-				write_connect_message(NS_CLIENT);
-			} else {
-				assert(cls.state == ca_connected || cls.state == ca_active);
-			}
 
 			// NOTE predict movement
 			if (cls.state == ca_active && cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged < CMD_BACKUP) {
