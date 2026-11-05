@@ -9073,15 +9073,6 @@ static void SV_Savegame_f(void* data) {
 	add_line_to_console_log(STR("Done."));
 }
 
-// Kick everyone off, possibly in preparation for a new game
-void SV_KillServer_f(void* data) {
-	UNUSED(data);
-
-	if (!svs.initialized)
-		return;
-	SV_Shutdown ("Server was killed.\n", false);
-}
-
 // Writes a delta update of an entity_state_t list to the message.
 void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t *msg)
 {
@@ -10003,22 +9994,10 @@ static void SCR_EndLoadingPlaque() {
 void SV_InitGame(void) {
 	edict_t	*ent;
 
-	if (svs.initialized) {
-		// cause any connected clients to reconnect
-		SV_Shutdown ("Server restarted\n", true);
-	} else {
-		// make sure the client is down
-		if (cls.state != ca_uninitialized && cls.state != ca_disconnected) {
-			CL_Disconnect();
+	assert(!svs.initialized);
+	assert(cls.state == ca_disconnected);
 
-			// drop loading plaque unless this is the initial game start
-			if (cls.disable_servercount != -1) {
-				SCR_EndLoadingPlaque();	// get rid of loading plaque
-			}
-		}
-
-		SCR_BeginLoadingPlaque ();
-	}
+	SCR_BeginLoadingPlaque ();
 
 	svs.initialized = true;
 
@@ -61811,13 +61790,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("exec"), Cmd_Exec_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("alias"), Cmd_Alias_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
-
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("save"), SV_Savegame_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("load"), SV_Loadgame_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("killserver"), SV_KillServer_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
