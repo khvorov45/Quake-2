@@ -15728,29 +15728,6 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->lightlevel = cl_lightlevel;
 }
 
-usercmd_t CL_CreateCmd (void)
-{
-	usercmd_t	cmd;
-
-	frame_msec = sys_frame_time - old_sys_frame_time;
-	if (frame_msec < 1)
-		frame_msec = 1;
-	if (frame_msec > 200)
-		frame_msec = 200;
-
-	// get basic movement from keyboard
-	CL_BaseMove (&cmd);
-
-	// allow mice or other external controllers to add to the move
-	IN_Move (&cmd);
-
-	CL_FinishMove (&cmd);
-
-	old_sys_frame_time = sys_frame_time;
-
-	return cmd;
-}
-
 void IN_CenterView(void* data) {
 	UNUSED(data);
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
@@ -15762,7 +15739,13 @@ static void CL_SendCmd() {
 	// save this command off for prediction
 	i32 cmd_index = cls.netchan.outgoing_sequence & (CMD_BACKUP - 1);
 	usercmd_t* cmd = cl.cmds + cmd_index;
-	*cmd = CL_CreateCmd(); // TODO inline
+
+	frame_msec = clamp(sys_frame_time - old_sys_frame_time, 1, 200);
+	CL_BaseMove(cmd);
+	IN_Move(cmd);
+	CL_FinishMove(cmd);
+	old_sys_frame_time = sys_frame_time;
+
 	cl.cmd = *cmd;
 
 	if (cls.state == ca_disconnected || cls.state == ca_connecting) {
