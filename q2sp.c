@@ -4617,15 +4617,6 @@ void Pmove (pmove_t *pmove);
 #define CS_GENERAL			(CS_PLAYERSKINS+MAX_CLIENTS)
 #define	MAX_CONFIGSTRINGS	(CS_GENERAL+MAX_GENERAL)
 
-
-
-#define BUILDSTRING "Win32 DEBUG"
-#define	CPUSTRING	"x86"
-
-#define	PROTOCOL_VERSION	34
-
-#define	PORT_SERVER	27910
-
 #define	UPDATE_BACKUP	16	// copies of entity_state_t to keep buffered must be power of two
 #define	UPDATE_MASK		(UPDATE_BACKUP-1)
 
@@ -10615,7 +10606,6 @@ void SV_New_f (void)
 
 	// send the serverdata
 	MSG_WriteByte (&svs.client.netchan.message, svc_serverdata);
-	MSG_WriteLong (&svs.client.netchan.message, PROTOCOL_VERSION);
 	MSG_WriteLong (&svs.client.netchan.message, svs.spawncount);
 
 	playernum = 0;
@@ -17058,9 +17048,6 @@ void CL_RegisterSounds (void)
 static void CL_ParseServerData() {
 	CL_ClearState();
 	cls.state = ca_connected;
-
-	int protocol_version = MSG_ReadLong(&net_message);
-	assert(protocol_version == PROTOCOL_VERSION);
 
 	cl.servercount = MSG_ReadLong(&net_message);
 
