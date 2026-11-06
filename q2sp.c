@@ -8336,100 +8336,6 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
-/*
-===============================================================================
-
-OPERATOR CONSOLE ONLY COMMANDS
-
-These commands can only be entered from stdin or by a remote operator datagram
-===============================================================================
-*/
-
-void SV_WriteLevelFile (void)
-{
-	char	name[MAX_OSPATH];
-	FILE	*f;
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sv2", sv.name);
-	f = fopen(name, "wb");
-	if (!f)
-	{
-		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
-		return;
-	}
-	fwrite (sv.configstrings, sizeof(sv.configstrings), 1, f);
-	CM_WritePortalState (f);
-	fclose (f);
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
-
-	void WriteLevel (char *filename);
-	WriteLevel (name);
-}
-
-void SV_ReadLevelFile() {
-	char	name[MAX_OSPATH];
-	FILE	*f;
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sv2", sv.name);
-	f = fopen(name, "rb");
-	if (!f)
-	{
-		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
-		return;
-	}
-	FS_Read (sv.configstrings, sizeof(sv.configstrings), f);
-	FS_Read(portalopen, sizeof(portalopen), f);
-	FloodAreaConnections();
-	fclose (f);
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
-
-	void ReadLevel(char *filename);
-	ReadLevel(name);
-}
-
-void SV_ReadServerFile (void)
-{
-	FILE	*f;
-	char	name[MAX_OSPATH], string[128];
-	char	comment[32];
-	char	mapcmd[MAX_TOKEN_CHARS];
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/server.ssv");
-	f = fopen (name, "rb");
-	if (!f)
-	{
-		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
-		return;
-	}
-	// read the comment field
-	FS_Read (comment, sizeof(comment), f);
-
-	// read the mapcmd
-	FS_Read (mapcmd, sizeof(mapcmd), f);
-
-	while (1)
-	{
-		if(!fread (name, 1, sizeof(name), f))
-			break;
-		FS_Read(string, sizeof(string), f);
-	}
-
-	fclose (f);
-
-	// start a new game fresh with new cvars
-	SV_InitGame ();
-
-	strcpy (svs.mapcmd, mapcmd);
-
-	// read game state
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/game.ssv");
-
-	void ReadGame (char *filename);
-	ReadGame (name);
-}
-
 static void SV_GameMap_f(void* data) {
 	UNUSED(data);
 	if (cmd_argc == 2) {
@@ -9305,38 +9211,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
-
-	bool savegame_exists = false;
-	{
-		char name[MAX_OSPATH] = {};
-		Com_sprintf(name, sizeof(name), "baseq2/save/current/%s.sav", sv.name);
-		FILE* f = fopen(name, "rb");
-		if (f) {
-			savegame_exists = true;
-			fclose(f);
-		}
-	}
-
-	if (savegame_exists) {
-		SV_ClearWorld();
-
-		// get configstrings and areaportals
-		SV_ReadLevelFile();
-
-		if (!sv.loadgame) {
-			// coming back to a level after being in a different level, so run it for ten seconds
-
-			// rlava2 was sending too many lightstyles, and overflowing the reliable data.
-			// temporarily changing the server state to loading prevents these from being passed down.
-			server_state_t previousState = sv.state;
-			sv.state = ss_loading;
-			for (i64 i = 0; i < 100; i++) {
-				G_RunFrame();
-			}
-
-			sv.state = previousState;
-		}
-	}
 }
 
 void CL_Disconnect(void);
