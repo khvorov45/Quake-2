@@ -61870,17 +61870,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					MSG_ReadLong(&net_message); // skip the -1 marker
 
 					svs.client.edict = g_edicts + 1;
-
 					svs.client.edict->client = &game.client;
-
-					// if there is already a body waiting for us (a loadgame), just take it, otherwise spawn one from scratch
-					if (svs.client.edict->inuse == false) {
-						// clear the respawning variables
-						InitClientResp(svs.client.edict->client);
-						if (!game.autosaved || !svs.client.edict->client->pers.weapon) {
-							InitClientPersistant (svs.client.edict->client);
-						}
-					}
+					assert(!svs.client.edict->inuse);
+					InitClientResp(svs.client.edict->client);
+					assert(!game.autosaved);
+					InitClientPersistant(svs.client.edict->client);
 
 					svs.client.edict->client->pers.connected = true;
 
