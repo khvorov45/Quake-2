@@ -20871,29 +20871,6 @@ static void HardGameFunc(void* data) {
 	StartGame();
 }
 
-static void Create_Savestrings() {
-	int		i;
-	FILE	*f;
-	char	name[MAX_OSPATH];
-
-	for (i=0 ; i<MAX_SAVEGAMES ; i++)
-	{
-		Com_sprintf (name, sizeof(name), "baseq2/save/save%i/server.ssv", i);
-		f = fopen (name, "rb");
-		if (!f)
-		{
-			strcpy (m_savestrings[i], "<EMPTY>");
-			m_savevalid[i] = false;
-		}
-		else
-		{
-			FS_Read (m_savestrings[i], sizeof(m_savestrings[i]), f);
-			fclose (f);
-			m_savevalid[i] = true;
-		}
-	}
-}
-
 static void LoadGameCallback(void* self) {
 	menuaction_s* a = (menuaction_s*)self;
 	if (m_savevalid[a->generic.localdata[0]]) {
@@ -20908,8 +20885,6 @@ static void LoadGame_MenuInit() {
 	s_loadgame_menu.x = viddef.width / 2 - 120;
 	s_loadgame_menu.y = viddef.height / 2 - 58;
 	s_loadgame_menu.nitems = 0;
-
-	Create_Savestrings();
 
 	for ( i = 0; i < MAX_SAVEGAMES; i++ )
 	{
@@ -20969,8 +20944,6 @@ static void SaveGame_MenuInit() {
 	s_savegame_menu.y = viddef.height / 2 - 58;
 	s_savegame_menu.nitems = 0;
 
-	Create_Savestrings();
-
 	// don't include the autosave slot
 	for (int i = 0; i < MAX_SAVEGAMES - 1; i++) {
 		s_savegame_actions[i].generic.name = m_savestrings[i+1];
@@ -21008,7 +20981,6 @@ static void M_Menu_SaveGame_f(void* data) {
 	if (sv.state != ss_dead) {
 		SaveGame_MenuInit();
 		M_PushMenu(SaveGame_MenuDraw, SaveGame_MenuKey);
-		Create_Savestrings();
 	}
 }
 
