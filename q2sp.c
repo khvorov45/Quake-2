@@ -619,7 +619,7 @@ static struct {
 typedef struct {Fixed_String fstr; float timestamp;} Console_Line;
 typedef struct {Console_Line* ptr; i64 head; i64 cap;} Console_Log; // NOTE: Circular buffer
 
-static Console_Log temp_global_console_log;
+global_variable Console_Log temp_global_console_log;
 
 // index 0 is most recent, 1 is second most recent, etc.
 typedef struct {String text; float timestamp;} Log_Line;
@@ -715,9 +715,9 @@ static void builtin_string_command_unbindall(void* ctx) {
 #define	MAX_ALIAS_NAME 32
 #define	ALIAS_LOOP_COUNT 16
 
-static int cmd_argc;
-static char* cmd_argv[MAX_STRING_TOKENS];
-static char cmd_args[MAX_STRING_CHARS];
+global_variable int cmd_argc;
+global_variable char* cmd_argv[MAX_STRING_TOKENS];
+global_variable char cmd_args[MAX_STRING_CHARS];
 
 static void builtin_string_command_unbind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
@@ -750,7 +750,7 @@ typedef struct Tagged_Malloc_Entry {
 	i16 tag; // for group free
 } Tagged_Malloc_Entry;
 
-static Tagged_Malloc_Entry tagged_malloc_head;
+global_variable Tagged_Malloc_Entry tagged_malloc_head;
 
 static void tml_free(void* ptr) {
 	Tagged_Malloc_Entry* entry = ((Tagged_Malloc_Entry*)ptr) - 1;
@@ -1905,7 +1905,7 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 #define SFF_SUBDIR  0x08
 #define SFF_SYSTEM  0x10
 
-static int curtime;		// time returned by last Sys_Milliseconds
+global_variable int curtime;		// time returned by last Sys_Milliseconds
 
 static int Sys_Milliseconds(void);
 
@@ -1935,7 +1935,7 @@ bool Netchan_CanReliable (netchan_t *chan);
 
 #define	MAX_QPATH 64 // max length of a quake game pathname
 
-static char com_token[MAX_TOKEN_CHARS];
+global_variable char com_token[MAX_TOKEN_CHARS];
 
 static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	char bigbuffer[0x10000] = {};
@@ -2027,11 +2027,11 @@ unsigned	Com_BlockChecksum (void *buffer, int length);
 // The + command line options are also added to the command buffer.
 // The game starts with a Cbuf_AddText("exec quake.rc\n"); Cmd_ExecuteCbuf();
 
-static sizebuf_t	cmd_text;
-static u8			cmd_text_buf[8192];
+global_variable sizebuf_t	cmd_text;
+global_variable u8			cmd_text_buf[8192];
 
 // Used to defer any pending commands while a map is being loaded
-static char defer_text_buf[8192];
+global_variable char defer_text_buf[8192];
 
 // as new commands are generated from the console or keybindings, the text is added to the end of the command buffer.
 static void Cbuf_AddText(char* text) {
@@ -2078,10 +2078,10 @@ typedef struct cmdalias_s {
 // Causes execution of the remainder of the command buffer to be delayed until next frame.
 // This allows commands like:
 // bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
-static bool cmd_wait;
+global_variable bool cmd_wait;
 
-static cmdalias_t*		cmd_alias;
-static int 				alias_count;	// for detecting runaway loops
+global_variable cmdalias_t*		cmd_alias;
+global_variable int 				alias_count;	// for detecting runaway loops
 
 static char* Cmd_Argv(int arg) {
 	if (arg >= cmd_argc) {
@@ -3674,39 +3674,39 @@ typedef struct {
 	int	floodvalid;
 } carea_t;
 
-static char				map_name[MAX_QPATH];
-static bool			portalopen[MAX_MAP_AREAPORTALS];
-static cmodel_t			map_cmodels[MAX_MAP_MODELS];
-static int				checkcount;
-static int				numbrushsides;
-static cbrushside_t		map_brushsides[MAX_MAP_BRUSHSIDES];
-static int				numtexinfo;
-static mapsurface_t		map_surfaces[MAX_MAP_TEXINFO];
-static int				numplanes;
-static cplane_t			map_planes[MAX_MAP_PLANES+6];	// extra for box hull
-static int				numnodes;
-static cnode_t			map_nodes[MAX_MAP_NODES+6];		// extra for box hull
-static int				numleafs = 1;					// allow leaf funcs to be called without a map
-static cleaf_t			map_leafs[MAX_MAP_LEAFS];
-static int				emptyleaf, solidleaf;
-static int				numleafbrushes;
-static unsigned short	map_leafbrushes[MAX_MAP_LEAFBRUSHES];
-static int				numcmodels;
-static int				numbrushes;
-static cbrush_t			map_brushes[MAX_MAP_BRUSHES];
-static int				numvisibility;
-static u8				map_visibility[MAX_MAP_VISIBILITY];
+global_variable char				map_name[MAX_QPATH];
+global_variable bool			portalopen[MAX_MAP_AREAPORTALS];
+global_variable cmodel_t			map_cmodels[MAX_MAP_MODELS];
+global_variable int				checkcount;
+global_variable int				numbrushsides;
+global_variable cbrushside_t		map_brushsides[MAX_MAP_BRUSHSIDES];
+global_variable int				numtexinfo;
+global_variable mapsurface_t		map_surfaces[MAX_MAP_TEXINFO];
+global_variable int				numplanes;
+global_variable cplane_t			map_planes[MAX_MAP_PLANES+6];	// extra for box hull
+global_variable int				numnodes;
+global_variable cnode_t			map_nodes[MAX_MAP_NODES+6];		// extra for box hull
+global_variable int				numleafs = 1;					// allow leaf funcs to be called without a map
+global_variable cleaf_t			map_leafs[MAX_MAP_LEAFS];
+global_variable int				emptyleaf, solidleaf;
+global_variable int				numleafbrushes;
+global_variable unsigned short	map_leafbrushes[MAX_MAP_LEAFBRUSHES];
+global_variable int				numcmodels;
+global_variable int				numbrushes;
+global_variable cbrush_t			map_brushes[MAX_MAP_BRUSHES];
+global_variable int				numvisibility;
+global_variable u8				map_visibility[MAX_MAP_VISIBILITY];
 static dvis_t			*map_vis = (dvis_t *)map_visibility;
-static int				numentitychars;
-static char				map_entitystring[MAX_MAP_ENTSTRING];
-static int				numareas = 1;
-static carea_t			map_areas[MAX_MAP_AREAS];
-static int				numareaportals;
-static dareaportal_t	map_areaportals[MAX_MAP_AREAPORTALS];
-static int				numclusters = 1;
-static mapsurface_t		nullsurface;
-static int				floodvalid;
-static u8*			cmod_base;
+global_variable int				numentitychars;
+global_variable char				map_entitystring[MAX_MAP_ENTSTRING];
+global_variable int				numareas = 1;
+global_variable carea_t			map_areas[MAX_MAP_AREAS];
+global_variable int				numareaportals;
+global_variable dareaportal_t	map_areaportals[MAX_MAP_AREAPORTALS];
+global_variable int				numclusters = 1;
+global_variable mapsurface_t		nullsurface;
+global_variable int				floodvalid;
+global_variable u8*			cmod_base;
 
 // Returns 1, 2, or 1 + 2
 static int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
@@ -4250,15 +4250,15 @@ typedef struct {
 } pmove_t;
 
 // movement parameters
-static float pm_stopspeed = 100;
-static float pm_maxspeed = 300;
-static float pm_duckspeed = 100;
-static float pm_accelerate = 10;
-static float pm_airaccelerate = 0;
-static float pm_wateraccelerate = 10;
-static float pm_friction = 6;
-static float pm_waterfriction = 1;
-static float pm_waterspeed = 400;
+global_variable float pm_stopspeed = 100;
+global_variable float pm_maxspeed = 300;
+global_variable float pm_duckspeed = 100;
+global_variable float pm_accelerate = 10;
+global_variable float pm_airaccelerate = 0;
+global_variable float pm_wateraccelerate = 10;
+global_variable float pm_friction = 6;
+global_variable float pm_waterfriction = 1;
+global_variable float pm_waterspeed = 400;
 
 void Pmove (pmove_t *pmove);
 
@@ -4794,7 +4794,7 @@ typedef enum {
 	MULTICAST_PVS_R
 } multicast_t;
 
-static int global_num_edicts;
+global_variable int global_num_edicts;
 
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
@@ -5054,17 +5054,17 @@ static struct {
 	bool	autosaved;
 } game;
 
-static level_locals_t	level;
-static spawn_temp_t		st;
+global_variable level_locals_t	level;
+global_variable spawn_temp_t		st;
 
-static int sm_meat_index;
-static int snd_fry;
+global_variable int sm_meat_index;
+global_variable int snd_fry;
 
-static int	jacket_armor_index;
-static int	combat_armor_index;
-static int	body_armor_index;
-static int	power_screen_index;
-static int	power_shield_index;
+global_variable int	jacket_armor_index;
+global_variable int	combat_armor_index;
+global_variable int	body_armor_index;
+global_variable int	power_screen_index;
+global_variable int	power_shield_index;
 
 // means of death
 #define MOD_UNKNOWN			0
@@ -5103,7 +5103,7 @@ static int	power_shield_index;
 #define MOD_TARGET_BLASTER	33
 #define MOD_FRIENDLY_FIRE	0x8000000
 
-static edict_t* g_edicts;
+global_variable edict_t* g_edicts;
 
 #define	FOFS(x) (size_t)&(((edict_t *)0)->x)
 #define	STOFS(x) (size_t)&(((spawn_temp_t *)0)->x)
@@ -9800,7 +9800,7 @@ typedef struct {
 	void	(*func) (void);
 } ucmd_t;
 
-static ucmd_t ucmds[] =
+global_variable ucmd_t ucmds[] =
 {
 	// auto issued
 	{"new", SV_New_f},
@@ -12067,7 +12067,7 @@ void CL_GetEntitySoundOrigin (int ent, vec3_t org)
 void CL_LogoutEffect (vec3_t org, int type);
 void CL_ItemRespawnParticles (vec3_t org);
 
-static vec3_t avelocities [NUMVERTEXNORMALS];
+global_variable vec3_t avelocities [NUMVERTEXNORMALS];
 
 extern	struct model_s	*cl_mod_smoke;
 extern	struct model_s	*cl_mod_flash;
@@ -14217,7 +14217,7 @@ void CL_ClearEffects (void)
 	CL_ClearLightStyles ();
 }
 
-static unsigned sys_frame_time;
+global_variable unsigned sys_frame_time;
 unsigned	frame_msec;
 unsigned	old_sys_frame_time;
 
@@ -14418,7 +14418,7 @@ void CL_ClampPitch (void)
 		cl.viewangles[PITCH] = -89 - pitch;
 }
 
-static u8 cl_lightlevel;
+global_variable u8 cl_lightlevel;
 
 void CL_FinishMove (usercmd_t *cmd)
 {
@@ -14472,7 +14472,7 @@ void CL_ParseInventory (void)
 void Draw_Char (int x, int y, int num);
 void Draw_Pic(int x, int y, char *pic);
 
-static Key_Bindings* temp_global_key_bindings;
+global_variable Key_Bindings* temp_global_key_bindings;
 static v2i temp_global_char_dim_px = {8, 8};
 
 enum {
@@ -16094,7 +16094,7 @@ void CL_ParseStartSoundPacket(void)
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
 }
 
-static String_Command_Context temp_global_string_command_context;
+global_variable String_Command_Context temp_global_string_command_context;
 
 void CL_ParseServerMessage ()
 {
@@ -16574,7 +16574,7 @@ typedef struct {
 	i64 len; // NOTE: Does not include the null terminator
 	i64 cap; // NOTE: Does include the null terminator
 } Console_Input;
-static Console_Input temp_global_console_input;
+global_variable Console_Input temp_global_console_input;
 
 static void Con_DrawConsole(float frac) {
 	i64 lines_px = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
@@ -16866,8 +16866,8 @@ typedef struct model_s {
 	void		*extradata;
 } model_t;
 
-static refdef_t r_newrefdef;
-static model_t* r_worldmodel;
+global_variable refdef_t r_newrefdef;
+global_variable model_t* r_worldmodel;
 
 void R_RenderFrame(refdef_t *fd);
 
@@ -17344,7 +17344,7 @@ typedef struct {
 	int			baseframe;
 } Explosion;
 
-static Explosion cl_explosions[32];
+global_variable Explosion cl_explosions[32];
 
 #define	MAX_BEAMS	32
 typedef struct {
@@ -19656,24 +19656,24 @@ typedef struct {
 	menucommon_s generic;
 } menuseparator_s;
 
-static int	m_main_cursor;
+global_variable int	m_main_cursor;
 
 #define NUM_CURSOR_FRAMES 15
 
-static char *menu_in_sound		= "misc/menu1.wav";
-static char *menu_move_sound	= "misc/menu2.wav";
-static char *menu_out_sound		= "misc/menu3.wav";
+global_variable char *menu_in_sound		= "misc/menu1.wav";
+global_variable char *menu_move_sound	= "misc/menu2.wav";
+global_variable char *menu_out_sound		= "misc/menu3.wav";
 
-static bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
+global_variable bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
 
 typedef char* (*M_Key_Proc)(int k);
 typedef void (*M_Draw_Proc)();
 
-static M_Key_Proc m_keyfunc = 0;
-static M_Draw_Proc m_drawfunc = 0;
+global_variable M_Key_Proc m_keyfunc = 0;
+global_variable M_Draw_Proc m_drawfunc = 0;
 
 static struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
-static int m_menudepth = 0;
+global_variable int m_menudepth = 0;
 
 static void M_Banner(char* name) {
 	int w = 0;
@@ -20041,45 +20041,45 @@ static void M_Main_Draw (void)
 #define VID_WIDTH viddef.width
 #define VID_HEIGHT viddef.height
 
-static menuframework_s	s_options_menu;
-static menuaction_s		s_options_defaults_action;
-static menuaction_s		s_options_customize_options_action;
-static menulist_s		s_options_console_action;
+global_variable menuframework_s	s_options_menu;
+global_variable menuaction_s		s_options_defaults_action;
+global_variable menuaction_s		s_options_customize_options_action;
+global_variable menulist_s		s_options_console_action;
 
-static menuframework_s	s_keys_menu;
-static menuaction_s		s_keys_attack_action;
-static menuaction_s		s_keys_change_weapon_action;
-static menuaction_s		s_keys_walk_forward_action;
-static menuaction_s		s_keys_backpedal_action;
-static menuaction_s		s_keys_turn_left_action;
-static menuaction_s		s_keys_turn_right_action;
-static menuaction_s		s_keys_run_action;
-static menuaction_s		s_keys_step_left_action;
-static menuaction_s		s_keys_step_right_action;
-static menuaction_s		s_keys_sidestep_action;
-static menuaction_s		s_keys_look_up_action;
-static menuaction_s		s_keys_look_down_action;
-static menuaction_s		s_keys_center_view_action;
-static menuaction_s		s_keys_mouse_look_action;
-static menuaction_s		s_keys_keyboard_look_action;
-static menuaction_s		s_keys_move_up_action;
-static menuaction_s		s_keys_move_down_action;
-static menuaction_s		s_keys_inventory_action;
-static menuaction_s		s_keys_inv_use_action;
-static menuaction_s		s_keys_inv_drop_action;
-static menuaction_s		s_keys_inv_prev_action;
-static menuaction_s		s_keys_inv_next_action;
-static menuaction_s		s_keys_help_computer_action;
+global_variable menuframework_s	s_keys_menu;
+global_variable menuaction_s		s_keys_attack_action;
+global_variable menuaction_s		s_keys_change_weapon_action;
+global_variable menuaction_s		s_keys_walk_forward_action;
+global_variable menuaction_s		s_keys_backpedal_action;
+global_variable menuaction_s		s_keys_turn_left_action;
+global_variable menuaction_s		s_keys_turn_right_action;
+global_variable menuaction_s		s_keys_run_action;
+global_variable menuaction_s		s_keys_step_left_action;
+global_variable menuaction_s		s_keys_step_right_action;
+global_variable menuaction_s		s_keys_sidestep_action;
+global_variable menuaction_s		s_keys_look_up_action;
+global_variable menuaction_s		s_keys_look_down_action;
+global_variable menuaction_s		s_keys_center_view_action;
+global_variable menuaction_s		s_keys_mouse_look_action;
+global_variable menuaction_s		s_keys_keyboard_look_action;
+global_variable menuaction_s		s_keys_move_up_action;
+global_variable menuaction_s		s_keys_move_down_action;
+global_variable menuaction_s		s_keys_inventory_action;
+global_variable menuaction_s		s_keys_inv_use_action;
+global_variable menuaction_s		s_keys_inv_drop_action;
+global_variable menuaction_s		s_keys_inv_prev_action;
+global_variable menuaction_s		s_keys_inv_next_action;
+global_variable menuaction_s		s_keys_help_computer_action;
 
-static int m_game_cursor;
+global_variable int m_game_cursor;
 
-static menuframework_s	s_game_menu;
-static menuaction_s		s_easy_game_action;
-static menuaction_s		s_medium_game_action;
-static menuaction_s		s_hard_game_action;
-static menuseparator_s	s_blankline;
+global_variable menuframework_s	s_game_menu;
+global_variable menuaction_s		s_easy_game_action;
+global_variable menuaction_s		s_medium_game_action;
+global_variable menuaction_s		s_hard_game_action;
+global_variable menuseparator_s	s_blankline;
 
-static int bind_grab;
+global_variable int bind_grab;
 
 static void KeyCursorDrawFunc( menuframework_s *menu ) {
 	if (bind_grab)
@@ -21144,7 +21144,7 @@ void	SNDDMA_BeginPainting (void);
 
 void	SNDDMA_Submit(void);
 
-static channel_t channels[32];
+global_variable channel_t channels[32];
 
 extern	vec3_t	listener_origin;
 extern	vec3_t	listener_forward;
@@ -21313,7 +21313,7 @@ S_EndRegistration
 */
 
 // written by the sound paging loop to keep the reads alive, never read
-static int paged_total;
+global_variable int paged_total;
 
 void S_EndRegistration (void)
 {
@@ -22120,7 +22120,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 #define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
-static i32 snd_vol;
+global_variable i32 snd_vol;
 
 void S_PaintChannels(int endtime)
 {
@@ -26402,7 +26402,7 @@ gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 #define HEALTH_TIMED		2
 
 void Use_Quad (edict_t *ent, gitem_t *item);
-static int	quad_drop_timeout_hack;
+global_variable int	quad_drop_timeout_hack;
 
 /*
 ===============
@@ -31120,7 +31120,7 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 	return blocked;
 }
 
-static float gravity_value = 800.0f;
+global_variable float gravity_value = 800.0f;
 
 void SV_AddGravity (edict_t *ent)
 {
@@ -31749,7 +31749,7 @@ void G_RunEntity (edict_t *ent)
 	}
 }
 
-static mmove_t mmove_reloc;
+global_variable mmove_t mmove_reloc;
 
 static field_t fields[] = {
 	{"classname", FOFS(classname), F_LSTRING, 0},
@@ -34139,7 +34139,7 @@ trigger_push
 
 #define PUSH_ONCE		1
 
-static int windsound;
+global_variable int windsound;
 
 static void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
@@ -36670,12 +36670,12 @@ BERSERK
 
 #define MODEL_SCALE		1.000000
 
-static int sound_pain;
-static int sound_die;
-static int sound_idle;
-static int sound_punch;
-static int sound_sight;
-static int sound_search;
+global_variable int sound_pain;
+global_variable int sound_die;
+global_variable int sound_idle;
+global_variable int sound_punch;
+global_variable int sound_sight;
+global_variable int sound_search;
 
 static void berserk_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -37063,11 +37063,11 @@ void BossExplode (edict_t* self);
 
 bool infront (edict_t* self, edict_t* other);
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_pain3;
-static int	sound_death;
-static int	sound_search1;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_pain3;
+global_variable int	sound_death;
+global_variable int	sound_search1;
 
 void boss2_search (edict_t* self)
 {
@@ -37728,20 +37728,20 @@ void SP_monster_boss3_stand (edict_t* self)
 extern void SP_monster_makron (edict_t* self);
 bool visible (edict_t* self, edict_t* other);
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_pain3;
-static int	sound_idle;
-static int	sound_death;
-static int	sound_search1;
-static int	sound_search2;
-static int	sound_search3;
-static int	sound_attack1;
-static int	sound_attack2;
-static int	sound_firegun;
-static int	sound_step_left;
-static int	sound_step_right;
-static int	sound_death_hit;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_pain3;
+global_variable int	sound_idle;
+global_variable int	sound_death;
+global_variable int	sound_search1;
+global_variable int	sound_search2;
+global_variable int	sound_search3;
+global_variable int	sound_attack1;
+global_variable int	sound_attack2;
+global_variable int	sound_firegun;
+global_variable int	sound_step_left;
+global_variable int	sound_step_right;
+global_variable int	sound_death_hit;
 
 void BossExplode (edict_t* self);
 void MakronToss (edict_t* self);
@@ -38406,20 +38406,20 @@ void makron_step_right (edict_t* self);
 void makronBFG (edict_t* self);
 void makron_dead (edict_t* self);
 
-static int	sound_pain4;
-static int	sound_pain5;
-static int	sound_pain6;
-static int	sound_death;
-static int	sound_step_left;
-static int	sound_step_right;
-static int	sound_attack_bfg;
-static int	sound_brainsplorch;
-static int	sound_prerailgun;
-static int	sound_popup;
-static int	sound_taunt1;
-static int	sound_taunt2;
-static int	sound_taunt3;
-static int	sound_hit;
+global_variable int	sound_pain4;
+global_variable int	sound_pain5;
+global_variable int	sound_pain6;
+global_variable int	sound_death;
+global_variable int	sound_step_left;
+global_variable int	sound_step_right;
+global_variable int	sound_attack_bfg;
+global_variable int	sound_brainsplorch;
+global_variable int	sound_prerailgun;
+global_variable int	sound_popup;
+global_variable int	sound_taunt1;
+global_variable int	sound_taunt2;
+global_variable int	sound_taunt3;
+global_variable int	sound_hit;
 
 void makron_taunt (edict_t* self)
 {
@@ -39264,20 +39264,20 @@ brain
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_chest_open;
-static int	sound_tentacles_extend;
-static int	sound_tentacles_retract;
-static int	sound_death;
-static int	sound_idle1;
-static int	sound_idle2;
-static int	sound_idle3;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_sight;
-static int	sound_search;
-static int	sound_melee1;
-static int	sound_melee2;
-static int	sound_melee3;
+global_variable int	sound_chest_open;
+global_variable int	sound_tentacles_extend;
+global_variable int	sound_tentacles_retract;
+global_variable int	sound_death;
+global_variable int	sound_idle1;
+global_variable int	sound_idle2;
+global_variable int	sound_idle3;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_sight;
+global_variable int	sound_search;
+global_variable int	sound_melee1;
+global_variable int	sound_melee2;
+global_variable int	sound_melee3;
 
 static void brain_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -39854,21 +39854,21 @@ void chick_reslash(edict_t* self);
 void chick_rerocket(edict_t* self);
 void chick_attack1(edict_t* self);
 
-static int	sound_missile_prelaunch;
-static int	sound_missile_launch;
-static int	sound_melee_swing;
-static int	sound_melee_hit;
-static int	sound_missile_reload;
-static int	sound_death1;
-static int	sound_death2;
-static int	sound_fall_down;
-static int	sound_idle1;
-static int	sound_idle2;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_pain3;
-static int	sound_sight;
-static int	sound_search;
+global_variable int	sound_missile_prelaunch;
+global_variable int	sound_missile_launch;
+global_variable int	sound_melee_swing;
+global_variable int	sound_melee_hit;
+global_variable int	sound_missile_reload;
+global_variable int	sound_death1;
+global_variable int	sound_death2;
+global_variable int	sound_fall_down;
+global_variable int	sound_idle1;
+global_variable int	sound_idle2;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_pain3;
+global_variable int	sound_sight;
+global_variable int	sound_search;
 
 void ChickMoan (edict_t* self)
 {
@@ -40148,7 +40148,7 @@ mframe_t chick_frames_death2 [] =
 };
 mmove_t chick_move_death2 = {60, 82, chick_frames_death2, chick_dead};
 
-static mframe_t chick_frames_death1 [] =
+global_variable mframe_t chick_frames_death1 [] =
 {
 	{ai_move, 0,  NULL},
 	{ai_move, 0,  NULL},
@@ -40495,14 +40495,14 @@ FLIPPER
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_chomp;
-static int	sound_attack;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_death;
-static int	sound_idle;
-static int	sound_search;
-static int	sound_sight;
+global_variable int	sound_chomp;
+global_variable int	sound_attack;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_death;
+global_variable int	sound_idle;
+global_variable int	sound_search;
+global_variable int	sound_sight;
 
 void flipper_stand (edict_t* self);
 
@@ -40875,13 +40875,13 @@ floater
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_attack2;
-static int	sound_attack3;
-static int	sound_death1;
-static int	sound_idle;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_sight;
+global_variable int	sound_attack2;
+global_variable int	sound_attack3;
+global_variable int	sound_death1;
+global_variable int	sound_idle;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_sight;
 
 static void floater_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -41517,15 +41517,15 @@ flyer
 
 bool visible (edict_t* self, edict_t* other);
 
-static int	nextmove;			// Used for start/stop frames
+global_variable int	nextmove;			// Used for start/stop frames
 
-static int	sound_sight;
-static int	sound_idle;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_slash;
-static int	sound_sproing;
-static int	sound_die;
+global_variable int	sound_sight;
+global_variable int	sound_idle;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_slash;
+global_variable int	sound_sproing;
+global_variable int	sound_die;
 
 void flyer_check_melee(edict_t* self);
 void flyer_loop_melee (edict_t* self);
@@ -42109,16 +42109,16 @@ GLADIATOR
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_die;
-static int	sound_gun;
-static int	sound_cleaver_swing;
-static int	sound_cleaver_hit;
-static int	sound_cleaver_miss;
-static int	sound_idle;
-static int	sound_search;
-static int	sound_sight;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_die;
+global_variable int	sound_gun;
+global_variable int	sound_cleaver_swing;
+global_variable int	sound_cleaver_hit;
+global_variable int	sound_cleaver_miss;
+global_variable int	sound_idle;
+global_variable int	sound_search;
+global_variable int	sound_sight;
 
 void gladiator_idle (edict_t* self)
 {
@@ -42465,13 +42465,13 @@ GUNNER
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.150000
 
-static int	sound_pain;
-static int	sound_pain2;
-static int	sound_death;
-static int	sound_idle;
-static int	sound_open;
-static int	sound_search;
-static int	sound_sight;
+global_variable int	sound_pain;
+global_variable int	sound_pain2;
+global_variable int	sound_death;
+global_variable int	sound_idle;
+global_variable int	sound_open;
+global_variable int	sound_search;
+global_variable int	sound_sight;
 
 void gunner_idlesound (edict_t* self)
 {
@@ -43063,13 +43063,13 @@ hover
 
 bool visible (edict_t* self, edict_t* other);
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_death1;
-static int	sound_death2;
-static int	sound_sight;
-static int	sound_search1;
-static int	sound_search2;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_death1;
+global_variable int	sound_death2;
+global_variable int	sound_sight;
+global_variable int	sound_search1;
+global_variable int	sound_search2;
 
 static void hover_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -43654,18 +43654,18 @@ INFANTRY
 
 void InfantryMachineGun (edict_t* self);
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_die1;
-static int	sound_die2;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_die1;
+global_variable int	sound_die2;
 
-static int	sound_gunshot;
-static int	sound_weapon_cock;
-static int	sound_punch_swing;
-static int	sound_punch_hit;
-static int	sound_sight;
-static int	sound_search;
-static int	sound_idle;
+global_variable int	sound_gunshot;
+global_variable int	sound_weapon_cock;
+global_variable int	sound_punch_swing;
+global_variable int	sound_punch_hit;
+global_variable int	sound_sight;
+global_variable int	sound_search;
+global_variable int	sound_idle;
 
 mframe_t infantry_frames_stand [] =
 {
@@ -44227,10 +44227,10 @@ insane
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_fist;
-static int	sound_shake;
-static int	sound_moan;
-static int	sound_scream[8];
+global_variable int	sound_fist;
+global_variable int	sound_shake;
+global_variable int	sound_moan;
+global_variable int	sound_scream[8];
 
 void insane_fist (edict_t* self)
 {
@@ -44455,7 +44455,7 @@ mframe_t insane_frames_down [] =
 };
 mmove_t insane_move_down = {99, 159, insane_frames_down, insane_onground};
 
-static mframe_t insane_frames_walk_normal [] =
+global_variable mframe_t insane_frames_walk_normal [] =
 {
 	{ai_walk,	0,		insane_scream},
 	{ai_walk,	2.5,	NULL},
@@ -44892,16 +44892,16 @@ MEDIC
 
 bool visible (edict_t* self, edict_t* other);
 
-static int	sound_idle1;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_die;
-static int	sound_sight;
-static int	sound_search;
-static int	sound_hook_launch;
-static int	sound_hook_hit;
-static int	sound_hook_heal;
-static int	sound_hook_retract;
+global_variable int	sound_idle1;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_die;
+global_variable int	sound_sight;
+global_variable int	sound_search;
+global_variable int	sound_hook_launch;
+global_variable int	sound_hook_hit;
+global_variable int	sound_hook_heal;
+global_variable int	sound_hook_retract;
 
 edict_t *medic_FindDeadMonster (edict_t* self)
 {
@@ -46151,19 +46151,19 @@ mutant
 
 #define MODEL_SCALE		1.000000
 
-static int	sound_swing;
-static int	sound_hit;
-static int	sound_hit2;
-static int	sound_death;
-static int	sound_idle;
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_sight;
-static int	sound_search;
-static int	sound_step1;
-static int	sound_step2;
-static int	sound_step3;
-static int	sound_thud;
+global_variable int	sound_swing;
+global_variable int	sound_hit;
+global_variable int	sound_hit2;
+global_variable int	sound_death;
+global_variable int	sound_idle;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_sight;
+global_variable int	sound_search;
+global_variable int	sound_step1;
+global_variable int	sound_step2;
+global_variable int	sound_step3;
+global_variable int	sound_thud;
 
 //
 // SOUNDS
@@ -46780,17 +46780,17 @@ parasite
 
 #define MODEL_SCALE             1.000000
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_die;
-static int	sound_launch;
-static int	sound_impact;
-static int	sound_suck;
-static int	sound_reelin;
-static int	sound_sight;
-static int	sound_tap;
-static int	sound_scratch;
-static int	sound_search;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_die;
+global_variable int	sound_launch;
+global_variable int	sound_impact;
+global_variable int	sound_suck;
+global_variable int	sound_reelin;
+global_variable int	sound_sight;
+global_variable int	sound_tap;
+global_variable int	sound_scratch;
+global_variable int	sound_search;
 
 void parasite_stand (edict_t* self);
 void parasite_start_run (edict_t* self);
@@ -47292,16 +47292,16 @@ SOLDIER
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.200000
 
-static int	sound_idle;
-static int	sound_sight1;
-static int	sound_sight2;
-static int	sound_pain_light;
-static int	sound_pain;
-static int	sound_pain_ss;
-static int	sound_death_light;
-static int	sound_death;
-static int	sound_death_ss;
-static int	sound_cock;
+global_variable int	sound_idle;
+global_variable int	sound_sight1;
+global_variable int	sound_sight2;
+global_variable int	sound_pain_light;
+global_variable int	sound_pain;
+global_variable int	sound_pain_ss;
+global_variable int	sound_death_light;
+global_variable int	sound_death;
+global_variable int	sound_death_ss;
+global_variable int	sound_cock;
 
 void soldier_idle (edict_t* self)
 {
@@ -48424,14 +48424,14 @@ SUPERTANK
 
 bool visible (edict_t* self, edict_t* other);
 
-static int	sound_pain1;
-static int	sound_pain2;
-static int	sound_pain3;
-static int	sound_death;
-static int	sound_search1;
-static int	sound_search2;
+global_variable int	sound_pain1;
+global_variable int	sound_pain2;
+global_variable int	sound_pain3;
+global_variable int	sound_death;
+global_variable int	sound_search1;
+global_variable int	sound_search2;
 
-static	int	tread_sound;
+global_variable	int	tread_sound;
 
 void BossExplode (edict_t* self);
 
@@ -49089,14 +49089,14 @@ void tank_refire_rocket (edict_t* self);
 void tank_doattack_rocket (edict_t* self);
 void tank_reattack_blaster (edict_t* self);
 
-static int	sound_thud;
-static int	sound_pain;
-static int	sound_idle;
-static int	sound_die;
-static int	sound_step;
-static int	sound_sight;
-static int	sound_windup;
-static int	sound_strike;
+global_variable int	sound_thud;
+global_variable int	sound_pain;
+global_variable int	sound_idle;
+global_variable int	sound_die;
+global_variable int	sound_step;
+global_variable int	sound_sight;
+global_variable int	sound_windup;
+global_variable int	sound_strike;
 
 //
 // misc
@@ -50855,10 +50855,10 @@ edict_t *PlayerTrail_LastSpot (void)
 	return trail[PREV(trail_head)];
 }
 
-static	edict_t		*current_player;
-static	gclient_t	*current_client;
+global_variable	edict_t		*current_player;
+global_variable	gclient_t	*current_client;
 
-static	vec3_t	forward, right, up;
+global_variable	vec3_t	forward, right, up;
 float	xyspeed;
 
 float	bobmove;
@@ -51861,8 +51861,8 @@ void ClientEndServerFrame (edict_t *ent)
 	VectorClear (ent->client->kick_angles);
 }
 
-static bool	is_quad;
-static u8		is_silenced;
+global_variable bool	is_quad;
+global_variable u8		is_silenced;
 
 void weapon_grenade_fire (edict_t *ent, bool held);
 
@@ -53213,7 +53213,7 @@ void R_TranslatePlayerSkin (int playernum);
 
 void R_LightPoint (vec3_t p, vec3_t color);
 
-static unsigned d_8to24table[256];
+global_variable unsigned d_8to24table[256];
 
 extern	int		registration_sequence;
 
@@ -53260,7 +53260,7 @@ static struct {
 
 void		GLimp_BeginFrame();
 
-static image_t* draw_chars;
+global_variable image_t* draw_chars;
 
 extern	bool	scrap_dirty;
 void Scrap_Upload (void);
@@ -53473,8 +53473,8 @@ image_t		gltextures[MAX_GLTEXTURES];
 int			numgltextures;
 int			base_textureid;		// gltextures[i] = base_textureid+i
 
-static u8			 intensitytable[256];
-static unsigned char gammatable[256];
+global_variable u8			 intensitytable[256];
+global_variable unsigned char gammatable[256];
 
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
@@ -54353,7 +54353,7 @@ void R_LightPoint (vec3_t p, vec3_t color)
 	}
 }
 
-static float s_blocklights[34*34*3];
+global_variable float s_blocklights[34*34*3];
 /*
 ===============
 R_AddDynamicLights
@@ -54783,7 +54783,7 @@ float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 
 typedef float vec4_t[4];
 
-static	vec4_t	s_lerped[MAX_VERTS];
+global_variable	vec4_t	s_lerped[MAX_VERTS];
 //static	vec3_t	lerped[MAX_VERTS];
 
 vec3_t	shadevector;
@@ -55473,9 +55473,9 @@ u8 *Mod_ClusterPVS (int cluster, model_t *model)
 		model);
 }
 
-static int hunk_cursize = 0;
-static int hunkmaxsize = 0;
-static u8* hunk_membase;
+global_variable int hunk_cursize = 0;
+global_variable int hunkmaxsize = 0;
+global_variable u8* hunk_membase;
 
 static void* Hunk_Begin(int maxsize) {
 	// reserve a huge chunk of memory, but don't commit any yet
@@ -56906,7 +56906,7 @@ void R_DrawBeam( Entity *e )
 	glDepthMask( GL_TRUE );
 }
 
-static vec3_t	modelorg;		// relative to viewpoint
+global_variable vec3_t	modelorg;		// relative to viewpoint
 
 msurface_t	*r_alpha_surfaces;
 
@@ -56938,7 +56938,7 @@ typedef struct
 	u8		lightmap_buffer[4*BLOCK_WIDTH*BLOCK_HEIGHT];
 } gllightmapstate_t;
 
-static gllightmapstate_t gl_lms;
+global_variable gllightmapstate_t gl_lms;
 
 static void		LM_InitBlock( void );
 static void		LM_UploadBlock( bool dynamic );
@@ -58694,8 +58694,8 @@ extern LPDIRECTSOUNDBUFFER pDSBuf;
 extern DWORD gSndBufSize;
 
 extern HWND	cl_hwnd;
-static bool ActiveApp;
-static bool Minimized;
+global_variable bool ActiveApp;
+global_variable bool Minimized;
 
 void IN_MouseEvent (int mstate);
 
@@ -58788,7 +58788,7 @@ void IN_DeactivateMouse (void)
 		;
 }
 
-static unsigned sys_msg_time;
+global_variable unsigned sys_msg_time;
 
 void IN_MouseEvent (int mstate)
 {
@@ -59172,10 +59172,10 @@ static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	return result;
 }
 
-static menuframework_s	s_opengl_menu;
+global_variable menuframework_s	s_opengl_menu;
 
-static menuaction_s		s_cancel_action;
-static menuaction_s		s_defaults_action;
+global_variable menuaction_s		s_cancel_action;
+global_variable menuaction_s		s_defaults_action;
 
 static void ResetDefaults(void* unused) {
 	UNUSED(unused);
