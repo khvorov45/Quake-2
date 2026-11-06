@@ -8517,51 +8517,6 @@ void SV_ReadLevelFile() {
 	ReadLevel(name);
 }
 
-void SV_WriteServerFile (bool autosave)
-{
-	FILE	*f;
-	char	name[MAX_OSPATH];
-	char	comment[32];
-	time_t	aclock;
-	struct tm	*newtime;
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/server.ssv");
-	f = fopen (name, "wb");
-	if (!f)
-	{
-		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
-		return;
-	}
-	// write the comment field
-	memset (comment, 0, sizeof(comment));
-
-	if (!autosave)
-	{
-		time (&aclock);
-		newtime = localtime (&aclock);
-		Com_sprintf (comment,sizeof(comment), "%2i:%i%i %2i/%2i  ", newtime->tm_hour
-			, newtime->tm_min/10, newtime->tm_min%10,
-			newtime->tm_mon+1, newtime->tm_mday);
-		strncat (comment, sv.configstrings[CS_NAME], sizeof(comment)-1-strlen(comment) );
-	}
-	else
-	{	// autosaved
-		Com_sprintf (comment, sizeof(comment), "ENTERING %s", sv.configstrings[CS_NAME]);
-	}
-
-	fwrite (comment, 1, sizeof(comment), f);
-
-	// write the mapcmd
-	fwrite (svs.mapcmd, 1, sizeof(svs.mapcmd), f);
-
-	fclose (f);
-
-	// write game state
-	Com_sprintf (name, sizeof(name), "baseq2/save/current/game.ssv");
-	void WriteGame (char *filename, bool autosave);
-	WriteGame (name, autosave);
-}
-
 void SV_ReadServerFile (void)
 {
 	FILE	*f;
@@ -8655,12 +8610,6 @@ static void SV_GameMap_f(void* data) {
 
 	// archive server state
 	strncpy (svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
-
-	// copy off the level to the autosave slot
-	{
-		SV_WriteServerFile(true);
-		SV_CopySaveGame("current", "save0");
-	}
 }
 
 // Goes directly to a given map without any savegame archiving.
@@ -8721,57 +8670,6 @@ static void SV_Loadgame_f(void* data) {
 	// go to the map
 	sv.state = ss_dead;		// don't save current level when changing
 	SV_Map(svs.mapcmd, true);
-}
-
-static void SV_Savegame_f(void* data) {
-	UNUSED(data);
-
-	char	*dir;
-
-	if (sv.state != ss_game)
-	{
-		add_line_to_console_log(STR("You must be in a game to save."));
-		return;
-	}
-
-	if (cmd_argc != 2)
-	{
-		add_line_to_console_log(STR("USAGE: savegame <directory>"));
-		return;
-	}
-
-	if (!strcmp (Cmd_Argv(1), "current"))
-	{
-		add_line_to_console_log(STR("Can't save to 'current'"));
-		return;
-	}
-
-	if (svs.client.edict->client->ps.stats[STAT_HEALTH] <= 0)
-	{
-		add_line_to_console_log(STR("\nCan't savegame while dead!"));
-		return;
-	}
-
-	dir = Cmd_Argv(1);
-	if (strstr (dir, "..") || strstr (dir, "/") || strstr (dir, "\\") )
-	{
-		add_line_to_console_log(STR("Bad savedir."));
-	}
-
-	add_line_to_console_log(STR("Saving game..."));
-
-	// archive current level, including all client edicts.
-	// when the level is reloaded, they will be shells awaiting
-	// a connecting client
-	SV_WriteLevelFile ();
-
-	// save server state
-	SV_WriteServerFile (false);
-
-	// copy it off
-	SV_CopySaveGame ("current", dir);
-
-	add_line_to_console_log(STR("Done."));
 }
 
 // Writes a delta update of an entity_state_t list to the message.
@@ -32712,33 +32610,6 @@ void ReadClient (FILE *f, gclient_t *client)
 	{
 		ReadField (f, field, (u8 *)client);
 	}
-}
-
-// This will be called whenever the game goes to a new level, and when the user explicitly saves the game.
-// Game information include cross level data, like multi level triggers, help computer info, and all client states.
-// A single player death will automatically restore from the last save position.
-void WriteGame (char *filename, bool autosave)
-{
-	FILE	*f;
-	char	str[16];
-
-	if (!autosave)
-		SaveClientData ();
-
-	f = fopen (filename, "wb");
-	assert(f);
-
-	memset (str, 0, sizeof(str));
-	strcpy (str, __DATE__);
-	fwrite (str, sizeof(str), 1, f);
-
-	game.autosaved = autosave;
-	fwrite (&game, sizeof(game), 1, f);
-	game.autosaved = false;
-
-	WriteClient(f, &game.client);
-
-	fclose (f);
 }
 
 void ReadGame (char *filename)
@@ -60228,7 +60099,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("save"), SV_Savegame_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("load"), SV_Loadgame_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
