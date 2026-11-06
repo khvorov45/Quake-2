@@ -60189,7 +60189,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 
 	// NOTE: Mainloop
-	float ms_since_last_client_update = 0.0f;
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
 	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
 
@@ -60296,6 +60295,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// NOTE Client update
 		float maxfps = 90.0f;
+		local_persist float ms_since_last_client_update = 0.0f;
 		ms_since_last_client_update += delta_time_ms;
 		if (!(cls.state == ca_connected && ms_since_last_client_update < 100) && ms_since_last_client_update >= 1000.0f / maxfps) {
 
