@@ -149,7 +149,7 @@ procedure void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep
 #define arena_alloc_slice(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), (count)}
 #define arena_alloc_fixed_cap(arena, type, count) {(type*)arena_alloc_bytes(arena, sizeof(type) * (count)), 0, (count)}
 #define append_fixed_cap(arr, val) do {assert((arr)->len < (arr)->cap); (arr)->ptr[(arr)->len++] = val;} while(0)
-#define copy_slice(arena, dest, source, type) do {(dest)->len = (source)->len; (dest)->ptr = (type*)arena_alloc_bytes(arena, (dest)->len * sizeof(type)); copy_bytes((dest)->ptr, (source)->ptr, (dest)->len * sizeof(type));} while (0)
+#define copy_slice(arena, dest, source) do {(dest)->len = (source)->len; (dest)->ptr = (typeof((source)->ptr[0])*)arena_alloc_bytes(arena, (dest)->len * sizeof((source)->ptr[0])); copy_bytes((dest)->ptr, (source)->ptr, (dest)->len * sizeof((source)->ptr[0]));} while (0)
 
 //
 // SECTION Strings
@@ -59496,7 +59496,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
-		copy_slice(&context.memory.perm, &temp_global_string_command_context.builtin, &temp_cmds, String_Command);
+		copy_slice(&context.memory.perm, &temp_global_string_command_context.builtin, &temp_cmds);
 	}
 
 	// NOTE: Command buffer
@@ -59828,7 +59828,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			} // for file
 		} // for pak
 
-		copy_slice(&context.memory.perm, &windows_platform_data.named_textures, &temp_named_textures, Named_Texture);
+		copy_slice(&context.memory.perm, &windows_platform_data.named_textures, &temp_named_textures);
 	} // load assets
 
 	// TODO: Remove
