@@ -8633,45 +8633,6 @@ static void SV_Map_f(void* data) {
 	SV_GameMap_f(data);
 }
 
-static void SV_Loadgame_f(void* data) {
-	UNUSED(data);
-
-	char	name[MAX_OSPATH];
-	FILE	*f;
-	char	*dir;
-
-	if (cmd_argc != 2)
-	{
-		add_line_to_console_log(STR("USAGE: loadgame <directory>"));
-		return;
-	}
-
-	add_line_to_console_log(STR("Loading game..."));
-
-	dir = Cmd_Argv(1);
-	if (strstr(dir, "..") || strstr (dir, "/") || strstr (dir, "\\"))
-	{
-		add_line_to_console_log(STR("Bad savedir."));
-	}
-
-	// make sure the server.ssv file exists
-	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", Cmd_Argv(1));
-	f = fopen(name, "rb");
-	if (!f) {
-		add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(name))));
-		return;
-	}
-	fclose(f);
-
-	SV_CopySaveGame(Cmd_Argv(1), "current");
-
-	SV_ReadServerFile();
-
-	// go to the map
-	sv.state = ss_dead;		// don't save current level when changing
-	SV_Map(svs.mapcmd, true);
-}
-
 // Writes a delta update of an entity_state_t list to the message.
 void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t *msg)
 {
@@ -60099,7 +60060,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("load"), SV_Loadgame_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
