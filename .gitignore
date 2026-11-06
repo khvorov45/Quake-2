@@ -6,3 +6,4 @@ debug
 .clangd
 build.bat
 .github
+*temp*

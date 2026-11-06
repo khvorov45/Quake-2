@@ -3511,7 +3511,6 @@ struct edict_s {
 	int			clipmask;
 	struct edict_s		*owner;
 
-
 	// DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
 	// EXPECTS THE FIELDS IN THAT ORDER!
 
@@ -4171,10 +4170,8 @@ static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 
 cmodel_t	*CM_InlineModel (char *name);	// *1, *2, etc
 
-
 // creates a clipping hull for an arbitrary box
 int			CM_HeadnodeForBox (vec3_t mins, vec3_t maxs);
-
 
 // returns an ORed contents mask
 int			CM_PointContents (vec3_t p, int headnode);
@@ -5169,10 +5166,8 @@ typedef struct
 	int		flags;
 } field_t;
 
-
 extern	field_t fields[];
 extern	gitem_t	itemlist[];
-
 
 //
 // g_cmds.c
@@ -5381,12 +5376,9 @@ void FetchClientEntData (edict_t *ent);
 
 /* already inlined above: game/q_shared.h */
 
-
-
 //============================================================================
 
 //============================================================================
-
 
 float Q_fabs (float f)
 {
@@ -5513,7 +5505,6 @@ void CM_InitBoxHull (void)
 	}
 }
 
-
 /*
 ===================
 CM_HeadnodeForBox
@@ -5539,7 +5530,6 @@ int	CM_HeadnodeForBox (vec3_t mins, vec3_t maxs)
 
 	return box_headnode;
 }
-
 
 /*
 ==================
@@ -5577,8 +5567,6 @@ int CM_PointLeafnum (vec3_t p)
 		return 0;		// sound may call this without map loaded
 	return CM_PointLeafnum_r (p, 0);
 }
-
-
 
 /*
 =============
@@ -5652,8 +5640,6 @@ int	CM_BoxLeafnums (vec3_t mins, vec3_t maxs, int *list, int listsize, int *topn
 		listsize, map_cmodels[0].headnode, topnode);
 }
 
-
-
 /*
 ==================
 CM_PointContents
@@ -5706,7 +5692,6 @@ int	CM_TransformedPointContents (vec3_t p, int headnode, vec3_t origin, vec3_t a
 
 	return map_leafs[l].contents;
 }
-
 
 /*
 ===============================================================================
@@ -5893,7 +5878,6 @@ void CM_TestBoxInBrush (vec3_t mins, vec3_t maxs, vec3_t p1,
 	trace->contents = brush->contents;
 }
 
-
 /*
 ================
 CM_TraceToLeaf
@@ -5927,7 +5911,6 @@ void CM_TraceToLeaf (int leafnum)
 
 }
 
-
 /*
 ================
 CM_TestInLeaf
@@ -5960,7 +5943,6 @@ void CM_TestInLeaf (int leafnum)
 	}
 
 }
-
 
 /*
 ==================
@@ -6015,7 +5997,6 @@ void CM_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
 				fabs(trace_extents[2]*plane->normal[2]);
 	}
 
-
 	// see which sides we need to consider
 	if (t1 >= offset && t2 >= offset)
 	{
@@ -6062,7 +6043,6 @@ void CM_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
 
 	CM_RecursiveHullCheck (node->children[side], p1f, midf, p1, mid);
 
-
 	// go past the node
 	if (frac2 < 0)
 		frac2 = 0;
@@ -6075,8 +6055,6 @@ void CM_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
 
 	CM_RecursiveHullCheck (node->children[side^1], midf, p2f, mid, p2);
 }
-
-
 
 //======================================================================
 
@@ -6231,8 +6209,6 @@ trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
 	return trace;
 }
 
-
-
 /*
 ===============================================================================
 
@@ -6358,7 +6334,6 @@ static bool CM_AreasConnected(int area1, int area2) {
 	return result;
 }
 
-
 /*
 =================
 CM_WriteAreaBits
@@ -6388,7 +6363,6 @@ int CM_WriteAreaBits (u8 *buffer, int area)
 
 	return bytes;
 }
-
 
 /*
 ===================
@@ -6577,7 +6551,6 @@ typedef unsigned int UINT4;
 typedef unsigned long int UINT4;
 #endif
 
-
 /* MD4.H - header file for MD4C.C */
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991.
@@ -6600,8 +6573,6 @@ typedef struct {
 void MD4Init (MD4_CTX *);
 void MD4Update (MD4_CTX *, unsigned char *, unsigned int);
 void MD4Final (unsigned char [16], MD4_CTX *);
-
-
 
 /* MD4C.C - RSA Data Security, Inc., MD4 message-digest algorithm */
 /* Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
@@ -6655,7 +6626,6 @@ static unsigned char PADDING[64] = {
 
 #define HH(a, b, c, d, x, s) {(a) += H ((b), (c), (d)) + (x) + (UINT4)0x6ed9eba1; (a) = ROTATE_LEFT ((a), (s));}
 
-
 /* MD4 initialization. Begins an MD4 operation, writing a new context. */
 void MD4Init (MD4_CTX *md4_context)
 {
@@ -6702,7 +6672,6 @@ void MD4Update (MD4_CTX *md4_context, unsigned char *input, unsigned int inputLe
 	memcpy ((POINTER)&md4_context->buffer[index], (POINTER)&input[i], inputLen-i);
 }
 
-
 /* MD4 finalization. Ends an MD4 message-digest operation, writing the the message digest and zeroizing the context. */
 void MD4Final (unsigned char digest[16], MD4_CTX *md4_context)
 {
@@ -6726,7 +6695,6 @@ void MD4Final (unsigned char digest[16], MD4_CTX *md4_context)
 	/* Zeroize sensitive information.*/
 	memset ((POINTER)md4_context, 0, sizeof (*md4_context));
 }
-
 
 /* MD4 basic transformation. Transforms state based on block. */
 static void MD4Transform (UINT4 state[4], unsigned char block[64])
@@ -6798,7 +6766,6 @@ state[3] += d;
 	memset ((POINTER)x, 0, sizeof (x));
 }
 
-
 /* Encodes input (UINT4) into output (unsigned char). Assumes len is a multiple of 4. */
 static void Encode (unsigned char *output, UINT4 *input, unsigned int len)
 {
@@ -6811,7 +6778,6 @@ static void Encode (unsigned char *output, UINT4 *input, unsigned int len)
  		output[j+3] = (unsigned char)((input[i] >> 24) & 0xff);
 	}
 }
-
 
 /* Decodes input (unsigned char) into output (UINT4). Assumes len is a multiple of 4. */
 static void Decode (UINT4 *output, unsigned char *input, unsigned int len)
@@ -6908,7 +6874,6 @@ static void Netchan_Setup(netsrc_t sock, netchan_t* chan) {
 	chan->message.allowoverflow = true;
 }
 
-
 /*
 ===============
 Netchan_CanReliable
@@ -6922,7 +6887,6 @@ bool Netchan_CanReliable (netchan_t *chan)
 		return false;			// waiting for ack
 	return true;
 }
-
 
 bool Netchan_NeedReliable (netchan_t *chan)
 {
@@ -7049,7 +7013,6 @@ typedef struct
 	vec3_t		forward, right, up;
 	float		frametime;
 
-
 	csurface_t	*groundsurface;
 	cplane_t	groundplane;
 	int			groundcontents;
@@ -7061,13 +7024,11 @@ typedef struct
 pmove_t		*pm;
 pml_t		pml;
 
-
 /*
 
   walking up a step should kill some velocity
 
 */
-
 
 /*
 ==================
@@ -7095,9 +7056,6 @@ void PM_ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 			out[i] = 0;
 	}
 }
-
-
-
 
 /*
 ==================
@@ -7172,7 +7130,6 @@ void PM_StepSlideMove_ (void)
 
 		VectorCopy (trace.plane.normal, planes[numplanes]);
 		numplanes++;
-
 
 //
 // modify original_velocity so it parallels all of the clip planes
@@ -7286,7 +7243,6 @@ void PM_StepSlideMove (void)
 	pml.velocity[2] = down_v[2];
 }
 
-
 /*
 ==================
 PM_Friction
@@ -7337,7 +7293,6 @@ void PM_Friction (void)
 	vel[1] = vel[1] * newspeed;
 	vel[2] = vel[2] * newspeed;
 }
-
 
 /*
 ==============
@@ -7421,7 +7376,6 @@ void PM_AddCurrents (vec3_t	wishvel)
 			wishvel[1] = 25;
 	}
 
-
 	//
 	// add water currents
 	//
@@ -7475,7 +7429,6 @@ void PM_AddCurrents (vec3_t	wishvel)
 	}
 }
 
-
 /*
 ===================
 PM_WaterMove
@@ -7516,7 +7469,6 @@ void PM_WaterMove (void)
 
 	PM_StepSlideMove ();
 }
-
 
 /*
 ===================
@@ -7604,8 +7556,6 @@ void PM_AirMove (void)
 		PM_StepSlideMove ();
 	}
 }
-
-
 
 /*
 =============
@@ -7708,7 +7658,6 @@ void PM_CatagorizePosition (void)
 
 }
 
-
 /*
 =============
 PM_CheckJump
@@ -7761,7 +7710,6 @@ void PM_CheckJump (void)
 		pml.velocity[2] = 270;
 }
 
-
 /*
 =============
 PM_CheckSpecialMovement
@@ -7811,7 +7759,6 @@ void PM_CheckSpecialMovement (void)
 	pm->s.pm_flags |= PMF_TIME_WATERJUMP;
 	pm->s.pm_time = 255;
 }
-
 
 /*
 ===============
@@ -7879,7 +7826,6 @@ void PM_FlyMove (bool doclip)
 		wishspeed = pm_maxspeed;
 	}
 
-
 	currentspeed = DotProduct(pml.velocity, wishdir);
 	addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0)
@@ -7903,7 +7849,6 @@ void PM_FlyMove (bool doclip)
 		VectorMA (pml.origin, pml.frametime, pml.velocity, pml.origin);
 	}
 }
-
 
 /*
 ==============
@@ -7964,7 +7909,6 @@ void PM_CheckDuck (void)
 	}
 }
 
-
 /*
 ==============
 PM_DeadMove
@@ -7991,7 +7935,6 @@ void PM_DeadMove (void)
 		VectorScale (pml.velocity, forward, pml.velocity);
 	}
 }
-
 
 bool	PM_GoodPosition (void)
 {
@@ -8284,7 +8227,6 @@ typedef struct {
 #define EDICT_NUM(n) ((edict_t *)((u8 *)g_edicts + sizeof(edict_t)*(n)))
 #define NUM_FOR_EDICT(e) ( ((u8 *)(e)-(u8 *)g_edicts ) / sizeof(edict_t))
 
-
 typedef struct
 {
 	int					areabytes;
@@ -8371,15 +8313,12 @@ void SV_BroadcastCommand (char *fmt, ...);
 void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg);
 void SV_BuildClientFrame (client_t *client);
 
-
 void SV_Error (char *error, ...);
 
 //
 // sv_game.c
 //
 void SV_InitEdict (edict_t *e);
-
-
 
 //============================================================
 
@@ -8418,7 +8357,6 @@ int SV_PointContents (vec3_t p);
 // returns the CONTENTS_* value from the world at the given point.
 // Quake 2 extends this to also check entities, to allow moving liquids
 
-
 trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
 // mins and maxs are relative
 
@@ -8445,7 +8383,6 @@ void SV_WipeSavegame (char *savename)
 	char	name[MAX_OSPATH];
 	char	*s;
 
-
 	Com_sprintf (name, sizeof(name), "baseq2/save/%s/server.ssv", savename);
 	remove (name);
 	Com_sprintf (name, sizeof(name), "baseq2/save/%s/game.ssv", savename);
@@ -8468,7 +8405,6 @@ void SV_WipeSavegame (char *savename)
 	}
 	Sys_FindClose ();
 }
-
 
 /*
 ================
@@ -8934,8 +8870,6 @@ void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t 
 
 }
 
-
-
 /*
 =============
 SV_WritePlayerstateToClient
@@ -8990,7 +8924,6 @@ void SV_WritePlayerstateToClient (client_frame_t *from, client_frame_t *to, size
 		|| ps->pmove.delta_angles[1] != ops->pmove.delta_angles[1]
 		|| ps->pmove.delta_angles[2] != ops->pmove.delta_angles[2] )
 		pflags |= PS_M_DELTA_ANGLES;
-
 
 	if (ps->viewoffset[0] != ops->viewoffset[0]
 		|| ps->viewoffset[1] != ops->viewoffset[1]
@@ -9157,7 +9090,6 @@ void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg)
 	SV_EmitPacketEntities (oldframe, frame, msg);
 }
 
-
 /*
 =============================================================================
 
@@ -9213,7 +9145,6 @@ void SV_FatPVS (vec3_t org)
 	}
 }
 
-
 /*
 =============
 SV_BuildClientFrame
@@ -9258,7 +9189,6 @@ void SV_BuildClientFrame (client_t *client)
 
 	// grab the current player_state_t
 	frame->ps = clent->client->ps;
-
 
 	SV_FatPVS (org);
 	clientphs = CM_ClusterPHS (clientcluster);
@@ -9340,7 +9270,6 @@ void SV_BuildClientFrame (client_t *client)
 			}
 		}
 
-
 		// add it to the circular client_entities array
 		state = &svs.client_entities[svs.next_client_entities%svs.num_client_entities];
 		if (ent->s.number != e)
@@ -9357,7 +9286,6 @@ void SV_BuildClientFrame (client_t *client)
 		frame->num_entities++;
 	}
 }
-
 
 // Sends the contents of the mutlicast buffer to a single client
 void PF_Unicast (edict_t *ent, bool reliable)
@@ -9469,8 +9397,6 @@ void PF_Configstring (int index, char *val)
 	}
 }
 
-
-
 void PF_WriteChar (int c) {MSG_WriteChar (&sv.multicast, c);}
 void PF_WriteByte (int c) {MSG_WriteByte (&sv.multicast, c);}
 void PF_WriteShort (int c) {MSG_WriteShort (&sv.multicast, c);}
@@ -9480,7 +9406,6 @@ void PF_WriteString (char *s) {MSG_WriteString (&sv.multicast, s);}
 void PF_WritePos (vec3_t pos) {MSG_WritePos (&sv.multicast, pos);}
 void PF_WriteDir (vec3_t dir) {MSG_WriteDir (&sv.multicast, dir);}
 void PF_WriteAngle (float f) {MSG_WriteAngle (&sv.multicast, f);}
-
 
 /*
 =================
@@ -9510,7 +9435,6 @@ bool PF_inPVS (vec3_t p1, vec3_t p2)
 		return false;		// a door blocks sight
 	return true;
 }
-
 
 /*
 =================
@@ -9596,7 +9520,6 @@ int SV_FindIndex (char *name, int start, int max, bool create)
 	return i;
 }
 
-
 int SV_ModelIndex (char *name)
 {
 	return SV_FindIndex (name, CS_MODELS, MAX_MODELS, true);
@@ -9611,7 +9534,6 @@ int SV_ImageIndex (char *name)
 {
 	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES, true);
 }
-
 
 /*
 ================
@@ -9823,8 +9745,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 	SV_BroadcastCommand ("reconnect\n");
 }
 
-
-
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
@@ -9978,7 +9898,6 @@ void SV_Multicast (vec3_t origin, multicast_t to)
 
 	SZ_Clear (&sv.multicast);
 }
-
 
 /*
 ==================
@@ -10166,7 +10085,6 @@ void SV_New_f (void)
 	int			playernum;
 	edict_t		*ent;
 
-
 	if (svs.client.state != cs_connected)
 	{
 		add_line_to_console_log(STR("New not valid -- already spawned"));
@@ -10208,7 +10126,6 @@ SV_Configstrings_f
 void SV_Configstrings_f (void)
 {
 	int			start;
-
 
 	if (svs.client.state != cs_connected)
 	{
@@ -10264,7 +10181,6 @@ void SV_Baselines_f (void)
 	int		start;
 	entity_state_t	nullstate;
 	entity_state_t	*base;
-
 
 	if (svs.client.state != cs_connected)
 	{
@@ -10397,7 +10313,6 @@ int		area_type;
 
 int SV_HullForEntity (edict_t *ent);
 
-
 // ClearLink is used for new headnodes
 void ClearLink (link_t *l)
 {
@@ -10477,7 +10392,6 @@ void SV_ClearWorld (void)
 	SV_CreateAreaNode (0, sv.models[1]->mins, sv.models[1]->maxs);
 }
 
-
 /*
 ===============
 SV_UnlinkEdict
@@ -10491,7 +10405,6 @@ void SV_UnlinkEdict (edict_t *ent)
 	RemoveLink (&ent->area);
 	ent->area.prev = ent->area.next = NULL;
 }
-
 
 /*
 ===============
@@ -10679,7 +10592,6 @@ void SV_LinkEdict (edict_t *ent)
 
 }
 
-
 /*
 ====================
 SV_AreaEdicts_r
@@ -10752,7 +10664,6 @@ int SV_AreaEdicts (vec3_t mins, vec3_t maxs, edict_t **list,
 	return area_count;
 }
 
-
 //===========================================================================
 
 /*
@@ -10787,8 +10698,6 @@ int SV_PointContents (vec3_t p)
 	return contents;
 }
 
-
-
 typedef struct
 {
 	vec3_t		boxmins, boxmaxs;// enclose the test object along entire move
@@ -10820,7 +10729,6 @@ int SV_HullForEntity (edict_t *ent)
 
 	return CM_HeadnodeForBox (ent->mins, ent->maxs);
 }
-
 
 //===========================================================================
 
@@ -10894,7 +10802,6 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 			clip->trace.startsolid = true;
 	}
 }
-
 
 /*
 ==================
@@ -11357,7 +11264,6 @@ void CL_WriteToServer (usercmd_t *cmd);
 
 float CL_KeyState (kbutton_t *key);
 
-
 //
 // cl_parse.c
 //
@@ -11385,7 +11291,6 @@ void V_AddLightStyle (int style, float r, float g, float b);
 void CL_RegisterTEntSounds (void);
 void CL_RegisterTEntModels (void);
 void CL_SmokeAndFlash(vec3_t origin);
-
 
 //
 // cl_pred.c
@@ -11709,8 +11614,6 @@ void CL_ParsePacketEntities (frame_t *oldframe, frame_t *newframe)
 	}
 }
 
-
-
 /*
 ===================
 CL_ParsePlayerstate
@@ -11830,7 +11733,6 @@ void CL_ParsePlayerstate (frame_t *oldframe, frame_t *newframe)
 			state->stats[i] = MSG_ReadShort(&net_message);
 }
 
-
 /*
 ==================
 CL_FireEntityEvents
@@ -11862,7 +11764,6 @@ void CL_ParseFrame (void)
 	frame_t		*old;
 
 	memset (&cl.frame, 0, sizeof(cl.frame));
-
 
 	cl.frame.serverframe = MSG_ReadLong (&net_message);
 	cl.frame.deltaframe = MSG_ReadLong (&net_message);
@@ -12500,7 +12401,6 @@ void CL_AddViewWeapon (player_state_t *ps, player_state_t *ops)
 	V_AddEntity (&gun);
 }
 
-
 /*
 ===============
 CL_CalcViewValues
@@ -12692,7 +12592,6 @@ void CL_RunLightStyles (void)
 	}
 }
 
-
 void CL_SetLightstyle (int i)
 {
 	char	*s;
@@ -12803,7 +12702,6 @@ void CL_NewDlight (int key, float x, float y, float z, float radius, float time)
 	dl->radius = radius;
 	dl->die = cl.time + time;
 }
-
 
 /*
 ===============
@@ -13021,7 +12919,6 @@ void CL_ParseMuzzleFlash (void)
 // ======================
 	}
 }
-
 
 /*
 ==============
@@ -13417,7 +13314,6 @@ cparticle_t	*active_particles, *free_particles;
 cparticle_t	particles[MAX_PARTICLES];
 int			cl_numparticles = MAX_PARTICLES;
 
-
 /*
 ===============
 CL_ClearParticles
@@ -13434,7 +13330,6 @@ void CL_ClearParticles (void)
 		particles[i].next = &particles[i+1];
 	particles[cl_numparticles-1].next = NULL;
 }
-
 
 /*
 ===============
@@ -13476,7 +13371,6 @@ void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	}
 }
 
-
 /*
 ===============
 CL_ParticleEffect2
@@ -13514,7 +13408,6 @@ void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count)
 		p->alphavel = -1.0 / (0.5 + frand()*0.3);
 	}
 }
-
 
 // RAFAEL
 /*
@@ -13632,7 +13525,6 @@ void CL_LogoutEffect (vec3_t org, int type)
 	}
 }
 
-
 /*
 ===============
 CL_ItemRespawnParticles
@@ -13672,7 +13564,6 @@ void CL_ItemRespawnParticles (vec3_t org)
 	}
 }
 
-
 /*
 ===============
 CL_ExplosionParticles
@@ -13708,7 +13599,6 @@ void CL_ExplosionParticles (vec3_t org)
 		p->alphavel = -0.8 / (0.5 + frand()*0.3);
 	}
 }
-
 
 /*
 ===============
@@ -13754,7 +13644,6 @@ void CL_BigTeleportParticles (vec3_t org)
 	}
 }
 
-
 /*
 ===============
 CL_BlasterParticles
@@ -13796,7 +13685,6 @@ void CL_BlasterParticles (vec3_t org, vec3_t dir)
 		p->alphavel = -1.0 / (0.5 + frand()*0.3);
 	}
 }
-
 
 /*
 ===============
@@ -14281,7 +14169,6 @@ void CL_IonripperTrail (vec3_t start, vec3_t ent)
 	}
 }
 
-
 /*
 ===============
 CL_BubbleTrail
@@ -14331,7 +14218,6 @@ void CL_BubbleTrail (vec3_t start, vec3_t end)
 	}
 }
 
-
 /*
 ===============
 CL_FlyParticles
@@ -14349,7 +14235,6 @@ void CL_FlyParticles (vec3_t origin, int count)
 	float		dist = 64;
 	float		ltime;
 
-
 	if (count > NUMVERTEXNORMALS)
 		count = NUMVERTEXNORMALS;
 
@@ -14358,7 +14243,6 @@ void CL_FlyParticles (vec3_t origin, int count)
 		for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
 			avelocities[0][i] = (rand()&255) * 0.01;
 	}
-
 
 	ltime = (float)cl.time / 1000.0;
 	for (i=0 ; i<count ; i+=2)
@@ -14429,7 +14313,6 @@ void CL_FlyEffect (centity_t *ent, vec3_t origin)
 	CL_FlyParticles (origin, count);
 }
 
-
 /*
 ===============
 CL_BfgParticles
@@ -14453,7 +14336,6 @@ void CL_BfgParticles (Entity *ent)
 		for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
 			avelocities[0][i] = (rand()&255) * 0.01;
 	}
-
 
 	ltime = (float)cl.time / 1000.0;
 	for (i=0 ; i<NUMVERTEXNORMALS ; i++)
@@ -14494,7 +14376,6 @@ void CL_BfgParticles (Entity *ent)
 		p->alphavel = -100;
 	}
 }
-
 
 /*
 ===============
@@ -14555,17 +14436,14 @@ void CL_TrapParticles (Entity *ent)
 
 	{
 
-
 	int			i, j, k;
 	cparticle_t	*p;
 	float		vel;
 	vec3_t		dir;
 	vec3_t		org;
 
-
 	ent->origin[2]+=14;
 	VectorCopy (ent->origin, org);
-
 
 	for (i=-2 ; i<=2 ; i+=4)
 		for (j=-2 ; j<=2 ; j+=4)
@@ -14601,7 +14479,6 @@ void CL_TrapParticles (Entity *ent)
 			}
 	}
 }
-
 
 /*
 ===============
@@ -14639,7 +14516,6 @@ void CL_BFGExplosionParticles (vec3_t org)
 		p->alphavel = -0.8 / (0.5 + frand()*0.3);
 	}
 }
-
 
 /*
 ===============
@@ -14687,7 +14563,6 @@ void CL_TeleportParticles (vec3_t org)
 				p->accel[2] = -PARTICLE_GRAVITY;
 			}
 }
-
 
 /*
 ===============
@@ -14758,7 +14633,6 @@ void CL_AddParticles (void)
 	active_particles = active;
 }
 
-
 /*
 ==============
 CL_EntityEvent
@@ -14826,7 +14700,6 @@ state bit 0 is the current state of the key
 state bit 1 is edge triggered on the up to down transition
 state bit 2 is edge triggered on the down to up transition
 
-
 Key_Event (int key, bool down, unsigned time);
 
   +mlook src time
@@ -14834,14 +14707,12 @@ Key_Event (int key, bool down, unsigned time);
 ===============================================================================
 */
 
-
 kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_speed, in_use, in_attack;
 kbutton_t	in_up, in_down;
 
 int			in_impulse;
-
 
 void KeyDown (kbutton_t *b)
 {
@@ -15228,7 +15099,6 @@ void CL_Packet_f (void)
 	int		i, l;
 	char	*in, *out;
 
-
 	if (cmd_argc != 3)
 	{
 		add_line_to_console_log(STR("packet <destination> <contents>"));
@@ -15425,7 +15295,6 @@ void CL_ColorFlash (vec3_t pos, int ent, int intensity, float r, float g, float 
 	dl->color[1] = g;
 	dl->color[2] = b;
 }
-
 
 /*
 ======
@@ -16612,7 +16481,6 @@ void CL_ParseConfigString (void)
 	}
 }
 
-
 /*
 =====================================================================
 
@@ -16816,7 +16684,6 @@ void CL_CheckPredictionError (void)
 	}
 }
 
-
 /*
 ====================
 CL_ClipMoveToEntities
@@ -16891,7 +16758,6 @@ void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 	}
 }
 
-
 /*
 ================
 CL_PMTrace
@@ -16956,7 +16822,6 @@ typedef struct
 	int		color;
 } graphsamp_t;
 
-
 void Draw_Fill (int x, int y, int w, int h, int c);
 
 char		scr_centerstring[1024];
@@ -17014,7 +16879,6 @@ void SCR_CenterPrint (char *str)
 		s++;		// skip the \n
 	} while (1);
 }
-
 
 void SCR_DrawCenterString (void)
 {
@@ -17301,11 +17165,9 @@ typedef struct {
 
 #define		MAX_GLTEXTURES	1024
 
-
 #define	SIDE_FRONT	0
 #define	SIDE_BACK	1
 #define	SIDE_ON		2
-
 
 #define	SURF_PLANEBACK		2
 #define	SURF_DRAWSKY		4
@@ -17483,8 +17345,6 @@ char		*sb_nums[2][11] =
 #define	ICON_HEIGHT	24
 #define	Q_CHAR_WIDTH	16
 #define	ICON_SPACE	8
-
-
 
 /*
 ================
@@ -17825,7 +17685,6 @@ void SCR_ExecuteLayoutString (char *s)
 			continue;
 		}
 
-
 		if (!strcmp(token, "stat_string"))
 		{
 			token = COM_Parse (&s);
@@ -17879,7 +17738,6 @@ void SCR_ExecuteLayoutString (char *s)
 
 			continue;
 		}
-
 
 	}
 }
@@ -17961,7 +17819,6 @@ typedef struct {
 
 beam_t cl_beams[MAX_BEAMS];
 beam_t cl_playerbeams[MAX_BEAMS];
-
 
 #define	MAX_LASERS	32
 typedef struct
@@ -18302,7 +18159,6 @@ int CL_ParsePlayerBeam (struct model_s *model)
 	else
 		MSG_ReadPos (&net_message, offset);
 
-
 	// override any beam with the same entity
 	// PMM - For player beams, we only want one per player (entity) so..
 	for (i=0, b=cl_playerbeams ; i< MAX_BEAMS ; i++, b++)
@@ -18549,7 +18405,6 @@ void CL_ParseNuke (void)
 
 //ROGUE
 //=============
-
 
 /*
 =================
@@ -18912,7 +18767,6 @@ void CL_ParseTEnt (void)
 		ex->frames = 4;
 		S_StartSound (pos,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
 		break;
-
 
 	case TE_LIGHTNING:
 		ent = CL_ParseLightning (cl_mod_lightning);
@@ -19505,7 +19359,6 @@ void CL_AddExplosions (void)
 	}
 }
 
-
 /*
 =================
 CL_AddLasers
@@ -19589,7 +19442,6 @@ void V_ClearScene (void)
 	r_numparticles = 0;
 }
 
-
 /*
 =====================
 V_AddEntity
@@ -19602,7 +19454,6 @@ void V_AddEntity (Entity *ent)
 		return;
 	r_entities[r_numentities++] = *ent;
 }
-
 
 /*
 =====================
@@ -19641,7 +19492,6 @@ void V_AddLight (vec3_t org, float intensity, float r, float g, float b)
 	dl->color[1] = g;
 	dl->color[2] = b;
 }
-
 
 /*
 =====================
@@ -21559,7 +21409,6 @@ static char* LoadGame_MenuKey( int key )
 	return Default_MenuKey( &s_loadgame_menu, key );
 }
 
-
 static void M_Menu_LoadGame_f (void* data)
 {
 	UNUSED(data);
@@ -22027,7 +21876,6 @@ sfx_t *S_FindName (char *name, bool create)
 	return sfx;
 }
 
-
 /*
 ==================
 S_AliasName
@@ -22063,7 +21911,6 @@ sfx_t *S_AliasName (char *aliasname, char *truename)
 	return sfx;
 }
 
-
 /*
 =====================
 S_BeginRegistration
@@ -22094,7 +21941,6 @@ sfx_t *S_RegisterSound (char *name)
 
 	return sfx;
 }
-
 
 /*
 =====================
@@ -22259,7 +22105,6 @@ void S_Spatialize(channel_t *ch)
 	S_SpatializeOrigin (origin, ch->master_vol, ch->dist_mult, &ch->leftvol, &ch->rightvol);
 }
 
-
 /*
 =================
 S_AllocPlaysound
@@ -22280,7 +22125,6 @@ playsound_t *S_AllocPlaysound (void)
 	return ps;
 }
 
-
 /*
 =================
 S_FreePlaysound
@@ -22298,8 +22142,6 @@ void S_FreePlaysound (playsound_t *ps)
 	ps->prev = &s_freeplays;
 	s_freeplays.next = ps;
 }
-
-
 
 /*
 ===============
@@ -22398,7 +22240,6 @@ struct sfx_s *S_RegisterSexedSound (entity_state_t *ent, char *base)
 
 	return sfx;
 }
-
 
 // =======================================================================
 // Start a sound effect
@@ -22757,8 +22598,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	return sc;
 }
 
-
-
 /*
 ===============================================================================
 
@@ -22767,13 +22606,11 @@ WAV loading
 ===============================================================================
 */
 
-
 u8	*data_p;
 u8 	*iff_end;
 u8 	*last_chunk;
 u8 	*iff_data;
 int 	iff_chunk_len;
-
 
 short GetLittleShort(void)
 {
@@ -23131,7 +22968,6 @@ void ai_move (edict_t* self, float dist)
 	M_walkmove (self, self->s.angles[YAW], dist);
 }
 
-
 /*
 =============
 ai_stand
@@ -23189,7 +23025,6 @@ void ai_stand (edict_t* self, float dist)
 	}
 }
 
-
 /*
 =============
 ai_walk
@@ -23219,7 +23054,6 @@ void ai_walk (edict_t* self, float dist)
 	}
 }
 
-
 /*
 =============
 ai_charge
@@ -23240,7 +23074,6 @@ void ai_charge (edict_t* self, float dist)
 		M_walkmove (self, self->s.angles[YAW], dist);
 }
 
-
 /*
 =============
 ai_turn
@@ -23259,7 +23092,6 @@ void ai_turn (edict_t* self, float dist)
 
 	M_ChangeYaw (self);
 }
-
 
 /*
 
@@ -23338,7 +23170,6 @@ bool visible (edict_t* self, edict_t* other)
 	return false;
 }
 
-
 /*
 =============
 infront
@@ -23361,7 +23192,6 @@ bool infront (edict_t* self, edict_t* other)
 		return true;
 	return false;
 }
-
 
 //============================================================================
 
@@ -23421,7 +23251,6 @@ void FoundTarget (edict_t* self)
 	// run for it
 	self->monsterinfo.run (self);
 }
-
 
 /*
 ===========
@@ -23618,7 +23447,6 @@ bool FindTarget (edict_t* self)
 	return true;
 }
 
-
 //=============================================================================
 
 /*
@@ -23636,7 +23464,6 @@ bool FacingIdeal(edict_t* self)
 		return false;
 	return true;
 }
-
 
 //=============================================================================
 
@@ -23720,7 +23547,6 @@ bool M_CheckAttack (edict_t* self)
 	return false;
 }
 
-
 /*
 =============
 ai_run_melee
@@ -23740,7 +23566,6 @@ void ai_run_melee(edict_t* self)
 	}
 }
 
-
 /*
 =============
 ai_run_missile
@@ -23759,7 +23584,6 @@ void ai_run_missile(edict_t* self)
 		self->monsterinfo.attack_state = AS_STRAIGHT;
 	}
 };
-
 
 /*
 =============
@@ -23895,7 +23719,6 @@ static bool ai_checkattack(edict_t* self) {
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
-
 
 	// JDC self->ideal_yaw = enemy_yaw;
 
@@ -24096,7 +23919,6 @@ void ai_run (edict_t* self, float dist)
 	if (self)
 		self->goalentity = save;
 }
-
 
 #define MODEL_SCALE		1.000000
 
@@ -24725,10 +24547,8 @@ bool CanDamage (edict_t *targ, edict_t* inflictor)
 	if (trace.fraction == 1.0)
 		return true;
 
-
 	return false;
 }
-
 
 /*
 ============
@@ -25104,7 +24924,6 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 		else
 			SpawnDamage (te_sparks, point, normal, take);
 
-
 		targ->health = targ->health - take;
 
 		if (targ->health <= 0)
@@ -25147,7 +24966,6 @@ void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir,
 		VectorCopy (point, client->damage_from);
 	}
 }
-
 
 /*
 ============
@@ -25219,7 +25037,6 @@ void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_
 	disabled?
   auto trigger spawning
 
-
 =========================================================
 */
 
@@ -25237,7 +25054,6 @@ void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_
 #define DOOR_TOGGLE			32
 #define DOOR_X_AXIS			64
 #define DOOR_Y_AXIS			128
-
 
 //
 // Support routines for movement (changes in origin using velocity)
@@ -25308,7 +25124,6 @@ void Move_Calc (edict_t *ent, vec3_t dest, void(*func)(edict_t*))
 		ent->nextthink = level.time + FRAMETIME;
 	}
 }
-
 
 //
 // Support routines for angular movement (changes in angle using avelocity)
@@ -25390,7 +25205,6 @@ void AngleMove_Calc (edict_t *ent, void(*func)(edict_t*))
 		ent->think = AngleMove_Begin;
 	}
 }
-
 
 /*
 ==============
@@ -25521,7 +25335,6 @@ void Think_AccelMove (edict_t *ent)
 	ent->nextthink = level.time + FRAMETIME;
 	ent->think = Think_AccelMove;
 }
-
 
 void plat_go_down (edict_t *ent);
 
@@ -25663,7 +25476,6 @@ void plat_spawn_inside_trigger (edict_t *ent)
 
 	SV_LinkEdict (trigger);
 }
-
 
 /*QUAKED func_plat (0 .5 .8) ? PLAT_LOW_TRIGGER
 speed	default 150
@@ -26276,7 +26088,6 @@ void door_blocked  (edict_t* self, edict_t* other)
 	if (self->spawnflags & DOOR_CRUSHER)
 		return;
 
-
 // if a door has a negative wait, it would never come back if blocked,
 // so let it just squash the object to death real fast
 	if (self->moveinfo.wait >= 0)
@@ -26415,7 +26226,6 @@ void SP_func_door (edict_t *ent)
 		ent->think = Think_SpawnDoorTrigger;
 }
 
-
 /*QUAKED func_door_rotating (0 .5 .8) ? START_OPEN REVERSE CRUSHER NOMONSTER ANIMATED TOGGLE X_AXIS Y_AXIS
 TOGGLE causes the door to wait in both the start and end states for a trigger event.
 
@@ -26545,7 +26355,6 @@ void SP_func_door_rotating (edict_t *ent)
 		ent->think = Think_SpawnDoorTrigger;
 }
 
-
 /*QUAKED func_water (0 .5 .8) ? START_OPEN
 func_water is a moveable water brush.  It must be targeted to operate.  Use a non-water texture at your own risk.
 
@@ -26626,7 +26435,6 @@ void SP_func_water (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-
 
 #define TRAIN_START_ON		1
 #define TRAIN_TOGGLE		2
@@ -26924,7 +26732,6 @@ void SP_trigger_elevator (edict_t* self)
 	self->nextthink = level.time + FRAMETIME;
 }
 
-
 /*QUAKED func_timer (0.3 0.1 0.6) (-8 -8 -8) (8 8 8) START_ON
 "wait"			base time between triggering all targets, default is 1
 "random"		wait variance, default is 0
@@ -26986,7 +26793,6 @@ void SP_func_timer (edict_t* self)
 	self->svflags = SVF_NOCLIENT;
 }
 
-
 /*QUAKED func_conveyor (0 .5 .8) ? START_ON TOGGLE
 Conveyors are stationary brushes that move what's on them.
 The brush should be have a surface with at least one current content enabled.
@@ -27029,7 +26835,6 @@ void SP_func_conveyor (edict_t* self)
 	self->solid = SOLID_BSP;
 	SV_LinkEdict (self);
 }
-
 
 /*QUAKED func_door_secret (0 .5 .8) ? always_shoot 1st_left 1st_down
 A secret door.  Slide back and then to the side.
@@ -27208,7 +27013,6 @@ void SP_func_door_secret (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*QUAKED func_killbox (1 0 0) ?
 Kills everything inside when fired, irrespective of protection.*/
 static void use_killbox(edict_t* self, edict_t* other, edict_t* activator) {
@@ -27229,7 +27033,6 @@ void SP_func_killbox (edict_t *ent)
 /* ============ begin source: game/g_items.c ============ */
 
 /* already inlined above: game/g_local.h */
-
 
 bool	Pickup_Weapon (edict_t *ent, edict_t* other);
 void		Use_Weapon (edict_t *ent, gitem_t *inv);
@@ -27271,7 +27074,6 @@ gitem_t	*GetItemByIndex (int index)
 
 	return &itemlist[index];
 }
-
 
 /*
 ===============
@@ -28072,7 +27874,6 @@ void droptofloor (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*
 ===============
 PrecacheItem
@@ -28264,7 +28065,6 @@ static gitem_t itemlist[] = {
 		ARMOR_SHARD,
 		""
 	},
-
 
 	/*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
@@ -29282,7 +29082,6 @@ void SP_func_areaportal (edict_t *ent)
 
 //=====================================================
 
-
 /*
 =================
 Misc functions
@@ -29315,7 +29114,6 @@ void ClipGibVelocity (edict_t *ent)
 	else if (ent->velocity[2] > 500)
 		ent->velocity[2] = 500;
 }
-
 
 // gibs
 
@@ -29459,7 +29257,6 @@ void ThrowHead (edict_t* self, char *gibname, int damage, int type)
 	SV_LinkEdict (self);
 }
 
-
 void ThrowClientHead (edict_t* self, int damage)
 {
 	vec3_t	vd;
@@ -29506,7 +29303,6 @@ void ThrowClientHead (edict_t* self, int damage)
 	SV_LinkEdict (self);
 }
 
-
 // debris
 static void debris_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -29544,7 +29340,6 @@ void ThrowDebris (edict_t* self, char *modelname, float speed, vec3_t origin)
 	SV_LinkEdict (chunk);
 }
 
-
 void BecomeExplosion1 (edict_t* self)
 {
 	PF_WriteByte (svc_temp_entity);
@@ -29555,7 +29350,6 @@ void BecomeExplosion1 (edict_t* self)
 	G_FreeEdict (self);
 }
 
-
 void BecomeExplosion2 (edict_t* self)
 {
 	PF_WriteByte (svc_temp_entity);
@@ -29565,7 +29359,6 @@ void BecomeExplosion2 (edict_t* self)
 
 	G_FreeEdict (self);
 }
-
 
 /*QUAKED path_corner (.5 .3 0) (-8 -8 -8) (8 8 8) TELEPORT
 Target: next path corner
@@ -29648,7 +29441,6 @@ void SP_path_corner (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 /*QUAKED point_combat (0.5 0.3 0) (-8 -8 -8) (8 8 8) Hold
 Makes this the target of a monster and it will head here
 when first activated before going after the activator.  If
@@ -29717,7 +29509,6 @@ void SP_point_combat (edict_t* self)
 	SV_LinkEdict (self);
 };
 
-
 /*QUAKED viewthing (0 .5 .8) (-8 -8 -8) (8 8 8)
 Just for the debugging level.  Don't use
 */
@@ -29742,7 +29533,6 @@ void SP_viewthing(edict_t *ent)
 	return;
 }
 
-
 /*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for spotlights, etc.
 */
@@ -29750,7 +29540,6 @@ void SP_info_null (edict_t* self)
 {
 	G_FreeEdict (self);
 };
-
 
 /*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for lightning.
@@ -29760,7 +29549,6 @@ void SP_info_notnull (edict_t* self)
 	VectorCopy (self->s.origin, self->absmin);
 	VectorCopy (self->s.origin, self->absmax);
 };
-
 
 /*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF
 Non-displayed light.
@@ -29805,7 +29593,6 @@ void SP_light (edict_t* self)
 			PF_Configstring (CS_LIGHTS+self->style, "m");
 	}
 }
-
 
 /*QUAKED func_wall (0 .5 .8) ? TRIGGER_SPAWN TOGGLE START_ON ANIMATED ANIMATED_FAST
 This is just a solid wall if not inhibited
@@ -29888,7 +29675,6 @@ void SP_func_wall (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 /*QUAKED func_object (0 .5 .8) ? TRIGGER_SPAWN ANIMATED ANIMATED_FAST
 This is solid bmodel that will fall if it's support it removed.
 */
@@ -29961,7 +29747,6 @@ void SP_func_object (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-
 
 /*QUAKED func_explosive (0 .5 .8) ? Trigger_Spawn ANIMATED ANIMATED_FAST
 Any brush that you want to explode or break apart.  If you want an
@@ -30096,7 +29881,6 @@ void SP_func_explosive (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-
 
 /*QUAKED misc_explobox (0 .5 .8) (-16 -16 0) (16 16 40)
 Large exploding box.  You can override its mass (100),
@@ -30241,7 +30025,6 @@ void SP_misc_explobox (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 //
 // miscellaneous specialty items
 //
@@ -30311,7 +30094,6 @@ void SP_misc_eastertank (edict_t *ent)
 /*QUAKED misc_easterchick (1 .5 0) (-32 -32 0) (32 32 32)
 */
 
-
 void misc_easterchick_think (edict_t* self)
 {
 	if (++self->s.frame < 247)
@@ -30339,7 +30121,6 @@ void SP_misc_easterchick (edict_t *ent)
 /*QUAKED misc_easterchick2 (1 .5 0) (-32 -32 0) (32 32 32)
 */
 
-
 void misc_easterchick2_think (edict_t* self)
 {
 	if (++self->s.frame < 287)
@@ -30363,7 +30144,6 @@ void SP_misc_easterchick2 (edict_t *ent)
 	ent->nextthink = level.time + 2 * FRAMETIME;
 	SV_LinkEdict (ent);
 }
-
 
 /*QUAKED monster_commander_body (1 .5 0) (-32 -32 0) (32 32 48)
 Not really a monster, this is the Tank Commander's decapitated body.
@@ -30416,7 +30196,6 @@ void SP_monster_commander_body (edict_t* self)
 	self->think = commander_body_drop;
 	self->nextthink = level.time + 5 * FRAMETIME;
 }
-
 
 /*QUAKED misc_banner (1 .5 0) (-4 -4 -4) (4 4 4)
 The origin is the bottom of the banner.
@@ -30534,7 +30313,6 @@ void SP_misc_viper (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72)
 This is a large stationary viper as seen in Paul's intro
 */
@@ -30547,7 +30325,6 @@ void SP_misc_bigviper (edict_t *ent)
 	ent->s.modelindex = SV_ModelIndex ("models/ships/bigviper/tris.md2");
 	SV_LinkEdict (ent);
 }
-
 
 /*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make?
@@ -30622,7 +30399,6 @@ void SP_misc_viper_bomb (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 /*QUAKED misc_strogg_ship (1 .5 0) (-16 -16 0) (16 16 32)
 This is a Storgg ship for the flybys.
 It is trigger_spawned, so you must have something use it for it to show up.
@@ -30667,7 +30443,6 @@ void SP_misc_strogg_ship (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128)
 */
 void misc_satellite_dish_think (edict_t* self)
@@ -30697,7 +30472,6 @@ void SP_misc_satellite_dish (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*QUAKED light_mine1 (0 1 0) (-2 -2 -12) (2 2 12)
 */
 void SP_light_mine1 (edict_t *ent)
@@ -30708,7 +30482,6 @@ void SP_light_mine1 (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 /*QUAKED light_mine2 (0 1 0) (-2 -2 -12) (2 2 12)
 */
 void SP_light_mine2 (edict_t *ent)
@@ -30718,7 +30491,6 @@ void SP_light_mine2 (edict_t *ent)
 	ent->s.modelindex = SV_ModelIndex ("models/objects/minelite/light2/tris.md2");
 	SV_LinkEdict (ent);
 }
-
 
 /*QUAKED misc_gib_arm (1 0 0) (-8 -8 -8) (8 8 8)
 Intended for use with the target_spawner
@@ -30800,7 +30572,6 @@ void SP_target_character (edict_t* self)
 	return;
 }
 
-
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
 */
 
@@ -30842,7 +30613,6 @@ void SP_target_string (edict_t* self)
 		self->message = "";
 	self->use = target_string_use;
 }
-
 
 /*QUAKED func_clock (0 0 1) (-8 -8 -8) (8 8 8) TIMER_UP TIMER_DOWN START_OFF MULTI_USE
 target a target_string with this
@@ -31110,7 +30880,6 @@ void SP_misc_teleporter_dest (edict_t *ent)
 
 /* already inlined above: game/g_local.h */
 
-
 //
 // monster weapons
 //
@@ -31184,8 +30953,6 @@ static void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int dam
 	SV_Multicast (start, MULTICAST_PVS);
 }
 
-
-
 //
 // Monster utility functions
 //
@@ -31222,7 +30989,6 @@ void AttackFinished (edict_t* self, float time)
 {
 	self->monsterinfo.attack_finished = level.time + time;
 }
-
 
 void M_CheckGround (edict_t *ent)
 {
@@ -31265,7 +31031,6 @@ void M_CheckGround (edict_t *ent)
 	}
 }
 
-
 void M_CatagorizePosition (edict_t *ent)
 {
 	vec3_t		point;
@@ -31299,7 +31064,6 @@ void M_CatagorizePosition (edict_t *ent)
 	if (cont & MASK_WATER)
 		ent->waterlevel = 3;
 }
-
 
 void M_WorldEffects (edict_t *ent)
 {
@@ -31392,7 +31156,6 @@ void M_WorldEffects (edict_t *ent)
 	}
 }
 
-
 void M_droptofloor (edict_t *ent)
 {
 	vec3_t		end;
@@ -31413,7 +31176,6 @@ void M_droptofloor (edict_t *ent)
 	M_CheckGround (ent);
 	M_CatagorizePosition (ent);
 }
-
 
 void M_SetEffects (edict_t *ent)
 {
@@ -31442,7 +31204,6 @@ void M_SetEffects (edict_t *ent)
 		}
 	}
 }
-
 
 void M_MoveFrame (edict_t* self)
 {
@@ -31503,7 +31264,6 @@ void M_MoveFrame (edict_t* self)
 		move->frame[index].thinkfunc (self);
 }
 
-
 void monster_think (edict_t* self)
 {
 	M_MoveFrame (self);
@@ -31535,9 +31295,7 @@ static void monster_use(edict_t* self, edict_t* other, edict_t* activator) {
 	FoundTarget (self);
 }
 
-
 void monster_start_go (edict_t* self);
-
 
 void monster_triggered_spawn (edict_t* self)
 {
@@ -31582,7 +31340,6 @@ void monster_triggered_start (edict_t* self)
 	self->nextthink = 0;
 	self->use = monster_triggered_spawn_use;
 }
-
 
 /*
 ================
@@ -31721,7 +31478,6 @@ void monster_start_go (edict_t* self)
 	self->nextthink = level.time + FRAMETIME;
 }
 
-
 void walkmonster_start_go (edict_t* self)
 {
 	if (!(self->spawnflags & 2) && level.time < 1)
@@ -31745,7 +31501,6 @@ void walkmonster_start (edict_t* self)
 	monster_start (self);
 }
 
-
 void flymonster_start_go (edict_t* self)
 {
 	if (!self->yaw_speed)
@@ -31758,14 +31513,12 @@ void flymonster_start_go (edict_t* self)
 		monster_triggered_start (self);
 }
 
-
 void flymonster_start (edict_t* self)
 {
 	self->flags |= FL_FLY;
 	self->think = flymonster_start_go;
 	monster_start (self);
 }
-
 
 void swimmonster_start_go (edict_t* self)
 {
@@ -31794,7 +31547,6 @@ void swimmonster_start (edict_t* self)
 
 /*
 
-
 pushmove objects do not obey gravity, and do not interact with each other or trigger fields, but block normal movement and push normal objects when they move.
 
 onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects
@@ -31809,7 +31561,6 @@ flying/floating monsters are SOLID_SLIDEBOX and MOVETYPE_FLY
 solid_edge items only clip against bsp models.
 
 */
-
 
 /*
 ============
@@ -31879,7 +31630,6 @@ void SV_Impact (edict_t *e1, trace_t *trace)
 		e2->touch (e2, e1, NULL, NULL);
 }
 
-
 /*
 ==================
 ClipVelocity
@@ -31914,7 +31664,6 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 
 	return blocked;
 }
-
 
 /*
 ============
@@ -31998,7 +31747,6 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 		SV_Impact (ent, &trace);
 		if (!ent->inuse)
 			break;		// removed by the impact function
-
 
 		time_left -= time_left * trace.fraction;
 
@@ -32121,7 +31869,6 @@ retry:
 
 	return trace;
 }
-
 
 typedef struct
 {
@@ -32890,7 +32637,6 @@ static void WriteField1(field_t *field, u8 *base) {
 	}
 }
 
-
 void WriteField2 (FILE *f, field_t *field, u8 *base)
 {
 	int			len;
@@ -33144,7 +32890,6 @@ void WriteLevelLocals (FILE *f)
 	}
 }
 
-
 /*
 ==============
 ReadEdict
@@ -33301,7 +33046,6 @@ typedef struct
 	char	*name;
 	void	(*spawn)(edict_t *ent);
 } spawn_t;
-
 
 void SP_item_health (edict_t* self);
 void SP_item_health_small (edict_t* self);
@@ -33623,9 +33367,6 @@ char *ED_NewString (char *string)
 	return newb;
 }
 
-
-
-
 /*
 ===============
 ED_ParseField
@@ -33726,7 +33467,6 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 	return data;
 }
 
-
 /*
 ================
 G_FindTeams
@@ -33823,7 +33563,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 		ED_CallSpawn (ent);
 	}
-
 
 	G_FindTeams ();
 
@@ -33938,7 +33677,6 @@ void SP_worldspawn (edict_t *ent)
 	PF_Configstring (CS_STATUSBAR, single_statusbar);
 
 	//---------------
-
 
 	// help icon for statusbar
 	SV_ImageIndex ("i_help");
@@ -34088,7 +33826,6 @@ void SP_target_temp_entity (edict_t *ent)
 	ent->use = Use_Target_Tent;
 }
 
-
 /*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) looped-on looped-off reliable
 "noise"		wav file to play
 "attenuation"
@@ -34160,7 +33897,6 @@ void SP_target_speaker (edict_t *ent)
 	// the server can determine who to send updates to
 	SV_LinkEdict (ent);
 }
-
 
 //==========================================================
 
@@ -34243,7 +33979,6 @@ void SP_target_goal (edict_t *ent)
 
 //==========================================================
 
-
 /*QUAKED target_explosion (1 0 0) (-8 -8 -8) (8 8 8)
 Spawns an explosion temporary entity when used.
 
@@ -34324,7 +34059,6 @@ void SP_target_changelevel (edict_t *ent)
 	ent->svflags = SVF_NOCLIENT;
 }
 
-
 //==========================================================
 
 /*QUAKED target_splash (1 0 0) (-8 -8 -8) (8 8 8)
@@ -34368,7 +34102,6 @@ void SP_target_splash (edict_t* self)
 
 	self->svflags = SVF_NOCLIENT;
 }
-
 
 //==========================================================
 
@@ -34444,7 +34177,6 @@ void SP_target_blaster (edict_t* self)
 
 	self->svflags = SVF_NOCLIENT;
 }
-
 
 //==========================================================
 
@@ -34802,7 +34534,6 @@ void SP_target_earthquake (edict_t* self)
 
 /* already inlined above: game/g_local.h */
 
-
 void InitTrigger (edict_t* self)
 {
 	if (!VectorCompare (self->s.angles, vec3_origin))
@@ -34814,13 +34545,11 @@ void InitTrigger (edict_t* self)
 	self->svflags = SVF_NOCLIENT;
 }
 
-
 // the wait time has passed, so set back up for another activation
 void multi_wait (edict_t *ent)
 {
 	ent->nextthink = 0;
 }
-
 
 // the trigger was just activated
 // ent->activator should be set to the activator so it can be held through a delay
@@ -34918,7 +34647,6 @@ void SP_trigger_multiple (edict_t *ent)
 	ent->movetype = MOVETYPE_NONE;
 	ent->svflags |= SVF_NOCLIENT;
 
-
 	if (ent->spawnflags & 4)
 	{
 		ent->solid = SOLID_NOT;
@@ -34936,7 +34664,6 @@ void SP_trigger_multiple (edict_t *ent)
 	PF_setmodel (ent, ent->model);
 	SV_LinkEdict (ent);
 }
-
 
 /*QUAKED trigger_once (.5 .5 .5) ? x x TRIGGERED
 Triggers once, then removes itself.
@@ -34983,7 +34710,6 @@ void SP_trigger_relay (edict_t* self)
 {
 	self->use = trigger_relay_use;
 }
-
 
 /*
 ==============================================================================
@@ -35050,7 +34776,6 @@ void SP_trigger_key (edict_t* self)
 	self->use = trigger_key_use;
 }
 
-
 /*
 ==============================================================================
 
@@ -35103,7 +34828,6 @@ void SP_trigger_counter (edict_t* self)
 	self->use = trigger_counter_use;
 }
 
-
 /*
 ==============================================================================
 
@@ -35122,7 +34846,6 @@ void SP_trigger_always (edict_t *ent)
 		ent->delay = 0.2;
 	G_UseTargets(ent, ent);
 }
-
 
 /*
 ==============================================================================
@@ -35163,7 +34886,6 @@ static void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, c
 		G_FreeEdict (self);
 }
 
-
 /*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE
 Pushes the player
 "speed"		defaults to 1000
@@ -35177,7 +34899,6 @@ void SP_trigger_push (edict_t* self)
 		self->speed = 1000;
 	SV_LinkEdict (self);
 }
-
 
 /*
 ==============================================================================
@@ -35212,7 +34933,6 @@ static void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
 	if (!(self->spawnflags & 2))
 		self->use = NULL;
 }
-
 
 static void hurt_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
@@ -35265,7 +34985,6 @@ void SP_trigger_hurt (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 /*
 ==============================================================================
 
@@ -35299,7 +35018,6 @@ void SP_trigger_gravity (edict_t* self)
 	self->gravity = atoi(st.gravity);
 	self->touch = trigger_gravity_touch;
 }
-
 
 /*
 ==============================================================================
@@ -35357,7 +35075,6 @@ void SP_trigger_monsterjump (edict_t* self)
 
 /* already inlined above: game/g_local.h */
 
-
 void AnglesNormalize(vec3_t vec)
 {
 	while(vec[0] > 360)
@@ -35379,7 +35096,6 @@ float SnapToEights(float x)
 		x -= 0.5;
 	return 0.125 * (int)x;
 }
-
 
 void turret_blocked(edict_t* self, edict_t* other)
 {
@@ -35582,7 +35298,6 @@ void SP_turret_breach (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 /*QUAKED turret_base (0 0 0) ?
 This portion of the turret changes yaw only.
 MUST be teamed with a turret_breach.
@@ -35596,7 +35311,6 @@ void SP_turret_base (edict_t* self)
 	self->blocked = turret_blocked;
 	SV_LinkEdict (self);
 }
-
 
 /*QUAKED turret_driver (1 .5 0) (-16 -16 -24) (16 16 32)
 Must NOT be on the team with the rest of the turret parts.
@@ -35762,14 +35476,12 @@ void SP_turret_driver (edict_t* self)
 
 /* already inlined above: game/g_local.h */
 
-
 void G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
 	result[0] = point[0] + forward[0] * distance[0] + right[0] * distance[1];
 	result[1] = point[1] + forward[1] * distance[0] + right[1] * distance[1];
 	result[2] = point[2] + forward[2] * distance[0] + right[2] * distance[1] + distance[2];
 }
-
 
 /*
 =============
@@ -35806,7 +35518,6 @@ edict_t *G_Find (edict_t *from, int fieldofs, char *match)
 	return NULL;
 }
 
-
 /*
 =================
 findradius
@@ -35840,7 +35551,6 @@ edict_t *findradius (edict_t *from, vec3_t org, float rad)
 
 	return NULL;
 }
-
 
 /*
 =============
@@ -35885,8 +35595,6 @@ edict_t *G_PickTarget (char *targetname)
 	return choice[rand() % num_choices];
 }
 
-
-
 void Think_Delay (edict_t *ent)
 {
 	G_UseTargets (ent, ent->activator);
@@ -35929,7 +35637,6 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 		t->killtarget = ent->killtarget;
 		return;
 	}
-
 
 //
 // print the message
@@ -35985,7 +35692,6 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 	}
 }
 
-
 /*
 =============
 TempVector
@@ -36012,7 +35718,6 @@ float	*tv (float x, float y, float z)
 	return v;
 }
 
-
 /*
 =============
 VectorToString
@@ -36035,7 +35740,6 @@ char	*vtos (vec3_t v)
 
 	return s;
 }
-
 
 vec3_t VEC_UP		= {0, -1, 0};
 vec3_t MOVEDIR_UP	= {0, 0, 1};
@@ -36060,7 +35764,6 @@ void G_SetMovedir (vec3_t angles, vec3_t movedir)
 	VectorClear (angles);
 }
 
-
 float vectoyaw (vec3_t vec)
 {
 	float	yaw;
@@ -36082,7 +35785,6 @@ float vectoyaw (vec3_t vec)
 
 	return yaw;
 }
-
 
 void vectoangles (vec3_t value1, vec3_t angles)
 {
@@ -36232,9 +35934,6 @@ void	G_TouchSolids (edict_t *ent)
 	}
 }
 
-
-
-
 /*
 ==============================================================================
 
@@ -36276,7 +35975,6 @@ bool KillBox (edict_t *ent)
 
 /* already inlined above: game/g_local.h */
 
-
 /*
 =================
 check_dodge
@@ -36302,7 +36000,6 @@ static void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
 		tr.ent->monsterinfo.dodge (tr.ent, self, eta);
 	}
 }
-
 
 /*
 =================
@@ -36373,7 +36070,6 @@ bool fire_hit (edict_t* self, vec3_t aim, int damage, int kick)
 		self->enemy->groundentity = NULL;
 	return true;
 }
-
 
 /*
 =================
@@ -36516,7 +36212,6 @@ static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, i
 	}
 }
 
-
 /*
 =================
 fire_bullet
@@ -36529,7 +36224,6 @@ void fire_bullet (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int ki
 {
 	fire_lead (self, start, aimdir, damage, kick, TE_GUNSHOT, hspread, vspread, mod);
 }
-
 
 /*
 =================
@@ -36545,7 +36239,6 @@ void fire_shotgun (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int k
 	for (i = 0; i < count; i++)
 		fire_lead (self, start, aimdir, damage, kick, TE_SHOTGUN, hspread, vspread, mod);
 }
-
 
 /*
 =================
@@ -36639,7 +36332,6 @@ void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int spee
 		bolt->touch (bolt, tr.ent, NULL, NULL);
 	}
 }
-
 
 /*
 =================
@@ -36812,7 +36504,6 @@ void fire_grenade2 (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int 
 	}
 }
 
-
 /*
 =================
 fire_rocket
@@ -36897,7 +36588,6 @@ void fire_rocket (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed
 	SV_LinkEdict (rocket);
 }
 
-
 /*
 =================
 fire_rail
@@ -36959,7 +36649,6 @@ void fire_rail (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick
 	if (self->client)
 		PlayerNoise(self, tr.endpos, PNOISE_IMPACT);
 }
-
 
 /*
 =================
@@ -37048,7 +36737,6 @@ void bfg_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf
 	SV_Multicast (self->s.origin, MULTICAST_PVS);
 }
 
-
 void bfg_think (edict_t* self)
 {
 	edict_t	*ent;
@@ -37122,7 +36810,6 @@ void bfg_think (edict_t* self)
 
 	self->nextthink = level.time + FRAMETIME;
 }
-
 
 void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius)
 {
@@ -37275,7 +36962,6 @@ static void actor_run(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_run;
 }
 
-
 static mframe_t actor_frames_pain1 [] = {
 	{ai_move, -5, NULL},
 	{ai_move, 4,  NULL},
@@ -37377,7 +37063,6 @@ static void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		self->monsterinfo.currentmove = &actor_move_pain3;
 }
 
-
 void actorMachineGun (edict_t* self)
 {
 	vec3_t	start, target;
@@ -37406,7 +37091,6 @@ void actorMachineGun (edict_t* self)
 	}
 	monster_fire_bullet (self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_ACTOR_MACHINEGUN_1);
 }
-
 
 void actor_dead (edict_t* self)
 {
@@ -37483,7 +37167,6 @@ static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 		self->monsterinfo.currentmove = &actor_move_death2;
 }
 
-
 static void actor_fire(edict_t* self) {
 	actorMachineGun (self);
 
@@ -37509,7 +37192,6 @@ static void actor_attack(edict_t* self) {
 	n = (rand() & 15) + 3 + 7;
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
-
 
 static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
@@ -37578,7 +37260,6 @@ void SP_misc_actor (edict_t* self)
 	// actors always start in a dormant state, they *must* be used to get going
 	self->use = actor_use;
 }
-
 
 /*QUAKED target_actor (.5 .3 0) (-8 -8 -8) (8 8 8) JUMP SHOOT ATTACK x HOLD BRUTAL
 JUMP			jump in set direction upon reaching this target
@@ -37725,10 +37406,8 @@ BERSERK
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_berserk.h ============ */
-
 
 static int sound_pain;
 static int sound_die;
@@ -37746,7 +37425,6 @@ static void berserk_sight(edict_t* self, edict_t* other) {
 static void berserk_search(edict_t* self) {
 	PF_StartSound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
-
 
 void berserk_fidget (edict_t* self);
 static mframe_t berserk_frames_stand[] = {
@@ -37864,13 +37542,11 @@ void berserk_run (edict_t* self)
 		self->monsterinfo.currentmove = &berserk_move_run1;
 }
 
-
 void berserk_attack_spike (edict_t* self)
 {
 	static	vec3_t	aim = {MELEE_DISTANCE, 0, -24};
 	fire_hit (self, aim, (15 + (rand() % 6)), 400);		//	Faster attack -- upwards and backwards
 }
-
 
 void berserk_swing (edict_t* self)
 {
@@ -37923,7 +37599,6 @@ void berserk_melee (edict_t* self)
 		self->monsterinfo.currentmove = &berserk_move_attack_club;
 }
 
-
 /*
 void() 	berserk_atke1	=[	$r_attb1,	berserk_atke2	] {ai_run(9);};
 void() 	berserk_atke2	=[	$r_attb2,	berserk_atke3	] {ai_run(6);};
@@ -37944,7 +37619,6 @@ void() 	berserk_atke16	=[	$r_attb16,	berserk_atke17	] {ai_run(25);};
 void() 	berserk_atke17	=[	$r_attb17,	berserk_atke18	] {ai_run(19.6);};
 void() 	berserk_atke18	=[	$r_attb18,	berserk_run1	] {ai_run(7.8);};
 */
-
 
 static mframe_t berserk_frames_pain1[] = {
 	{ai_move, 0, NULL},
@@ -38128,7 +37802,6 @@ boss2
 // G:\quake2\baseq2\models/monsters/boss2
 
 // This file generated by ModelGen - Do NOT Modify
-
 
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss2.h ============ */
@@ -38340,7 +38013,6 @@ mframe_t boss2_frames_walk [] =
 };
 mmove_t boss2_move_walk = {50, 69, boss2_frames_walk, NULL};
 
-
 mframe_t boss2_frames_run [] =
 {
 	{ai_run,	8,	NULL},
@@ -38379,7 +38051,6 @@ mframe_t boss2_frames_attack_pre_mg [] =
 	{ai_charge,	1,	boss2_attack_mg},
 };
 mmove_t boss2_move_attack_pre_mg = {70, 78, boss2_frames_attack_pre_mg, NULL};
-
 
 // Loop this
 mframe_t boss2_frames_attack_mg [] =
@@ -38569,7 +38240,6 @@ void boss2_reattack_mg (edict_t* self)
 		self->monsterinfo.currentmove = &boss2_move_attack_post_mg;
 }
 
-
 static void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
@@ -38650,7 +38320,6 @@ bool Boss2_CheckAttack (edict_t* self)
 	enemy_yaw = vectoyaw(temp);
 
 	self->ideal_yaw = enemy_yaw;
-
 
 	// melee attack
 	if (enemy_range == RANGE_MELEE)
@@ -38767,7 +38436,6 @@ boss3
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_boss32.h ============ */
 
@@ -38810,7 +38478,6 @@ void SP_monster_boss3_stand (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-
 #define MODEL_SCALE		1.000000
 
 extern void SP_monster_makron (edict_t* self);
@@ -38834,7 +38501,6 @@ static int	sound_death_hit;
 void BossExplode (edict_t* self);
 void MakronToss (edict_t* self);
 
-
 void jorg_search (edict_t* self)
 {
 	float r;
@@ -38848,7 +38514,6 @@ void jorg_search (edict_t* self)
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_search3, 1, ATTN_NORM, 0);
 }
-
 
 void jorg_dead (edict_t* self);
 void jorgBFG (edict_t* self);
@@ -38930,7 +38595,6 @@ void jorg_death_hit (edict_t* self)
 	PF_StartSound (self, CHAN_BODY, sound_death_hit, 1, ATTN_NORM,0);
 }
 
-
 void jorg_step_left (edict_t* self)
 {
 	PF_StartSound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
@@ -38940,7 +38604,6 @@ void jorg_step_right (edict_t* self)
 {
 	PF_StartSound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
 }
-
 
 void jorg_stand (edict_t* self)
 {
@@ -39225,11 +38888,9 @@ static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		if (random() <= 0.00005)
 			return;
 
-
 	if ( (self->s.frame >= 18) && (self->s.frame <= 25) )
 		if (random() <= 0.005)
 			return;
-
 
 	self->pain_debounce_time = level.time + 3;
 
@@ -39372,7 +39033,6 @@ bool Jorg_CheckAttack (edict_t* self)
 
 	self->ideal_yaw = enemy_yaw;
 
-
 	// melee attack
 	if (enemy_range == RANGE_MELEE)
 	{
@@ -39431,7 +39091,6 @@ bool Jorg_CheckAttack (edict_t* self)
 
 	return false;
 }
-
 
 void MakronPrecache (void);
 
@@ -39653,7 +39312,6 @@ void makron_prerailgun (edict_t* self)
 {
 	PF_StartSound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
 }
-
 
 mframe_t makron_frames_walk [] =
 {
@@ -39894,7 +39552,6 @@ void makronBFG (edict_t* self)
 	monster_fire_bfg(self, start, dir, 50, 300, 300, MZ2_MAKRON_BFG);
 }
 
-
 mframe_t makron_frames_attack3 []=
 {
 	{ai_charge,	0,	NULL},
@@ -40113,7 +39770,6 @@ void makron_torso (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-
 //
 // death
 //
@@ -40198,7 +39854,6 @@ bool Makron_CheckAttack (edict_t* self)
 	enemy_yaw = vectoyaw(temp);
 
 	self->ideal_yaw = enemy_yaw;
-
 
 	// melee attack
 	if (enemy_range == RANGE_MELEE)
@@ -40313,7 +39968,6 @@ void SP_monster_makron (edict_t* self)
 	walkmonster_start(self);
 }
 
-
 /*
 =================
 MakronSpawn
@@ -40375,10 +40029,8 @@ brain
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_brain.h ============ */
-
 
 static int	sound_chest_open;
 static int	sound_tentacles_extend;
@@ -40395,7 +40047,6 @@ static int	sound_melee1;
 static int	sound_melee2;
 static int	sound_melee3;
 
-
 static void brain_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -40406,10 +40057,8 @@ void brain_search (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-
 void brain_run (edict_t* self);
 void brain_dead (edict_t* self);
-
 
 //
 // STAND
@@ -40457,7 +40106,6 @@ void brain_stand (edict_t* self)
 	self->monsterinfo.currentmove = &brain_move_stand;
 }
 
-
 //
 // IDLE
 //
@@ -40504,7 +40152,6 @@ void brain_idle (edict_t* self)
 	PF_StartSound (self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
 	self->monsterinfo.currentmove = &brain_move_idle;
 }
-
 
 //
 // WALK
@@ -40594,7 +40241,6 @@ mframe_t brain_frames_pain1 [] =
 };
 mmove_t brain_move_pain1 = {88, 108, brain_frames_pain1, brain_run};
 
-
 //
 // DUCK
 //
@@ -40650,7 +40296,6 @@ void brain_dodge (edict_t* self, edict_t* attacker, float eta)
 	self->monsterinfo.currentmove = &brain_move_duck;
 }
 
-
 mframe_t brain_frames_death2 [] =
 {
 	{ai_move,	0,	NULL},
@@ -40683,7 +40328,6 @@ mframe_t brain_frames_death1 [] =
 	{ai_move,	0,	NULL},
 };
 mmove_t brain_move_death1 = {123, 140, brain_frames_death1, brain_dead};
-
 
 //
 // MELEE
@@ -40797,7 +40441,6 @@ void brain_melee(edict_t* self)
 		self->monsterinfo.currentmove = &brain_move_attack2;
 }
 
-
 //
 // RUN
 //
@@ -40826,7 +40469,6 @@ void brain_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &brain_move_run;
 }
-
 
 static void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -40975,7 +40617,6 @@ chick
 
 // This file generated by qdata - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_chick.h ============ */
 
@@ -41002,7 +40643,6 @@ static int	sound_pain2;
 static int	sound_pain3;
 static int	sound_sight;
 static int	sound_search;
-
 
 void ChickMoan (edict_t* self)
 {
@@ -41236,7 +40876,6 @@ static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
 
-
 	if (damage <= 10)
 		self->monsterinfo.currentmove = &chick_move_pain1;
 	else if (damage <= 25)
@@ -41341,7 +40980,6 @@ static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 	}
 }
 
-
 void chick_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
@@ -41401,7 +41039,6 @@ void ChickSlash (edict_t* self)
 	fire_hit (self, aim, (10 + (rand() %6)), 100);
 }
 
-
 void ChickRocket (edict_t* self)
 {
 	vec3_t	forward, right;
@@ -41430,7 +41067,6 @@ void ChickReload (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
 
-
 mframe_t chick_frames_start_attack1 [] =
 {
 	{ai_charge, 0,	Chick_PreAttack1},
@@ -41449,7 +41085,6 @@ mframe_t chick_frames_start_attack1 [] =
 };
 
 mmove_t chick_move_start_attack1 = {0, 12, chick_frames_start_attack1, NULL};
-
 
 mframe_t chick_frames_attack1 [] =
 {
@@ -41525,7 +41160,6 @@ mframe_t chick_frames_end_slash [] =
 };
 mmove_t chick_move_end_slash = {44, 47, chick_frames_end_slash, chick_run};
 
-
 void chick_reslash(edict_t* self)
 {
 	if (self->enemy->health > 0)
@@ -41552,7 +41186,6 @@ void chick_slash(edict_t* self)
 	self->monsterinfo.currentmove = &chick_move_slash;
 }
 
-
 mframe_t chick_frames_start_slash [] =
 {
 	{ai_charge, 1,	NULL},
@@ -41561,13 +41194,10 @@ mframe_t chick_frames_start_slash [] =
 };
 mmove_t chick_move_start_slash = {32, 34, chick_frames_start_slash, chick_slash};
 
-
-
 void chick_melee(edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_start_slash;
 }
-
 
 void chick_attack(edict_t* self)
 {
@@ -41644,10 +41274,8 @@ FLIPPER
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flipper.h ============ */
-
 
 static int	sound_chomp;
 static int	sound_attack;
@@ -41657,7 +41285,6 @@ static int	sound_death;
 static int	sound_idle;
 static int	sound_search;
 static int	sound_sight;
-
 
 void flipper_stand (edict_t* self);
 
@@ -42035,10 +41662,8 @@ floater
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_float.h ============ */
-
 
 static int	sound_attack2;
 static int	sound_attack3;
@@ -42058,14 +41683,12 @@ static void floater_idle (edict_t* self) {
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-
 //void floater_stand1 (edict_t* self);
 void floater_dead (edict_t* self);
 void floater_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 void floater_run (edict_t* self);
 void floater_wham (edict_t* self);
 void floater_zap (edict_t* self);
-
 
 void floater_fire_blaster (edict_t* self)
 {
@@ -42088,7 +41711,6 @@ void floater_fire_blaster (edict_t* self)
 
 	monster_fire_blaster (self, start, dir, 1, 1000, MZ2_FLOAT_BLASTER_1, effect);
 }
-
 
 mframe_t floater_frames_stand1 [] =
 {
@@ -42688,7 +42310,6 @@ flyer
 #define ACTION_run				3
 #define ACTION_walk				4
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_flyer.h ============ */
 
@@ -42726,7 +42347,6 @@ void flyer_pop_blades (edict_t* self)
 {
 	PF_StartSound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
-
 
 mframe_t flyer_frames_stand [] =
 {
@@ -42777,7 +42397,6 @@ mframe_t flyer_frames_stand [] =
 	{ai_stand, 0, NULL},
 };
 mmove_t	flyer_move_stand = {13, 57, flyer_frames_stand, NULL};
-
 
 mframe_t flyer_frames_walk [] =
 {
@@ -42930,7 +42549,6 @@ void flyer_start (edict_t* self)
 		self->monsterinfo.currentmove = &flyer_move_start;
 }
 
-
 mframe_t flyer_frames_rollright [] =
 {
 		{ai_move, 0, NULL},
@@ -43026,7 +42644,6 @@ mframe_t flyer_frames_bankleft [] =
 };
 mmove_t flyer_move_bankleft = {96, 102, flyer_frames_bankleft, NULL};
 
-
 void flyer_fire (edict_t* self, int flash_number)
 {
 	vec3_t	start;
@@ -43059,7 +42676,6 @@ void flyer_fireright (edict_t* self)
 	flyer_fire (self, MZ2_FLYER_BLASTER_2);
 }
 
-
 mframe_t flyer_frames_attack2 [] =
 {
 		{ai_charge, 0, NULL},
@@ -43081,7 +42697,6 @@ mframe_t flyer_frames_attack2 [] =
 		{ai_charge, 0, NULL},
 };
 mmove_t flyer_move_attack2 = {79, 95, flyer_frames_attack2, flyer_run};
-
 
 void flyer_slash_left (edict_t* self)
 {
@@ -43120,7 +42735,6 @@ mframe_t flyer_frames_end_melee [] =
 };
 mmove_t flyer_move_end_melee = {76, 78, flyer_frames_end_melee, flyer_run};
 
-
 mframe_t flyer_frames_loop_melee [] =
 {
 		{ai_charge, 0, NULL},		// Loop Start
@@ -43146,8 +42760,6 @@ void flyer_loop_melee (edict_t* self)
 	else */
 	self->monsterinfo.currentmove = &flyer_move_loop_melee;
 }
-
-
 
 void flyer_attack (edict_t* self)
 {
@@ -43300,10 +42912,8 @@ GLADIATOR
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_gladiator.h ============ */
-
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -43315,7 +42925,6 @@ static int	sound_cleaver_miss;
 static int	sound_idle;
 static int	sound_search;
 static int	sound_sight;
-
 
 void gladiator_idle (edict_t* self)
 {
@@ -43355,7 +42964,6 @@ void gladiator_stand (edict_t* self)
 	self->monsterinfo.currentmove = &gladiator_move_stand;
 }
 
-
 mframe_t gladiator_frames_walk [] =
 {
 	{ai_walk, 15, NULL},
@@ -43382,7 +42990,6 @@ void gladiator_walk (edict_t* self)
 	self->monsterinfo.currentmove = &gladiator_move_walk;
 }
 
-
 mframe_t gladiator_frames_run [] =
 {
 	{ai_run, 23,	NULL},
@@ -43401,7 +43008,6 @@ void gladiator_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &gladiator_move_run;
 }
-
 
 void GaldiatorMelee (edict_t* self)
 {
@@ -43440,7 +43046,6 @@ void gladiator_melee(edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_attack_melee;
 }
-
 
 void GladiatorGun (edict_t* self)
 {
@@ -43490,7 +43095,6 @@ void gladiator_attack(edict_t* self)
 	self->monsterinfo.currentmove = &gladiator_move_attack_gun;
 }
 
-
 mframe_t gladiator_frames_pain [] =
 {
 	{ai_move, 0, NULL},
@@ -43536,14 +43140,12 @@ static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damag
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-
 	if (self->velocity[2] > 100)
 		self->monsterinfo.currentmove = &gladiator_move_pain_air;
 	else
 		self->monsterinfo.currentmove = &gladiator_move_pain;
 
 }
-
 
 void gladiator_dead (edict_t* self)
 {
@@ -43673,11 +43275,9 @@ GUNNER
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.150000
 /* ============ end inlined header: game/m_gunner.h ============ */
-
 
 static int	sound_pain;
 static int	sound_pain2;
@@ -43686,7 +43286,6 @@ static int	sound_idle;
 static int	sound_open;
 static int	sound_search;
 static int	sound_sight;
-
 
 void gunner_idlesound (edict_t* self)
 {
@@ -43704,13 +43303,11 @@ void gunner_search (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-
 bool visible (edict_t* self, edict_t* other);
 void GunnerGrenade (edict_t* self);
 void GunnerFire (edict_t* self);
 void gunner_fire_chain(edict_t* self);
 void gunner_refire_chain(edict_t* self);
-
 
 void gunner_stand (edict_t* self);
 
@@ -43821,7 +43418,6 @@ void gunner_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &gunner_move_stand;
 }
-
 
 mframe_t gunner_frames_walk [] =
 {
@@ -44012,7 +43608,6 @@ static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int
 	self->monsterinfo.currentmove = &gunner_move_death;
 }
 
-
 void gunner_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
@@ -44065,7 +43660,6 @@ static void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
 
 	self->monsterinfo.currentmove = &gunner_move_duck;
 }
-
 
 void gunner_opengun (edict_t* self)
 {
@@ -44285,13 +43879,11 @@ hover
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_hover.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
-
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -44314,7 +43906,6 @@ void hover_search (edict_t* self)
 	else
 		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 }
-
 
 void hover_run (edict_t* self);
 void hover_stand (edict_t* self);
@@ -44672,7 +44263,6 @@ mframe_t hover_frames_attack1 [] =
 };
 mmove_t hover_move_attack1 = {200, 202, hover_frames_attack1, NULL};
 
-
 mframe_t hover_frames_end_attack [] =
 {
 	{ai_charge,	1,	NULL},
@@ -44691,7 +44281,6 @@ void hover_reattack (edict_t* self)
 			}
 	self->monsterinfo.currentmove = &hover_move_end_attack;
 }
-
 
 void hover_fire_blaster (edict_t* self)
 {
@@ -44715,7 +44304,6 @@ void hover_fire_blaster (edict_t* self)
 
 	monster_fire_blaster (self, start, dir, 1, 1000, MZ2_HOVER_BLASTER_1, effect);
 }
-
 
 void hover_stand (edict_t* self)
 {
@@ -44891,12 +44479,10 @@ INFANTRY
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_infantry.h ============ */
 
 void InfantryMachineGun (edict_t* self);
-
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -44910,7 +44496,6 @@ static int	sound_punch_hit;
 static int	sound_sight;
 static int	sound_search;
 static int	sound_idle;
-
 
 mframe_t infantry_frames_stand [] =
 {
@@ -44943,7 +44528,6 @@ void infantry_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_stand;
 }
-
 
 mframe_t infantry_frames_fidget [] =
 {
@@ -45047,7 +44631,6 @@ void infantry_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &infantry_move_run;
 }
-
 
 mframe_t infantry_frames_pain1 [] =
 {
@@ -45293,7 +44876,6 @@ static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	}
 }
 
-
 void infantry_duck_down (edict_t* self)
 {
 	if (self->monsterinfo.aiflags & AI_DUCKED)
@@ -45343,7 +44925,6 @@ static void infantry_dodge(edict_t* self, edict_t* attacker, float eta) {
 	self->monsterinfo.currentmove = &infantry_move_duck;
 }
 
-
 void infantry_cock_gun (edict_t* self)
 {
 	int		n;
@@ -45382,7 +44963,6 @@ mframe_t infantry_frames_attack1 [] =
 	{ai_charge, -3, NULL},
 };
 mmove_t infantry_move_attack1 = {184, 198, infantry_frames_attack1, infantry_run};
-
 
 void infantry_swing (edict_t* self)
 {
@@ -45435,7 +45015,6 @@ void SP_monster_infantry (edict_t* self)
 	sound_search = SV_SoundIndex ("infantry/infsrch1.wav");
 	sound_idle = SV_SoundIndex ("infantry/infidle1.wav");
 
-
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = SV_ModelIndex("models/monsters/infantry/tris.md2");
@@ -45483,10 +45062,8 @@ insane
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_insane.h ============ */
-
 
 static int	sound_fist;
 static int	sound_shake;
@@ -45513,7 +45090,6 @@ void insane_scream (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
 }
 
-
 void insane_stand (edict_t* self);
 void insane_dead (edict_t* self);
 void insane_cross (edict_t* self);
@@ -45522,7 +45098,6 @@ void insane_run (edict_t* self);
 void insane_checkdown (edict_t* self);
 void insane_checkup (edict_t* self);
 void insane_onground (edict_t* self);
-
 
 mframe_t insane_frames_stand_normal [] =
 {
@@ -45618,7 +45193,6 @@ mframe_t insane_frames_uptodown [] =
 };
 mmove_t insane_move_uptodown = {0, 39, insane_frames_uptodown, insane_onground};
 
-
 mframe_t insane_frames_downtoup [] =
 {
 	{ai_move,	-0.7,	NULL},			// 41
@@ -45652,7 +45226,6 @@ mframe_t insane_frames_jumpdown [] =
 	{ai_move,	0,	NULL},
 };
 mmove_t insane_move_jumpdown = {95, 99, insane_frames_jumpdown, insane_onground};
-
 
 mframe_t insane_frames_down [] =
 {
@@ -46160,12 +45733,10 @@ MEDIC
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_medic.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
-
 
 static int	sound_idle1;
 static int	sound_pain1;
@@ -46177,7 +45748,6 @@ static int	sound_hook_launch;
 static int	sound_hook_hit;
 static int	sound_hook_heal;
 static int	sound_hook_retract;
-
 
 edict_t *medic_FindDeadMonster (edict_t* self)
 {
@@ -46254,7 +45824,6 @@ static void medic_sight(edict_t* self, edict_t* other) {
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
-
 
 mframe_t medic_frames_stand [] =
 {
@@ -46357,7 +45926,6 @@ void medic_stand (edict_t* self)
 	self->monsterinfo.currentmove = &medic_move_stand;
 }
 
-
 mframe_t medic_frames_walk [] =
 {
 	{ai_walk, 6.2,	NULL},
@@ -46379,7 +45947,6 @@ void medic_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &medic_move_walk;
 }
-
 
 mframe_t medic_frames_run [] =
 {
@@ -46416,7 +45983,6 @@ void medic_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &medic_move_run;
 }
-
 
 mframe_t medic_frames_pain1 [] =
 {
@@ -46501,7 +46067,6 @@ void medic_fire_blaster (edict_t* self)
 	monster_fire_blaster (self, start, dir, 2, 1000, MZ2_MEDIC_BLASTER_1, effect);
 }
 
-
 void medic_dead (edict_t* self)
 {
 	VectorSet (self->mins, -16, -16, -24);
@@ -46581,7 +46146,6 @@ static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 
 	self->monsterinfo.currentmove = &medic_move_death;
 }
-
 
 void medic_duck_down (edict_t* self)
 {
@@ -46664,14 +46228,12 @@ mframe_t medic_frames_attackHyperBlaster [] =
 };
 mmove_t medic_move_attackHyperBlaster = {191, 206, medic_frames_attackHyperBlaster, medic_run};
 
-
 void medic_continue (edict_t* self)
 {
 	if (visible (self, self->enemy) )
 		if (random() <= 0.95)
 			self->monsterinfo.currentmove = &medic_move_attackHyperBlaster;
 }
-
 
 mframe_t medic_frames_attackBlaster [] =
 {
@@ -46691,7 +46253,6 @@ mframe_t medic_frames_attackBlaster [] =
 	{ai_charge, 0,	medic_continue},	// Change to medic_continue... Else, go to frame 32
 };
 mmove_t medic_move_attackBlaster = {177, 190, medic_frames_attackBlaster, medic_run};
-
 
 void medic_hook_launch (edict_t* self)
 {
@@ -46831,7 +46392,6 @@ mframe_t medic_frames_attackCable [] =
 	{ai_move, 1.3,	NULL},
 };
 mmove_t medic_move_attackCable = {209, 236, medic_frames_attackCable, medic_run};
-
 
 void medic_attack(edict_t* self)
 {
@@ -46980,7 +46540,6 @@ realcheck:
 	return true;
 }
 
-
 /*
 =============
 SV_movestep
@@ -47110,7 +46669,6 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 			return false;
 	}
 
-
 	// don't go in to water
 	if (ent->waterlevel == 0)
 	{
@@ -47176,7 +46734,6 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 	return true;
 }
 
-
 //============================================================================
 
 /*
@@ -47223,7 +46780,6 @@ void M_ChangeYaw (edict_t *ent)
 
 	ent->s.angles[YAW] = anglemod (current + move);
 }
-
 
 /*
 ======================
@@ -47274,8 +46830,6 @@ void SV_FixCheckBottom (edict_t *ent)
 {
 	ent->flags |= FL_PARTIALGROUND;
 }
-
-
 
 /*
 ================
@@ -47390,7 +46944,6 @@ bool SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 	return true;
 }
 
-
 /*
 ======================
 M_MoveToGoal
@@ -47416,7 +46969,6 @@ void M_MoveToGoal (edict_t *ent, float dist)
 			SV_NewChaseDir (ent, goal, dist);
 	}
 }
-
 
 /*
 ===============
@@ -47456,10 +47008,8 @@ mutant
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_mutant.h ============ */
-
 
 static int	sound_swing;
 static int	sound_hit;
@@ -47506,7 +47056,6 @@ void mutant_swing (edict_t* self)
 {
 	PF_StartSound (self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
 }
-
 
 //
 // STAND
@@ -47578,7 +47127,6 @@ void mutant_stand (edict_t* self)
 	self->monsterinfo.currentmove = &mutant_move_stand;
 }
 
-
 //
 // IDLE
 //
@@ -47612,7 +47160,6 @@ void mutant_idle (edict_t* self)
 	self->monsterinfo.currentmove = &mutant_move_idle;
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
-
 
 //
 // WALK
@@ -47656,7 +47203,6 @@ void mutant_walk (edict_t* self)
 	self->monsterinfo.currentmove = &mutant_move_start_walk;
 }
 
-
 //
 // RUN
 //
@@ -47679,7 +47225,6 @@ void mutant_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &mutant_move_run;
 }
-
 
 //
 // MELEE
@@ -47732,7 +47277,6 @@ void mutant_melee (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_attack;
 }
-
 
 //
 // ATTACK
@@ -47826,7 +47370,6 @@ void mutant_jump (edict_t* self)
 	self->monsterinfo.currentmove = &mutant_move_jump;
 }
 
-
 //
 // CHECKATTACK
 //
@@ -47885,7 +47428,6 @@ bool mutant_checkattack (edict_t* self)
 
 	return false;
 }
-
 
 //
 // PAIN
@@ -47960,7 +47502,6 @@ static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) 
 		self->monsterinfo.currentmove = &mutant_move_pain3;
 	}
 }
-
 
 //
 // DEATH
@@ -48104,10 +47645,8 @@ parasite
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #define MODEL_SCALE             1.000000
 /* ============ end inlined header: game/m_parasite.h ============ */
-
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -48121,7 +47660,6 @@ static int	sound_tap;
 static int	sound_scratch;
 static int	sound_search;
 
-
 void parasite_stand (edict_t* self);
 void parasite_start_run (edict_t* self);
 void parasite_run (edict_t* self);
@@ -48130,7 +47668,6 @@ void parasite_start_walk (edict_t* self);
 void parasite_end_fidget (edict_t* self);
 void parasite_do_fidget (edict_t* self);
 void parasite_refidget (edict_t* self);
-
 
 void parasite_launch (edict_t* self)
 {
@@ -48162,7 +47699,6 @@ void parasite_search (edict_t* self)
 {
 	PF_StartSound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
-
 
 mframe_t parasite_frames_start_fidget [] =
 {
@@ -48220,7 +47756,6 @@ void parasite_idle (edict_t* self)
 	self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
 
-
 mframe_t parasite_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
@@ -48247,7 +47782,6 @@ void parasite_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_stand;
 }
-
 
 mframe_t parasite_frames_run [] =
 {
@@ -48294,7 +47828,6 @@ void parasite_run (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &parasite_move_run;
 }
-
 
 mframe_t parasite_frames_walk [] =
 {
@@ -48370,7 +47903,6 @@ static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage)
 
 	self->monsterinfo.currentmove = &parasite_move_pain1;
 }
-
 
 static bool parasite_drain_attack_ok (vec3_t start, vec3_t end)
 {
@@ -48464,7 +47996,6 @@ mframe_t parasite_frames_drain [] =
 };
 mmove_t parasite_move_drain = {39, 56, parasite_frames_drain, parasite_start_run};
 
-
 mframe_t parasite_frames_break [] =
 {
 	{ai_charge, 0,	NULL},
@@ -48515,8 +48046,6 @@ void parasite_attack (edict_t* self)
 //	else
 		self->monsterinfo.currentmove = &parasite_move_drain;
 }
-
-
 
 /*
 ===
@@ -48635,11 +48164,9 @@ SOLDIER
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.200000
 /* ============ end inlined header: game/m_soldier.h ============ */
-
 
 static int	sound_idle;
 static int	sound_sight1;
@@ -48651,7 +48178,6 @@ static int	sound_death_light;
 static int	sound_death;
 static int	sound_death_ss;
 static int	sound_cock;
-
 
 void soldier_idle (edict_t* self)
 {
@@ -48666,7 +48192,6 @@ void soldier_cock (edict_t* self)
 	else
 		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_NORM, 0);
 }
-
 
 // STAND
 
@@ -48756,7 +48281,6 @@ mframe_t soldier_frames_stand3 [] =
 };
 mmove_t soldier_move_stand3 = {176, 214, soldier_frames_stand3, soldier_stand};
 
-
 void soldier_stand (edict_t* self)
 {
 	if ((self->monsterinfo.currentmove == &soldier_move_stand3) || (random() < 0.8))
@@ -48764,7 +48288,6 @@ void soldier_stand (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &soldier_move_stand3;
 }
-
 
 //
 // WALK
@@ -48837,7 +48360,6 @@ void soldier_walk (edict_t* self)
 		self->monsterinfo.currentmove = &soldier_move_walk2;
 }
 
-
 //
 // RUN
 //
@@ -48881,7 +48403,6 @@ void soldier_run (edict_t* self)
 		self->monsterinfo.currentmove = &soldier_move_start_run;
 	}
 }
-
 
 //
 // PAIN
@@ -48997,7 +48518,6 @@ static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
 	else
 		self->monsterinfo.currentmove = &soldier_move_pain3;
 }
-
 
 //
 // ATTACK
@@ -49292,7 +48812,6 @@ void soldier_attack(edict_t* self)
 	}
 }
 
-
 //
 // SIGHT
 //
@@ -49358,7 +48877,6 @@ void soldier_dodge (edict_t* self, edict_t* attacker, float eta)
 
 	self->monsterinfo.currentmove = &soldier_move_attack3;
 }
-
 
 //
 // DEATH
@@ -49687,7 +49205,6 @@ static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 		self->monsterinfo.currentmove = &soldier_move_death6;
 }
 
-
 //
 // SPAWN
 //
@@ -49785,7 +49302,6 @@ SUPERTANK
 
 // This file generated by ModelGen - Do NOT Modify
 
-
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_supertank.h ============ */
@@ -49816,12 +49332,10 @@ void supertank_search (edict_t* self)
 		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 }
 
-
 void supertank_dead (edict_t* self);
 void supertankRocket (edict_t* self);
 void supertankMachineGun (edict_t* self);
 void supertank_reattack1(edict_t* self);
-
 
 //
 // stand
@@ -49897,7 +49411,6 @@ void supertank_stand (edict_t* self)
 	self->monsterinfo.currentmove = &supertank_move_stand;
 }
 
-
 mframe_t supertank_frames_run [] =
 {
 	{ai_run, 12,	TreadSound},
@@ -49924,7 +49437,6 @@ mmove_t	supertank_move_run = {128, 145, supertank_frames_run, NULL};
 //
 // walk
 //
-
 
 mframe_t supertank_frames_forward [] =
 {
@@ -50012,7 +49524,6 @@ mframe_t supertank_frames_turn_left [] =
 	{ai_move,	0,	NULL},
 };
 mmove_t supertank_move_turn_left = {146, 163, supertank_frames_turn_left, supertank_run};
-
 
 mframe_t supertank_frames_pain3 [] =
 {
@@ -50199,7 +49710,6 @@ mframe_t supertank_frames_end_attack1[]=
 };
 mmove_t supertank_move_end_attack1 = {6, 19, supertank_frames_end_attack1, supertank_run};
 
-
 void supertank_reattack1(edict_t* self)
 {
 	if (visible(self, self->enemy))
@@ -50244,7 +49754,6 @@ static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage
 		self->monsterinfo.currentmove = &supertank_move_pain3;
 	}
 };
-
 
 void supertankRocket (edict_t* self)
 {
@@ -50302,7 +49811,6 @@ void supertankMachineGun (edict_t* self)
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-
 void supertank_attack(edict_t* self)
 {
 	vec3_t	vec;
@@ -50330,7 +49838,6 @@ void supertank_attack(edict_t* self)
 	}
 }
 
-
 //
 // death
 //
@@ -50344,7 +49851,6 @@ void supertank_dead (edict_t* self)
 	self->nextthink = 0;
 	SV_LinkEdict (self);
 }
-
 
 void BossExplode (edict_t* self)
 {
@@ -50461,10 +49967,8 @@ void SP_monster_supertank (edict_t* self)
 	walkmonster_start(self);
 }
 
-
 #define MODEL_SCALE		1.000000
 /* ============ end inlined header: game/m_tank.h ============ */
-
 
 void tank_refire_rocket (edict_t* self);
 void tank_doattack_rocket (edict_t* self);
@@ -50489,7 +49993,6 @@ static void tank_sight(edict_t* self, edict_t* other) {
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-
 void tank_footstep (edict_t* self)
 {
 	PF_StartSound (self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
@@ -50509,7 +50012,6 @@ void tank_idle (edict_t* self)
 {
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
-
 
 //
 // stand
@@ -50554,7 +50056,6 @@ void tank_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &tank_move_stand;
 }
-
 
 //
 // walk
@@ -50607,7 +50108,6 @@ void tank_walk (edict_t* self)
 {
 		self->monsterinfo.currentmove = &tank_move_walk;
 }
-
 
 //
 // run
@@ -50750,7 +50250,6 @@ static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 		self->monsterinfo.currentmove = &tank_move_pain3;
 };
 
-
 //
 // attacks
 //
@@ -50847,7 +50346,6 @@ void TankMachineGun (edict_t* self)
 	monster_fire_bullet (self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-
 mframe_t tank_frames_attack_blast [] =
 {
 	{ai_charge, 0,	NULL},
@@ -50895,7 +50393,6 @@ void tank_reattack_blaster (edict_t* self)
 {
 	self->monsterinfo.currentmove = &tank_move_attack_post_blast;
 }
-
 
 void tank_poststrike (edict_t* self)
 {
@@ -51108,7 +50605,6 @@ void tank_attack(edict_t* self)
 	}
 }
 
-
 //
 // death
 //
@@ -51295,7 +50791,6 @@ void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 	if (self->client->killer_yaw < 0)
 		self->client->killer_yaw += 360;
 
-
 }
 
 static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -51421,7 +50916,6 @@ void InitClientPersistant (gclient_t *client)
 
 	client->pers.connected = true;
 }
-
 
 void InitClientResp (gclient_t *client)
 {
@@ -51657,9 +51151,7 @@ void ClientDisconnect (edict_t *ent)
 	PF_Configstring (CS_PLAYERSKINS+playernum, "");
 }
 
-
 //==============================================================
-
 
 edict_t	*pm_passent;
 
@@ -51826,7 +51318,6 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		}
 	}
 }
-
 
 /*
 ==============
@@ -52172,7 +51663,6 @@ void PlayerTrail_Init (void)
 	trail_active = true;
 }
 
-
 void PlayerTrail_Add (vec3_t spot)
 {
 	vec3_t	temp;
@@ -52190,7 +51680,6 @@ void PlayerTrail_Add (vec3_t spot)
 	trail_head = NEXT(trail_head);
 }
 
-
 void PlayerTrail_New (vec3_t spot)
 {
 	if (!trail_active)
@@ -52199,7 +51688,6 @@ void PlayerTrail_New (vec3_t spot)
 	PlayerTrail_Init ();
 	PlayerTrail_Add (spot);
 }
-
 
 edict_t *PlayerTrail_PickFirst (edict_t* self)
 {
@@ -52278,7 +51766,6 @@ static float SV_CalcRoll(vec3_t velocity) {
 
 	return side*sign;
 }
-
 
 /*
 ===============
@@ -52384,7 +51871,6 @@ void P_DamageFeedback (edict_t *player)
 		VectorMA (v, (float)client->damage_blood/realcount,  bcolor, v);
 	VectorCopy (v, client->damage_blend);
 
-
 	//
 	// calculate view angle kicks
 	//
@@ -52419,9 +51905,6 @@ void P_DamageFeedback (edict_t *player)
 	client->damage_knockback = 0;
 }
 
-
-
-
 /*
 ===============
 SV_CalcViewOffset
@@ -52445,7 +51928,6 @@ void SV_CalcViewOffset (edict_t *ent)
 	float		ratio;
 	float		delta;
 	vec3_t		v;
-
 
 //===================================
 
@@ -52596,7 +52078,6 @@ void SV_CalcGunOffset (edict_t *ent)
 	VectorClear (ent->client->ps.gunoffset);
 }
 
-
 /*
 =============
 SV_AddBlend
@@ -52616,7 +52097,6 @@ void SV_AddBlend (float r, float g, float b, float a, float *v_blend)
 	v_blend[2] = v_blend[2]*a3 + b*(1-a3);
 	v_blend[3] = a2;
 }
-
 
 /*
 =============
@@ -52769,8 +52249,6 @@ void P_FallingDamage (edict_t *ent)
 		return;
 	}
 }
-
-
 
 /*
 =============
@@ -52937,7 +52415,6 @@ void P_WorldEffects (void)
 	}
 }
 
-
 /*
 ===============
 G_SetClientEffects
@@ -52990,7 +52467,6 @@ void G_SetClientEffects (edict_t *ent)
 	}
 }
 
-
 /*
 ===============
 G_SetClientEvent
@@ -53029,7 +52505,6 @@ void G_SetClientSound (edict_t *ent)
 		ent->client->pers.helpchanged++;
 		PF_StartSound (ent, CHAN_VOICE, SV_SoundIndex ("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
 	}
-
 
 	if (ent->client->pers.weapon)
 		weap = ent->client->pers.weapon->classname;
@@ -53146,7 +52621,6 @@ newanim:
 		}
 	}
 }
-
 
 /*
 =================
@@ -53277,9 +52751,7 @@ void ClientEndServerFrame (edict_t *ent)
 static bool	is_quad;
 static u8		is_silenced;
 
-
 void weapon_grenade_fire (edict_t *ent, bool held);
-
 
 static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
@@ -53289,7 +52761,6 @@ static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, v
 	VectorCopy (distance, _distance);
 	G_ProjectSource (point, _distance, forward, right, result);
 }
-
 
 /*
 ===============
@@ -53318,7 +52789,6 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 
 	if (who->flags & FL_NOTARGET)
 		return;
-
 
 	if (!who->mynoise)
 	{
@@ -53358,7 +52828,6 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 	noise->teleport_time = level.time;
 	SV_LinkEdict (noise);
 }
-
 
 bool Pickup_Weapon (edict_t *ent, edict_t* other)
 {
@@ -53560,7 +53029,6 @@ void Drop_Weapon (edict_t *ent, gitem_t *item)
 	ent->client->pers.inventory[index]--;
 }
 
-
 /*
 ================
 Weapon_Generic
@@ -53724,7 +53192,6 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 			ent->client->weaponstate = WEAPON_READY;
 	}
 }
-
 
 /*
 ======================================================================
@@ -54041,7 +53508,6 @@ void Weapon_Blaster (edict_t *ent)
 	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
 }
 
-
 void Weapon_HyperBlaster_Fire (edict_t *ent)
 {
 	float	rotation;
@@ -54328,7 +53794,6 @@ void Chaingun_Fire (edict_t *ent)
 	ent->client->pers.inventory[ent->client->ammo_index] -= shots;
 }
 
-
 void Weapon_Chaingun (edict_t *ent)
 {
 	static int	pause_frames[]	= {38, 43, 51, 61, 0};
@@ -54336,7 +53801,6 @@ void Weapon_Chaingun (edict_t *ent)
 
 	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 }
-
 
 /*
 ======================================================================
@@ -54395,7 +53859,6 @@ void Weapon_Shotgun (edict_t *ent)
 
 	Weapon_Generic (ent, 7, 18, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
 }
-
 
 void weapon_supershotgun_fire (edict_t *ent)
 {
@@ -54487,7 +53950,6 @@ void weapon_railgun_fire (edict_t *ent)
 	ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
-
 void Weapon_Railgun (edict_t *ent)
 {
 	static int	pause_frames[]	= {56, 0};
@@ -54574,7 +54036,6 @@ void Weapon_BFG (edict_t *ent)
 
 */
 
-
 //===================================================================
 
 //
@@ -54600,17 +54061,14 @@ typedef struct
 	float	r, g, b;
 } glvert_t;
 
-
 #define	MAX_LBM_HEIGHT		480
 
 #define BACKFACE_EPSILON	0.01
-
 
 //====================================================
 
 extern	image_t		gltextures[MAX_GLTEXTURES];
 extern	int			numgltextures;
-
 
 extern	image_t		*r_notexture;
 extern	image_t		*r_particletexture;
@@ -54619,8 +54077,6 @@ extern	model_t		*currentmodel;
 extern	int			r_visframecount;
 extern	int			r_framecount;
 extern	cplane_t	frustum[4];
-
-
 
 extern	int			gl_filter_min, gl_filter_max;
 
@@ -54648,11 +54104,9 @@ void R_TranslatePlayerSkin (int playernum);
 
 void R_LightPoint (vec3_t p, vec3_t color);
 
-
 static unsigned d_8to24table[256];
 
 extern	int		registration_sequence;
-
 
 void V_AddBlend (float r, float g, float b, float a, float *v_blend);
 
@@ -55173,7 +54627,6 @@ void R_FloodFillSkin( u8 *skin, int skinwidth, int skinheight )
 
 //=======================================================
 
-
 /*
 ================
 GL_ResampleTexture
@@ -55512,9 +54965,6 @@ nonscrap:
 	return image;
 }
 
-
-
-
 /*
 ===============
 R_RegisterSkin
@@ -55524,7 +54974,6 @@ struct image_s *R_RegisterSkin (char *name)
 {
 	return GL_FindImage (name, it_skin);
 }
-
 
 /*
 ================
@@ -55874,7 +55323,6 @@ void R_AddDynamicLights (msurface_t *surf)
 		}
 	}
 }
-
 
 /*
 ** R_SetCacheState
@@ -56771,7 +56219,6 @@ void R_DrawAliasModel (Entity *e)
 		glEnable (GL_BLEND);
 	}
 
-
 	if ( (currententity->frame >= paliashdr->num_frames)
 		|| (currententity->frame < 0) )
 	{
@@ -56863,7 +56310,6 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 
 	return NULL;	// never reached
 }
-
 
 /*
 ===================
@@ -57048,7 +56494,6 @@ void Mod_LoadLighting (lump_t *l)
 	memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 }
 
-
 /*
 =================
 Mod_LoadVisibility
@@ -57073,7 +56518,6 @@ void Mod_LoadVisibility (lump_t *l)
 		loadmodel->vis->bitofs[i][1] = LittleLong (loadmodel->vis->bitofs[i][1]);
 	}
 }
-
 
 /*
 =================
@@ -57119,7 +56563,6 @@ float RadiusFromBounds (vec3_t mins, vec3_t maxs)
 
 	return VectorLength (corner);
 }
-
 
 /*
 =================
@@ -57281,7 +56724,6 @@ void CalcSurfaceExtents (msurface_t *s)
 	}
 }
 
-
 void GL_BuildPolygonFromSurface(msurface_t *fa);
 void GL_CreateSurfaceLightmap (msurface_t *surf);
 void GL_EndBuildingLightmaps (void);
@@ -57360,7 +56802,6 @@ static void Mod_LoadFaces(lump_t *l) {
 
 	GL_EndBuildingLightmaps ();
 }
-
 
 /*
 =================
@@ -57507,7 +56948,6 @@ void Mod_LoadSurfedges (lump_t *l)
 	for ( i=0 ; i<count ; i++)
 		out[i] = LittleLong (in[i]);
 }
-
 
 /*
 =================
@@ -57703,7 +57143,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	for (i=0 ; i<pheader->num_glcmds ; i++)
 		poutcmd[i] = LittleLong (pincmd[i]);
 
-
 	// register all skins
 	memcpy ((char *)pheader + pheader->ofs_skins, (char *)pinmodel + pheader->ofs_skins,
 		pheader->num_skins*MAX_SKINNAME);
@@ -57758,8 +57197,6 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 
 	mod->type = mod_sprite;
 }
-
-
 
 static void Mod_Free(model_t* mod) {
 	VirtualFree(mod->extradata, 0, MEM_RELEASE);
@@ -57842,8 +57279,6 @@ void R_EndRegistration (void)
 
 float		gldepthmin, gldepthmax;
 
-
-
 image_t		*r_notexture;		// use for bad textures
 image_t		*r_particletexture;	// little dot for particles
 
@@ -57881,7 +57316,6 @@ bool R_CullBox (vec3_t mins, vec3_t maxs)
 	return false;
 }
 
-
 void R_RotateForEntity (Entity *e)
 {
 	glTranslatef (e->origin[0],  e->origin[1],  e->origin[2]);
@@ -57898,7 +57332,6 @@ void R_RotateForEntity (Entity *e)
 
 =============================================================
 */
-
 
 /*
 =================
@@ -58140,7 +57573,6 @@ void R_PolyBlend (void)
 
 //=======================================================================
 
-
 void MYgluPerspective( GLdouble fovy, GLdouble aspect,
 			 GLdouble zNear, GLdouble zFar )
 {
@@ -58278,7 +57710,6 @@ static struct {
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
 
-
 static void R_BeginFrame() {
 	GLimp_BeginFrame();
 
@@ -58405,7 +57836,6 @@ typedef struct
 } gllightmapstate_t;
 
 static gllightmapstate_t gl_lms;
-
 
 static void		LM_InitBlock( void );
 static void		LM_UploadBlock( bool dynamic );
@@ -58750,7 +58180,6 @@ dynamic:
 		gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
 	}
 }
-
 
 /*
 ================
@@ -59112,7 +58541,6 @@ void R_DrawWorld (void)
 	R_DrawSkyBox ();
 }
 
-
 /*
 ===============
 R_MarkLeaves
@@ -59177,8 +58605,6 @@ void R_MarkLeaves (void)
 		}
 	}
 }
-
-
 
 /*
 =============================================================================
@@ -59645,9 +59071,7 @@ void EmitWaterPolys (msurface_t *fa)
 	}
 }
 
-
 //===================================================================
-
 
 vec3_t	skyclip[6] = {
 	{1,1,0},
@@ -59878,7 +59302,6 @@ void R_AddSkySurface (msurface_t *fa)
 	}
 }
 
-
 /*
 ==============
 R_ClearSkyBox
@@ -59894,7 +59317,6 @@ void R_ClearSkyBox (void)
 		skymaxs[0][i] = skymaxs[1][i] = -9999;
 	}
 }
-
 
 void MakeSkyVec (float s, float t, int axis)
 {
@@ -59981,7 +59403,6 @@ glRotatef (r_newrefdef.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
 glPopMatrix ();
 }
 
-
 // 3dstudio environment map names
 char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 void R_SetSky (char *name, float rotate, vec3_t axis)
@@ -60000,7 +59421,6 @@ void R_SetSky (char *name, float rotate, vec3_t axis)
 		sky_images[i] = GL_FindImage (pathname, it_sky);
 		if (!sky_images[i])
 			sky_images[i] = r_notexture;
-
 
 		{
 			sky_min = 1.0/512;
@@ -60267,9 +59687,7 @@ void IN_DeactivateMouse (void)
 		;
 }
 
-
 static unsigned sys_msg_time;
-
 
 void IN_MouseEvent (int mstate)
 {
@@ -60555,7 +59973,6 @@ void Sys_AppActivate (void)
 // Global variables used internally by this module
 
 HINSTANCE	reflib_library;		// Handle to refresh DLL
-
 
 HWND        cl_hwnd;            // Main window handle for life of program
 
@@ -62093,7 +61510,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					cl.predicted_step = step * 0.125;
 					cl.predicted_step_time = cls.realtime - cls.frametime * 500;
 				}
-
 
 				// copy results out for rendering
 				cl.predicted_origin[0] = pm.s.origin[0]*0.125;
