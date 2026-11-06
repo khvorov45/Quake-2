@@ -20075,21 +20075,7 @@ static menuframework_s	s_game_menu;
 static menuaction_s		s_easy_game_action;
 static menuaction_s		s_medium_game_action;
 static menuaction_s		s_hard_game_action;
-static menuaction_s		s_load_game_action;
-static menuaction_s		s_save_game_action;
 static menuseparator_s	s_blankline;
-
-#define	MAX_SAVEGAMES	15
-
-static menuframework_s	s_savegame_menu;
-
-static menuframework_s	s_loadgame_menu;
-static menuaction_s		s_loadgame_actions[MAX_SAVEGAMES];
-
-static char m_savestrings[MAX_SAVEGAMES][32];
-static bool m_savevalid[MAX_SAVEGAMES];
-
-static menuaction_s		s_savegame_actions[MAX_SAVEGAMES];
 
 static int bind_grab;
 
@@ -20871,124 +20857,6 @@ static void HardGameFunc(void* data) {
 	StartGame();
 }
 
-static void LoadGameCallback(void* self) {
-	menuaction_s* a = (menuaction_s*)self;
-	if (m_savevalid[a->generic.localdata[0]]) {
-		Cbuf_AddText(va("load save%i\n", a->generic.localdata[0]));
-	}
-	M_ForceMenuOff();
-}
-
-static void LoadGame_MenuInit() {
-	int i;
-
-	s_loadgame_menu.x = viddef.width / 2 - 120;
-	s_loadgame_menu.y = viddef.height / 2 - 58;
-	s_loadgame_menu.nitems = 0;
-
-	for ( i = 0; i < MAX_SAVEGAMES; i++ )
-	{
-		s_loadgame_actions[i].generic.name			= m_savestrings[i];
-		s_loadgame_actions[i].generic.flags			= QMF_LEFT_JUSTIFY;
-		s_loadgame_actions[i].generic.localdata[0]	= i;
-		s_loadgame_actions[i].generic.callback		= LoadGameCallback;
-
-		s_loadgame_actions[i].generic.x = 0;
-		s_loadgame_actions[i].generic.y = ( i ) * 10;
-		if (i>0)	// separate from autosave
-			s_loadgame_actions[i].generic.y += 10;
-
-		s_loadgame_actions[i].generic.type = MTYPE_ACTION;
-
-		Menu_AddItem( &s_loadgame_menu, &s_loadgame_actions[i] );
-	}
-}
-
-static void LoadGame_MenuDraw( void )
-{
-	M_Banner( "m_banner_load_game" );
-	Menu_Draw( &s_loadgame_menu );
-}
-
-static char* LoadGame_MenuKey( int key )
-{
-	if ( key == Key_Code_Escape || key == Key_Code_Enter )
-	{
-		s_savegame_menu.cursor = s_loadgame_menu.cursor - 1;
-		if ( s_savegame_menu.cursor < 0 )
-			s_savegame_menu.cursor = 0;
-	}
-	return Default_MenuKey( &s_loadgame_menu, key );
-}
-
-static void M_Menu_LoadGame_f (void* data)
-{
-	UNUSED(data);
-	LoadGame_MenuInit();
-	M_PushMenu( LoadGame_MenuDraw, LoadGame_MenuKey);
-}
-
-static void LoadGameFunc(void* unused) {
-	UNUSED(unused);
-	M_Menu_LoadGame_f (0);
-}
-
-static void SaveGameCallback(void* self) {
-	menuaction_s* a = (menuaction_s*)self;
-	Cbuf_AddText(va("save save%i\n", a->generic.localdata[0] ));
-	M_ForceMenuOff();
-}
-
-static void SaveGame_MenuInit() {
-	s_savegame_menu.x = viddef.width / 2 - 120;
-	s_savegame_menu.y = viddef.height / 2 - 58;
-	s_savegame_menu.nitems = 0;
-
-	// don't include the autosave slot
-	for (int i = 0; i < MAX_SAVEGAMES - 1; i++) {
-		s_savegame_actions[i].generic.name = m_savestrings[i+1];
-		s_savegame_actions[i].generic.localdata[0] = i+1;
-		s_savegame_actions[i].generic.flags = QMF_LEFT_JUSTIFY;
-		s_savegame_actions[i].generic.callback = SaveGameCallback;
-
-		s_savegame_actions[i].generic.x = 0;
-		s_savegame_actions[i].generic.y = ( i ) * 10;
-
-		s_savegame_actions[i].generic.type = MTYPE_ACTION;
-
-		Menu_AddItem( &s_savegame_menu, &s_savegame_actions[i] );
-	}
-}
-
-static void SaveGame_MenuDraw() {
-	M_Banner("m_banner_save_game");
-	place_cursor_in_nearest_valid_position( &s_savegame_menu, 1 );
-	Menu_Draw(&s_savegame_menu);
-}
-
-static char* SaveGame_MenuKey(int key) {
-	if (key == Key_Code_Enter || key == Key_Code_Escape) {
-		s_loadgame_menu.cursor = s_savegame_menu.cursor - 1;
-		if (s_loadgame_menu.cursor < 0) {
-			s_loadgame_menu.cursor = 0;
-		}
-	}
-	return Default_MenuKey(&s_savegame_menu, key);
-}
-
-static void M_Menu_SaveGame_f(void* data) {
-	UNUSED(data);
-	if (sv.state != ss_dead) {
-		SaveGame_MenuInit();
-		M_PushMenu(SaveGame_MenuDraw, SaveGame_MenuKey);
-	}
-}
-
-static void SaveGameFunc(void* unused) {
-	UNUSED(unused);
-	M_Menu_SaveGame_f(0);
-}
-
 static void Game_MenuInit() {
 	s_game_menu.x = viddef.width * 0.50;
 	s_game_menu.nitems = 0;
@@ -21016,26 +20884,10 @@ static void Game_MenuInit() {
 
 	s_blankline.generic.type = MTYPE_SEPARATOR;
 
-	s_load_game_action.generic.type	= MTYPE_ACTION;
-	s_load_game_action.generic.flags  = QMF_LEFT_JUSTIFY;
-	s_load_game_action.generic.x		= 0;
-	s_load_game_action.generic.y		= 40;
-	s_load_game_action.generic.name	= "load game";
-	s_load_game_action.generic.callback = LoadGameFunc;
-
-	s_save_game_action.generic.type	= MTYPE_ACTION;
-	s_save_game_action.generic.flags  = QMF_LEFT_JUSTIFY;
-	s_save_game_action.generic.x		= 0;
-	s_save_game_action.generic.y		= 50;
-	s_save_game_action.generic.name	= "save game";
-	s_save_game_action.generic.callback = SaveGameFunc;
-
 	Menu_AddItem( &s_game_menu, ( void * ) &s_easy_game_action );
 	Menu_AddItem( &s_game_menu, ( void * ) &s_medium_game_action );
 	Menu_AddItem( &s_game_menu, ( void * ) &s_hard_game_action );
 	Menu_AddItem( &s_game_menu, ( void * ) &s_blankline );
-	Menu_AddItem( &s_game_menu, ( void * ) &s_load_game_action );
-	Menu_AddItem( &s_game_menu, ( void * ) &s_save_game_action );
 	Menu_AddItem( &s_game_menu, ( void * ) &s_blankline );
 
 	Menu_Center( &s_game_menu );
@@ -59660,8 +59512,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), M_Menu_Game_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_loadgame"), M_Menu_LoadGame_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_savegame"), M_Menu_SaveGame_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), M_Menu_Video_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), M_Menu_Options_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), M_Menu_Keys_f}));
