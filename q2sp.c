@@ -3697,7 +3697,7 @@ global_variable int				numbrushes;
 global_variable cbrush_t			map_brushes[MAX_MAP_BRUSHES];
 global_variable int				numvisibility;
 global_variable u8				map_visibility[MAX_MAP_VISIBILITY];
-static dvis_t			*map_vis = (dvis_t *)map_visibility;
+global_variable dvis_t			*map_vis = (dvis_t *)map_visibility;
 global_variable int				numentitychars;
 global_variable char				map_entitystring[MAX_MAP_ENTSTRING];
 global_variable int				numareas = 1;
@@ -14219,8 +14219,8 @@ void CL_ClearEffects (void)
 }
 
 global_variable unsigned sys_frame_time;
-unsigned	frame_msec;
-unsigned	old_sys_frame_time;
+global_variable unsigned	frame_msec;
+global_variable unsigned	old_sys_frame_time;
 
 /*
 ===============================================================================
@@ -14474,7 +14474,7 @@ void Draw_Char (int x, int y, int num);
 void Draw_Pic(int x, int y, char *pic);
 
 global_variable Key_Bindings* temp_global_key_bindings;
-static v2i temp_global_char_dim_px = {8, 8};
+global_variable v2i temp_global_char_dim_px = {8, 8};
 
 enum {
 	Inventory_Row_Layout_Hotkey,
@@ -21147,12 +21147,12 @@ void	SNDDMA_Submit(void);
 
 global_variable channel_t channels[32];
 
-extern	vec3_t	listener_origin;
-extern	vec3_t	listener_forward;
-extern	vec3_t	listener_right;
-extern	vec3_t	listener_up;
-extern	dma_t	dma;
-extern	playsound_t	s_pendingplays;
+global_variable vec3_t listener_origin;
+global_variable vec3_t listener_forward;
+global_variable vec3_t listener_right;
+global_variable vec3_t listener_up;
+global_variable dma_t dma;
+global_variable playsound_t s_pendingplays;
 
 wavinfo_t GetWavinfo (u8 *wav, int wavlength);
 
@@ -21178,12 +21178,6 @@ int			s_registration_sequence;
 
 bool	snd_initialized = false;
 
-dma_t		dma;
-
-vec3_t		listener_origin;
-vec3_t		listener_forward;
-vec3_t		listener_right;
-vec3_t		listener_up;
 
 bool	s_registering;
 
@@ -21195,14 +21189,13 @@ int   		paintedtime; 	// sample PAIRS
 // because we don't want to free anything until we are
 // sure we won't need it.
 #define		MAX_SFX		(MAX_SOUNDS*2)
-sfx_t		known_sfx[MAX_SFX];
-int			num_sfx;
+global_variable sfx_t		known_sfx[MAX_SFX];
+global_variable int			num_sfx;
 
-playsound_t	s_playsounds[128];
-playsound_t	s_freeplays;
-playsound_t	s_pendingplays;
+global_variable playsound_t	s_playsounds[128];
+global_variable playsound_t	s_freeplays;
 
-int			s_beginofs;
+global_variable  int			s_beginofs;
 
 sfx_t *S_FindName (char *name, bool create)
 {
@@ -31752,7 +31745,7 @@ void G_RunEntity (edict_t *ent)
 
 global_variable mmove_t mmove_reloc;
 
-static field_t fields[] = {
+global_variable field_t fields[] = {
 	{"classname", FOFS(classname), F_LSTRING, 0},
 	{"model", FOFS(model), F_LSTRING, 0},
 	{"spawnflags", FOFS(spawnflags), F_INT, 0},
@@ -54785,7 +54778,6 @@ float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 typedef float vec4_t[4];
 
 global_variable	vec4_t	s_lerped[MAX_VERTS];
-//static	vec3_t	lerped[MAX_VERTS];
 
 vec3_t	shadevector;
 float	shadelight[3];
