@@ -1906,7 +1906,6 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 static int curtime;		// time returned by last Sys_Milliseconds
 
 static int Sys_Milliseconds(void);
-static void Sys_Mkdir(char *path);
 
 // pass in an attribute mask of things you wish to REJECT
 static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
@@ -8422,17 +8421,6 @@ void CopyFile (char *src, char *dst)
 	fclose (f2);
 }
 
-// Creates any directories needed to store the given filename
-static void FS_CreatePath(char* path) {
-	for (char* ofs = path + 1; *ofs ; ofs++) {
-		if (*ofs == '/') {
-			*ofs = 0;
-			Sys_Mkdir(path);
-			*ofs = '/';
-		}
-	}
-}
-
 void SV_WriteLevelFile (void)
 {
 	char	name[MAX_OSPATH];
@@ -8518,58 +8506,14 @@ void SV_ReadServerFile (void)
 	ReadGame (name);
 }
 
-// Saves the state of the map just being exited and goes to a new map.
-// If the initial character of the map string is '*', the next map is in a new unit, so the current savegame directory is cleared of map files.
 static void SV_GameMap_f(void* data) {
 	UNUSED(data);
-
-	char		*map;
-	int			i;
-	client_t	*cl;
-	bool	*savedInuse;
-
-	if (cmd_argc != 2) {
+	if (cmd_argc == 2) {
+		SV_Map(Cmd_Argv(1), false);
+		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
+	} else {
 		add_line_to_console_log(STR("USAGE: gamemap <map>"));
-		return;
 	}
-
-	FS_CreatePath(va("baseq2/save/current/"));
-
-	// check for clearing the current savegame
-	map = Cmd_Argv(1);
-	if (map[0] == '*')
-	{
-		// wipe all the *.sav files
-		SV_WipeSavegame ("current");
-	}
-	else
-	{	// save the map just exited
-		if (sv.state == ss_game)
-		{
-			// clear all the client inuse flags before saving so that
-			// when the level is re-entered, the clients will spawn
-			// at spawn points instead of occupying body shells
-			savedInuse = malloc(1 * sizeof(bool));
-			for (i=0,cl=&svs.client ; i<1; i++,cl++)
-			{
-				savedInuse[i] = cl->edict->inuse;
-				cl->edict->inuse = false;
-			}
-
-			SV_WriteLevelFile ();
-
-			// we must restore these for clients to transfer over correctly
-			for (i=0,cl=&svs.client ; i<1; i++,cl++)
-				cl->edict->inuse = savedInuse[i];
-			free (savedInuse);
-		}
-	}
-
-	// start up the next map
-	SV_Map(Cmd_Argv(1), false);
-
-	// archive server state
-	strncpy (svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
 }
 
 // Goes directly to a given map without any savegame archiving.
@@ -59328,13 +59272,6 @@ int Sys_Milliseconds (void)
 
 	return curtime;
 }
-
-void Sys_Mkdir (char *path)
-{
-	_mkdir (path);
-}
-
-//============================================
 
 char	findbase[MAX_OSPATH];
 char	findpath[MAX_OSPATH];
