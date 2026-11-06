@@ -318,7 +318,7 @@ typedef struct {Pak_File_Info* ptr; i64 len;} Pak_File_Infos;
 // SECTION Input
 //
 
-typedef enum {
+enum {
 	Key_Code_Tab = 9,
 	Key_Code_Enter = 13,
 	Key_Code_Escape = 27,
@@ -371,10 +371,10 @@ typedef enum {
 	Key_Code_Mouse_Wheel_Up = 240,
 	Key_Code_Pause = 255,
 	Key_Code_Count,
-} Partial_Key_Code;
+};
 typedef struct {Fixed_String values[Key_Code_Count];} Key_Bindings;
 
-procedure String Key_Code_Strings[Key_Code_Count] = {
+global_const String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Tab] = STR("Tab"),
 	[Key_Code_Enter] = STR("Enter"),
 	[Key_Code_Escape] = STR("Escape"),
@@ -658,11 +658,12 @@ procedure void add_line_to_console_log(String line) {
 typedef void (*String_Command_Proc)(void*);
 typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
+typedef struct {String* ptr; i64 len; i64 cap;} User_Args;
 
 typedef struct String_Command_Data {
 	Client_State* client_state;
 	Key_Bindings* key_bindings;
-	String_Slice user_args;
+	User_Args user_args;
 } String_Command_Data;
 
 typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
@@ -715,7 +716,7 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 
 procedure void builtin_string_command_unbind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
-	String_Slice user_args = ((String_Command_Context*)ctx)->data.user_args;
+	User_Args user_args = ((String_Command_Context*)ctx)->data.user_args;
 
 	if (user_args.len == 1) {
 		u8 key_code = get_key_code_number(user_args.ptr[0]);
@@ -725,9 +726,8 @@ procedure void builtin_string_command_unbind(void* ctx) {
 			add_line_to_console_log(STR("invalid key"));
 		}
 	} else {
-		add_line_to_console_log(STR("unbind(key): remove commands from a key"));
+		add_line_to_console_log(STR("unbind key: remove commands from a key"));
 	}
-
 }
 
 // TODO remove
