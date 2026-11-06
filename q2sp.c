@@ -8433,46 +8433,6 @@ static void FS_CreatePath(char* path) {
 	}
 }
 
-static void SV_CopySaveGame(char *src, char *dst) {
-	char	name[MAX_OSPATH], name2[MAX_OSPATH];
-	int		l, len;
-	char	*found;
-
-	SV_WipeSavegame (dst);
-
-	// copy the savegame over
-	Com_sprintf(name, sizeof(name), "baseq2/save/%s/server.ssv", src);
-	Com_sprintf(name2, sizeof(name2), "baseq2/save/%s/server.ssv", dst);
-	FS_CreatePath(name2);
-	CopyFile (name, name2);
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/game.ssv", src);
-	Com_sprintf (name2, sizeof(name2), "baseq2/save/%s/game.ssv", dst);
-	CopyFile (name, name2);
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/", src);
-	len = strlen(name);
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sav", src);
-	found = Sys_FindFirst(name, 0, 0 );
-	while (found)
-	{
-		strcpy (name+len, found+len);
-
-		Com_sprintf (name2, sizeof(name2), "baseq2/save/%s/%s", dst, found+len);
-		CopyFile (name, name2);
-
-		// change sav to sv2
-		l = strlen(name);
-		strcpy (name+l-3, "sv2");
-		l = strlen(name2);
-		strcpy (name2+l-3, "sv2");
-		CopyFile (name, name2);
-
-		found = Sys_FindNext( 0, 0 );
-	}
-	Sys_FindClose ();
-}
-
 void SV_WriteLevelFile (void)
 {
 	char	name[MAX_OSPATH];
