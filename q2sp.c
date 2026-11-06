@@ -42,6 +42,7 @@ typedef struct {i64 x; i64 y;} v2i;
 #define Megabyte ((i64)(1024 * Kilobyte))
 #define Gigabyte ((i64)(1024 * Megabyte))
 
+#define procedure static
 #define global_variable static
 
 //
