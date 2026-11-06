@@ -1907,11 +1907,6 @@ static int curtime;		// time returned by last Sys_Milliseconds
 
 static int Sys_Milliseconds(void);
 
-// pass in an attribute mask of things you wish to REJECT
-static char	*Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
-static char	*Sys_FindNext(unsigned musthave, unsigned canthave);
-static void	Sys_FindClose();
-
 // note: this can't be called from another DLL, due to MS libc issues
 static int FS_FOpenFile(char* filename, FILE** file);
 
@@ -1939,15 +1934,6 @@ bool Netchan_CanReliable (netchan_t *chan);
 #define	MAX_QPATH 64 // max length of a quake game pathname
 
 static char com_token[MAX_TOKEN_CHARS];
-
-static void COM_FilePath(char *in, char *out) {
-	char* s = in + strlen(in) - 1;
-	while (s != in && *s != '/') {
-		s--;
-	}
-	strncpy(out, in, s-in);
-	out[s-in] = 0;
-}
 
 static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	char bigbuffer[0x10000] = {};
@@ -8359,68 +8345,6 @@ These commands can only be entered from stdin or by a remote operator datagram
 ===============================================================================
 */
 
-// Delete save/<XXX>/
-void SV_WipeSavegame (char *savename)
-{
-	char	name[MAX_OSPATH];
-	char	*s;
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/server.ssv", savename);
-	remove (name);
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/game.ssv", savename);
-	remove (name);
-
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sav", savename);
-	s = Sys_FindFirst( name, 0, 0 );
-	while (s)
-	{
-		remove (s);
-		s = Sys_FindNext( 0, 0 );
-	}
-	Sys_FindClose ();
-	Com_sprintf (name, sizeof(name), "baseq2/save/%s/*.sv2", savename);
-	s = Sys_FindFirst(name, 0, 0 );
-	while (s)
-	{
-		remove (s);
-		s = Sys_FindNext( 0, 0 );
-	}
-	Sys_FindClose ();
-}
-
-/*
-================
-CopyFile
-================
-*/
-void CopyFile (char *src, char *dst)
-{
-	FILE	*f1, *f2;
-	int		l;
-	u8	buffer[65536];
-
-	f1 = fopen (src, "rb");
-	if (!f1)
-		return;
-	f2 = fopen (dst, "wb");
-	if (!f2)
-	{
-		fclose (f1);
-		return;
-	}
-
-	while (1)
-	{
-		l = fread (buffer, 1, sizeof(buffer), f1);
-		if (!l)
-			break;
-		fwrite (buffer, 1, l, f2);
-	}
-
-	fclose (f1);
-	fclose (f2);
-}
-
 void SV_WriteLevelFile (void)
 {
 	char	name[MAX_OSPATH];
@@ -8516,8 +8440,6 @@ static void SV_GameMap_f(void* data) {
 	}
 }
 
-// Goes directly to a given map without any savegame archiving.
-// For development work
 static void SV_Map_f(void* data) {
 	UNUSED(data);
 
@@ -8533,7 +8455,6 @@ static void SV_Map_f(void* data) {
 	}
 
 	sv.state = ss_dead; // don't save current level when changing
-	SV_WipeSavegame("current");
 	SV_GameMap_f(data);
 }
 
@@ -59271,74 +59192,6 @@ int Sys_Milliseconds (void)
 	curtime = timeGetTime() - base;
 
 	return curtime;
-}
-
-char	findbase[MAX_OSPATH];
-char	findpath[MAX_OSPATH];
-intptr_t		findhandle;
-
-static bool CompareAttributes( unsigned found, unsigned musthave, unsigned canthave )
-{
-	if ( ( found & _A_RDONLY ) && ( canthave & SFF_RDONLY ) )
-		return false;
-	if ( ( found & _A_HIDDEN ) && ( canthave & SFF_HIDDEN ) )
-		return false;
-	if ( ( found & _A_SYSTEM ) && ( canthave & SFF_SYSTEM ) )
-		return false;
-	if ( ( found & _A_SUBDIR ) && ( canthave & SFF_SUBDIR ) )
-		return false;
-	if ( ( found & _A_ARCH ) && ( canthave & SFF_ARCH ) )
-		return false;
-
-	if ( ( musthave & SFF_RDONLY ) && !( found & _A_RDONLY ) )
-		return false;
-	if ( ( musthave & SFF_HIDDEN ) && !( found & _A_HIDDEN ) )
-		return false;
-	if ( ( musthave & SFF_SYSTEM ) && !( found & _A_SYSTEM ) )
-		return false;
-	if ( ( musthave & SFF_SUBDIR ) && !( found & _A_SUBDIR ) )
-		return false;
-	if ( ( musthave & SFF_ARCH ) && !( found & _A_ARCH ) )
-		return false;
-
-	return true;
-}
-
-char *Sys_FindFirst (char *path, unsigned musthave, unsigned canthave )
-{
-	struct _finddata_t findinfo;
-	assert(findhandle == 0);
-
-	COM_FilePath (path, findbase);
-	findhandle = _findfirst (path, &findinfo);
-	if (findhandle == -1)
-		return NULL;
-	if ( !CompareAttributes( findinfo.attrib, musthave, canthave ) )
-		return NULL;
-	Com_sprintf (findpath, sizeof(findpath), "%s/%s", findbase, findinfo.name);
-	return findpath;
-}
-
-char *Sys_FindNext ( unsigned musthave, unsigned canthave )
-{
-	struct _finddata_t findinfo;
-
-	if (findhandle == -1)
-		return NULL;
-	if (_findnext (findhandle, &findinfo) == -1)
-		return NULL;
-	if ( !CompareAttributes( findinfo.attrib, musthave, canthave ) )
-		return NULL;
-
-	Com_sprintf (findpath, sizeof(findpath), "%s/%s", findbase, findinfo.name);
-	return findpath;
-}
-
-void Sys_FindClose (void)
-{
-	if (findhandle != -1)
-		_findclose (findhandle);
-	findhandle = 0;
 }
 
 DWORD	gSndBufSize;
