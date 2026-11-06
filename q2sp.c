@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define carray_count(a) (sizeof(a) / sizeof((a)[0]))
+#define carray_count(a) ((i64)(sizeof(a) / sizeof((a)[0])))
 #define UNUSED(x) ((x)=(x))
 #define clamp(x, min, max) ((x) > (max) ? max : (x) < (min) ? (min) : (x))
 #define swap(x, y) do {typeof(x) temp = (x); (x) = (y); (y) = temp;} while (0)
@@ -535,7 +535,7 @@ procedure u8 get_key_code_number(String string) {
 
 procedure void set_key_binding(Key_Bindings* key_bindings, u8 key_code, String binding) {
 	Fixed_String* fstr = key_bindings->values + key_code;
-	assert((i64)carray_count(fstr->buf) > binding.len);
+	assert(carray_count(fstr->buf) > binding.len);
 	fstr->len = binding.len;
 	copy_bytes(fstr->buf, binding.ptr, binding.len);
 	fstr->buf[fstr->len] = 0;
@@ -644,7 +644,7 @@ procedure void add_line_to_console_log(String line) {
 	Console_Line* console_line = temp_global_console_log.ptr + temp_global_console_log.head;
 	temp_global_console_log.head = (temp_global_console_log.head + 1) % temp_global_console_log.cap;
 
-	assert((i64)carray_count(console_line->fstr.buf) > line.len);
+	assert(carray_count(console_line->fstr.buf) > line.len);
 	copy_bytes(console_line->fstr.buf, line.ptr, line.len);
 	console_line->fstr.len = line.len;
 	console_line->fstr.buf[console_line->fstr.len] = 0;
@@ -662,6 +662,7 @@ typedef struct {String_Command* ptr; i64 len;} String_Commands;
 typedef struct String_Command_Data {
 	Client_State* client_state;
 	Key_Bindings* key_bindings;
+	String_Slice user_args;
 } String_Command_Data;
 
 typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
@@ -686,7 +687,7 @@ procedure void builtin_string_command_write_config(void* ctx) {
 			if (value.len) {
 				String key = Key_Code_Strings[key_code];
 				String strs[] = {STR("bind "), key, STR(" \""), value, STR("\"\n")};
-				for (String* str = strs; str - strs < (i64)carray_count(strs); str++) {
+				for (String* str = strs; str - strs < carray_count(strs); str++) {
 					string_builder_write_string(&builder, *str);
 				}
 			}
@@ -712,6 +713,23 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 	}
 }
 
+procedure void builtin_string_command_unbind(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	String_Slice user_args = ((String_Command_Context*)ctx)->data.user_args;
+
+	if (user_args.len == 1) {
+		u8 key_code = get_key_code_number(user_args.ptr[0]);
+		if (key_code) {
+			set_key_binding(key_bindings, key_code, STR(""));
+		} else {
+			add_line_to_console_log(STR("invalid key"));
+		}
+	} else {
+		add_line_to_console_log(STR("unbind(key): remove commands from a key"));
+	}
+
+}
+
 // TODO remove
 #define	MAX_STRING_CHARS 1024
 #define	MAX_STRING_TOKENS 80
@@ -721,22 +739,6 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 global_variable int cmd_argc;
 global_variable char* cmd_argv[MAX_STRING_TOKENS];
 global_variable char cmd_args[MAX_STRING_CHARS];
-
-procedure void builtin_string_command_unbind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
-
-	if (cmd_argc != 2) {
-		add_line_to_console_log(STR("unbind <key> : remove commands from a key"));
-		return;
-	}
-
-	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
-	if (key_code) {
-		set_key_binding(key_bindings, key_code, STR(""));
-	} else {
-		add_line_to_console_log(STR("invalid key"));
-	}
-}
 
 // TODO: Move the builtin procs here
 
@@ -2148,7 +2150,7 @@ procedure void Cmd_TokenizeString(char* text) {
 }
 
 procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
-	context.debug_log(STR("EXECUTE"), string_from_cstring(text));
+	context.debug_log(STR("STR EXECUTE"), string_from_cstring(text));
 
 	Cmd_TokenizeString(text);
 
@@ -8232,8 +8234,6 @@ int SV_ImageIndex (char *name);
 
 void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
 
-void SV_ExecuteUserCommand (char *s);
-
 void SV_SendServerinfo (client_t *client);
 void Master_Packet (void);
 
@@ -9764,37 +9764,30 @@ void SV_Begin_f (void)
 	defer_text_buf[0] = 0;
 }
 
-typedef struct {
-	char	*name;
-	void	(*func) (void);
-} ucmd_t;
-
-global_variable ucmd_t ucmds[] =
-{
-	// auto issued
-	{"new", SV_New_f},
-	{"configstrings", SV_Configstrings_f},
-	{"baselines", SV_Baselines_f},
-	{"begin", SV_Begin_f},
-
-	{NULL, NULL}
-};
-
-void SV_ExecuteUserCommand (char *s)
-{
-	ucmd_t	*u;
+procedure void SV_ExecuteUserCommand(char* s) {
+	context.debug_log(STR("SV EXECUTE"), string_from_cstring(s));
 
 	Cmd_TokenizeString(s);
 
-	for (u=ucmds ; u->name ; u++)
-		if (!strcmp (Cmd_Argv(0), u->name) )
-		{
-			u->func ();
-			break;
+	typedef struct {char* name; void (*func)(void);} ucmd_t;
+	ucmd_t ucmds[] = {
+		{"new", SV_New_f},
+		{"configstrings", SV_Configstrings_f},
+		{"baselines", SV_Baselines_f},
+		{"begin", SV_Begin_f},
+	};
+
+	ucmd_t* u = ucmds;
+	bool found = false;
+	for (; u - ucmds < carray_count(ucmds) && !found; u++)
+		if (!strcmp(Cmd_Argv(0), u->name) ) {
+			u->func();
+			found = true;
 		}
 
-	if (!u->name && sv.state == ss_game)
+	if (!found && sv.state == ss_game) {
 		ClientCommand(svs.client.edict);
+	}
 }
 
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
@@ -21323,7 +21316,7 @@ procedure channel_t* S_PickChannel(i32 entnum, i32 entchannel) {
 	// Check for replacement sound, or find the best one to replace
 	i64 first_to_die = -1;
 	i64 life_left = 0x7fffffff;
-	for (i64 ch_idx = 0; ch_idx < (i64)carray_count(channels); ch_idx++) {
+	for (i64 ch_idx = 0; ch_idx < carray_count(channels); ch_idx++) {
 		channel_t* ch = channels + ch_idx;
 
 		// always override sound from same entity (channel 0 never overrides)
@@ -21752,7 +21745,7 @@ procedure void S_StopAllSounds(void* data) {
 	s_freeplays.next = s_freeplays.prev = &s_freeplays;
 	s_pendingplays.next = s_pendingplays.prev = &s_pendingplays;
 
-	for (i64 ind = 0; ind < (i64)carray_count(s_playsounds); ind++) {
+	for (i64 ind = 0; ind < carray_count(s_playsounds); ind++) {
 		playsound_t* playsound = s_playsounds + ind;
 
 		playsound->prev = &s_freeplays;
@@ -22118,7 +22111,7 @@ void S_PaintChannels(int endtime)
 
 		// paint in the channels.
 		ch = channels;
-		for (i64 i = 0; i < (i64)carray_count(channels); i++, ch++)
+		for (i64 i = 0; i < carray_count(channels); i++, ch++)
 		{
 			ltime = paintedtime;
 
@@ -59578,7 +59571,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					loose_files_header->info_section_len_bytes += sizeof(Pak_File_Info);
 					String file_name = string_from_cstring(find_data.cFileName);
 					String file_path_no_baseq2 = concat(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
-					assert(file_path_no_baseq2.len < (i64)carray_count(file_info->name));
+					assert(file_path_no_baseq2.len < carray_count(file_info->name));
 					copy_bytes(file_info->name, file_path_no_baseq2.ptr, file_path_no_baseq2.len + 1); // NOTE: write the null terminator
 
 					String file_path = concat(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
@@ -59604,7 +59597,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			for (i64 file_index = 0; file_index < pak->infos.len; file_index++) {
 				Pak_File_Info* info = pak->infos.ptr + file_index;
 				String info_name = string_from_cstring(info->name);
-				assert(info_name.len > 0 && info_name.len < (i64)carray_count(info->name));
+				assert(info_name.len > 0 && info_name.len < carray_count(info->name));
 
 				u8_Slice file_content = {};
 				{
@@ -60479,7 +60472,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 				// update spatialization for dynamic sounds
 				channel_t* ch = channels;
-				for (i64 ind = 0; ind < (i64)carray_count(channels); ind++, ch++) {
+				for (i64 ind = 0; ind < carray_count(channels); ind++, ch++) {
 					if (ch->sfx) {
 						if (ch->autosound) {
 							// autosounds are regenerated fresh each frame
