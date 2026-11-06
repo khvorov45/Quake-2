@@ -9826,7 +9826,6 @@ void SV_Map(char* levelstring, bool loadgame) {
 
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
-bool ClientConnect(edict_t* ent);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
@@ -51619,9 +51618,6 @@ void ClientBegin (edict_t *ent)
 	}
 	else
 	{
-		// a spawn point will completely reinitialize the entity
-		// except for the persistant data that was initialized at
-		// ClientConnect() time
 		G_InitEdict (ent);
 		ent->classname = "player";
 		InitClientResp (ent->client);
@@ -51635,22 +51631,6 @@ void ClientBegin (edict_t *ent)
 
 	// make sure all view stuff is valid
 	ClientEndServerFrame (ent);
-}
-
-bool ClientConnect(edict_t *ent) {
-	ent->client = &game.client;
-
-	// if there is already a body waiting for us (a loadgame), just
-	// take it, otherwise spawn one from scratch
-	if (ent->inuse == false) {
-		// clear the respawning variables
-		InitClientResp (ent->client);
-		if (!game.autosaved || !ent->client->pers.weapon)
-			InitClientPersistant (ent->client);
-	}
-
-	ent->client->pers.connected = true;
-	return true;
 }
 
 void ClientDisconnect (edict_t *ent)
@@ -61889,12 +61869,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					MSG_BeginReading(&net_message);
 					MSG_ReadLong(&net_message); // skip the -1 marker
 
-					i32 edictnum = 1;
-					edict_t* ent = EDICT_NUM(edictnum);
-					svs.client.edict = ent;
+					svs.client.edict = g_edicts + 1;
 
-					bool client_connect_result = ClientConnect(ent);
-					assert(client_connect_result);
+					svs.client.edict->client = &game.client;
+
+					// if there is already a body waiting for us (a loadgame), just take it, otherwise spawn one from scratch
+					if (svs.client.edict->inuse == false) {
+						// clear the respawning variables
+						InitClientResp(svs.client.edict->client);
+						if (!game.autosaved || !svs.client.edict->client->pers.weapon) {
+							InitClientPersistant (svs.client.edict->client);
+						}
+					}
+
+					svs.client.edict->client->pers.connected = true;
 
 					write_connect_message(NS_SERVER);
 					Netchan_Setup(NS_SERVER, &svs.client.netchan);
