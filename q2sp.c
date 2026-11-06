@@ -5369,17 +5369,6 @@ void FetchClientEntData (edict_t *ent);
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
 
-/* ============ end inlined header: game/g_local.h ============ */
-
-/* shared types/math — compiled once here instead of into exe+2 dlls */
-/* ============ begin source: game/q_shared.c ============ */
-
-/* already inlined above: game/q_shared.h */
-
-//============================================================================
-
-//============================================================================
-
 float Q_fabs (float f)
 {
 	int tmp = * ( int * ) &f;
@@ -6055,8 +6044,6 @@ void CM_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
 
 	CM_RecursiveHullCheck (node->children[side^1], midf, p2f, mid, p2);
 }
-
-//======================================================================
 
 /*
 ==================
@@ -6787,8 +6774,6 @@ unsigned int i, j;
 for (i = 0, j = 0; j < len; i++, j += 4)
  	output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) | (((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);
 }
-
-//===================================================================
 
 unsigned Com_BlockChecksum (void *buffer, int length)
 {
@@ -8347,8 +8332,6 @@ int SV_AreaEdicts (vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int a
 // test.
 // returns the number of pointers filled in
 // ??? does this always return the world?
-
-//===================================================================
 
 //
 // functions that interact with everything apropriate
@@ -10664,8 +10647,6 @@ int SV_AreaEdicts (vec3_t mins, vec3_t maxs, edict_t **list,
 	return area_count;
 }
 
-//===========================================================================
-
 /*
 =============
 SV_PointContents
@@ -10729,8 +10710,6 @@ int SV_HullForEntity (edict_t *ent)
 
 	return CM_HeadnodeForBox (ent->mins, ent->maxs);
 }
-
-//===========================================================================
 
 /*
 ====================
@@ -22953,8 +22932,6 @@ void AI_SetSightClient (void)
 	}
 }
 
-//============================================================================
-
 /*
 =============
 ai_move
@@ -23192,8 +23169,6 @@ bool infront (edict_t* self, edict_t* other)
 		return true;
 	return false;
 }
-
-//============================================================================
 
 void HuntTarget (edict_t* self)
 {
@@ -23447,8 +23422,6 @@ bool FindTarget (edict_t* self)
 	return true;
 }
 
-//=============================================================================
-
 /*
 ============
 FacingIdeal
@@ -23464,8 +23437,6 @@ bool FacingIdeal(edict_t* self)
 		return false;
 	return true;
 }
-
-//=============================================================================
 
 bool M_CheckAttack (edict_t* self)
 {
@@ -25002,10 +24973,6 @@ void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_
 		}
 	}
 }
-/* ============ end source: game/g_combat.c ============ */
-/* ============ begin source: game/g_func.c ============ */
-
-/* already inlined above: game/g_local.h */
 
 /*
 =========================================================
@@ -25561,8 +25528,6 @@ void SP_func_plat (edict_t *ent)
 	ent->moveinfo.sound_middle = SV_SoundIndex ("plats/pt1_mid.wav");
 	ent->moveinfo.sound_end = SV_SoundIndex ("plats/pt1_end.wav");
 }
-
-//====================================================================
 
 /*QUAKED func_rotating (0 .5 .8) ? START_ON REVERSE X_AXIS Y_AXIS TOUCH_PAIN STOP ANIMATED ANIMATED_FAST
 You need to have an origin brush as part of this entity.  The center of that brush will be
@@ -27029,11 +26994,6 @@ void SP_func_killbox (edict_t *ent)
 	ent->svflags = SVF_NOCLIENT;
 }
 
-/* ============ end source: game/g_func.c ============ */
-/* ============ begin source: game/g_items.c ============ */
-
-/* already inlined above: game/g_local.h */
-
 bool	Pickup_Weapon (edict_t *ent, edict_t* other);
 void		Use_Weapon (edict_t *ent, gitem_t *inv);
 void		Drop_Weapon (edict_t *ent, gitem_t *inv);
@@ -27059,8 +27019,6 @@ gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 
 void Use_Quad (edict_t *ent, gitem_t *item);
 static int	quad_drop_timeout_hack;
-
-//======================================================================
 
 /*
 ===============
@@ -27120,8 +27078,6 @@ gitem_t	*FindItem (char *pickup_name)
 
 	return NULL;
 }
-
-//======================================================================
 
 void DoRespawn (edict_t *ent)
 {
@@ -27339,8 +27295,6 @@ void Use_Breather (edict_t *ent, gitem_t *item)
 //	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
-//======================================================================
-
 void Use_Envirosuit (edict_t *ent, gitem_t *item)
 {
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
@@ -27354,8 +27308,6 @@ void Use_Envirosuit (edict_t *ent, gitem_t *item)
 //	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
-//======================================================================
-
 void	Use_Invulnerability (edict_t *ent, gitem_t *item)
 {
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
@@ -27368,8 +27320,6 @@ void	Use_Invulnerability (edict_t *ent, gitem_t *item)
 
 	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/protect.wav"), 1, ATTN_NORM, 0);
 }
-
-//======================================================================
 
 void	Use_Silencer (edict_t *ent, gitem_t *item)
 {
@@ -27509,8 +27459,6 @@ bool Pickup_Health (edict_t *ent, edict_t* other)
 	return true;
 }
 
-//======================================================================
-
 int ArmorIndex (edict_t *ent)
 {
 	if (!ent->client)
@@ -27603,8 +27551,6 @@ bool Pickup_Armor (edict_t *ent, edict_t* other)
 
 	return true;
 }
-
-//======================================================================
 
 int PowerArmorType (edict_t *ent)
 {
@@ -27803,8 +27749,6 @@ static void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
 	SV_LinkEdict (ent);
 }
 
-//======================================================================
-
 /*
 ================
 droptofloor
@@ -27970,8 +27914,6 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 	if (ent->model)
 		SV_ModelIndex (ent->model);
 }
-
-//======================================================================
 
 static gitem_t itemlist[] = {
 	{},	// leave index 0 alone
@@ -30779,8 +30721,6 @@ void SP_func_clock (edict_t* self)
 		self->nextthink = level.time + 1;
 }
 
-//=================================================================================
-
 static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
@@ -30874,11 +30814,6 @@ void SP_misc_teleporter_dest (edict_t *ent)
 	VectorSet (ent->maxs, 32, 32, -16);
 	SV_LinkEdict (ent);
 }
-
-/* ============ end source: game/g_misc.c ============ */
-/* ============ begin source: game/g_monster.c ============ */
-
-/* already inlined above: game/g_local.h */
 
 //
 // monster weapons
@@ -31538,12 +31473,6 @@ void swimmonster_start (edict_t* self)
 	self->think = swimmonster_start_go;
 	monster_start (self);
 }
-/* ============ end source: game/g_monster.c ============ */
-/* ============ begin source: game/g_phys.c ============ */
-
-// g_phys.c
-
-/* already inlined above: game/g_local.h */
 
 /*
 
@@ -34529,10 +34458,6 @@ void SP_target_earthquake (edict_t* self)
 
 	self->noise_index = SV_SoundIndex ("world/quake.wav");
 }
-/* ============ end source: game/g_target.c ============ */
-/* ============ begin source: game/g_trigger.c ============ */
-
-/* already inlined above: game/g_local.h */
 
 void InitTrigger (edict_t* self)
 {
@@ -35068,12 +34993,7 @@ void SP_trigger_monsterjump (edict_t* self)
 	self->movedir[2] = st.height;
 }
 
-/* ============ end source: game/g_trigger.c ============ */
-/* ============ begin source: game/g_turret.c ============ */
-
 // g_turret.c
-
-/* already inlined above: game/g_local.h */
 
 void AnglesNormalize(vec3_t vec)
 {
@@ -35469,12 +35389,8 @@ void SP_turret_driver (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-/* ============ end source: game/g_turret.c ============ */
-/* ============ begin source: game/g_utils.c ============ */
 
 // g_utils.c -- misc utility functions for game module
-
-/* already inlined above: game/g_local.h */
 
 void G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
@@ -35970,10 +35886,6 @@ bool KillBox (edict_t *ent)
 
 	return true;		// all clear
 }
-/* ============ end source: game/g_utils.c ============ */
-/* ============ begin source: game/g_weapon.c ============ */
-
-/* already inlined above: game/g_local.h */
 
 /*
 =================
@@ -37388,8 +37300,6 @@ void SP_target_actor (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-/* ============ end source: game/m_actor.c ============ */
-/* ============ begin source: game/m_berserk.c ============ */
 
 /*
 ==============================================================================
@@ -37399,15 +37309,9 @@ BERSERK
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_berserk.h ============ */
-
 // G:\quake2\baseq2\models/monsters/berserk
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_berserk.h ============ */
 
 static int sound_pain;
 static int sound_die;
@@ -37785,8 +37689,6 @@ void SP_monster_berserk (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_berserk.c ============ */
-/* ============ begin source: game/m_boss2.c ============ */
 
 /*
 ==============================================================================
@@ -37796,15 +37698,9 @@ boss2
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_boss2.h ============ */
-
 // G:\quake2\baseq2\models/monsters/boss2
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_boss2.h ============ */
 
 void BossExplode (edict_t* self);
 
@@ -38418,8 +38314,6 @@ void SP_monster_boss2 (edict_t* self)
 
 	flymonster_start (self);
 }
-/* ============ end source: game/m_boss2.c ============ */
-/* ============ begin source: game/m_boss3.c ============ */
 
 /*
 ==============================================================================
@@ -38429,15 +38323,9 @@ boss3
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_boss32.h ============ */
-
 // G:\quake2\baseq2\models/monsters/boss3/rider
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_boss32.h ============ */
 
 static void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
@@ -39142,8 +39030,6 @@ void SP_monster_jorg (edict_t* self)
 
 	walkmonster_start(self);
 }
-/* ============ end source: game/m_boss31.c ============ */
-/* ============ begin source: game/m_boss32.c ============ */
 
 /*
 ==============================================================================
@@ -39152,9 +39038,6 @@ Makron -- Final Boss
 
 ==============================================================================
 */
-
-/* already inlined above: game/g_local.h */
-/* already inlined above: game/m_boss32.h */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -40011,8 +39894,6 @@ void MakronToss (edict_t* self)
 	ent->target = self->target;
 	VectorCopy (self->s.origin, ent->s.origin);
 }
-/* ============ end source: game/m_boss32.c ============ */
-/* ============ begin source: game/m_brain.c ============ */
 
 /*
 ==============================================================================
@@ -40022,15 +39903,9 @@ brain
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_brain.h ============ */
-
 // G:\quake2\baseq2\models/monsters/brain
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_brain.h ============ */
 
 static int	sound_chest_open;
 static int	sound_tentacles_extend;
@@ -40599,8 +40474,6 @@ void SP_monster_brain (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_brain.c ============ */
-/* ============ begin source: game/m_chick.c ============ */
 
 /*
 ==============================================================================
@@ -40610,15 +40483,11 @@ chick
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_chick.h ============ */
-
 // G:\quake2\baseq2\models/monsters/bitch
 
 // This file generated by qdata - Do NOT Modify
 
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_chick.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -41256,8 +41125,6 @@ void SP_monster_chick (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_chick.c ============ */
-/* ============ begin source: game/m_flipper.c ============ */
 
 /*
 ==============================================================================
@@ -41267,15 +41134,9 @@ FLIPPER
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_flipper.h ============ */
-
 // G:\quake2\baseq2\models/monsters/flipper
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_flipper.h ============ */
 
 static int	sound_chomp;
 static int	sound_attack;
@@ -41644,8 +41505,6 @@ void SP_monster_flipper (edict_t* self)
 
 	swimmonster_start (self);
 }
-/* ============ end source: game/m_flipper.c ============ */
-/* ============ begin source: game/m_float.c ============ */
 
 /*
 ==============================================================================
@@ -41655,15 +41514,9 @@ floater
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_float.h ============ */
-
 // G:\quake2\baseq2\models/monsters/float
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_float.h ============ */
 
 static int	sound_attack2;
 static int	sound_attack3;
@@ -42286,8 +42139,6 @@ void SP_monster_floater (edict_t* self)
 
 	flymonster_start (self);
 }
-/* ============ end source: game/m_float.c ============ */
-/* ============ begin source: game/m_flyer.c ============ */
 
 /*
 ==============================================================================
@@ -42297,12 +42148,7 @@ flyer
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_flyer.h ============ */
-
 // G:\quake2\baseq2\models/monsters/flyer
-
-// This file generated by ModelGen - Do NOT Modify
 
 #define ACTION_nothing			0
 #define ACTION_attack1			1
@@ -42311,7 +42157,6 @@ flyer
 #define ACTION_walk				4
 
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_flyer.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -42894,8 +42739,6 @@ void SP_monster_flyer (edict_t* self)
 
 	flymonster_start (self);
 }
-/* ============ end source: game/m_flyer.c ============ */
-/* ============ begin source: game/m_gladiator.c ============ */
 
 /*
 ==============================================================================
@@ -42905,15 +42748,9 @@ GLADIATOR
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_gladiator.h ============ */
-
 // G:\quake2\baseq2\models/monsters/gladiatr
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_gladiator.h ============ */
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -43257,8 +43094,6 @@ void SP_monster_gladiator (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_gladiator.c ============ */
-/* ============ begin source: game/m_gunner.c ============ */
 
 /*
 ==============================================================================
@@ -43268,16 +43103,10 @@ GUNNER
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_gunner.h ============ */
-
 // G:\quake2\baseq2\models/gunner
-
-// This file generated by ModelGen - Do NOT Modify
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.150000
-/* ============ end inlined header: game/m_gunner.h ============ */
 
 static int	sound_pain;
 static int	sound_pain2;
@@ -43861,8 +43690,6 @@ void SP_monster_gunner (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_gunner.c ============ */
-/* ============ begin source: game/m_hover.c ============ */
 
 /*
 ==============================================================================
@@ -43872,16 +43699,10 @@ hover
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_hover.h ============ */
-
 // G:\quake2\baseq2\models/monsters/hover
-
-// This file generated by ModelGen - Do NOT Modify
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_hover.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -44461,8 +44282,6 @@ void SP_monster_hover (edict_t* self)
 
 	flymonster_start (self);
 }
-/* ============ end source: game/m_hover.c ============ */
-/* ============ begin source: game/m_infantry.c ============ */
 
 /*
 ==============================================================================
@@ -44472,15 +44291,9 @@ INFANTRY
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_infantry.h ============ */
-
 // G:\quake2\baseq2\models/monsters/infantry
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_infantry.h ============ */
 
 void InfantryMachineGun (edict_t* self);
 
@@ -45044,8 +44857,6 @@ void SP_monster_infantry (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_infantry.c ============ */
-/* ============ begin source: game/m_insane.c ============ */
 
 /*
 ==============================================================================
@@ -45055,15 +44866,9 @@ insane
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_insane.h ============ */
-
 // G:\quake2\baseq2\models/monsters/insane
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_insane.h ============ */
 
 static int	sound_fist;
 static int	sound_shake;
@@ -45715,8 +45520,6 @@ void SP_misc_insane (edict_t* self)
 		self->s.skinnum = rand()%3;
 	}
 }
-/* ============ end source: game/m_insane.c ============ */
-/* ============ begin source: game/m_medic.c ============ */
 
 /*
 ==============================================================================
@@ -45726,15 +45529,9 @@ MEDIC
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_medic.h ============ */
-
 // G:\quake2\baseq2\models/monsters/medic
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_medic.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -46458,12 +46255,8 @@ void SP_monster_medic (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_medic.c ============ */
-/* ============ begin source: game/m_move.c ============ */
 
 // m_move.c -- monster movement
-
-/* already inlined above: game/g_local.h */
 
 #define	STEPSIZE	18
 
@@ -46734,8 +46527,6 @@ bool SV_movestep (edict_t *ent, vec3_t move, bool relink)
 	return true;
 }
 
-//============================================================================
-
 /*
 ===============
 M_ChangeYaw
@@ -46990,8 +46781,6 @@ bool M_walkmove (edict_t *ent, float yaw, float dist)
 
 	return SV_movestep(ent, move, true);
 }
-/* ============ end source: game/m_move.c ============ */
-/* ============ begin source: game/m_mutant.c ============ */
 
 /*
 ==============================================================================
@@ -47001,15 +46790,9 @@ mutant
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_mutant.h ============ */
-
 // G:\quake2\baseq2\models/monsters/mutant
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_mutant.h ============ */
 
 static int	sound_swing;
 static int	sound_hit;
@@ -47627,8 +47410,6 @@ void SP_monster_mutant (edict_t* self)
 	self->monsterinfo.scale = MODEL_SCALE;
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_mutant.c ============ */
-/* ============ begin source: game/m_parasite.c ============ */
 
 /*
 ==============================================================================
@@ -47638,15 +47419,9 @@ parasite
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_parasite.h ============ */
-
 // G:\quake2\baseq2\models/monsters/parasite
 
-// This file generated by ModelGen - Do NOT Modify
-
 #define MODEL_SCALE             1.000000
-/* ============ end inlined header: game/m_parasite.h ============ */
 
 static int	sound_pain1;
 static int	sound_pain2;
@@ -48146,8 +47921,6 @@ void SP_monster_parasite (edict_t* self)
 
 	walkmonster_start (self);
 }
-/* ============ end source: game/m_parasite.c ============ */
-/* ============ begin source: game/m_soldier.c ============ */
 
 /*
 ==============================================================================
@@ -48157,16 +47930,10 @@ SOLDIER
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_soldier.h ============ */
-
 // G:\quake2\baseq2\models/monsters/soldier
-
-// This file generated by ModelGen - Do NOT Modify
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.200000
-/* ============ end inlined header: game/m_soldier.h ============ */
 
 static int	sound_idle;
 static int	sound_sight1;
@@ -49284,8 +49051,6 @@ void SP_monster_soldier_ss (edict_t* self)
 	self->health = 40;
 	self->gib_health = -30;
 }
-/* ============ end source: game/m_soldier.c ============ */
-/* ============ begin source: game/m_supertank.c ============ */
 
 /*
 ==============================================================================
@@ -49295,16 +49060,10 @@ SUPERTANK
 ==============================================================================
 */
 
-/* already inlined above: game/g_local.h */
-/* ============ begin inlined header: game/m_supertank.h ============ */
-
 // G:\quake2\baseq2\models/monsters/boss1/backup
-
-// This file generated by ModelGen - Do NOT Modify
 
 #undef MODEL_SCALE
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_supertank.h ============ */
 
 bool visible (edict_t* self, edict_t* other);
 
@@ -49968,7 +49727,6 @@ void SP_monster_supertank (edict_t* self)
 }
 
 #define MODEL_SCALE		1.000000
-/* ============ end inlined header: game/m_tank.h ============ */
 
 void tank_refire_rocket (edict_t* self);
 void tank_doattack_rocket (edict_t* self);
@@ -50881,8 +50639,6 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 
 	SV_LinkEdict (self);
 }
-
-//=======================================================================
 
 /*
 ==============
@@ -54036,13 +53792,9 @@ void Weapon_BFG (edict_t *ent)
 
 */
 
-//===================================================================
-
 //
 // Whole model
 //
-
-//============================================================================
 
 void	Mod_ClearAll (void);
 model_t *Mod_ForName (char *name, bool crash);
@@ -57411,8 +57163,6 @@ void R_DrawSpriteModel (Entity *e)
 	glColor4f( 1, 1, 1, 1 );
 }
 
-//==================================================================================
-
 /*
 =============
 R_DrawNullModel
@@ -57568,10 +57318,6 @@ void R_PolyBlend (void)
 
 	glColor4f(1,1,1,1);
 }
-
-//=======================================================================
-
-//=======================================================================
 
 void MYgluPerspective( GLdouble fovy, GLdouble aspect,
 			 GLdouble zNear, GLdouble zFar )
@@ -59070,8 +58816,6 @@ void EmitWaterPolys (msurface_t *fa)
 		glEnd ();
 	}
 }
-
-//===================================================================
 
 vec3_t	skyclip[6] = {
 	{1,1,0},
