@@ -44,6 +44,8 @@ typedef struct {i64 x; i64 y;} v2i;
 
 #define procedure static
 #define global_variable static
+#define global_const static const
+#define local_persist static
 
 //
 // SECTION Context
@@ -70,7 +72,7 @@ typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
 
 // Platform is responsible for initialising this
-static struct {
+global_variable struct {
 	struct {Arena perm; Arena temp;} memory;
 
 	void* platform_data;
@@ -84,17 +86,17 @@ static struct {
 // SECTION Memory
 //
 
-static void copy_bytes(void* dest, void* src, i64 len) {
+procedure void copy_bytes(void* dest, void* src, i64 len) {
 	assert(len == 0 || (len > 0 && dest && src));
 	while (len--) {*(u8*)dest++ = *(u8*)src++;}
 }
 
-static void zero_memory(void* dest, i64 len) {
+procedure void zero_memory(void* dest, i64 len) {
 	assert(len == 0 || (len > 0 && dest));
 	while (len--) {*(u8*)dest++ = 0;}
 }
 
-static void* arena_alloc_bytes(Arena* arena, i64 size) {
+procedure void* arena_alloc_bytes(Arena* arena, i64 size) {
 	assert(arena->base && arena->size >= 0 && arena->used >= 0 && arena->temp_memory_count >= 0 && size >= 0);
 	assert(arena->size >= arena->used + size);
 	void* result = (u8*)arena->base + arena->used;
@@ -102,7 +104,7 @@ static void* arena_alloc_bytes(Arena* arena, i64 size) {
 	return result;
 }
 
-static void* arena_alloc_bytes_zeroed(Arena* arena, i64 size) {
+procedure void* arena_alloc_bytes_zeroed(Arena* arena, i64 size) {
 	void* result = arena_alloc_bytes(arena, size);
 	zero_memory(result, size);
 	return result;
@@ -114,7 +116,7 @@ typedef struct {
 	i64 temp_memory_count_when_started;
 } Arena_Temp_Memory;
 
-static Arena_Temp_Memory arena_temp_memory_begin(Arena* arena) {
+procedure Arena_Temp_Memory arena_temp_memory_begin(Arena* arena) {
 	assert(arena->base && arena->size >= 0 && arena->used >= 0 && arena->temp_memory_count >= 0);
 	Arena_Temp_Memory temp = {
 		.arena = arena,
@@ -125,7 +127,7 @@ static Arena_Temp_Memory arena_temp_memory_begin(Arena* arena) {
 	return temp;
 }
 
-static void arena_temp_memory_end(Arena_Temp_Memory* temp) {
+procedure void arena_temp_memory_end(Arena_Temp_Memory* temp) {
 	assert(temp->arena && temp->arena->base && temp->arena->size >= 0 && temp->arena->used >= 0);
 	assert(temp->arena->temp_memory_count == temp->temp_memory_count_when_started + 1);
 	assert(temp->arena->used >= temp->used_when_started);
@@ -136,7 +138,7 @@ static void arena_temp_memory_end(Arena_Temp_Memory* temp) {
 
 #define temp_memory_block(__arena__) for (Arena_Temp_Memory __tempororary_memory__ = arena_temp_memory_begin(__arena__); __tempororary_memory__.arena; arena_temp_memory_end(&__tempororary_memory__))
 
-static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
+procedure void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 	assert(bytes_to_keep >= 0 && bytes_to_keep <= temp->arena->used - temp->used_when_started);
 	Arena* arena = temp->arena;
 	arena_temp_memory_end(temp);
@@ -155,7 +157,7 @@ static void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep) {
 
 typedef struct {char buf[1024]; i64 len;} Fixed_String;
 
-static String string_from_fixed_string(Fixed_String* fstr) {
+procedure String string_from_fixed_string(Fixed_String* fstr) {
 	String result = {fstr->buf, fstr->len};
 	return result;
 }
@@ -173,7 +175,7 @@ typedef struct {String* ptr; i64 len;} String_Slice;
 typedef struct {char** ptr; i64 len;} Cstring_Slice;
 #define CSTRS(...) (Cstring_Slice){(char*[]){__VA_ARGS__}, carray_count(((char*[]){__VA_ARGS__}))}
 
-static String string_from_cstring(char* cstring) {
+procedure String string_from_cstring(char* cstring) {
 	String result = {};
 	if (cstring) {
 		i64 len = 0;
@@ -183,7 +185,7 @@ static String string_from_cstring(char* cstring) {
 	return result;
 }
 
-static String copy_string(Arena* arena, String text) {
+procedure String copy_string(Arena* arena, String text) {
 	i64 len_with_null = text.len + 1;
 	char* dest = arena_alloc_bytes(arena, len_with_null);
 	copy_bytes(dest, text.ptr, text.len);
@@ -192,7 +194,7 @@ static String copy_string(Arena* arena, String text) {
 	return result;
 }
 
-static bool streq(String str1, String str2) {
+procedure bool streq(String str1, String str2) {
 	bool result = false;
 	if (str1.len == str2.len) {
 		result = true;
@@ -206,7 +208,7 @@ static bool streq(String str1, String str2) {
 	return result;
 }
 
-static bool string_ends_with(String text, String ending) {
+procedure bool string_ends_with(String text, String ending) {
 	bool result = false;
 	if (text.len >= ending.len) {
 		String text_ending = (String){text.ptr + text.len - ending.len, ending.len};
@@ -217,31 +219,31 @@ static bool string_ends_with(String text, String ending) {
 
 typedef struct {String str; i64 max_len;} String_Builder;
 
-static String_Builder string_builder_begin(Arena* arena, i64 max_len) {
+procedure String_Builder string_builder_begin(Arena* arena, i64 max_len) {
 	void* base = arena_alloc_bytes(arena, max_len);
 	String_Builder builder = {.str = (String){.ptr = base, .len = 0}, .max_len = max_len};
 	return builder;
 }
 
-static void string_builder_write_string(String_Builder* builder, String text) {
+procedure void string_builder_write_string(String_Builder* builder, String text) {
 	assert(text.len >= 0 && builder->max_len >= 0 && builder->str.len >= 0);
 	assert(builder->str.len + text.len <= builder->max_len);
 	copy_bytes((u8*)builder->str.ptr + builder->str.len, text.ptr, text.len);
 	builder->str.len += text.len;
 }
 
-static void string_builder_write_char(String_Builder* builder, char ch) {
+procedure void string_builder_write_char(String_Builder* builder, char ch) {
 	string_builder_write_string(builder, (String){&ch, 1});
 }
 
-static String string_builder_end(String_Builder* builder) {
+procedure String string_builder_end(String_Builder* builder) {
 	String result = builder->str;
 	string_builder_write_char(builder, '\0');
 	*builder = (String_Builder){};
 	return result;
 }
 
-static String concat(Arena* arena, String_Slice strings) {
+procedure String concat(Arena* arena, String_Slice strings) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
 	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
@@ -255,7 +257,7 @@ static String concat(Arena* arena, String_Slice strings) {
 	return result;
 }
 
-static String int_to_string(Arena* arena, i64 val) {
+procedure String int_to_string(Arena* arena, i64 val) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
 	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
@@ -298,7 +300,7 @@ static String int_to_string(Arena* arena, i64 val) {
 // File Contents (find corresponding file info to locate the file contents here)
 // File infos (see header to get offset to this)
 
-static const u32 id_pack_header_magic = (('K'<<24)+('C'<<16)+('A'<<8)+'P');
+global_const u32 id_pack_header_magic = (('K'<<24)+('C'<<16)+('A'<<8)+'P');
 typedef struct {
 	u32 magic;
 	i32 info_section_offset;
@@ -372,7 +374,7 @@ typedef enum {
 } Partial_Key_Code;
 typedef struct {Fixed_String values[Key_Code_Count];} Key_Bindings;
 
-static String Key_Code_Strings[Key_Code_Count] = {
+procedure String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Tab] = STR("Tab"),
 	[Key_Code_Enter] = STR("Enter"),
 	[Key_Code_Escape] = STR("Escape"),
@@ -520,7 +522,7 @@ static String Key_Code_Strings[Key_Code_Count] = {
 	[Key_Code_Pause] = STR("Pause"),
 };
 
-static u8 get_key_code_number(String string) {
+procedure u8 get_key_code_number(String string) {
 	u8 result = 0;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (streq(string, Key_Code_Strings[key_code])) {
@@ -531,7 +533,7 @@ static u8 get_key_code_number(String string) {
 	return result;
 }
 
-static void set_key_binding(Key_Bindings* key_bindings, u8 key_code, String binding) {
+procedure void set_key_binding(Key_Bindings* key_bindings, u8 key_code, String binding) {
 	Fixed_String* fstr = key_bindings->values + key_code;
 	assert((i64)carray_count(fstr->buf) > binding.len);
 	fstr->len = binding.len;
@@ -591,7 +593,7 @@ typedef struct {
 } netchan_t;
 
 // Persistant through an arbitrary number of server connections
-static struct {
+global_variable struct {
 	Client_State state;
 
 	enum {
@@ -624,7 +626,7 @@ global_variable Console_Log temp_global_console_log;
 
 // index 0 is most recent, 1 is second most recent, etc.
 typedef struct {String text; float timestamp;} Log_Line;
-static Log_Line get_log_line(i64 recency_index) {
+procedure Log_Line get_log_line(i64 recency_index) {
 	assert(recency_index >= 0 && recency_index < temp_global_console_log.cap);
 	i64 actual_index = temp_global_console_log.head - 1 - recency_index;
 	if (actual_index < 0) {
@@ -636,7 +638,7 @@ static Log_Line get_log_line(i64 recency_index) {
 	return result;
 }
 
-static void add_line_to_console_log(String line) {
+procedure void add_line_to_console_log(String line) {
 	context.debug_log(STR("CONSOLE"), line);
 
 	Console_Line* console_line = temp_global_console_log.ptr + temp_global_console_log.head;
@@ -664,12 +666,12 @@ typedef struct String_Command_Data {
 
 typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
 
-static void builtin_string_command_quit(void* ctx) {
+procedure void builtin_string_command_quit(void* ctx) {
 	UNUSED(ctx);
 	context.exit_process();
 }
 
-static void builtin_string_command_write_config(void* ctx) {
+procedure void builtin_string_command_write_config(void* ctx) {
 	Client_State* client_state = ((String_Command_Context*)ctx)->data.client_state;
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 
@@ -695,14 +697,14 @@ static void builtin_string_command_write_config(void* ctx) {
 	}}
 }
 
-static void builtin_string_command_cmdlist(void* ctx) {
+procedure void builtin_string_command_cmdlist(void* ctx) {
 	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
 	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
 
-static void builtin_string_command_unbindall(void* ctx) {
+procedure void builtin_string_command_unbindall(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 	for (Fixed_String* fstr = key_bindings->values; fstr - key_bindings->values < Key_Code_Count; fstr++) {
 		fstr->len = 0;
@@ -720,7 +722,7 @@ global_variable int cmd_argc;
 global_variable char* cmd_argv[MAX_STRING_TOKENS];
 global_variable char cmd_args[MAX_STRING_CHARS];
 
-static void builtin_string_command_unbind(void* ctx) {
+procedure void builtin_string_command_unbind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 
 	if (cmd_argc != 2) {
@@ -753,7 +755,7 @@ typedef struct Tagged_Malloc_Entry {
 
 global_variable Tagged_Malloc_Entry tagged_malloc_head;
 
-static void tml_free(void* ptr) {
+procedure void tml_free(void* ptr) {
 	Tagged_Malloc_Entry* entry = ((Tagged_Malloc_Entry*)ptr) - 1;
 	assert(entry->magic == TAGGED_MALLOC_MAGIC);
 
@@ -763,7 +765,7 @@ static void tml_free(void* ptr) {
 	free(entry);
 }
 
-static void tml_free_all(i16 tag) {
+procedure void tml_free_all(i16 tag) {
 	for (Tagged_Malloc_Entry* entry = tagged_malloc_head.next; entry != &tagged_malloc_head;) {
 		Tagged_Malloc_Entry* next = entry->next;
 		if (entry->tag == tag) {
@@ -773,7 +775,7 @@ static void tml_free_all(i16 tag) {
 	}
 }
 
-static void* tml_alloc_with_tag(i32 size, i32 tag) {
+procedure void* tml_alloc_with_tag(i32 size, i32 tag) {
 	size = size + sizeof(Tagged_Malloc_Entry);
 	Tagged_Malloc_Entry* entry = malloc(size);
 	assert(entry);
@@ -790,11 +792,11 @@ static void* tml_alloc_with_tag(i32 size, i32 tag) {
 	return result;
 }
 
-static void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
+procedure void* tml_alloc(i32 size) {return tml_alloc_with_tag(size, 0);}
 
-static short LittleShort(short l) {return l;}
-static int LittleLong(int l) {return l;}
-static float LittleFloat(float l) {return l;}
+procedure short LittleShort(short l) {return l;}
+procedure int LittleLong(int l) {return l;}
+procedure float LittleFloat(float l) {return l;}
 
 // angle indexes
 #define	PITCH				0		// up / down
@@ -809,17 +811,15 @@ typedef	int	fixed4_t;
 typedef	int	fixed8_t;
 typedef	int	fixed16_t;
 
-#ifndef M_PI
-#define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
-#endif
+global_const float PI = 3.14159265358979323846;	// matches value in gcc v2 math.h
 
-vec3_t vec3_origin = {0,0,0};
+global_variable vec3_t vec3_origin = {0,0,0};
 
 #define	nanmask (255<<23)
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
 #define Q_ftol(f) (long)(f)
-#define DEG2RAD(a) ((a * M_PI ) / 180.0F)
+#define DEG2RAD(a) ((a * PI ) / 180.0F)
 
 #define DotProduct(x, y)		(x[0]*y[0] + x[1]*y[1] + x[2]*y[2])
 #define VectorSubtract(a, b, c)	(c[0]=a[0]-b[0], c[1]=a[1]-b[1], c[2]=a[2]-b[2])
@@ -829,13 +829,13 @@ vec3_t vec3_origin = {0,0,0};
 #define VectorNegate(a, b)		(b[0]=-a[0], b[1]=-a[1], b[2]=-a[2])
 #define VectorSet(v, x, y, z)	(v[0]=(x), v[1]=(y), v[2]=(z))
 
-static void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc) {
+procedure void VectorMA(vec3_t veca, float scale, vec3_t vecb, vec3_t vecc) {
 	vecc[0] = veca[0] + scale*vecb[0];
 	vecc[1] = veca[1] + scale*vecb[1];
 	vecc[2] = veca[2] + scale*vecb[2];
 }
 
-static void AddPointToBounds(vec3_t v, vec3_t mins, vec3_t maxs) {
+procedure void AddPointToBounds(vec3_t v, vec3_t mins, vec3_t maxs) {
 	for (int i = 0; i < 3; i++) {
 		vec_t val = v[i];
 		if (val < mins[i]) {
@@ -847,14 +847,14 @@ static void AddPointToBounds(vec3_t v, vec3_t mins, vec3_t maxs) {
 	}
 }
 
-static int VectorCompare(vec3_t v1, vec3_t v2) {
+procedure int VectorCompare(vec3_t v1, vec3_t v2) {
 	if (v1[0] != v2[0] || v1[1] != v2[1] || v1[2] != v2[2]) {
 		return 0;
 	}
 	return 1;
 }
 
-static vec_t VectorLength(vec3_t v) {
+procedure vec_t VectorLength(vec3_t v) {
 	vec_t length_squared = 0;
 	for (int i = 0; i < 3; i++) {
 		length_squared += v[i]*v[i];
@@ -863,13 +863,13 @@ static vec_t VectorLength(vec3_t v) {
 	return length;
 }
 
-static void CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross) {
+procedure void CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross) {
 	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
 	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
-static vec_t VectorNormalize(vec3_t v) {
+procedure vec_t VectorNormalize(vec3_t v) {
 	float length_squared = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
 	float length = sqrt(length_squared);
 	if (length) {
@@ -881,13 +881,13 @@ static vec_t VectorNormalize(vec3_t v) {
 	return length;
 }
 
-static void VectorScale(vec3_t in, vec_t scale, vec3_t out) {
+procedure void VectorScale(vec3_t in, vec_t scale, vec3_t out) {
 	out[0] = in[0] * scale;
 	out[1] = in[1] * scale;
 	out[2] = in[2] * scale;
 }
 
-static void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]) {
+procedure void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]) {
 	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] + in1[0][2] * in2[2][0];
 	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] + in1[0][2] * in2[2][1];
 	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] + in1[0][2] * in2[2][2];
@@ -899,7 +899,7 @@ static void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3])
 	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] + in1[2][2] * in2[2][2];
 }
 
-static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up) {
+procedure void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up) {
 	float yaw = DEG2RAD(angles[YAW]);
 	float sy = sin(yaw);
 	float cy = cos(yaw);
@@ -931,12 +931,12 @@ static void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 	}
 }
 
-static float anglemod(float a) {
+procedure float anglemod(float a) {
 	a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
 	return a;
 }
 
-static float LerpAngle (float a2, float a1, float frac) {
+procedure float LerpAngle (float a2, float a1, float frac) {
 	if (a1 - a2 > 180) {
 		a1 -= 360;
 	}
@@ -946,7 +946,7 @@ static float LerpAngle (float a2, float a1, float frac) {
 	return a2 + frac * (a1 - a2);
 }
 
-static void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal) {
+procedure void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal) {
 	float inv_denom = 1.0F / DotProduct( normal, normal );
 	float d = DotProduct( normal, p ) * inv_denom;
 
@@ -961,7 +961,7 @@ static void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal)
 }
 
 // assumes "src" is normalized
-static void PerpendicularVector(vec3_t dst, const vec3_t src) {
+procedure void PerpendicularVector(vec3_t dst, const vec3_t src) {
 
 	// find the smallest magnitude axially aligned vector
 	int	pos = 0;
@@ -981,7 +981,7 @@ static void PerpendicularVector(vec3_t dst, const vec3_t src) {
 	VectorNormalize(dst);
 }
 
-static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees) {
+procedure void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees) {
 	vec3_t vf = {dir[0], dir[1], dir[2]};
 
 	vec3_t vr;
@@ -1034,24 +1034,24 @@ static void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t p
 	}
 }
 
-static float frand() {
+procedure float frand() {
 	return (rand()&32767)* (1.0/32767);
 }
 
-static float crand() {
+procedure float crand() {
 	return (rand()&32767)* (2.0/32767) - 1;
 }
 
-static void SZ_Init(sizebuf_t* buf, u8* data, int length) {
+procedure void SZ_Init(sizebuf_t* buf, u8* data, int length) {
 	*buf = (sizebuf_t){.data = data, .maxsize = length};
 }
 
-static void SZ_Clear(sizebuf_t* buf) {
+procedure void SZ_Clear(sizebuf_t* buf) {
 	buf->cursize = 0;
 	buf->overflowed = false;
 }
 
-static void* SZ_GetSpace(sizebuf_t* buf, int length) {
+procedure void* SZ_GetSpace(sizebuf_t* buf, int length) {
 	if (buf->cursize + length > buf->maxsize) {
 		assert(buf->allowoverflow);
 		assert(length <= buf->maxsize);
@@ -1065,12 +1065,12 @@ static void* SZ_GetSpace(sizebuf_t* buf, int length) {
 	return data;
 }
 
-static void SZ_Write(sizebuf_t* buf, void* data, int length) {
+procedure void SZ_Write(sizebuf_t* buf, void* data, int length) {
 	void* dest = SZ_GetSpace(buf, length);
 	memcpy(dest, data, length);
 }
 
-static void SZ_Print(sizebuf_t* buf, char* data) {
+procedure void SZ_Print(sizebuf_t* buf, char* data) {
 	int len = strlen(data) + 1; // NOTE: include null terminator
 
 	if (buf->cursize) {
@@ -1084,14 +1084,14 @@ static void SZ_Print(sizebuf_t* buf, char* data) {
 	}
 }
 
-static char* CopyString(char *in) {
+procedure char * CopyString(char *in) {
 	int in_len = strlen(in);
 	char* out = tml_alloc(in_len + 1);
 	strcpy(out, in);
 	return out;
 }
 
-static int Q_strcasecmp(char *s1, char *s2) {
+procedure int Q_strcasecmp(char *s1, char *s2) {
 	int n = 99999;
 	int	c1 = 0;
 	int c2 = 0;
@@ -1118,18 +1118,18 @@ static int Q_strcasecmp(char *s1, char *s2) {
 	return 0;		// strings are equal
 }
 
-static int Q_stricmp(char *s1, char *s2) {return Q_strcasecmp(s1, s2);}
+procedure int Q_stricmp(char *s1, char *s2) {return Q_strcasecmp(s1, s2);}
 
 // vsprintf into a sized buffer; the destination is always null-terminated on overflow, which even MSVC's _vsnprintf doesn't guarantee
-static int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
+procedure int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 	int len = vsnprintf(str, size, format, ap);
 	str[size-1] = 0;
 	return len;
 }
 
 // does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
-static char* va(char *format, ...) {
-	static char string[1024];
+procedure char * va(char *format, ...) {
+	procedure char  string[1024];
 	va_list argptr;
 	va_start(argptr, format);
 	Q_vsnprintf(string, sizeof(string), format, argptr);
@@ -1252,7 +1252,7 @@ typedef struct usercmd_s {
 	u8	lightlevel;		// light level the player is standing on
 } usercmd_t;
 
-static vec3_t bytedirs[NUMVERTEXNORMALS] = {
+global_variable vec3_t bytedirs[NUMVERTEXNORMALS] = {
 	{-0.525731, 0.000000, 0.850651},
 	{-0.442863, 0.238856, 0.864188},
 	{-0.295242, 0.000000, 0.955423},
@@ -1417,25 +1417,25 @@ static vec3_t bytedirs[NUMVERTEXNORMALS] = {
 	{-0.688191, -0.587785, -0.425325},
 };
 
-static void MSG_WriteChar (sizebuf_t* sb, int c) {
+procedure void MSG_WriteChar (sizebuf_t* sb, int c) {
 	assert((c >= -128) && (c <= 127));
 	u8* buf = SZ_GetSpace(sb, 1);
 	buf[0] = c;
 }
 
-static void MSG_WriteByte (sizebuf_t* sb, int c) {
+procedure void MSG_WriteByte (sizebuf_t* sb, int c) {
 	assert(c >= 0 && c <= 255);
 	u8* buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
 }
 
-static void MSG_WriteShort(sizebuf_t* sb, int c) {
+procedure void MSG_WriteShort(sizebuf_t* sb, int c) {
 	u8* buf = SZ_GetSpace(sb, 2);
 	buf[0] = c & 0xff;
 	buf[1] = c >> 8;
 }
 
-static void MSG_WriteLong(sizebuf_t* sb, int c) {
+procedure void MSG_WriteLong(sizebuf_t* sb, int c) {
 	u8* buf = SZ_GetSpace(sb, 4);
 	buf[0] = c & 0xff;
 	buf[1] = (c>>8) & 0xff;
@@ -1443,7 +1443,7 @@ static void MSG_WriteLong(sizebuf_t* sb, int c) {
 	buf[3] = c>>24;
 }
 
-static void MSG_WriteFloat(sizebuf_t* sb, float f) {
+procedure void MSG_WriteFloat(sizebuf_t* sb, float f) {
 	union {
 		float	f;
 		int	l;
@@ -1453,7 +1453,7 @@ static void MSG_WriteFloat(sizebuf_t* sb, float f) {
 	SZ_Write(sb, &dat.l, 4);
 }
 
-static void MSG_WriteString(sizebuf_t* sb, char* s) {
+procedure void MSG_WriteString(sizebuf_t* sb, char* s) {
 	if (!s) {
 		SZ_Write (sb, "", 1);
 	} else {
@@ -1461,25 +1461,25 @@ static void MSG_WriteString(sizebuf_t* sb, char* s) {
 	}
 }
 
-static void MSG_WriteCoord(sizebuf_t* sb, float f) {
+procedure void MSG_WriteCoord(sizebuf_t* sb, float f) {
 	MSG_WriteShort(sb, (int)(f * 8));
 }
 
-static void MSG_WritePos(sizebuf_t* sb, vec3_t pos) {
+procedure void MSG_WritePos(sizebuf_t* sb, vec3_t pos) {
 	MSG_WriteShort(sb, (int)(pos[0] * 8));
 	MSG_WriteShort(sb, (int)(pos[1] * 8));
 	MSG_WriteShort(sb, (int)(pos[2] * 8));
 }
 
-static void MSG_WriteAngle(sizebuf_t* sb, float f) {
+procedure void MSG_WriteAngle(sizebuf_t* sb, float f) {
 	MSG_WriteByte(sb, (int)(f*256/360) & 255);
 }
 
-static void MSG_WriteAngle16(sizebuf_t* sb, float f) {
+procedure void MSG_WriteAngle16(sizebuf_t* sb, float f) {
 	MSG_WriteShort (sb, ANGLE2SHORT(f));
 }
 
-static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* cmd) {
+procedure void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* cmd) {
 
 	// send the movement message
 	int bits = 0;
@@ -1542,7 +1542,7 @@ static void MSG_WriteDeltaUsercmd (sizebuf_t* buf, usercmd_t* from, usercmd_t* c
 }
 
 // Writes part of a packetentities message. Can delta from either a baseline or a previous packet_entity
-static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, bool force, bool newentity) {
+procedure void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizebuf_t* msg, bool force, bool newentity) {
 	assert(to->number > 0 && to->number < MAX_EDICTS);
 
 	// send an update
@@ -1756,7 +1756,7 @@ static void MSG_WriteDeltaEntity(entity_state_t* from, entity_state_t* to, sizeb
 	}
 }
 
-static void MSG_WriteDir(sizebuf_t* sb, vec3_t dir) {
+procedure void MSG_WriteDir(sizebuf_t* sb, vec3_t dir) {
 	if (!dir) {
 		MSG_WriteByte(sb, 0);
 		return;
@@ -1774,12 +1774,12 @@ static void MSG_WriteDir(sizebuf_t* sb, vec3_t dir) {
 	MSG_WriteByte (sb, best);
 }
 
-static void MSG_BeginReading(sizebuf_t* msg) {
+procedure void MSG_BeginReading(sizebuf_t* msg) {
 	msg->readcount = 0;
 }
 
 // returns -1 if no more characters are available
-static int MSG_ReadChar(sizebuf_t* msg_read) {
+procedure int MSG_ReadChar(sizebuf_t* msg_read) {
 	int c = -1;
 	if (msg_read->readcount + 1 <= msg_read->cursize) {
 		c = (signed char)msg_read->data[msg_read->readcount];
@@ -1788,7 +1788,7 @@ static int MSG_ReadChar(sizebuf_t* msg_read) {
 	return c;
 }
 
-static int MSG_ReadByte(sizebuf_t* msg_read) {
+procedure int MSG_ReadByte(sizebuf_t* msg_read) {
 	int	c = -1;
 	if (msg_read->readcount + 1 <= msg_read->cursize) {
 		c = (unsigned char)msg_read->data[msg_read->readcount];
@@ -1797,7 +1797,7 @@ static int MSG_ReadByte(sizebuf_t* msg_read) {
 	return c;
 }
 
-static int MSG_ReadShort (sizebuf_t* msg_read) {
+procedure int MSG_ReadShort (sizebuf_t* msg_read) {
 	int	c = - 1;
 	if (msg_read->readcount+2 <= msg_read->cursize) {
 		c = (short)(msg_read->data[msg_read->readcount] + (msg_read->data[msg_read->readcount+1]<<8));
@@ -1806,7 +1806,7 @@ static int MSG_ReadShort (sizebuf_t* msg_read) {
 	return c;
 }
 
-static int MSG_ReadLong(sizebuf_t* msg_read) {
+procedure int MSG_ReadLong(sizebuf_t* msg_read) {
 	int	c = -1;
 	if (msg_read->readcount + 4 <= msg_read->cursize) {
 		c = msg_read->data[msg_read->readcount]
@@ -1818,8 +1818,8 @@ static int MSG_ReadLong(sizebuf_t* msg_read) {
 	return c;
 }
 
-static char* MSG_ReadString(sizebuf_t* msg_read) {
-	static char	string[2048];
+procedure char * MSG_ReadString(sizebuf_t* msg_read) {
+	procedure char 	string[2048];
 
 	int l = 0;
 	do {
@@ -1835,25 +1835,25 @@ static char* MSG_ReadString(sizebuf_t* msg_read) {
 	return string;
 }
 
-static float MSG_ReadCoord(sizebuf_t* msg_read) {
+procedure float MSG_ReadCoord(sizebuf_t* msg_read) {
 	return MSG_ReadShort(msg_read) * (1.0/8);
 }
 
-static void MSG_ReadPos(sizebuf_t* msg_read, vec3_t pos) {
+procedure void MSG_ReadPos(sizebuf_t* msg_read, vec3_t pos) {
 	pos[0] = MSG_ReadShort(msg_read) * (1.0/8);
 	pos[1] = MSG_ReadShort(msg_read) * (1.0/8);
 	pos[2] = MSG_ReadShort(msg_read) * (1.0/8);
 }
 
-static float MSG_ReadAngle(sizebuf_t* msg_read) {
+procedure float MSG_ReadAngle(sizebuf_t* msg_read) {
 	return MSG_ReadChar(msg_read) * (360.0/256);
 }
 
-static float MSG_ReadAngle16 (sizebuf_t* msg_read) {
+procedure float MSG_ReadAngle16 (sizebuf_t* msg_read) {
 	return SHORT2ANGLE(MSG_ReadShort(msg_read));
 }
 
-static void MSG_ReadDeltaUsercmd(sizebuf_t* msg_read, usercmd_t* from, usercmd_t* move) {
+procedure void MSG_ReadDeltaUsercmd(sizebuf_t* msg_read, usercmd_t* from, usercmd_t* move) {
 	memcpy (move, from, sizeof(*move));
 	int bits = MSG_ReadByte (msg_read);
 
@@ -1893,7 +1893,7 @@ static void MSG_ReadDeltaUsercmd(sizebuf_t* msg_read, usercmd_t* from, usercmd_t
 	move->lightlevel = MSG_ReadByte(msg_read);
 }
 
-static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
+procedure void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 	int b = MSG_ReadByte(sb);
 	assert(b < NUMVERTEXNORMALS);
 	VectorCopy(bytedirs[b], dir);
@@ -1908,15 +1908,15 @@ static void MSG_ReadDir(sizebuf_t* sb, vec3_t dir) {
 
 global_variable int curtime;		// time returned by last Sys_Milliseconds
 
-static int Sys_Milliseconds(void);
+procedure int Sys_Milliseconds(void);
 
 // note: this can't be called from another DLL, due to MS libc issues
-static int FS_FOpenFile(char* filename, FILE** file);
+procedure int FS_FOpenFile(char* filename, FILE** file);
 
 // a null buffer will just return the file length without loading a -1 length is not present
-static int FS_LoadFile(char* path, void** buffer);
+procedure int FS_LoadFile(char* path, void** buffer);
 
-static void FS_FreeFile(void* buffer);
+procedure void FS_FreeFile(void* buffer);
 
 sizebuf_t	net_message;
 u8		net_message_buffer[MAX_MSGLEN];
@@ -1938,7 +1938,7 @@ bool Netchan_CanReliable (netchan_t *chan);
 
 global_variable char com_token[MAX_TOKEN_CHARS];
 
-static void Com_sprintf(char *dest, int size, char *fmt, ...) {
+procedure void Com_sprintf(char *dest, int size, char *fmt, ...) {
 	char bigbuffer[0x10000] = {};
 
 	va_list argptr;
@@ -1952,7 +1952,7 @@ static void Com_sprintf(char *dest, int size, char *fmt, ...) {
 
 // Parse a token out of a string
 // data is an in/out parm, returns a parsed out token
-static char* COM_Parse(char** data_p) {
+procedure char * COM_Parse(char** data_p) {
 	char* data = *data_p;
 	int len = 0;
 	com_token[0] = 0;
@@ -2035,7 +2035,7 @@ global_variable u8			cmd_text_buf[8192];
 global_variable char defer_text_buf[8192];
 
 // as new commands are generated from the console or keybindings, the text is added to the end of the command buffer.
-static void Cbuf_AddText(char* text) {
+procedure void Cbuf_AddText(char* text) {
 	int l = strlen(text);
 	if (cmd_text.cursize + l >= cmd_text.maxsize) {
 		add_line_to_console_log(STR("cbuf overflow"));
@@ -2049,7 +2049,7 @@ static void Cbuf_AddText(char* text) {
 // commands.
 // Adds a \n to the text
 // FIXME: actually change the command buffer to do less copying
-static void Cbuf_InsertText(char* text) {
+procedure void Cbuf_InsertText(char* text) {
 	char* temp = 0;
 
 	// copy off any commands still remaining in the exec buffer
@@ -2084,19 +2084,19 @@ global_variable bool cmd_wait;
 global_variable cmdalias_t*		cmd_alias;
 global_variable int 				alias_count;	// for detecting runaway loops
 
-static char* Cmd_Argv(int arg) {
+procedure char * Cmd_Argv(int arg) {
 	if (arg >= cmd_argc) {
 		return "";
 	}
 	return cmd_argv[arg];
 }
 
-static char* Cmd_Args() {return cmd_args;}
+procedure char * Cmd_Args() {return cmd_args;}
 
 // Parses the given string into command line tokens.
 // $Cvars will be expanded unless they are in a quoted token
 // Takes a null terminated string. Does not need to be /n terminated.
-static void Cmd_TokenizeString(char* text) {
+procedure void Cmd_TokenizeString(char* text) {
 	// clear the args from the last string
 	for (int i = 0; i < cmd_argc; i++) {
 		tml_free (cmd_argv[i]);
@@ -2147,7 +2147,7 @@ static void Cmd_TokenizeString(char* text) {
 
 }
 
-static void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
+procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	context.debug_log(STR("EXECUTE"), string_from_cstring(text));
 
 	Cmd_TokenizeString(text);
@@ -2204,7 +2204,7 @@ static void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 // Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
-static void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
+procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 	char line[1024] = {};
 
 	alias_count = 0; // don't allow infinite alias loops
@@ -2252,7 +2252,7 @@ static void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 	}
 }
 
-static void Cmd_Exec_f(void* data) {
+procedure void Cmd_Exec_f(void* data) {
 	UNUSED(data);
 
 	if (cmd_argc != 2) {
@@ -2279,7 +2279,7 @@ static void Cmd_Exec_f(void* data) {
 }
 
 // Creates a new command that executes a command string (possibly ; seperated)
-static void Cmd_Alias_f(void* data) {
+procedure void Cmd_Alias_f(void* data) {
 	UNUSED(data);
 
 	char cmd[1024] = {};
@@ -2326,7 +2326,7 @@ static void Cmd_Alias_f(void* data) {
 	a->value = CopyString(cmd);
 }
 
-static void Cmd_Wait_f(void* data) {
+procedure void Cmd_Wait_f(void* data) {
 	UNUSED(data);
 	cmd_wait = true;
 }
@@ -2883,7 +2883,7 @@ typedef struct {
 #define	MZ2_WIDOW2_BEAM_SWEEP_10		209
 #define	MZ2_WIDOW2_BEAM_SWEEP_11		210
 
-static vec3_t monster_flash_offset[] = {
+global_variable vec3_t monster_flash_offset[] = {
 	// flash 0 is not used
 	{0.0, 0.0, 0.0},
 
@@ -3710,7 +3710,7 @@ global_variable int				floodvalid;
 global_variable u8*			cmod_base;
 
 // Returns 1, 2, or 1 + 2
-static int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
+procedure int CM_BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t* p) {
 
 	// fast axial cases
 	if (p->type < 3) {
@@ -4083,9 +4083,9 @@ void CMod_LoadEntityString (lump_t *l)
 	memcpy (map_entitystring, cmod_base + l->fileofs, l->filelen);
 }
 
-static cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
+procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
 	int				length;
-	static unsigned	last_checksum;
+	local_persist unsigned	last_checksum;
 
 	if (!strcmp(map_name, name)) {
 		*checksum = last_checksum;
@@ -5031,7 +5031,7 @@ typedef struct {
 // this structure is left intact through an entire game
 // it should be initialized at dll load time, and read/written to
 // the server.ssv file for savegames
-static struct {
+global_variable struct {
 	char		helpmessage1[512];
 	char		helpmessage2[512];
 	int			helpchanged;	// flash F1 icon if non 0, play sound
@@ -5357,52 +5357,24 @@ void FetchClientEntData (edict_t *ent);
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
 
-float Q_fabs (float f)
-{
-	int tmp = * ( int * ) &f;
-	tmp &= 0x7FFFFFFF;
-	return * ( float * ) &tmp;
-}
-
-/*
-============
-COM_FileExtension
-============
-*/
-char *COM_FileExtension (char *in)
-{
-	static char exten[8];
-	int		i;
-
-	while (*in && *in != '.')
-		in++;
-	if (!*in)
-		return "";
-	in++;
-	for (i=0 ; i<7 && *in ; i++,in++)
-		exten[i] = *in;
-	exten[i] = 0;
-	return exten;
-}
-
-static cmodel_t* CM_InlineModel(char *name) {
+procedure cmodel_t* CM_InlineModel(char *name) {
 	assert(name && name[0] == '*');
 	int num = atoi (name + 1);
 	assert(num >= 1 && num < numcmodels);
 	return &map_cmodels[num];
 }
 
-static int CM_LeafContents(int leafnum) {
+procedure int CM_LeafContents(int leafnum) {
 	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].contents;
 }
 
-static int CM_LeafCluster(int leafnum) {
+procedure int CM_LeafCluster(int leafnum) {
 	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].cluster;
 }
 
-static int CM_LeafArea(int leafnum) {
+procedure int CM_LeafArea(int leafnum) {
 	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].area;
 }
@@ -6259,7 +6231,7 @@ u8	*CM_ClusterPHS (int cluster)
 	return phsrow;
 }
 
-static void FloodArea_r(carea_t* area, int floodnum) {
+procedure void FloodArea_r(carea_t* area, int floodnum) {
 	if (area->floodvalid == floodvalid) {
 		assert(area->floodnum == floodnum);
 	} else {
@@ -6297,13 +6269,13 @@ void	FloodAreaConnections (void)
 
 }
 
-static void CM_SetAreaPortalState(int portalnum, bool open) {
+procedure void CM_SetAreaPortalState(int portalnum, bool open) {
 	assert(portalnum >= 0 && portalnum <= numareaportals);
 	portalopen[portalnum] = open;
 	FloodAreaConnections();
 }
 
-static bool CM_AreasConnected(int area1, int area2) {
+procedure bool CM_AreasConnected(int area1, int area2) {
 	assert(area1 >= 0 && area1 <= numareas && area2 >= 0 && area2 <= numareas);
 	bool result = map_areas[area1].floodnum == map_areas[area2].floodnum;
 	return result;
@@ -6351,7 +6323,7 @@ void	CM_WritePortalState (FILE *f)
 	fwrite (portalopen, sizeof(portalopen), 1, f);
 }
 
-static void FS_Read(void* buffer, int len, FILE *f) {
+procedure void FS_Read(void* buffer, int len, FILE *f) {
 	int read = fread(buffer, 1, len, f);
 	assert(read == len);
 }
@@ -6422,7 +6394,7 @@ searchpath_t	*fs_searchpaths;
 // The game directory can never be changed while quake is executing.
 // This is a precacution against having a malicious server instruct clients to write files over areas they shouldn't.
 
-static int FS_filelength (FILE *f) {
+procedure int FS_filelength (FILE *f) {
 	int		pos;
 	int		end;
 
@@ -6577,12 +6549,12 @@ These notices must be retained in any copies of any part of this documentation a
 #define S33 11
 #define S34 15
 
-static void MD4Transform (UINT4 [4], unsigned char [64]);
-static void Encode (unsigned char *, UINT4 *, unsigned int);
-static void Decode (UINT4 *, unsigned char *, unsigned int);
+procedure void MD4Transform (UINT4 [4], unsigned char [64]);
+procedure void Encode (unsigned char *, UINT4 *, unsigned int);
+procedure void Decode (UINT4 *, unsigned char *, unsigned int);
 
-static unsigned char PADDING[64] = {
-0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+global_variable u8 PADDING[64] = {
+	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 /* F, G and H are basic MD4 functions. */
@@ -6672,7 +6644,7 @@ void MD4Final (unsigned char digest[16], MD4_CTX *md4_context)
 }
 
 /* MD4 basic transformation. Transforms state based on block. */
-static void MD4Transform (UINT4 state[4], unsigned char block[64])
+procedure void MD4Transform (UINT4 state[4], unsigned char block[64])
 {
 	UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
@@ -6742,7 +6714,7 @@ state[3] += d;
 }
 
 /* Encodes input (UINT4) into output (unsigned char). Assumes len is a multiple of 4. */
-static void Encode (unsigned char *output, UINT4 *input, unsigned int len)
+procedure void Encode (unsigned char *output, UINT4 *input, unsigned int len)
 {
 	unsigned int i, j;
 
@@ -6755,7 +6727,7 @@ static void Encode (unsigned char *output, UINT4 *input, unsigned int len)
 }
 
 /* Decodes input (unsigned char) into output (UINT4). Assumes len is a multiple of 4. */
-static void Decode (UINT4 *output, unsigned char *input, unsigned int len)
+procedure void Decode (UINT4 *output, unsigned char *input, unsigned int len)
 {
 unsigned int i, j;
 
@@ -6826,7 +6798,7 @@ enum {
 	Connect_Message_First_Int_Value = -1,
 };
 
-static void write_connect_message(netsrc_t from) {
+procedure void write_connect_message(netsrc_t from) {
 	sizebuf_t send = {};
 	u8 send_buf[MAX_MSGLEN] = {};
 	SZ_Init(&send, send_buf, sizeof(send_buf));
@@ -6835,7 +6807,7 @@ static void write_connect_message(netsrc_t from) {
 }
 
 // called to open a channel to a remote system
-static void Netchan_Setup(netsrc_t sock, netchan_t* chan) {
+procedure void Netchan_Setup(netsrc_t sock, netchan_t* chan) {
 	*chan = (netchan_t){
 		.sock = sock,
 		.last_received = curtime,
@@ -7939,7 +7911,7 @@ void PM_SnapPosition (void)
 	int		i, j, bits;
 	short	base[3];
 	// try all single bits first
-	static int jitterbits[8] = {0,4,1,2,3,5,6,7};
+	procedure int jitterbits[8] = {0,4,1,2,3,5,6,7};
 
 	// snap velocity to eigths
 	for (i=0 ; i<3 ; i++)
@@ -7984,7 +7956,7 @@ void PM_InitialSnapPosition(void)
 {
 	int        x, y, z;
 	short      base[3];
-	static int offset[3] = { 0, -1, 1 };
+	procedure int offset[3] = { 0, -1, 1 };
 
 	VectorCopy (pm->s.origin, base);
 
@@ -8174,8 +8146,6 @@ typedef enum {
 	ss_loading,			// spawning level edicts
 	ss_game,			// actively running
 } server_state_t;
-// some qc commands are only valid before the server has finished
-// initializing (precache commands, static sounds / objects, etc)
 
 typedef struct {
 	server_state_t	state;			// precache commands are only valid during load
@@ -8339,7 +8309,7 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
-static void SV_GameMap_f(void* data) {
+procedure void SV_GameMap_f(void* data) {
 	UNUSED(data);
 	if (cmd_argc == 2) {
 		SV_Map(Cmd_Argv(1), false);
@@ -8349,7 +8319,7 @@ static void SV_GameMap_f(void* data) {
 	}
 }
 
-static void SV_Map_f(void* data) {
+procedure void SV_Map_f(void* data) {
 	UNUSED(data);
 
 	// make sure the level exists
@@ -9051,7 +9021,7 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 }
 
 // Called when either the entire server is being killed, or it is changing to a different game directory.
-static void SV_ShutdownGameProgs() {
+procedure void SV_ShutdownGameProgs() {
 	tml_free_all(TAG_LEVEL);
 	tml_free_all(TAG_GAME);
 }
@@ -9145,7 +9115,7 @@ void SV_CreateBaseline (void)
 void G_RunFrame();
 
 // Change the server to a new map, taking all connected clients along with it.
-static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
+procedure void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	int			i;
 	unsigned	checksum;
 
@@ -9197,8 +9167,6 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	// spawn the rest of the entities on the map
 	//
 
-	// precache and static commands can be issued during
-	// map initialization
 	sv.state = ss_loading;
 
 	// load and spawn all other entities
@@ -9218,7 +9186,7 @@ static void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 
 void CL_Disconnect(void);
 
-static void SCR_EndLoadingPlaque() {
+procedure void SCR_EndLoadingPlaque() {
 	cls.disable_screen = 0;
 }
 
@@ -10595,7 +10563,7 @@ extern int num_cl_weaponmodels;
 
 #define	CMD_BACKUP 64
 
-static struct {
+global_variable struct {
 	bool refresh_prepped;
 	bool sound_prepped; // ambient sounds can start
 
@@ -10859,7 +10827,7 @@ void CL_TrapParticles (Entity *ent);
 void CL_ParseInventory (void);
 void CL_KeyInventory (int key);
 
-static struct {
+global_variable struct {
 	int width;
 	int height;
 } viddef;
@@ -11803,7 +11771,7 @@ void CL_AddPacketEntities (frame_t *frame)
 			}
 			else if (effects & EF_BFG)
 			{
-				static int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
+				procedure int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
 
 				if (effects & EF_ANIM_ALLFAST)
 				{
@@ -12840,7 +12808,7 @@ void CL_ParseMuzzleFlash2 (void)
 	}
 }
 
-static void CL_AddDLights() {
+procedure void CL_AddDLights() {
 	cdlight_t* dl = cl_dlights;
 	for (int i = 0; i < MAX_DLIGHTS; i++, dl++) {
 		if (dl->radius) {
@@ -13150,7 +13118,7 @@ void CL_BigTeleportParticles (vec3_t org)
 	int			i;
 	cparticle_t	*p;
 	float		angle, dist;
-	static int colortable[4] = {2*8,13*8,21*8,18*8};
+	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
 
 	for (i=0 ; i<4096 ; i++)
 	{
@@ -13165,7 +13133,7 @@ void CL_BigTeleportParticles (vec3_t org)
 
 		p->color = colortable[rand()&3];
 
-		angle = M_PI*2*(rand()&1023)/1023.0;
+		angle = PI*2*(rand()&1023)/1023.0;
 		dist = rand()&31;
 		p->org[0] = org[0] + cos(angle)*dist;
 		p->vel[0] = cos(angle)*(70+(rand()&63));
@@ -14330,33 +14298,33 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-static void IN_UpDown(void* data) {UNUSED(data); KeyDown(&in_up);}
-static void IN_UpUp(void* data) {UNUSED(data); KeyUp(&in_up);}
-static void IN_DownDown(void* data) {UNUSED(data); KeyDown(&in_down);}
-static void IN_DownUp(void* data) {UNUSED(data); KeyUp(&in_down);}
-static void IN_LeftDown(void* data) {UNUSED(data); KeyDown(&in_left);}
-static void IN_LeftUp(void* data) {UNUSED(data); KeyUp(&in_left);}
-static void IN_RightDown(void* data) {UNUSED(data); KeyDown(&in_right);}
-static void IN_RightUp(void* data) {UNUSED(data); KeyUp(&in_right);}
-static void IN_ForwardDown(void* data) {UNUSED(data); KeyDown(&in_forward);}
-static void IN_ForwardUp(void* data) {UNUSED(data); KeyUp(&in_forward);}
-static void IN_BackDown(void* data) {UNUSED(data); KeyDown(&in_back);}
-static void IN_BackUp(void* data) {UNUSED(data); KeyUp(&in_back);}
-static void IN_LookupDown(void* data) {UNUSED(data); KeyDown(&in_lookup);}
-static void IN_LookupUp(void* data) {UNUSED(data); KeyUp(&in_lookup);}
-static void IN_LookdownDown(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
-static void IN_LookdownUp(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
-static void IN_MoveleftDown(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
-static void IN_MoveleftUp(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
-static void IN_MoverightDown(void* data) {UNUSED(data); KeyDown(&in_moveright);}
-static void IN_MoverightUp(void* data) {UNUSED(data); KeyUp(&in_moveright);}
-static void IN_SpeedDown(void* data) {UNUSED(data); KeyDown(&in_speed);}
-static void IN_SpeedUp(void* data) {UNUSED(data); KeyUp(&in_speed);}
-static void IN_AttackDown(void* data) {UNUSED(data); KeyDown(&in_attack);}
-static void IN_AttackUp(void* data) {UNUSED(data); KeyUp(&in_attack);}
-static void IN_UseDown(void* data) {UNUSED(data); KeyDown(&in_use);}
-static void IN_UseUp(void* data) {UNUSED(data); KeyUp(&in_use);}
-static void IN_Impulse(void* data) {UNUSED(data); in_impulse=atoi(Cmd_Argv(1));}
+procedure void IN_UpDown(void* data) {UNUSED(data); KeyDown(&in_up);}
+procedure void IN_UpUp(void* data) {UNUSED(data); KeyUp(&in_up);}
+procedure void IN_DownDown(void* data) {UNUSED(data); KeyDown(&in_down);}
+procedure void IN_DownUp(void* data) {UNUSED(data); KeyUp(&in_down);}
+procedure void IN_LeftDown(void* data) {UNUSED(data); KeyDown(&in_left);}
+procedure void IN_LeftUp(void* data) {UNUSED(data); KeyUp(&in_left);}
+procedure void IN_RightDown(void* data) {UNUSED(data); KeyDown(&in_right);}
+procedure void IN_RightUp(void* data) {UNUSED(data); KeyUp(&in_right);}
+procedure void IN_ForwardDown(void* data) {UNUSED(data); KeyDown(&in_forward);}
+procedure void IN_ForwardUp(void* data) {UNUSED(data); KeyUp(&in_forward);}
+procedure void IN_BackDown(void* data) {UNUSED(data); KeyDown(&in_back);}
+procedure void IN_BackUp(void* data) {UNUSED(data); KeyUp(&in_back);}
+procedure void IN_LookupDown(void* data) {UNUSED(data); KeyDown(&in_lookup);}
+procedure void IN_LookupUp(void* data) {UNUSED(data); KeyUp(&in_lookup);}
+procedure void IN_LookdownDown(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
+procedure void IN_LookdownUp(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
+procedure void IN_MoveleftDown(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
+procedure void IN_MoveleftUp(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
+procedure void IN_MoverightDown(void* data) {UNUSED(data); KeyDown(&in_moveright);}
+procedure void IN_MoverightUp(void* data) {UNUSED(data); KeyUp(&in_moveright);}
+procedure void IN_SpeedDown(void* data) {UNUSED(data); KeyDown(&in_speed);}
+procedure void IN_SpeedUp(void* data) {UNUSED(data); KeyUp(&in_speed);}
+procedure void IN_AttackDown(void* data) {UNUSED(data); KeyDown(&in_attack);}
+procedure void IN_AttackUp(void* data) {UNUSED(data); KeyUp(&in_attack);}
+procedure void IN_UseDown(void* data) {UNUSED(data); KeyDown(&in_use);}
+procedure void IN_UseUp(void* data) {UNUSED(data); KeyUp(&in_use);}
+procedure void IN_Impulse(void* data) {UNUSED(data); in_impulse=atoi(Cmd_Argv(1));}
 
 /*
 ===============
@@ -14483,7 +14451,7 @@ enum {
 	Inventory_Row_Layout_Count,
 };
 
-static void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
+procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
 	v2i current_topleft = topleft;
 	for (i64 ind = 0; ind < Inventory_Row_Layout_Count; ind++) {
 		String string = strings[ind];
@@ -14497,7 +14465,7 @@ static void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
 	}
 }
 
-static void draw_inventory_table() {
+procedure void draw_inventory_table() {
 	// NOTE: Header
 	v2i header_topleft_px = temp_global_char_dim_px;
 
@@ -14579,7 +14547,7 @@ void CL_ForwardToServer_f (void* data)
 	}
 }
 
-static void S_StopAllSounds(void* data);
+procedure void S_StopAllSounds(void* data);
 
 void CL_ClearState (void)
 {
@@ -14595,7 +14563,7 @@ void CL_ClearState (void)
 
 }
 
-static void M_ForceMenuOff();
+procedure void M_ForceMenuOff();
 
 // Goes from a connected state to full screen console state
 // Sends a disconnect message to the server
@@ -14688,7 +14656,7 @@ u8 *precache_model; // used for skin checking in alias models
 #define TEXTURE_CNT (ENV_CNT+13)
 
 // The server will send this command right before allowing the client into the server
-static void CL_Precache_f(void* data) {
+procedure void CL_Precache_f(void* data) {
 	UNUSED(data);
 
 	precache_check = CS_MODELS;
@@ -14781,7 +14749,7 @@ void vectoangles2 (vec3_t value1, vec3_t angles)
 	{
 	// PMM - fixed to correct for pitch of 0
 		if (value1[0])
-			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
+			yaw = (atan2(value1[1], value1[0]) * 180 / PI);
 		else if (value1[1] > 0)
 			yaw = 90;
 		else
@@ -14791,7 +14759,7 @@ void vectoangles2 (vec3_t value1, vec3_t angles)
 			yaw += 360;
 
 		forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
-		pitch = (atan2(value1[2], forward) * 180 / M_PI);
+		pitch = (atan2(value1[2], forward) * 180 / PI);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -15121,13 +15089,13 @@ void CL_Heatbeam (vec3_t start, vec3_t forward)
 
 	VectorScale (vec, step, vec);
 
-	rstep = M_PI/10.0;
+	rstep = PI/10.0;
 	for (i=start_pt ; i<len ; i+=step)
 	{
 		if (i>step*5) // don't bother after the 5th ring
 			break;
 
-		for (rot = 0; rot < M_PI*2; rot += rstep)
+		for (rot = 0; rot < PI*2; rot += rstep)
 		{
 
 			if (!free_particles)
@@ -15384,7 +15352,7 @@ void CL_Widowbeamout (cl_sustain_t *self)
 	vec3_t			dir;
 	int				i;
 	cparticle_t		*p;
-	static int colortable[4] = {2*8,13*8,21*8,18*8};
+	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
 	float			ratio;
 
 	ratio = 1.0 - (((float)self->endtime - (float)cl.time)/2100.0);
@@ -15420,7 +15388,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 	vec3_t			dir;
 	int				i;
 	cparticle_t		*p;
-	static int colortable[4] = {110, 112, 114, 116};
+	procedure int colortable[4] = {110, 112, 114, 116};
 	float			ratio;
 
 	ratio = 1.0 - (((float)self->endtime - (float)cl.time)/1000.0);
@@ -15453,7 +15421,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 
 void CL_WidowSplash (vec3_t org)
 {
-	static int colortable[4] = {2*8,13*8,21*8,18*8};
+	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
 	int			i;
 	cparticle_t	*p;
 	vec3_t		dir;
@@ -15790,7 +15758,7 @@ void CL_RegisterSounds (void)
 	S_EndRegistration ();
 }
 
-static void CL_ParseServerData() {
+procedure void CL_ParseServerData() {
 	CL_ClearState();
 	cls.state = ca_connected;
 
@@ -16475,7 +16443,7 @@ void SCR_CheckDrawCenterString (void)
 }
 
 // Sets scr_vrect, the coordinates of the rendered window
-static void SCR_CalcVrect() {
+procedure void SCR_CalcVrect() {
 	scr_vrect.width = viddef.width;
 	scr_vrect.width &= ~7;
 
@@ -16577,7 +16545,7 @@ typedef struct {
 } Console_Input;
 global_variable Console_Input temp_global_console_input;
 
-static void Con_DrawConsole(float frac) {
+procedure void Con_DrawConsole(float frac) {
 	i64 lines_px = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
 	if (lines_px > 0) {
 
@@ -16619,7 +16587,7 @@ static void Con_DrawConsole(float frac) {
 	} // if any lines
 }
 
-static void SCR_DrawConsole() {
+procedure void SCR_DrawConsole() {
 	if (cls.state == ca_disconnected || cls.state == ca_connecting)
 	{	// forced full screen console
 		Con_DrawConsole (1.0);
@@ -17285,7 +17253,7 @@ void SCR_ExecuteLayoutString (char *s)
 #define	STAT_LAYOUTS 13
 
 // This is called every frame, and can also be called explicitly to flush text to the screen.
-static void SCR_UpdateScreen() {
+procedure void SCR_UpdateScreen() {
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
 	if (cls.disable_screen) {
 		if (Sys_Milliseconds() - cls.disable_screen > 120000) {
@@ -17504,7 +17472,7 @@ void CL_ClearTEnts (void)
 }
 
 // Uses a free slot or the oldest one
-static Explosion* CL_AllocExplosion() {
+procedure Explosion* CL_AllocExplosion() {
 
 	Explosion* result = 0;
 	{
@@ -17951,7 +17919,7 @@ void CL_ParseNuke (void)
 CL_ParseTEnt
 =================
 */
-static u8 splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
+procedure u8 splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
 
 void CL_ParseTEnt (void)
 {
@@ -18064,10 +18032,10 @@ void CL_ParseTEnt (void)
 
 		ex = CL_AllocExplosion ();
 		VectorCopy (pos, ex->ent.origin);
-		ex->ent.angles[0] = acos(dir[2])/M_PI*180;
+		ex->ent.angles[0] = acos(dir[2])/PI*180;
 	// PMM - fixed to correct for pitch of 0
 		if (dir[0])
-			ex->ent.angles[1] = atan2(dir[1], dir[0])/M_PI*180;
+			ex->ent.angles[1] = atan2(dir[1], dir[0])/PI*180;
 		else if (dir[1] > 0)
 			ex->ent.angles[1] = 90;
 		else if (dir[1] < 0)
@@ -18272,10 +18240,10 @@ void CL_ParseTEnt (void)
 
 		ex = CL_AllocExplosion ();
 		VectorCopy (pos, ex->ent.origin);
-		ex->ent.angles[0] = acos(dir[2])/M_PI*180;
+		ex->ent.angles[0] = acos(dir[2])/PI*180;
 	// PMM - fixed to correct for pitch of 0
 		if (dir[0])
-			ex->ent.angles[1] = atan2(dir[1], dir[0])/M_PI*180;
+			ex->ent.angles[1] = atan2(dir[1], dir[0])/PI*180;
 		else if (dir[1] > 0)
 			ex->ent.angles[1] = 90;
 		else if (dir[1] < 0)
@@ -18502,7 +18470,7 @@ void CL_AddBeams (void)
 		{
 	// PMM - fixed to correct for pitch of 0
 			if (dist[0])
-				yaw = (atan2(dist[1], dist[0]) * 180 / M_PI);
+				yaw = (atan2(dist[1], dist[0]) * 180 / PI);
 			else if (dist[1] > 0)
 				yaw = 90;
 			else
@@ -18511,7 +18479,7 @@ void CL_AddBeams (void)
 				yaw += 360;
 
 			forward = sqrt (dist[0]*dist[0] + dist[1]*dist[1]);
-			pitch = (atan2(dist[2], forward) * -180.0 / M_PI);
+			pitch = (atan2(dist[2], forward) * -180.0 / PI);
 			if (pitch < 0)
 				pitch += 360.0;
 		}
@@ -18676,7 +18644,7 @@ void CL_AddPlayerBeams (void)
 		{
 	// PMM - fixed to correct for pitch of 0
 			if (dist[0])
-				yaw = (atan2(dist[1], dist[0]) * 180 / M_PI);
+				yaw = (atan2(dist[1], dist[0]) * 180 / PI);
 			else if (dist[1] > 0)
 				yaw = 90;
 			else
@@ -18685,7 +18653,7 @@ void CL_AddPlayerBeams (void)
 				yaw += 360;
 
 			forward = sqrt (dist[0]*dist[0] + dist[1]*dist[1]);
-			pitch = (atan2(dist[2], forward) * -180.0 / M_PI);
+			pitch = (atan2(dist[2], forward) * -180.0 / PI);
 			if (pitch < 0)
 				pitch += 360.0;
 		}
@@ -19053,7 +19021,7 @@ void V_AddLightStyle (int style, float r, float g, float b)
 }
 
 // Call before entering a new level, or after changing dlls
-static void CL_PrepRefresh() {
+procedure void CL_PrepRefresh() {
 	char		mapname[32];
 	int			i;
 	char		name[MAX_QPATH];
@@ -19158,11 +19126,11 @@ float CalcFov (float fov_x, float width, float height)
 
 	assert(fov_x >= 1 && fov_x <= 179);
 
-	x = width/tan(fov_x/360*M_PI);
+	x = width/tan(fov_x/360*PI);
 
 	a = atan (height/x);
 
-	a = a*360/M_PI;
+	a = a*360/PI;
 
 	return a;
 }
@@ -19181,7 +19149,7 @@ void V_Gun_Model_f (void* data) {
 	gun_model = R_RegisterModel (name);
 }
 
-static void SCR_DrawCrosshair() {
+procedure void SCR_DrawCrosshair() {
 	assert(crosshair_pic[0]);
 	Draw_Pic(scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1), scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
@@ -19258,13 +19226,13 @@ void DrawAltString (int x, int y, char *s)
 	}
 }
 
-static void clear_console_input() {
+procedure void clear_console_input() {
 	assert(temp_global_console_input.cap > 1);
 	temp_global_console_input.len = 0;
 	temp_global_console_input.ptr[0] = 0;
 }
 
-static void Con_ToggleConsole_f(void* data) {
+procedure void Con_ToggleConsole_f(void* data) {
 	UNUSED(data);
 
 	SCR_EndLoadingPlaque();
@@ -19351,7 +19319,7 @@ void Key_Console(int key) {
 	} // NOTE: ignore anything else
 }
 
-static void builtin_string_command_bind(void* ctx) {
+procedure void builtin_string_command_bind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 
 	int			i;
@@ -19390,7 +19358,7 @@ static void builtin_string_command_bind(void* ctx) {
 	set_key_binding(key_bindings, key_code, string_from_cstring(cmd));
 }
 
-static void Key_Bindlist_f(void* ctx) {
+procedure void Key_Bindlist_f(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
@@ -19673,17 +19641,17 @@ typedef void (*M_Draw_Proc)();
 global_variable M_Key_Proc m_keyfunc = 0;
 global_variable M_Draw_Proc m_drawfunc = 0;
 
-static struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
+global_variable struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
 global_variable int m_menudepth = 0;
 
-static void M_Banner(char* name) {
+procedure void M_Banner(char* name) {
 	int w = 0;
 	int h = 0;
 	Draw_GetPicSize(&w, &h, name);
 	Draw_Pic(viddef.width / 2 - w / 2, viddef.height / 2 - 110, name);
 }
 
-static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
+procedure void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
 	// if this menu is already present, drop back to that level to avoid stacking menus by hotkeys
 	int i = 0;
 	for (; i < m_menudepth; i++) {
@@ -19708,7 +19676,7 @@ static void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
 	cls.key_dest = key_menu;
 }
 
-static void M_ForceMenuOff() {
+procedure void M_ForceMenuOff() {
 	m_drawfunc = 0;
 	m_keyfunc = 0;
 	cls.key_dest = key_game;
@@ -19716,7 +19684,7 @@ static void M_ForceMenuOff() {
 	Key_ClearStates();
 }
 
-static void M_PopMenu() {
+procedure void M_PopMenu() {
 	S_StartLocalSound(menu_out_sound);
 	assert(m_menudepth >= 1);
 	m_menudepth--;
@@ -19729,7 +19697,7 @@ static void M_PopMenu() {
 	}
 }
 
-static bool Field_Key(menufield_s *field, int key_passed) {
+procedure bool Field_Key(menufield_s *field, int key_passed) {
 	int key = key_passed;
 	switch (key_passed) {
 		case Key_Code_Keypad_Slash: {key = '/';} break;
@@ -19809,7 +19777,7 @@ static bool Field_Key(menufield_s *field, int key_passed) {
 	return handled;
 }
 
-static void* item_at_cursor(menuframework_s* menu) {
+procedure void* item_at_cursor(menuframework_s* menu) {
 	void* result = 0;
 	if (menu->cursor >= 0 && menu->cursor < menu->nitems) {
 		result = menu->items[menu->cursor];
@@ -19817,7 +19785,7 @@ static void* item_at_cursor(menuframework_s* menu) {
 	return result;
 }
 
-static void place_cursor_in_nearest_valid_position(menuframework_s* menu, int dir) {
+procedure void place_cursor_in_nearest_valid_position(menuframework_s* menu, int dir) {
 	for (menucommon_s* cursor_item = item_at_cursor(menu); !cursor_item || cursor_item->type == MTYPE_SEPARATOR; cursor_item = item_at_cursor(menu)) {
 		menu->cursor += dir;
 
@@ -19830,15 +19798,15 @@ static void place_cursor_in_nearest_valid_position(menuframework_s* menu, int di
 	}
 }
 
-static void	 Action_DoEnter( menuaction_s *a );
-static void	 Action_Draw( menuaction_s *a );
-static void  Menu_DrawStatusBar( const char *string );
-static void	 MenuList_Draw( menulist_s *l );
-static void	 Separator_Draw( menuseparator_s *s );
-static void	 Slider_Draw( menuslider_s *s );
-static void	 SpinControl_Draw( menulist_s *s );
+procedure void Action_DoEnter( menuaction_s *a );
+procedure void Action_Draw( menuaction_s *a );
+procedure void Menu_DrawStatusBar( const char *string );
+procedure void MenuList_Draw( menulist_s *l );
+procedure void Separator_Draw( menuseparator_s *s );
+procedure void Slider_Draw( menuslider_s *s );
+procedure void SpinControl_Draw( menulist_s *s );
 
-static void Menu_SlideItem(menuframework_s *s, int dir) {
+procedure void Menu_SlideItem(menuframework_s *s, int dir) {
 	menucommon_s* item = (menucommon_s*)item_at_cursor(s);
 	if (item) {
 		switch (item->type) {
@@ -19864,7 +19832,7 @@ static void Menu_SlideItem(menuframework_s *s, int dir) {
 	}
 }
 
-static bool Field_DoEnter(menufield_s* f) {
+procedure bool Field_DoEnter(menufield_s* f) {
 	if (f->generic.callback) {
 		f->generic.callback( f );
 		return true;
@@ -19872,7 +19840,7 @@ static bool Field_DoEnter(menufield_s* f) {
 	return false;
 }
 
-static bool Menu_SelectItem( menuframework_s *s ) {
+procedure bool Menu_SelectItem( menuframework_s *s ) {
 	bool result = false;
 	menucommon_s *item = ( menucommon_s * ) item_at_cursor( s );
 	if (item) {
@@ -19891,7 +19859,7 @@ static bool Menu_SelectItem( menuframework_s *s ) {
 	return result;
 }
 
-static char* Default_MenuKey(menuframework_s* m, int key) {
+procedure char * Default_MenuKey(menuframework_s* m, int key) {
 	bool handled_by_field_key = false;
 	if (m) {
 		menucommon_s* item = item_at_cursor(m);
@@ -19969,10 +19937,10 @@ static char* Default_MenuKey(menuframework_s* m, int key) {
 
 // Draws an animating cursor with the point at x,y.
 // The pic will extend to the left of x, and both above and below y.
-static void M_DrawCursor( int x, int y, int f )
+procedure void M_DrawCursor( int x, int y, int f )
 {
 	char	cursorname[80];
-	static bool cached;
+	procedure bool cached;
 
 	if ( !cached )
 	{
@@ -19991,7 +19959,7 @@ static void M_DrawCursor( int x, int y, int f )
 	Draw_Pic( x, y, cursorname );
 }
 
-static void M_Main_Draw (void)
+procedure void M_Main_Draw (void)
 {
 	int i;
 	int w, h;
@@ -20082,14 +20050,14 @@ global_variable menuseparator_s	s_blankline;
 
 global_variable int bind_grab;
 
-static void KeyCursorDrawFunc( menuframework_s *menu ) {
+procedure void KeyCursorDrawFunc( menuframework_s *menu ) {
 	if (bind_grab)
 		Draw_Char( menu->x, menu->y + menu->cursor * 9, '=' );
 	else
 		Draw_Char( menu->x, menu->y + menu->cursor * 9, 12 + ( ( int ) ( Sys_Milliseconds() / 250 ) & 1 ) );
 }
 
-static void M_FindKeysForCommand (char *command, int *twokeys)
+procedure void M_FindKeysForCommand (char *command, int *twokeys)
 {
 	int		count;
 	int		j;
@@ -20115,7 +20083,7 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 	}
 }
 
-static char* bindnames[][2] = {
+procedure char * bindnames[][2] = {
 	{"+attack", "attack"},
 	{"weapnext", "next weapon"},
 	{"+forward", "walk forward"},
@@ -20140,7 +20108,7 @@ static char* bindnames[][2] = {
 	{0, 0}
 };
 
-static void Menu_DrawString( int x, int y, const char *string )
+procedure void Menu_DrawString( int x, int y, const char *string )
 {
 	unsigned i;
 
@@ -20150,7 +20118,7 @@ static void Menu_DrawString( int x, int y, const char *string )
 	}
 }
 
-static void DrawKeyBindingFunc( void *self )
+procedure void DrawKeyBindingFunc( void *self )
 {
 	int keys[2];
 	menuaction_s *a = ( menuaction_s * ) self;
@@ -20180,7 +20148,7 @@ static void DrawKeyBindingFunc( void *self )
 	}
 }
 
-static int Menu_TallySlots( menuframework_s *menu )
+procedure int Menu_TallySlots( menuframework_s *menu )
 {
 	int i;
 	int total = 0;
@@ -20206,7 +20174,7 @@ static int Menu_TallySlots( menuframework_s *menu )
 	return total;
 }
 
-static void Menu_AddItem( menuframework_s *menu, void *item )
+procedure void Menu_AddItem( menuframework_s *menu, void *item )
 {
 	if ( menu->nitems == 0 )
 		menu->nslots = 0;
@@ -20221,11 +20189,11 @@ static void Menu_AddItem( menuframework_s *menu, void *item )
 	menu->nslots = Menu_TallySlots( menu );
 }
 
-static void Menu_SetStatusBar(menuframework_s* m, char* string ) {
+procedure void Menu_SetStatusBar(menuframework_s* m, char* string ) {
 	m->statusbar = string;
 }
 
-static void Menu_Center( menuframework_s *menu )
+procedure void Menu_Center( menuframework_s *menu )
 {
 	int height;
 
@@ -20235,7 +20203,7 @@ static void Menu_Center( menuframework_s *menu )
 	menu->y = ( VID_HEIGHT - height ) / 2;
 }
 
-static void Keys_MenuInit( void )
+procedure void Keys_MenuInit( void )
 {
 	int y = 0;
 	int i = 0;
@@ -20458,7 +20426,7 @@ static void Keys_MenuInit( void )
 	Menu_Center( &s_keys_menu );
 }
 
-static void Menu_DrawStringR2LDark( int x, int y, const char *string )
+procedure void Menu_DrawStringR2LDark( int x, int y, const char *string )
 {
 	unsigned i;
 
@@ -20468,7 +20436,7 @@ static void Menu_DrawStringR2LDark( int x, int y, const char *string )
 	}
 }
 
-static void Field_Draw( menufield_s *f )
+procedure void Field_Draw( menufield_s *f )
 {
 	int i;
 	char tempbuffer[128]="";
@@ -20516,7 +20484,7 @@ static void Field_Draw( menufield_s *f )
 	}
 }
 
-static void Menu_Draw( menuframework_s *menu )
+procedure void Menu_Draw( menuframework_s *menu )
 {
 	int i;
 	menucommon_s *item;
@@ -20587,13 +20555,13 @@ static void Menu_Draw( menuframework_s *menu )
 	}
 }
 
-static void Keys_MenuDraw (void)
+procedure void Keys_MenuDraw (void)
 {
 	place_cursor_in_nearest_valid_position( &s_keys_menu, 1 );
 	Menu_Draw( &s_keys_menu );
 }
 
-static void M_UnbindCommand (char *command)
+procedure void M_UnbindCommand (char *command)
 {
 	int		j;
 	int		l;
@@ -20612,7 +20580,7 @@ static void M_UnbindCommand (char *command)
 	}
 }
 
-static void KeyBindingFunc( void *self )
+procedure void KeyBindingFunc( void *self )
 {
 	menuaction_s *a = ( menuaction_s * ) self;
 	int keys[2];
@@ -20627,7 +20595,7 @@ static void KeyBindingFunc( void *self )
 	Menu_SetStatusBar( &s_keys_menu, "press a key or button for this action" );
 }
 
-static char* Keys_MenuKey( int key )
+procedure char * Keys_MenuKey( int key )
 {
 	menuaction_s *item = ( menuaction_s * ) item_at_cursor( &s_keys_menu );
 
@@ -20662,24 +20630,24 @@ static char* Keys_MenuKey( int key )
 	}
 }
 
-static void M_Menu_Keys_f(void* data) {
+procedure void M_Menu_Keys_f(void* data) {
 	UNUSED(data);
 	Keys_MenuInit();
 	M_PushMenu(Keys_MenuDraw, Keys_MenuKey);
 }
 
-static void CustomizeControlsFunc(void* unused) {
+procedure void CustomizeControlsFunc(void* unused) {
 	UNUSED(unused);
 	M_Menu_Keys_f(0);
 }
 
-static void ControlsResetDefaultsFunc(void* unused) {
+procedure void ControlsResetDefaultsFunc(void* unused) {
 	UNUSED(unused);
 	Cbuf_AddText("exec default.cfg\n");
 	Cmd_ExecuteCbuf(&temp_global_string_command_context);
 }
 
-static void ConsoleFunc(void* unused) {
+procedure void ConsoleFunc(void* unused) {
 	UNUSED(unused);
 	// the proper way to do this is probably to have ToggleConsole_f accept a parameter
 	clear_console_input();
@@ -20687,7 +20655,7 @@ static void ConsoleFunc(void* unused) {
 	cls.key_dest = key_console;
 }
 
-static void Options_MenuInit() {
+procedure void Options_MenuInit() {
 	// configure controls menu and menu items
 	s_options_menu.x = viddef.width / 2;
 	s_options_menu.y = viddef.height / 2 - 58;
@@ -20718,7 +20686,7 @@ static void Options_MenuInit() {
 
 #define SLIDER_RANGE 10
 
-static void Slider_Draw( menuslider_s *s )
+procedure void Slider_Draw( menuslider_s *s )
 {
 	int	i;
 
@@ -20739,7 +20707,7 @@ static void Slider_Draw( menuslider_s *s )
 	Draw_Char( ( int ) ( 8 + RCOLUMN_OFFSET + s->generic.parent->x + s->generic.x + (SLIDER_RANGE-1)*8 * s->range ), s->generic.y + s->generic.parent->y, 131);
 }
 
-static void Menu_DrawStringDark( int x, int y, const char *string )
+procedure void Menu_DrawStringDark( int x, int y, const char *string )
 {
 	unsigned i;
 
@@ -20749,7 +20717,7 @@ static void Menu_DrawStringDark( int x, int y, const char *string )
 	}
 }
 
-static void Menu_DrawStringR2L( int x, int y, const char *string )
+procedure void Menu_DrawStringR2L( int x, int y, const char *string )
 {
 	unsigned i;
 
@@ -20759,7 +20727,7 @@ static void Menu_DrawStringR2L( int x, int y, const char *string )
 	}
 }
 
-static void Action_Draw( menuaction_s *a )
+procedure void Action_Draw( menuaction_s *a )
 {
 	if ( a->generic.flags & QMF_LEFT_JUSTIFY )
 	{
@@ -20779,7 +20747,7 @@ static void Action_Draw( menuaction_s *a )
 		a->generic.ownerdraw( a );
 }
 
-static void Menu_DrawStatusBar( const char *string )
+procedure void Menu_DrawStatusBar( const char *string )
 {
 	if ( string )
 	{
@@ -20796,7 +20764,7 @@ static void Menu_DrawStatusBar( const char *string )
 	}
 }
 
-static void MenuList_Draw( menulist_s *l )
+procedure void MenuList_Draw( menulist_s *l )
 {
 	char **n;
 	int y = 0;
@@ -20815,52 +20783,52 @@ static void MenuList_Draw( menulist_s *l )
 	}
 }
 
-static void Options_MenuDraw() {
+procedure void Options_MenuDraw() {
 	M_Banner("m_banner_options");
 	place_cursor_in_nearest_valid_position(&s_options_menu, 1);
 	Menu_Draw(&s_options_menu);
 }
 
-static char* Options_MenuKey(int key) {
+procedure char * Options_MenuKey(int key) {
 	return Default_MenuKey(&s_options_menu, key);
 }
 
-static void M_Menu_Options_f(void* data) {
+procedure void M_Menu_Options_f(void* data) {
 	UNUSED(data);
 	Options_MenuInit();
 	M_PushMenu(Options_MenuDraw, Options_MenuKey);
 }
 
-static void M_Menu_Video_f(void* data) {
+procedure void M_Menu_Video_f(void* data) {
 	UNUSED(data);
 	VID_MenuInit();
 	char* VID_MenuKey(int key);
 	M_PushMenu(VID_MenuDraw, VID_MenuKey);
 }
 
-static void StartGame() {
+procedure void StartGame() {
 	cl.servercount = -1;
 	M_ForceMenuOff();
 	Cbuf_AddText("loading ; killserver ; wait ; newgame\n");
 	cls.key_dest = key_game;
 }
 
-static void EasyGameFunc(void* data) {
+procedure void EasyGameFunc(void* data) {
 	UNUSED(data);
 	StartGame();
 }
 
-static void MediumGameFunc(void* data) {
+procedure void MediumGameFunc(void* data) {
 	UNUSED(data);
 	StartGame();
 }
 
-static void HardGameFunc(void* data) {
+procedure void HardGameFunc(void* data) {
 	UNUSED(data);
 	StartGame();
 }
 
-static void Game_MenuInit() {
+procedure void Game_MenuInit() {
 	s_game_menu.x = viddef.width * 0.50;
 	s_game_menu.nitems = 0;
 
@@ -20896,24 +20864,24 @@ static void Game_MenuInit() {
 	Menu_Center( &s_game_menu );
 }
 
-static void Game_MenuDraw() {
+procedure void Game_MenuDraw() {
 	M_Banner( "m_banner_game" );
 	place_cursor_in_nearest_valid_position( &s_game_menu, 1 );
 	Menu_Draw( &s_game_menu );
 }
 
-static char* Game_MenuKey(int key) {
+procedure char * Game_MenuKey(int key) {
 	return Default_MenuKey(&s_game_menu, key);
 }
 
-static void M_Menu_Game_f(void* data) {
+procedure void M_Menu_Game_f(void* data) {
 	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
 	m_game_cursor = 1;
 }
 
-static char* M_Quit_Key(int key) {
+procedure char * M_Quit_Key(int key) {
 	switch (key){
 		case Key_Code_Escape:
 		case 'n':
@@ -20926,18 +20894,18 @@ static char* M_Quit_Key(int key) {
 	return NULL;
 }
 
-static void M_Quit_Draw() {
+procedure void M_Quit_Draw() {
 	int w, h;
 	Draw_GetPicSize (&w, &h, "quit");
 	Draw_Pic( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
-static void M_Menu_Quit_f(void* data) {
+procedure void M_Menu_Quit_f(void* data) {
 	UNUSED(data);
 	M_PushMenu(M_Quit_Draw, M_Quit_Key);
 }
 
-static char* M_Main_Key(int key) {
+procedure char * M_Main_Key(int key) {
 	char* sound = menu_move_sound;
 	i64	main_items = 4;
 
@@ -20986,13 +20954,13 @@ static char* M_Main_Key(int key) {
 	return NULL;
 }
 
-static void M_Menu_Main_f (void* data)
+procedure void M_Menu_Main_f (void* data)
 {
 	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
 }
 
-static void M_Draw() {
+procedure void M_Draw() {
 	if (cls.key_dest != key_menu) {
 		return;
 	}
@@ -21012,7 +20980,7 @@ static void M_Draw() {
 	}
 }
 
-static void M_Keydown (int key)
+procedure void M_Keydown (int key)
 {
 	const char *s;
 
@@ -21349,7 +21317,7 @@ void S_EndRegistration (void)
 	s_registering = false;
 }
 
-static channel_t* S_PickChannel(i32 entnum, i32 entchannel) {
+procedure channel_t* S_PickChannel(i32 entnum, i32 entchannel) {
 	assert(entchannel >= 0);
 
 	// Check for replacement sound, or find the best one to replace
@@ -21381,14 +21349,8 @@ static channel_t* S_PickChannel(i32 entnum, i32 entchannel) {
 	return result;
 }
 
-/*
-=================
-S_SpatializeOrigin
-
-Used for spatializing channels and autosounds
-=================
-*/
-void S_SpatializeOrigin (vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol)
+// Used for spatializing channels and autosounds
+procedure void S_SpatializeOrigin (vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol)
 {
 	vec_t		dot;
 	vec_t		dist;
@@ -21694,7 +21656,7 @@ void S_StartLocalSound (char *sound)
 	S_StartSound (NULL, cl.playernum+1, 0, sfx, 1, 1, 0);
 }
 
-static void S_ClearBuffer() {
+procedure void S_ClearBuffer() {
 	i32 clear = 0;
 
 	SNDDMA_BeginPainting();
@@ -21783,7 +21745,7 @@ void S_AddLoopSounds (void)
 	}
 }
 
-static void S_StopAllSounds(void* data) {
+procedure void S_StopAllSounds(void* data) {
 	UNUSED(data);
 
 	zero_memory(s_playsounds, sizeof(s_playsounds));
@@ -22269,7 +22231,7 @@ void S_PaintChannels(int endtime)
 
 bool FindTarget (edict_t* self);
 
-static bool ai_checkattack(edict_t* self);
+procedure bool ai_checkattack(edict_t* self);
 
 bool	enemy_vis;
 bool	enemy_infront;
@@ -22961,7 +22923,7 @@ void ai_run_slide(edict_t* self, float distance)
 }
 
 // Decides if we're going to attack or do something else used by ai_run and ai_stand
-static bool ai_checkattack(edict_t* self) {
+procedure bool ai_checkattack(edict_t* self) {
 	vec3_t		temp;
 	bool	hesDeadJim;
 
@@ -23338,7 +23300,7 @@ void ValidateSelectedItem (edict_t *ent)
 }
 
 // Give items to a client
-static void Cmd_Give_f (edict_t *ent)
+procedure void Cmd_Give_f (edict_t *ent)
 {
 	char		*name;
 	gitem_t		*it;
@@ -23759,7 +23721,7 @@ void Cmd_InvDrop_f (edict_t *ent)
 	it->drop (ent, it);
 }
 
-static void Cmd_Kill_f(edict_t* ent) {
+procedure void Cmd_Kill_f(edict_t* ent) {
 	if((level.time - ent->client->respawn_time) < 5)
 		return;
 	ent->flags &= ~FL_GODMODE;
@@ -23767,12 +23729,12 @@ static void Cmd_Kill_f(edict_t* ent) {
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
-static void Cmd_PutAway_f(edict_t* ent) {
+procedure void Cmd_PutAway_f(edict_t* ent) {
 	ent->client->showhelp = false;
 	ent->client->showinventory = false;
 }
 
-static void Cmd_Players_f(edict_t* ent) {
+procedure void Cmd_Players_f(edict_t* ent) {
 	char print_info[1280] = {};
 	Com_sprintf(print_info, sizeof(print_info), "%3i %s\n", game.client.ps.stats[STAT_FRAGS], game.client.pers.netname);
 	PF_cprintf(ent, PRINT_HIGH, "%s\n 1 player\n", print_info);
@@ -23972,7 +23934,7 @@ dflags		these flags are used to control how T_Damage works
 	DAMAGE_NO_PROTECTION	kills godmode, armor, everything
 ============
 */
-static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
+procedure int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
 {
 	gclient_t	*client;
 	int			save;
@@ -24056,7 +24018,7 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
 	return save;
 }
 
-static int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sparks, int dflags)
+procedure int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sparks, int dflags)
 {
 	gclient_t	*client;
 	int			save;
@@ -24169,7 +24131,7 @@ void M_ReactToDamage (edict_t *targ, edict_t* attacker)
 	}
 }
 
-static bool CheckTeamDamage(edict_t *targ, edict_t* attacker) {
+procedure bool CheckTeamDamage(edict_t *targ, edict_t* attacker) {
 	// FIXME make the next line real and uncomment this block
 	// if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
 	UNUSED(targ);
@@ -24752,7 +24714,7 @@ void plat_blocked (edict_t* self, edict_t* other)
 		plat_go_up (self);
 }
 
-static void Use_Plat (edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Plat (edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 	if (ent->think) {
@@ -24761,7 +24723,7 @@ static void Use_Plat (edict_t *ent, edict_t* other, edict_t* activator) {
 	plat_go_down(ent);
 }
 
-static void Touch_Plat_Center(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void Touch_Plat_Center(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -24924,7 +24886,7 @@ void rotating_blocked (edict_t* self, edict_t* other)
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-static void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 	if (self->avelocity[0] || self->avelocity[1] || self->avelocity[2]) {
@@ -24932,7 +24894,7 @@ static void rotating_touch(edict_t* self, edict_t* other, cplane_t* plane, csurf
 	}
 }
 
-static void rotating_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void rotating_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -25065,13 +25027,13 @@ void button_fire (edict_t* self)
 	Move_Calc (self, self->moveinfo.end_origin, button_wait);
 }
 
-static void button_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void button_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	self->activator = activator;
 	button_fire (self);
 }
 
-static void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -25085,7 +25047,7 @@ static void button_touch(edict_t* self, edict_t* other, cplane_t* plane, csurfac
 	button_fire (self);
 }
 
-static void button_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void button_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(damage);
 	UNUSED(point);
@@ -25282,7 +25244,7 @@ void door_go_up (edict_t* self, edict_t* activator)
 	door_use_areaportals (self, true);
 }
 
-static void door_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void door_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	edict_t	*ent;
@@ -25314,7 +25276,7 @@ static void door_use(edict_t* self, edict_t* other, edict_t* activator) {
 	}
 };
 
-static void Touch_DoorTrigger(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void Touch_DoorTrigger(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -25448,7 +25410,7 @@ void door_blocked  (edict_t* self, edict_t* other)
 	}
 }
 
-static void door_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void door_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(damage);
 	UNUSED(point);
@@ -25463,7 +25425,7 @@ static void door_killed(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	door_use (self->teammaster, attacker, attacker);
 }
 
-static void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void door_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -25962,7 +25924,7 @@ void func_train_find (edict_t* self)
 	}
 }
 
-static void train_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void train_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	self->activator = activator;
@@ -26023,7 +25985,7 @@ void SP_func_train (edict_t* self)
 }
 
 // QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8)
-static void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_elevator_use (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(activator);
 
 	edict_t *target;
@@ -26090,12 +26052,12 @@ so, the basic time between firing is a random time between
 These can used but not touched.
 */
 
-static void func_timer_think(edict_t* self) {
+procedure void func_timer_think(edict_t* self) {
 	G_UseTargets (self, self->activator);
 	self->nextthink = level.time + self->wait + crandom() * self->random;
 }
 
-static void func_timer_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_timer_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	self->activator = activator;
@@ -26142,7 +26104,7 @@ The brush should be have a surface with at least one current content enabled.
 speed	default 100
 */
 
-static void func_conveyor_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_conveyor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -26204,7 +26166,7 @@ void door_secret_move5 (edict_t* self);
 void door_secret_move6 (edict_t* self);
 void door_secret_done (edict_t* self);
 
-static void door_secret_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void door_secret_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -26280,7 +26242,7 @@ void door_secret_blocked  (edict_t* self, edict_t* other)
 	T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-static void door_secret_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void door_secret_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(damage);
 	UNUSED(point);
@@ -26358,7 +26320,7 @@ void SP_func_door_secret (edict_t *ent)
 
 /*QUAKED func_killbox (1 0 0) ?
 Kills everything inside when fired, irrespective of protection.*/
-static void use_killbox(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void use_killbox(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -26706,7 +26668,7 @@ void	Use_Silencer (edict_t *ent, gitem_t *item)
 	ent->client->silencer_shots += 30;
 }
 
-static bool Pickup_Key(edict_t* ent, edict_t* other) {
+procedure bool Pickup_Key(edict_t* ent, edict_t* other) {
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
 	return true;
 }
@@ -26947,7 +26909,7 @@ int PowerArmorType (edict_t *ent)
 	return POWER_ARMOR_NONE;
 }
 
-static void Use_PowerArmor(edict_t *ent, gitem_t *item) {
+procedure void Use_PowerArmor(edict_t *ent, gitem_t *item) {
 	UNUSED(item);
 
 	int		index;
@@ -26983,7 +26945,7 @@ void Drop_PowerArmor (edict_t *ent, gitem_t *item)
 	Drop_General (ent, item);
 }
 
-static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -27044,7 +27006,7 @@ static void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t
 		G_FreeEdict (ent);
 }
 
-static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
+procedure void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
 {
 	if (other == ent->owner)
 		return;
@@ -27052,7 +27014,7 @@ static void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csur
 	Touch_Item (ent, other, plane, surf);
 }
 
-static void drop_make_touchable (edict_t *ent)
+procedure void drop_make_touchable (edict_t *ent)
 {
 	ent->touch = Touch_Item;
 }
@@ -27106,7 +27068,7 @@ edict_t *Drop_Item (edict_t *ent, gitem_t *item)
 	return dropped;
 }
 
-static void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -27293,7 +27255,7 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 		SV_ModelIndex (ent->model);
 }
 
-static gitem_t itemlist[] = {
+global_variable gitem_t itemlist[] = {
 	{},	// leave index 0 alone
 
 	// ARMOR
@@ -28252,7 +28214,7 @@ void InitItems (void)
 
 // Called by worldspawn
 // TODO: inline
-static void SetItemNames (void)
+procedure void SetItemNames (void)
 {
 	int		i;
 	gitem_t	*it;
@@ -28380,7 +28342,7 @@ void G_RunFrame (void)
 /*QUAKED func_group (0 0 0) ?
 Used to group brushes together just for editor convenience.*/
 
-static void Use_Areaportal(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Areaportal(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -28437,7 +28399,7 @@ void ClipGibVelocity (edict_t *ent)
 
 // gibs
 
-static void gib_think(edict_t* self) {
+procedure void gib_think(edict_t* self) {
 	self->s.frame++;
 	self->nextthink = level.time + FRAMETIME;
 
@@ -28447,7 +28409,7 @@ static void gib_think(edict_t* self) {
 	}
 }
 
-static void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(other);
 	UNUSED(surf);
 
@@ -28475,7 +28437,7 @@ static void gib_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_
 	}
 }
 
-static void gib_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void gib_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -28624,7 +28586,7 @@ void ThrowClientHead (edict_t* self, int damage)
 }
 
 // debris
-static void debris_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void debris_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -28686,7 +28648,7 @@ Pathtarget: gets used when an entity that has
 	this path_corner targeted touches it
 */
 
-static void path_corner_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void path_corner_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -28766,7 +28728,7 @@ Makes this the target of a monster and it will head here
 when first activated before going after the activator.  If
 hold is selected, it will stay here.
 */
-static void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void point_combat_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -28880,7 +28842,7 @@ Default _cone value is 10 (used to set size of light for spotlights)
 
 #define START_OFF	1
 
-static void light_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void light_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -28928,7 +28890,7 @@ START_ON		only valid for TRIGGER_SPAWN walls
 				the wall will initially be present
 */
 
-static void func_wall_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_wall_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -28999,7 +28961,7 @@ void SP_func_wall (edict_t* self)
 This is solid bmodel that will fall if it's support it removed.
 */
 
-static void func_object_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void func_object_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(surf);
 
 	// only squash thing we fall on top of
@@ -29018,7 +28980,7 @@ void func_object_release (edict_t* self)
 	self->touch = func_object_touch;
 }
 
-static void func_object_use (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_object_use (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29081,7 +29043,7 @@ mass defaults to 75.  This determines how much debris is emitted when
 it explodes.  You get one large chunk per 100 of mass (up to 8) and
 one small chunk per 25 of mass (up to 16).  So 800 gives the most.
 */
-static void func_explosive_explode(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void func_explosive_explode(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(damage);
 	UNUSED(point);
 
@@ -29147,13 +29109,13 @@ static void func_explosive_explode(edict_t* self, edict_t* inflictor, edict_t* a
 		G_FreeEdict (self);
 }
 
-static void func_explosive_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_explosive_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(activator);
 
 	func_explosive_explode(self, self, other, self->health, vec3_origin);
 }
 
-static void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_explosive_spawn (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29207,7 +29169,7 @@ Large exploding box.  You can override its mass (100),
 health (80), and dmg (150).
 */
 
-static void barrel_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void barrel_touch (edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -29301,7 +29263,7 @@ void barrel_explode (edict_t* self)
 		BecomeExplosion1 (self);
 }
 
-static void barrel_delay(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void barrel_delay(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(damage);
 	UNUSED(point);
@@ -29352,7 +29314,7 @@ void SP_misc_explobox (edict_t* self)
 /*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8)
 */
 
-static void misc_blackhole_use(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void misc_blackhole_use(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29481,7 +29443,7 @@ void commander_body_think (edict_t* self)
 		PF_StartSound (self, CHAN_BODY, SV_SoundIndex ("tank/thud.wav"), 1, ATTN_NORM, 0);
 }
 
-static void commander_body_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void commander_body_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29542,7 +29504,7 @@ void SP_misc_banner (edict_t *ent)
 /*QUAKED misc_deadsoldier (1 .5 0) (-16 -16 0) (16 16 16) ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED
 This is the dead player model. Comes in 6 exciting different poses!
 */
-static void misc_deadsoldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void misc_deadsoldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -29649,7 +29611,7 @@ void SP_misc_bigviper (edict_t *ent)
 /*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make?
 */
-static void misc_viper_bomb_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void misc_viper_bomb_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(other);
 	UNUSED(plane);
 	UNUSED(surf);
@@ -29680,7 +29642,7 @@ void misc_viper_bomb_prethink (edict_t* self)
 	self->s.angles[2] = diff + 10;
 }
 
-static void misc_viper_bomb_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void misc_viper_bomb_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	edict_t	*viper;
@@ -29772,7 +29734,7 @@ void misc_satellite_dish_think (edict_t* self)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-static void misc_satellite_dish_use (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void misc_satellite_dish_use (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29895,7 +29857,7 @@ void SP_target_character (edict_t* self)
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
 */
 
-static void target_string_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void target_string_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -29952,7 +29914,7 @@ If START_OFF, this entity must be used before it starts
 // don't let field width of any clock messages change, or it
 // could cause an overwrite after a game load
 
-static void func_clock_reset (edict_t* self)
+procedure void func_clock_reset (edict_t* self)
 {
 	self->activator = NULL;
 	if (self->spawnflags & 1)
@@ -29967,7 +29929,7 @@ static void func_clock_reset (edict_t* self)
 	}
 }
 
-static void func_clock_format_countdown (edict_t* self)
+procedure void func_clock_format_countdown (edict_t* self)
 {
 	if (self->style == 0)
 	{
@@ -30059,7 +30021,7 @@ void func_clock_think (edict_t* self)
 	self->nextthink = level.time + 1;
 }
 
-static void func_clock_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void func_clock_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	if (!(self->spawnflags & 8))
@@ -30099,7 +30061,7 @@ void SP_func_clock (edict_t* self)
 		self->nextthink = level.time + 1;
 }
 
-static void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void teleporter_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -30257,7 +30219,7 @@ void monster_fire_railgun (edict_t* self, vec3_t start, vec3_t aimdir, int damag
 	SV_Multicast (start, MULTICAST_PVS);
 }
 
-static void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, int flashtype) {
+procedure void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, int flashtype) {
 	fire_bfg(self, start, aimdir, damage, speed, damage_radius);
 
 	PF_WriteByte (svc_muzzleflash2);
@@ -30270,13 +30232,13 @@ static void monster_fire_bfg(edict_t* self, vec3_t start, vec3_t aimdir, int dam
 // Monster utility functions
 //
 
-static void M_FliesOff (edict_t* self)
+procedure void M_FliesOff (edict_t* self)
 {
 	self->s.effects &= ~EF_FLIES;
 	self->s.sound = 0;
 }
 
-static void M_FliesOn (edict_t* self)
+procedure void M_FliesOn (edict_t* self)
 {
 	if (self->waterlevel)
 		return;
@@ -30591,7 +30553,7 @@ void monster_think (edict_t* self)
 }
 
 // Using a monster makes it angry at the current activator
-static void monster_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void monster_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	if (self->enemy)
@@ -30633,7 +30595,7 @@ void monster_triggered_spawn (edict_t* self)
 	}
 }
 
-static void monster_triggered_spawn_use(edict_t* self, edict_t* other, edict_t* activator)
+procedure void monster_triggered_spawn_use(edict_t* self, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
@@ -30904,7 +30866,7 @@ void SV_CheckVelocity (edict_t *ent) {
 }
 
 // Runs thinking code for this frame if necessary
-static bool SV_RunThink(edict_t* ent) {
+procedure bool SV_RunThink(edict_t* ent) {
 	if (ent->nextthink <= 0 || ent->nextthink > level.time + 0.001) {
 		return true;
 	}
@@ -31840,7 +31802,7 @@ global_variable field_t fields[] = {
 
 };
 
-static field_t levelfields[] = {
+global_variable field_t levelfields[] = {
 	{"changemap", LLOFS(changemap), F_LSTRING, 0},
 
 	{"sight_client", LLOFS(sight_client), F_EDICT, 0},
@@ -31851,7 +31813,7 @@ static field_t levelfields[] = {
 	{NULL, 0, F_INT, 0}
 };
 
-static field_t clientfields[] = {
+global_variable field_t clientfields[] = {
 	{"pers.weapon", CLOFS(pers.weapon), F_ITEM, 0},
 	{"pers.lastweapon", CLOFS(pers.lastweapon), F_ITEM, 0},
 	{"newweapon", CLOFS(newweapon), F_ITEM, 0},
@@ -31859,7 +31821,7 @@ static field_t clientfields[] = {
 	{NULL, 0, F_INT, 0}
 };
 
-static void InitGame() {
+procedure void InitGame() {
 	InitItems();
 	Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
 	Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
@@ -31874,7 +31836,7 @@ static void InitGame() {
 
 //=========================================================
 
-static void WriteField1(field_t *field, u8 *base) {
+procedure void WriteField1(field_t *field, u8 *base) {
 	void		*p;
 	int			len;
 	int			index;
@@ -32332,17 +32294,17 @@ void SP_item_health_small (edict_t* self);
 void SP_item_health_large (edict_t* self);
 void SP_item_health_mega (edict_t* self);
 
-static void SP_info_player_start(edict_t* self) {UNUSED(self);}
+procedure void SP_info_player_start(edict_t* self) {UNUSED(self);}
 
-static void SP_info_player_deathmatch(edict_t* self) {
+procedure void SP_info_player_deathmatch(edict_t* self) {
 	G_FreeEdict(self);
 }
 
-static void SP_info_player_coop(edict_t* self) {
+procedure void SP_info_player_coop(edict_t* self) {
 	G_FreeEdict(self);
 }
 
-static void SP_info_player_intermission(edict_t* ent) {UNUSED(ent);}
+procedure void SP_info_player_intermission(edict_t* ent) {UNUSED(ent);}
 
 void SP_func_plat (edict_t *ent);
 void SP_func_rotating (edict_t *ent);
@@ -33091,7 +33053,7 @@ void SP_worldspawn (edict_t *ent)
 	PF_Configstring(CS_LIGHTS+63, "a");
 }
 
-static void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Target_Tent(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33120,7 +33082,7 @@ Normal sounds play each time the target is used.  The reliable flag can be set f
 Looped sounds are always atten 3 / vol 1, and the use function toggles it on/off.
 Multiple identical looping sounds will just increase volume without any speed cost.
 */
-static void Use_Target_Speaker(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Target_Speaker(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33180,7 +33142,7 @@ void SP_target_speaker (edict_t *ent)
 
 //==========================================================
 
-static void Use_Target_Help(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Target_Help(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33205,7 +33167,7 @@ void SP_target_help(edict_t *ent)
 
 // Counts a secret found.
 // These are single use targets.
-static void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
+procedure void use_target_secret(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
@@ -33232,7 +33194,7 @@ void SP_target_secret (edict_t *ent)
 
 // Counts a goal completed.
 // These are single use targets.
-static void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
+procedure void use_target_goal(edict_t *ent, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
@@ -33282,7 +33244,7 @@ void target_explosion_explode (edict_t* self)
 	self->delay = save;
 }
 
-static void use_target_explosion(edict_t* self, edict_t* other, edict_t* activator)
+procedure void use_target_explosion(edict_t* self, edict_t* other, edict_t* activator)
 {
 	UNUSED(other);
 
@@ -33357,7 +33319,7 @@ Set "sounds" to one of the following:
 		useful for lava/sparks
 */
 
-static void use_target_splash(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void use_target_splash(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	PF_WriteByte (svc_temp_entity);
@@ -33399,7 +33361,7 @@ For gibs:
 */
 void ED_CallSpawn (edict_t *ent);
 
-static void use_target_spawner (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void use_target_spawner (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33437,7 +33399,7 @@ dmg		default is 15
 speed	default is 1000
 */
 
-static void use_target_blaster (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void use_target_blaster (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 	fire_blaster (self, self->s.origin, self->movedir, self->dmg, self->speed, EF_BLASTER, MOD_TARGET_BLASTER);
@@ -33463,7 +33425,7 @@ void SP_target_blaster (edict_t* self)
 /*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-static void trigger_crosslevel_trigger_use (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_crosslevel_trigger_use (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 	game.serverflags |= self->spawnflags;
@@ -33589,7 +33551,7 @@ void target_laser_off (edict_t* self)
 	self->nextthink = 0;
 }
 
-static void target_laser_use (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void target_laser_use (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	self->activator = activator;
@@ -33691,7 +33653,7 @@ void target_lightramp_think (edict_t* self)
 	}
 }
 
-static void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void target_lightramp_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33785,7 +33747,7 @@ void target_earthquake_think (edict_t* self)
 		self->nextthink = level.time + FRAMETIME;
 }
 
-static void target_earthquake_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void target_earthquake_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	self->timestamp = level.time + self->count;
@@ -33851,14 +33813,14 @@ void multi_trigger (edict_t *ent)
 	}
 }
 
-static void Use_Multi(edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Multi(edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	ent->activator = activator;
 	multi_trigger (ent);
 }
 
-static void Touch_Multi(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void Touch_Multi(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -33899,7 +33861,7 @@ sounds
 4)
 set "message" to text string
 */
-static void trigger_enable (edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_enable (edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -33976,7 +33938,7 @@ void SP_trigger_once(edict_t *ent)
 /*QUAKED trigger_relay (.5 .5 .5) (-8 -8 -8) (8 8 8)
 This fixed size trigger cannot be touched, it can only be fired by other events.
 */
-static void trigger_relay_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_relay_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	G_UseTargets (self, activator);
@@ -33999,7 +33961,7 @@ trigger_key
 A relay trigger that only fires it's targets if player has the proper key.
 Use "item" to specify the required key, for example "key_data_cd"
 */
-static void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_key_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	int			index;
@@ -34068,7 +34030,7 @@ If nomessage is not set, t will print "1 more.. " etc when triggered and "sequen
 After the counter has been triggered "count" times (default 2), it will fire all of it's targets and remove itself.
 */
 
-static void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void trigger_counter_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 
 	if (self->count == 0)
@@ -34135,7 +34097,7 @@ trigger_push
 
 global_variable int windsound;
 
-static void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void trigger_push_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -34196,7 +34158,7 @@ NO_PROTECTION	*nothing* stops the damage
 "dmg"			default 5 (whole numbers only)
 
 */
-static void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -34210,7 +34172,7 @@ static void hurt_use(edict_t* self, edict_t* other, edict_t* activator) {
 		self->use = NULL;
 }
 
-static void hurt_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void hurt_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -34275,7 +34237,7 @@ the value of "gravity".  1.0 is standard
 gravity for the level.
 */
 
-static void trigger_gravity_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void trigger_gravity_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -34309,7 +34271,7 @@ Walking monsters that touch this will jump in the direction of the trigger's ang
 "height" default to 200, the speed thrown upwards
 */
 
-static void trigger_monsterjump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void trigger_monsterjump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -34497,7 +34459,7 @@ void turret_breach_think (edict_t* self)
 
 		// x & y
 		angle = self->s.angles[1] + self->owner->move_origin[1];
-		angle *= (M_PI*2 / 360);
+		angle *= (PI*2 / 360);
 		target[0] = SnapToEights(self->s.origin[0] + cos(angle) * self->owner->move_origin[0]);
 		target[1] = SnapToEights(self->s.origin[1] + sin(angle) * self->owner->move_origin[0]);
 		target[2] = self->owner->s.origin[2];
@@ -34507,7 +34469,7 @@ void turret_breach_think (edict_t* self)
 		self->owner->velocity[1] = dir[1] * 1.0 / FRAMETIME;
 
 		// z
-		angle = self->s.angles[PITCH] * (M_PI*2 / 360);
+		angle = self->s.angles[PITCH] * (PI*2 / 360);
 		target_z = SnapToEights(self->s.origin[2] + self->owner->move_origin[0] * tan(angle) + self->owner->move_origin[2]);
 
 		diff = target_z - self->owner->s.origin[2];
@@ -34592,7 +34554,7 @@ void infantry_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int dam
 void infantry_stand (edict_t* self);
 void monster_use (edict_t* self, edict_t* other, edict_t* activator);
 
-static void turret_driver_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void turret_driver_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(point);
 
 	edict_t	*ent;
@@ -34959,18 +34921,10 @@ void G_UseTargets (edict_t *ent, edict_t* activator)
 	}
 }
 
-/*
-=============
-TempVector
-
-This is just a convenience function
-for making temporary vectors for function calls
-=============
-*/
 float	*tv (float x, float y, float z)
 {
-	static	int		index;
-	static	vec3_t	vecs[8];
+	local_persist	int		index;
+	local_persist	vec3_t	vecs[8];
 	float	*v;
 
 	// use an array so that multiple tempvectors won't collide
@@ -34995,8 +34949,8 @@ for printing vectors
 */
 char	*vtos (vec3_t v)
 {
-	static	int		index;
-	static	char	str[8][32];
+	local_persist	int		index;
+	local_persist	char	str[8][32];
 	char	*s;
 
 	// use an array so that multiple vtos won't collide
@@ -35045,7 +34999,7 @@ float vectoyaw (vec3_t vec)
 	}
 	else
 	{
-		yaw = (int) (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
+		yaw = (int) (atan2(vec[YAW], vec[PITCH]) * 180 / PI);
 		if (yaw < 0)
 			yaw += 360;
 	}
@@ -35069,7 +35023,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 	else
 	{
 		if (value1[0])
-			yaw = (int) (atan2(value1[1], value1[0]) * 180 / M_PI);
+			yaw = (int) (atan2(value1[1], value1[0]) * 180 / PI);
 		else if (value1[1] > 0)
 			yaw = 90;
 		else
@@ -35078,7 +35032,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 			yaw += 360;
 
 		forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
-		pitch = (int) (atan2(value1[2], forward) * 180 / M_PI);
+		pitch = (int) (atan2(value1[2], forward) * 180 / PI);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -35247,7 +35201,7 @@ a non-instant attack weapon.  It checks to see if a
 monster's dodge function should be called.
 =================
 */
-static void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
+procedure void check_dodge (edict_t* self, vec3_t start, vec3_t dir, int speed)
 {
 	vec3_t	end;
 	vec3_t	v;
@@ -35341,7 +35295,7 @@ fire_lead
 This is an internal support routine used for bullet/pellet based weapons.
 =================
 */
-static void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int te_impact, int hspread, int vspread, int mod)
+procedure void fire_lead (edict_t* self, vec3_t start, vec3_t aimdir, int damage, int kick, int te_impact, int hspread, int vspread, int mod)
 {
 	trace_t		tr;
 	vec3_t		dir;
@@ -35601,7 +35555,7 @@ void fire_blaster (edict_t* self, vec3_t start, vec3_t dir, int damage, int spee
 fire_grenade
 =================
 */
-static void Grenade_Explode (edict_t *ent)
+procedure void Grenade_Explode (edict_t *ent)
 {
 	vec3_t		origin;
 	int			mod;
@@ -35658,7 +35612,7 @@ static void Grenade_Explode (edict_t *ent)
 	G_FreeEdict (ent);
 }
 
-static void Grenade_Touch(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void Grenade_Touch(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 
 	if (other == ent->owner)
@@ -36112,7 +36066,7 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 
 #define MODEL_SCALE 1.000000
 
-static mframe_t actor_frames_stand[] = {
+global_variable mframe_t actor_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -36158,9 +36112,9 @@ static mframe_t actor_frames_stand[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t actor_move_stand = {128, 167, actor_frames_stand, NULL};
+global_variable mmove_t actor_move_stand = {128, 167, actor_frames_stand, NULL};
 
-static void actor_stand(edict_t* self) {
+procedure void actor_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_stand;
 
 	// randomize on startup
@@ -36169,7 +36123,7 @@ static void actor_stand(edict_t* self) {
 	}
 }
 
-static mframe_t actor_frames_walk[] = {
+global_variable mframe_t actor_frames_walk[] = {
 	{ai_walk, 0,  NULL},
 	{ai_walk, 6,  NULL},
 	{ai_walk, 10, NULL},
@@ -36183,13 +36137,13 @@ static mframe_t actor_frames_walk[] = {
 	{ai_walk, 0,  NULL},
 };
 
-static mmove_t actor_move_walk = {251, 258, actor_frames_walk, NULL};
+global_variable mmove_t actor_move_walk = {251, 258, actor_frames_walk, NULL};
 
-static void actor_walk(edict_t* self) {
+procedure void actor_walk(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
 
-static mframe_t actor_frames_run[] = {
+global_variable mframe_t actor_frames_run[] = {
 	{ai_run, 4,  NULL},
 	{ai_run, 15, NULL},
 	{ai_run, 15, NULL},
@@ -36204,9 +36158,9 @@ static mframe_t actor_frames_run[] = {
 	{ai_run, -1, NULL},
 };
 
-static mmove_t actor_move_run = {93, 98, actor_frames_run, NULL};
+global_variable mmove_t actor_move_run = {93, 98, actor_frames_run, NULL};
 
-static void actor_run(edict_t* self) {
+procedure void actor_run(edict_t* self) {
 	if ((level.time < self->pain_debounce_time) && (!self->enemy))
 	{
 		if (self->movetarget)
@@ -36225,31 +36179,31 @@ static void actor_run(edict_t* self) {
 	self->monsterinfo.currentmove = &actor_move_run;
 }
 
-static mframe_t actor_frames_pain1 [] = {
+global_variable mframe_t actor_frames_pain1 [] = {
 	{ai_move, -5, NULL},
 	{ai_move, 4,  NULL},
 	{ai_move, 1,  NULL},
 };
 
-static mmove_t actor_move_pain1 = {74, 76, actor_frames_pain1, actor_run};
+global_variable mmove_t actor_move_pain1 = {74, 76, actor_frames_pain1, actor_run};
 
-static mframe_t actor_frames_pain2[] = {
+global_variable mframe_t actor_frames_pain2[] = {
 	{ai_move, -4, NULL},
 	{ai_move, 4,  NULL},
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t actor_move_pain2 = {77, 79, actor_frames_pain2, actor_run};
+global_variable mmove_t actor_move_pain2 = {77, 79, actor_frames_pain2, actor_run};
 
-static mframe_t actor_frames_pain3[] = {
+global_variable mframe_t actor_frames_pain3[] = {
 	{ai_move, -1, NULL},
 	{ai_move, 1,  NULL},
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t actor_move_pain3 = {80, 82, actor_frames_pain3, actor_run};
+global_variable mmove_t actor_move_pain3 = {80, 82, actor_frames_pain3, actor_run};
 
-static mframe_t actor_frames_flipoff[] = {
+global_variable mframe_t actor_frames_flipoff[] = {
 	{ai_turn, 0,  NULL},
 	{ai_turn, 0,  NULL},
 	{ai_turn, 0,  NULL},
@@ -36266,9 +36220,9 @@ static mframe_t actor_frames_flipoff[] = {
 	{ai_turn, 0,  NULL},
 };
 
-static mmove_t actor_move_flipoff = {39, 52, actor_frames_flipoff, actor_run};
+global_variable mmove_t actor_move_flipoff = {39, 52, actor_frames_flipoff, actor_run};
 
-static mframe_t actor_frames_taunt[] = {
+global_variable mframe_t actor_frames_taunt[] = {
 	{ai_turn, 0,  NULL},
 	{ai_turn, 0,  NULL},
 	{ai_turn, 0,  NULL},
@@ -36288,9 +36242,9 @@ static mframe_t actor_frames_taunt[] = {
 	{ai_turn, 0,  NULL},
 };
 
-static mmove_t actor_move_taunt = {234, 250, actor_frames_taunt, actor_run};
+global_variable mmove_t actor_move_taunt = {234, 250, actor_frames_taunt, actor_run};
 
-static void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void actor_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(kick);
 	UNUSED(damage);
 
@@ -36365,7 +36319,7 @@ void actor_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static mframe_t actor_frames_death1[] = {
+global_variable mframe_t actor_frames_death1[] = {
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 	{ai_move, -13, NULL},
@@ -36375,9 +36329,9 @@ static mframe_t actor_frames_death1[] = {
 	{ai_move, 1,   NULL},
 };
 
-static mmove_t actor_move_death1 = {4, 10, actor_frames_death1, actor_dead};
+global_variable mmove_t actor_move_death1 = {4, 10, actor_frames_death1, actor_dead};
 
-static mframe_t actor_frames_death2[] = {
+global_variable mframe_t actor_frames_death2[] = {
 	{ai_move, 0,   NULL},
 	{ai_move, 7,   NULL},
 	{ai_move, -6,  NULL},
@@ -36393,9 +36347,9 @@ static mframe_t actor_frames_death2[] = {
 	{ai_move, 0,   NULL},
 };
 
-static mmove_t actor_move_death2 = {11, 23, actor_frames_death2, actor_dead};
+global_variable mmove_t actor_move_death2 = {11, 23, actor_frames_death2, actor_dead};
 
-static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -36430,7 +36384,7 @@ static void actor_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int 
 		self->monsterinfo.currentmove = &actor_move_death2;
 }
 
-static void actor_fire(edict_t* self) {
+procedure void actor_fire(edict_t* self) {
 	actorMachineGun (self);
 
 	if (level.time >= self->monsterinfo.pausetime)
@@ -36439,16 +36393,16 @@ static void actor_fire(edict_t* self) {
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-static mframe_t actor_frames_attack[] = {
+global_variable mframe_t actor_frames_attack[] = {
 	{ai_charge, -2,  actor_fire},
 	{ai_charge, -2,  NULL},
 	{ai_charge, 3,   NULL},
 	{ai_charge, 2,   NULL},
 };
 
-static mmove_t actor_move_attack = {0, 3, actor_frames_attack, actor_run};
+global_variable mmove_t actor_move_attack = {0, 3, actor_frames_attack, actor_run};
 
-static void actor_attack(edict_t* self) {
+procedure void actor_attack(edict_t* self) {
 	int		n;
 
 	self->monsterinfo.currentmove = &actor_move_attack;
@@ -36456,7 +36410,7 @@ static void actor_attack(edict_t* self) {
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
 
-static void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
+procedure void actor_use(edict_t* self, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 
@@ -36539,7 +36493,7 @@ for JUMP only:
 "height"		speed thrown upwards (default 200)
 */
 
-static void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void target_actor_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -36671,18 +36625,18 @@ global_variable int sound_punch;
 global_variable int sound_sight;
 global_variable int sound_search;
 
-static void berserk_sight(edict_t* self, edict_t* other) {
+procedure void berserk_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-static void berserk_search(edict_t* self) {
+procedure void berserk_search(edict_t* self) {
 	PF_StartSound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 void berserk_fidget (edict_t* self);
-static mframe_t berserk_frames_stand[] = {
+global_variable mframe_t berserk_frames_stand[] = {
 	{ai_stand, 0, berserk_fidget},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -36690,13 +36644,13 @@ static mframe_t berserk_frames_stand[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t berserk_move_stand = {0, 4, berserk_frames_stand, NULL};
+global_variable mmove_t berserk_move_stand = {0, 4, berserk_frames_stand, NULL};
 
-static void berserk_stand(edict_t* self) {
+procedure void berserk_stand(edict_t* self) {
 	self->monsterinfo.currentmove = &berserk_move_stand;
 }
 
-static mframe_t berserk_frames_stand_fidget[] = {
+global_variable mframe_t berserk_frames_stand_fidget[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -36719,7 +36673,7 @@ static mframe_t berserk_frames_stand_fidget[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t berserk_move_stand_fidget = {5, 24, berserk_frames_stand_fidget, berserk_stand};
+global_variable mmove_t berserk_move_stand_fidget = {5, 24, berserk_frames_stand_fidget, berserk_stand};
 
 void berserk_fidget (edict_t* self)
 {
@@ -36732,7 +36686,7 @@ void berserk_fidget (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-static mframe_t berserk_frames_walk[] = {
+global_variable mframe_t berserk_frames_walk[] = {
 	{ai_walk, 9.1, NULL},
 	{ai_walk, 6.3, NULL},
 	{ai_walk, 4.9, NULL},
@@ -36747,7 +36701,7 @@ static mframe_t berserk_frames_walk[] = {
 	{ai_walk, 4.8, NULL},
 };
 
-static mmove_t berserk_move_walk = {25, 35, berserk_frames_walk, NULL};
+global_variable mmove_t berserk_move_walk = {25, 35, berserk_frames_walk, NULL};
 
 void berserk_walk (edict_t* self)
 {
@@ -36778,7 +36732,7 @@ void()	berserk_runb12	=[	$r_att12 ,	berserk_runb7	] {ai_run(19);};
 // running with arm in air : end loop
 */
 
-static mframe_t berserk_frames_run1[] = {
+global_variable mframe_t berserk_frames_run1[] = {
 	{ai_run, 21, NULL},
 	{ai_run, 11, NULL},
 	{ai_run, 21, NULL},
@@ -36787,7 +36741,7 @@ static mframe_t berserk_frames_run1[] = {
 	{ai_run, 19, NULL},
 };
 
-static mmove_t berserk_move_run1 = {36, 41, berserk_frames_run1, NULL};
+global_variable mmove_t berserk_move_run1 = {36, 41, berserk_frames_run1, NULL};
 
 void berserk_run (edict_t* self)
 {
@@ -36799,7 +36753,7 @@ void berserk_run (edict_t* self)
 
 void berserk_attack_spike (edict_t* self)
 {
-	static	vec3_t	aim = {MELEE_DISTANCE, 0, -24};
+	local_persist	vec3_t	aim = {MELEE_DISTANCE, 0, -24};
 	fire_hit (self, aim, (15 + (rand() % 6)), 400);		//	Faster attack -- upwards and backwards
 }
 
@@ -36808,7 +36762,7 @@ void berserk_swing (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
 
-static mframe_t berserk_frames_attack_spike[] = {
+global_variable mframe_t berserk_frames_attack_spike[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, berserk_swing},
@@ -36819,7 +36773,7 @@ static mframe_t berserk_frames_attack_spike[] = {
 	{ai_charge, 0, NULL},
 };
 
-static mmove_t berserk_move_attack_spike = {76, 83, berserk_frames_attack_spike, berserk_run};
+global_variable mmove_t berserk_move_attack_spike = {76, 83, berserk_frames_attack_spike, berserk_run};
 
 void berserk_attack_club (edict_t* self)
 {
@@ -36829,7 +36783,7 @@ void berserk_attack_club (edict_t* self)
 	fire_hit (self, aim, (5 + (rand() % 6)), 400);		// Slower attack
 }
 
-static mframe_t berserk_frames_attack_club [] = {
+global_variable mframe_t berserk_frames_attack_club [] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -36844,7 +36798,7 @@ static mframe_t berserk_frames_attack_club [] = {
 	{ai_charge, 0, NULL},
 };
 
-static mmove_t berserk_move_attack_club = {84, 95, berserk_frames_attack_club, berserk_run};
+global_variable mmove_t berserk_move_attack_club = {84, 95, berserk_frames_attack_club, berserk_run};
 
 void berserk_melee (edict_t* self)
 {
@@ -36854,37 +36808,16 @@ void berserk_melee (edict_t* self)
 		self->monsterinfo.currentmove = &berserk_move_attack_club;
 }
 
-/*
-void() 	berserk_atke1	=[	$r_attb1,	berserk_atke2	] {ai_run(9);};
-void() 	berserk_atke2	=[	$r_attb2,	berserk_atke3	] {ai_run(6);};
-void() 	berserk_atke3	=[	$r_attb3,	berserk_atke4	] {ai_run(18.4);};
-void() 	berserk_atke4	=[	$r_attb4,	berserk_atke5	] {ai_run(25);};
-void() 	berserk_atke5	=[	$r_attb5,	berserk_atke6	] {ai_run(14);};
-void() 	berserk_atke6	=[	$r_attb6,	berserk_atke7	] {ai_run(20);};
-void() 	berserk_atke7	=[	$r_attb7,	berserk_atke8	] {ai_run(8.5);};
-void() 	berserk_atke8	=[	$r_attb8,	berserk_atke9	] {ai_run(3);};
-void() 	berserk_atke9	=[	$r_attb9,	berserk_atke10	] {ai_run(17.5);};
-void() 	berserk_atke10	=[	$r_attb10,	berserk_atke11	] {ai_run(17);};
-void() 	berserk_atke11	=[	$r_attb11,	berserk_atke12	] {ai_run(9);};
-void() 	berserk_atke12	=[	$r_attb12,	berserk_atke13	] {ai_run(25);};
-void() 	berserk_atke13	=[	$r_attb13,	berserk_atke14	] {ai_run(3.7);};
-void() 	berserk_atke14	=[	$r_attb14,	berserk_atke15	] {ai_run(2.6);};
-void() 	berserk_atke15	=[	$r_attb15,	berserk_atke16	] {ai_run(19);};
-void() 	berserk_atke16	=[	$r_attb16,	berserk_atke17	] {ai_run(25);};
-void() 	berserk_atke17	=[	$r_attb17,	berserk_atke18	] {ai_run(19.6);};
-void() 	berserk_atke18	=[	$r_attb18,	berserk_run1	] {ai_run(7.8);};
-*/
-
-static mframe_t berserk_frames_pain1[] = {
+global_variable mframe_t berserk_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_pain1 = {199, 202, berserk_frames_pain1, berserk_run};
+global_variable mmove_t berserk_move_pain1 = {199, 202, berserk_frames_pain1, berserk_run};
 
-static mframe_t berserk_frames_pain2[] = {
+global_variable mframe_t berserk_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -36907,9 +36840,9 @@ static mframe_t berserk_frames_pain2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_pain2 = {203, 222, berserk_frames_pain2, berserk_run};
+global_variable mmove_t berserk_move_pain2 = {203, 222, berserk_frames_pain2, berserk_run};
 
-static void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void berserk_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -36938,7 +36871,7 @@ void berserk_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static mframe_t berserk_frames_death1[] = {
+global_variable mframe_t berserk_frames_death1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -36954,9 +36887,9 @@ static mframe_t berserk_frames_death1[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_death1 = {223, 235, berserk_frames_death1, berserk_dead};
+global_variable mmove_t berserk_move_death1 = {223, 235, berserk_frames_death1, berserk_dead};
 
-static mframe_t berserk_frames_death2[] = {
+global_variable mframe_t berserk_frames_death2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -36967,9 +36900,9 @@ static mframe_t berserk_frames_death2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t berserk_move_death2 = {236, 243, berserk_frames_death2, berserk_dead};
+global_variable mmove_t berserk_move_death2 = {236, 243, berserk_frames_death2, berserk_dead};
 
-static void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -37487,7 +37420,7 @@ void boss2_reattack_mg (edict_t* self)
 		self->monsterinfo.currentmove = &boss2_move_attack_post_mg;
 }
 
-static void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -37516,7 +37449,7 @@ static void boss2_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	}
 }
 
-static void boss2_dead (edict_t* self) {
+procedure void boss2_dead (edict_t* self) {
 	VectorSet (self->mins, -56, -56, 0);
 	VectorSet (self->maxs, 56, 56, 80);
 	self->movetype = MOVETYPE_TOSS;
@@ -37525,7 +37458,7 @@ static void boss2_dead (edict_t* self) {
 	SV_LinkEdict (self);
 }
 
-static void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -37678,7 +37611,7 @@ boss3
 
 #define MODEL_SCALE		1.000000
 
-static void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
+procedure void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
 	UNUSED(activator);
 	PF_WriteByte (svc_temp_entity);
@@ -37769,7 +37702,7 @@ void jorg_death_hit(edict_t* self);
 // stand
 //
 
-static mframe_t jorg_frames_stand[] = {
+global_variable mframe_t jorg_frames_stand[] = {
 	{ai_stand, 0, jorg_idle},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -38093,11 +38026,11 @@ void jorg_reattack1(edict_t* self)
 	}
 }
 
-static void jorg_attack1(edict_t* self) {
+procedure void jorg_attack1(edict_t* self) {
 	self->monsterinfo.currentmove = &jorg_move_attack1;
 }
 
-static void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -38224,11 +38157,11 @@ void jorg_attack(edict_t* self)
 	}
 }
 
-static void jorg_dead(edict_t* self) {
+procedure void jorg_dead(edict_t* self) {
 	UNUSED(self);
 }
 
-static void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -38432,7 +38365,7 @@ void makron_taunt (edict_t* self)
 // stand
 //
 
-static mframe_t makron_frames_stand[]= {
+global_variable mframe_t makron_frames_stand[]= {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -38495,7 +38428,7 @@ static mframe_t makron_frames_stand[]= {
 	{ai_stand, 0, NULL},		// 60
 };
 
-static mmove_t makron_move_stand = {414, 473, makron_frames_stand, NULL};
+global_variable mmove_t makron_move_stand = {414, 473, makron_frames_stand, NULL};
 
 void makron_stand (edict_t* self)
 {
@@ -38911,7 +38844,7 @@ void MakronHyperblaster (edict_t* self)
 	monster_fire_blaster (self, start, forward, 15, 1000, MZ2_MAKRON_BLASTER_1, EF_BLASTER);
 }
 
-static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -38953,7 +38886,7 @@ static void makron_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	}
 };
 
-static void makron_sight(edict_t* self, edict_t* other) {
+procedure void makron_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	self->monsterinfo.currentmove = &makron_move_sight;
@@ -39018,7 +38951,7 @@ void makron_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -39273,7 +39206,7 @@ global_variable int	sound_melee1;
 global_variable int	sound_melee2;
 global_variable int	sound_melee3;
 
-static void brain_sight(edict_t* self, edict_t* other) {
+procedure void brain_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
@@ -39696,7 +39629,7 @@ void brain_run (edict_t* self)
 		self->monsterinfo.currentmove = &brain_move_run;
 }
 
-static void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void brain_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -39739,7 +39672,7 @@ void brain_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -40074,7 +40007,7 @@ mframe_t chick_frames_pain3 [] =
 };
 mmove_t chick_move_pain3 = {100, 120, chick_frames_pain3, chick_run};
 
-static void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -40158,9 +40091,9 @@ global_variable mframe_t chick_frames_death1 [] =
 	{ai_move, 0,  NULL},
 
 };
-static mmove_t chick_move_death1 = {48, 59, chick_frames_death1, chick_dead};
+global_variable mmove_t chick_move_death1 = {48, 59, chick_frames_death1, chick_dead};
 
-static void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -40219,14 +40152,14 @@ void chick_duck_hold (edict_t* self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-static void chick_duck_up (edict_t* self) {
+procedure void chick_duck_up (edict_t* self) {
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
 	SV_LinkEdict (self);
 }
 
-static mframe_t chick_frames_duck[] = {
+global_variable mframe_t chick_frames_duck[] = {
 	{ai_move, 0, chick_duck_down},
 	{ai_move, 1, NULL},
 	{ai_move, 4, chick_duck_hold},
@@ -40236,9 +40169,9 @@ static mframe_t chick_frames_duck[] = {
 	{ai_move, 1, NULL},
 };
 
-static mmove_t chick_move_duck = {83, 89, chick_frames_duck, chick_run};
+global_variable mmove_t chick_move_duck = {83, 89, chick_frames_duck, chick_run};
 
-static void chick_dodge(edict_t* self, edict_t* attacker, float eta) {
+procedure void chick_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
 
 	if (random() > 0.25)
@@ -40424,7 +40357,7 @@ void chick_attack(edict_t* self)
 	self->monsterinfo.currentmove = &chick_move_start_attack1;
 }
 
-static void chick_sight(edict_t* self, edict_t* other) {
+procedure void chick_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -40679,7 +40612,7 @@ void flipper_melee(edict_t* self)
 	self->monsterinfo.currentmove = &flipper_move_attack;
 }
 
-static void flipper_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void flipper_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -40783,13 +40716,13 @@ mframe_t flipper_frames_death [] =
 };
 mmove_t flipper_move_death = {104, 159, flipper_frames_death, flipper_dead};
 
-static void flipper_sight(edict_t* self, edict_t* other) {
+procedure void flipper_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-static void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -40877,13 +40810,13 @@ global_variable int	sound_pain1;
 global_variable int	sound_pain2;
 global_variable int	sound_sight;
 
-static void floater_sight(edict_t* self, edict_t* other) {
+procedure void floater_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-static void floater_idle (edict_t* self) {
+procedure void floater_idle (edict_t* self) {
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
@@ -41350,7 +41283,7 @@ void floater_walk (edict_t* self)
 
 void floater_wham (edict_t* self)
 {
-	static	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
+	local_persist	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
 	PF_StartSound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, 5 + rand() % 6, -50);
 }
@@ -41384,11 +41317,11 @@ void floater_zap (edict_t* self)
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
 
-static void floater_attack(edict_t* self) {
+procedure void floater_attack(edict_t* self) {
 	self->monsterinfo.currentmove = &floater_move_attack1;
 }
 
-static void floater_melee(edict_t* self) {
+procedure void floater_melee(edict_t* self) {
 	if (random() < 0.5) {
 		self->monsterinfo.currentmove = &floater_move_attack3;
 	} else {
@@ -41396,7 +41329,7 @@ static void floater_melee(edict_t* self) {
 	}
 }
 
-static void floater_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void floater_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -41424,7 +41357,7 @@ static void floater_pain (edict_t* self, edict_t* other, float kick, int damage)
 	}
 }
 
-static void floater_dead(edict_t* self) {
+procedure void floater_dead(edict_t* self) {
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -41433,7 +41366,7 @@ static void floater_dead(edict_t* self) {
 	SV_LinkEdict (self);
 }
 
-static void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -41528,7 +41461,7 @@ void flyer_setstart (edict_t* self);
 void flyer_stand (edict_t* self);
 void flyer_nextmove (edict_t* self);
 
-static void flyer_sight(edict_t* self, edict_t* other) {
+procedure void flyer_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -41999,7 +41932,7 @@ void flyer_check_melee(edict_t* self)
 		self->monsterinfo.currentmove = &flyer_move_end_melee;
 }
 
-static void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -42032,7 +41965,7 @@ static void flyer_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	}
 }
 
-static void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -42119,7 +42052,7 @@ void gladiator_idle (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-static void gladiator_sight(edict_t* self, edict_t* other) {
+procedure void gladiator_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -42306,7 +42239,7 @@ mframe_t gladiator_frames_pain_air [] =
 };
 mmove_t gladiator_move_pain_air = {83, 89, gladiator_frames_pain_air, gladiator_run};
 
-static void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -42372,7 +42305,7 @@ mframe_t gladiator_frames_death [] =
 };
 mmove_t gladiator_move_death = {61, 82, gladiator_frames_death, gladiator_dead};
 
-static void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -42472,7 +42405,7 @@ void gunner_idlesound (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-static void gunner_sight (edict_t* self, edict_t* other) {
+procedure void gunner_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -42707,7 +42640,7 @@ mframe_t gunner_frames_pain1 [] =
 };
 mmove_t gunner_move_pain1 = {159, 176, gunner_frames_pain1, gunner_run};
 
-static void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -42758,7 +42691,7 @@ mframe_t gunner_frames_death [] =
 };
 mmove_t gunner_move_death = {190, 200, gunner_frames_death, gunner_dead};
 
-static void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -42816,7 +42749,7 @@ void gunner_duck_up (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static mframe_t gunner_frames_duck[] = {
+global_variable mframe_t gunner_frames_duck[] = {
 	{ai_move, 1,  gunner_duck_down},
 	{ai_move, 1,  NULL},
 	{ai_move, 1,  gunner_duck_hold},
@@ -42827,9 +42760,9 @@ static mframe_t gunner_frames_duck[] = {
 	{ai_move, -1, NULL},
 };
 
-static mmove_t gunner_move_duck = {201, 208, gunner_frames_duck, gunner_run};
+global_variable mmove_t gunner_move_duck = {201, 208, gunner_frames_duck, gunner_run};
 
-static void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
+procedure void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
 
 	if (random() > 0.25)
@@ -43065,7 +42998,7 @@ global_variable int	sound_sight;
 global_variable int	sound_search1;
 global_variable int	sound_search2;
 
-static void hover_sight(edict_t* self, edict_t* other) {
+procedure void hover_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -43505,7 +43438,7 @@ void hover_attack(edict_t* self)
 	self->monsterinfo.currentmove = &hover_move_attack1;
 }
 
-static void hover_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void hover_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -43558,7 +43491,7 @@ void hover_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -43826,7 +43759,7 @@ mframe_t infantry_frames_pain2 [] =
 };
 mmove_t infantry_move_pain2 = {110, 119, infantry_frames_pain2, infantry_run};
 
-static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void infantry_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -43854,7 +43787,7 @@ static void infantry_pain (edict_t* self, edict_t* other, float kick, int damage
 	}
 }
 
-static vec3_t aimangles[] = {
+global_variable vec3_t aimangles[] = {
 	{0.0, 5.0, 0.0},
 	{10.0, 15.0, 0.0},
 	{20.0, 25.0, 0.0},
@@ -43908,7 +43841,7 @@ void InfantryMachineGun (edict_t* self)
 	monster_fire_bullet (self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-static void infantry_sight (edict_t* self, edict_t* other) {
+procedure void infantry_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound(self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
@@ -43995,7 +43928,7 @@ mframe_t infantry_frames_death3 [] =
 };
 mmove_t infantry_move_death3 = {170, 178, infantry_frames_death3, infantry_dead};
 
-static void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -44067,7 +44000,7 @@ void infantry_duck_up (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static mframe_t infantry_frames_duck[] = {
+global_variable mframe_t infantry_frames_duck[] = {
 	{ai_move, -2, infantry_duck_down},
 	{ai_move, -5, infantry_duck_hold},
 	{ai_move, 3,  NULL},
@@ -44075,9 +44008,9 @@ static mframe_t infantry_frames_duck[] = {
 	{ai_move, 0,  NULL},
 };
 
-static mmove_t infantry_move_duck = {120, 124, infantry_frames_duck, infantry_run};
+global_variable mmove_t infantry_move_duck = {120, 124, infantry_frames_duck, infantry_run};
 
-static void infantry_dodge(edict_t* self, edict_t* attacker, float eta) {
+procedure void infantry_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
 
 	if (random() > 0.25)
@@ -44466,10 +44399,10 @@ global_variable mframe_t insane_frames_walk_normal [] =
 	{ai_walk,	0,		NULL},
 };
 
-static mmove_t insane_move_walk_normal = {160, 172, insane_frames_walk_normal, insane_walk};
-static mmove_t insane_move_run_normal = {160, 172, insane_frames_walk_normal, insane_run};
+global_variable mmove_t insane_move_walk_normal = {160, 172, insane_frames_walk_normal, insane_walk};
+global_variable mmove_t insane_move_run_normal = {160, 172, insane_frames_walk_normal, insane_run};
 
-static mframe_t insane_frames_walk_insane[] = {
+global_variable mframe_t insane_frames_walk_insane[] = {
 	{ai_walk,	0,	insane_scream},		// walk 1
 	{ai_walk,	3.4,	NULL},		// walk 2
 	{ai_walk,	3.6,	NULL},		// 3
@@ -44661,7 +44594,7 @@ void insane_run (edict_t* self)
 			self->monsterinfo.currentmove = &insane_move_run_insane;
 }
 
-static void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void insane_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -44766,7 +44699,7 @@ void insane_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-static void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -44967,7 +44900,7 @@ void medic_search (edict_t* self)
 	}
 }
 
-static void medic_sight(edict_t* self, edict_t* other) {
+procedure void medic_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -45145,7 +45078,7 @@ mframe_t medic_frames_pain1 [] =
 };
 mmove_t medic_move_pain1 = {108, 115, medic_frames_pain1, medic_run};
 
-static mframe_t medic_frames_pain2[] = {
+global_variable mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -45163,9 +45096,9 @@ static mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t medic_move_pain2 = {116, 130, medic_frames_pain2, medic_run};
+global_variable mmove_t medic_move_pain2 = {116, 130, medic_frames_pain2, medic_run};
 
-static void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void medic_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -45260,7 +45193,7 @@ mframe_t medic_frames_death [] =
 };
 mmove_t medic_move_death = {147, 176, medic_frames_death, medic_dead};
 
-static void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -45343,7 +45276,7 @@ mframe_t medic_frames_duck [] =
 };
 mmove_t medic_move_duck = {131, 146, medic_frames_duck, medic_run};
 
-static void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
+procedure void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
 
 	if (random() > 0.25)
@@ -45409,7 +45342,7 @@ void medic_hook_launch (edict_t* self)
 
 void ED_CallSpawn (edict_t *ent);
 
-static vec3_t medic_cable_offsets[] = {
+global_variable vec3_t medic_cable_offsets[] = {
 	{45.0,  -9.2, 15.5},
 	{48.4,  -9.7, 15.2},
 	{47.8,  -9.8, 15.8},
@@ -45940,7 +45873,7 @@ bool SV_StepDirection (edict_t *ent, float yaw, float dist)
 	ent->ideal_yaw = yaw;
 	M_ChangeYaw (ent);
 
-	yaw = yaw*M_PI*2 / 360;
+	yaw = yaw*PI*2 / 360;
 	move[0] = cos(yaw)*dist;
 	move[1] = sin(yaw)*dist;
 	move[2] = 0;
@@ -46124,7 +46057,7 @@ bool M_walkmove (edict_t *ent, float yaw, float dist)
 	if (!ent->groundentity && !(ent->flags & (FL_FLY|FL_SWIM)))
 		return false;
 
-	yaw = yaw*M_PI*2 / 360;
+	yaw = yaw*PI*2 / 360;
 
 	move[0] = cos(yaw)*dist;
 	move[1] = sin(yaw)*dist;
@@ -46175,7 +46108,7 @@ void mutant_step (edict_t* self)
 		PF_StartSound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
 }
 
-static void mutant_sight(edict_t* self, edict_t* other) {
+procedure void mutant_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -46271,7 +46204,7 @@ void mutant_idle_loop (edict_t* self)
 		self->monsterinfo.nextframe = 116;
 }
 
-static mframe_t mutant_frames_idle[] = {
+global_variable mframe_t mutant_frames_idle[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -46287,7 +46220,7 @@ static mframe_t mutant_frames_idle[] = {
 	{ai_stand, 0, NULL},
 };
 
-static mmove_t mutant_move_idle = {113, 125, mutant_frames_idle, mutant_stand};
+global_variable mmove_t mutant_move_idle = {113, 125, mutant_frames_idle, mutant_stand};
 
 void mutant_idle (edict_t* self)
 {
@@ -46416,7 +46349,7 @@ void mutant_melee (edict_t* self)
 // ATTACK
 //
 
-static void mutant_jump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
+procedure void mutant_jump_touch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) {
 	UNUSED(plane);
 	UNUSED(surf);
 
@@ -46604,7 +46537,7 @@ mframe_t mutant_frames_pain3 [] =
 };
 mmove_t mutant_move_pain3 = {45, 55, mutant_frames_pain3, mutant_run};
 
-static void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -46681,7 +46614,7 @@ mframe_t mutant_frames_death2 [] =
 };
 mmove_t mutant_move_death2 = {24, 33, mutant_frames_death2, mutant_dead};
 
-static void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -46805,7 +46738,7 @@ void parasite_reel_in (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
 
-static void parasite_sight(edict_t* self, edict_t* other) {
+procedure void parasite_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
@@ -46967,12 +46900,12 @@ mframe_t parasite_frames_walk [] =
 };
 mmove_t parasite_move_walk = {70, 76, parasite_frames_walk, parasite_walk};
 
-static mframe_t parasite_frames_start_walk[] = {
+global_variable mframe_t parasite_frames_start_walk[] = {
 	{ai_walk, 0,	NULL},
 	{ai_walk, 30, parasite_walk},
 };
 
-static mmove_t parasite_move_start_walk = {68, 69, parasite_frames_start_walk, NULL};
+global_variable mmove_t parasite_move_start_walk = {68, 69, parasite_frames_start_walk, NULL};
 
 mframe_t parasite_frames_stop_walk[] = {
 	{ai_walk, 20, NULL},
@@ -46989,11 +46922,11 @@ void parasite_start_walk (edict_t* self)
 	self->monsterinfo.currentmove = &parasite_move_start_walk;
 }
 
-static void parasite_walk(edict_t* self) {
+procedure void parasite_walk(edict_t* self) {
 	self->monsterinfo.currentmove = &parasite_move_walk;
 }
 
-static mframe_t parasite_frames_pain1[] = {
+global_variable mframe_t parasite_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0,	NULL},
@@ -47007,9 +46940,9 @@ static mframe_t parasite_frames_pain1[] = {
 	{ai_move, 0, NULL},
 };
 
-static mmove_t parasite_move_pain1 = {57, 67, parasite_frames_pain1, parasite_start_run};
+global_variable mmove_t parasite_move_pain1 = {57, 67, parasite_frames_pain1, parasite_start_run};
 
-static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void parasite_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -47030,7 +46963,7 @@ static void parasite_pain(edict_t* self, edict_t* other, float kick, int damage)
 	self->monsterinfo.currentmove = &parasite_move_pain1;
 }
 
-static bool parasite_drain_attack_ok (vec3_t start, vec3_t end)
+procedure bool parasite_drain_attack_ok (vec3_t start, vec3_t end)
 {
 	vec3_t	dir, angles;
 
@@ -47201,7 +47134,7 @@ mframe_t parasite_frames_death [] =
 };
 mmove_t parasite_move_death = {32, 38, parasite_frames_death, parasite_dead};
 
-static void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
 	UNUSED(inflictor);
 	UNUSED(point);
@@ -47593,7 +47526,7 @@ mframe_t soldier_frames_pain4 [] =
 };
 mmove_t soldier_move_pain4 = {80, 96, soldier_frames_pain4, soldier_run};
 
-static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void soldier_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	UNUSED(damage);
@@ -47641,9 +47574,9 @@ static void soldier_pain (edict_t* self, edict_t* other, float kick, int damage)
 // ATTACK
 //
 
-static int blaster_flash [] = {MZ2_SOLDIER_BLASTER_1, MZ2_SOLDIER_BLASTER_2, MZ2_SOLDIER_BLASTER_3, MZ2_SOLDIER_BLASTER_4, MZ2_SOLDIER_BLASTER_5, MZ2_SOLDIER_BLASTER_6, MZ2_SOLDIER_BLASTER_7, MZ2_SOLDIER_BLASTER_8};
-static int shotgun_flash [] = {MZ2_SOLDIER_SHOTGUN_1, MZ2_SOLDIER_SHOTGUN_2, MZ2_SOLDIER_SHOTGUN_3, MZ2_SOLDIER_SHOTGUN_4, MZ2_SOLDIER_SHOTGUN_5, MZ2_SOLDIER_SHOTGUN_6, MZ2_SOLDIER_SHOTGUN_7, MZ2_SOLDIER_SHOTGUN_8};
-static int machinegun_flash [] = {MZ2_SOLDIER_MACHINEGUN_1, MZ2_SOLDIER_MACHINEGUN_2, MZ2_SOLDIER_MACHINEGUN_3, MZ2_SOLDIER_MACHINEGUN_4, MZ2_SOLDIER_MACHINEGUN_5, MZ2_SOLDIER_MACHINEGUN_6, MZ2_SOLDIER_MACHINEGUN_7, MZ2_SOLDIER_MACHINEGUN_8};
+procedure int blaster_flash [] = {MZ2_SOLDIER_BLASTER_1, MZ2_SOLDIER_BLASTER_2, MZ2_SOLDIER_BLASTER_3, MZ2_SOLDIER_BLASTER_4, MZ2_SOLDIER_BLASTER_5, MZ2_SOLDIER_BLASTER_6, MZ2_SOLDIER_BLASTER_7, MZ2_SOLDIER_BLASTER_8};
+procedure int shotgun_flash [] = {MZ2_SOLDIER_SHOTGUN_1, MZ2_SOLDIER_SHOTGUN_2, MZ2_SOLDIER_SHOTGUN_3, MZ2_SOLDIER_SHOTGUN_4, MZ2_SOLDIER_SHOTGUN_5, MZ2_SOLDIER_SHOTGUN_6, MZ2_SOLDIER_SHOTGUN_7, MZ2_SOLDIER_SHOTGUN_8};
+procedure int machinegun_flash [] = {MZ2_SOLDIER_MACHINEGUN_1, MZ2_SOLDIER_MACHINEGUN_2, MZ2_SOLDIER_MACHINEGUN_3, MZ2_SOLDIER_MACHINEGUN_4, MZ2_SOLDIER_MACHINEGUN_5, MZ2_SOLDIER_MACHINEGUN_6, MZ2_SOLDIER_MACHINEGUN_7, MZ2_SOLDIER_MACHINEGUN_8};
 
 void soldier_fire (edict_t* self, int flash_number)
 {
@@ -47934,7 +47867,7 @@ void soldier_attack(edict_t* self)
 // SIGHT
 //
 
-static void soldier_sight(edict_t* self, edict_t* other) {
+procedure void soldier_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	if (random() < 0.5)
@@ -48270,7 +48203,7 @@ mframe_t soldier_frames_death6 [] =
 };
 mmove_t soldier_move_death6 = {465, 474, soldier_frames_death6, soldier_dead};
 
-static void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
 	UNUSED(inflictor);
 
@@ -48831,7 +48764,7 @@ void supertank_reattack1(edict_t* self)
 		self->monsterinfo.currentmove = &supertank_move_end_attack1;
 }
 
-static void supertank_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void supertank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 
@@ -49024,7 +48957,7 @@ void BossExplode (edict_t* self)
 	self->nextthink = level.time + 0.1;
 }
 
-static void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(damage);
@@ -49096,7 +49029,7 @@ global_variable int	sound_strike;
 // misc
 //
 
-static void tank_sight(edict_t* self, edict_t* other) {
+procedure void tank_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -49332,7 +49265,7 @@ mframe_t tank_frames_pain3 [] =
 };
 mmove_t	tank_move_pain3 = {206, 221, tank_frames_pain3, tank_run};
 
-static void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
+procedure void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
 	UNUSED(kick);
 	if (self->health < (self->max_health / 2))
@@ -49765,7 +49698,7 @@ mframe_t tank_frames_death1 [] =
 };
 mmove_t	tank_move_death = {222, 253, tank_frames_death1, tank_dead};
 
-static void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
 	UNUSED(attacker);
 	UNUSED(point);
@@ -49860,7 +49793,7 @@ void SP_monster_tank (edict_t* self)
 
 void SP_misc_teleporter_dest (edict_t *ent);
 
-static void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
+procedure void player_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(self);
 	UNUSED(other);
 	UNUSED(kick);
@@ -49889,7 +49822,7 @@ void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 	}
 
 	if (dir[0])
-		self->client->killer_yaw = 180/M_PI*atan2(dir[1], dir[0]);
+		self->client->killer_yaw = 180/PI*atan2(dir[1], dir[0]);
 	else {
 		self->client->killer_yaw = 0;
 		if (dir[1] > 0)
@@ -49902,7 +49835,7 @@ void LookAtKiller (edict_t* self, edict_t* inflictor, edict_t* attacker)
 
 }
 
-static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
+procedure void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(point);
 
 	int		n;
@@ -49957,7 +49890,7 @@ static void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker, in
 	{	// normal death
 		if (!self->deadflag)
 		{
-			static int i;
+			procedure int i;
 
 			i = (i+1)%3;
 			// start a death animation
@@ -50064,7 +49997,7 @@ void FetchClientEntData (edict_t *ent)
 }
 
 // Chooses a player start, deathmatch start, etc
-static void SelectSpawnPoint(vec3_t origin, vec3_t angles) {
+procedure void SelectSpawnPoint(vec3_t origin, vec3_t angles) {
 	edict_t	*spot = NULL;
 
 	// find a single player start spot
@@ -50857,9 +50790,9 @@ float	xyspeed;
 
 float	bobmove;
 int		bobcycle;		// odd cycles are right foot going forward
-float	bobfracsin;		// sin(bobfrac*M_PI)
+float	bobfracsin;		// sin(bobfrac*PI)
 
-static float SV_CalcRoll(vec3_t velocity) {
+procedure float SV_CalcRoll(vec3_t velocity) {
 	float side = DotProduct (velocity, right);
 	float sign = side < 0 ? -1 : 1;
 	side = fabs(side);
@@ -50888,9 +50821,9 @@ void P_DamageFeedback (edict_t *player)
 	float	realcount, count, kick;
 	vec3_t	v;
 	int		r, l;
-	static	vec3_t	power_color = {0.0, 1.0, 0.0};
-	static	vec3_t	acolor = {1.0, 1.0, 1.0};
-	static	vec3_t	bcolor = {1.0, 0.0, 0.0};
+	local_persist	vec3_t	power_color = {0.0, 1.0, 0.0};
+	local_persist	vec3_t	acolor = {1.0, 1.0, 1.0};
+	local_persist	vec3_t	bcolor = {1.0, 0.0, 0.0};
 
 	client = player->client;
 
@@ -50909,7 +50842,7 @@ void P_DamageFeedback (edict_t *player)
 	// start a pain animation if still in the player model
 	if (client->anim_priority < ANIM_PAIN && player->s.modelindex == 255)
 	{
-		static int		i;
+		procedure int		i;
 
 		client->anim_priority = ANIM_PAIN;
 		if (client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -51816,7 +51749,7 @@ void ClientEndServerFrame (edict_t *ent)
 		bobtime *= 4;
 
 	bobcycle = (int)bobtime;
-	bobfracsin = fabs(sin(bobtime*M_PI));
+	bobfracsin = fabs(sin(bobtime*PI));
 
 	// detect hitting the floor
 	P_FallingDamage (ent);
@@ -51860,7 +51793,7 @@ global_variable u8		is_silenced;
 
 void weapon_grenade_fire (edict_t *ent, bool held);
 
-static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
+procedure void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
 	UNUSED(client);
 	vec3_t	_distance;
@@ -52509,8 +52442,8 @@ void weapon_grenadelauncher_fire (edict_t *ent)
 
 void Weapon_GrenadeLauncher (edict_t *ent)
 {
-	static int	pause_frames[]	= {34, 51, 59, 0};
-	static int	fire_frames[]	= {6, 0};
+	procedure int	pause_frames[]	= {34, 51, 59, 0};
+	procedure int	fire_frames[]	= {6, 0};
 
 	Weapon_Generic (ent, 5, 16, 59, 64, pause_frames, fire_frames, weapon_grenadelauncher_fire);
 }
@@ -52564,8 +52497,8 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 
 void Weapon_RocketLauncher (edict_t *ent)
 {
-	static int	pause_frames[]	= {25, 33, 42, 50, 0};
-	static int	fire_frames[]	= {5, 0};
+	procedure int	pause_frames[]	= {25, 33, 42, 50, 0};
+	procedure int	fire_frames[]	= {5, 0};
 
 	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 }
@@ -52609,8 +52542,8 @@ void Weapon_Blaster_Fire (edict_t *ent)
 
 void Weapon_Blaster (edict_t *ent)
 {
-	static int	pause_frames[]	= {19, 32, 0};
-	static int	fire_frames[]	= {5, 0};
+	procedure int	pause_frames[]	= {19, 32, 0};
+	procedure int	fire_frames[]	= {5, 0};
 
 	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
 }
@@ -52641,7 +52574,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 		}
 		else
 		{
-			rotation = (ent->client->ps.gunframe - 5) * 2*M_PI/6;
+			rotation = (ent->client->ps.gunframe - 5) * 2*PI/6;
 			offset[0] = -4 * sin(rotation);
 			offset[1] = 0;
 			offset[2] = 4 * cos(rotation);
@@ -52682,8 +52615,8 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 
 void Weapon_HyperBlaster (edict_t *ent)
 {
-	static int	pause_frames[]	= {0};
-	static int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
+	procedure int	pause_frames[]	= {0};
+	procedure int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
 
 	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, Weapon_HyperBlaster_Fire);
 }
@@ -52780,8 +52713,8 @@ void Machinegun_Fire (edict_t *ent)
 
 void Weapon_Machinegun (edict_t *ent)
 {
-	static int	pause_frames[]	= {23, 45, 0};
-	static int	fire_frames[]	= {4, 5, 0};
+	procedure int	pause_frames[]	= {23, 45, 0};
+	procedure int	fire_frames[]	= {4, 5, 0};
 
 	Weapon_Generic (ent, 3, 5, 45, 49, pause_frames, fire_frames, Machinegun_Fire);
 }
@@ -52903,8 +52836,8 @@ void Chaingun_Fire (edict_t *ent)
 
 void Weapon_Chaingun (edict_t *ent)
 {
-	static int	pause_frames[]	= {38, 43, 51, 61, 0};
-	static int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
+	procedure int	pause_frames[]	= {38, 43, 51, 61, 0};
+	procedure int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
 
 	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 }
@@ -52961,8 +52894,8 @@ void weapon_shotgun_fire (edict_t *ent)
 
 void Weapon_Shotgun (edict_t *ent)
 {
-	static int	pause_frames[]	= {22, 28, 34, 0};
-	static int	fire_frames[]	= {8, 9, 0};
+	procedure int	pause_frames[]	= {22, 28, 34, 0};
+	procedure int	fire_frames[]	= {8, 9, 0};
 
 	Weapon_Generic (ent, 7, 18, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
 }
@@ -53013,8 +52946,8 @@ void weapon_supershotgun_fire (edict_t *ent)
 
 void Weapon_SuperShotgun (edict_t *ent)
 {
-	static int	pause_frames[]	= {29, 42, 57, 0};
-	static int	fire_frames[]	= {7, 0};
+	procedure int	pause_frames[]	= {29, 42, 57, 0};
+	procedure int	fire_frames[]	= {7, 0};
 
 	Weapon_Generic (ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
 }
@@ -53059,8 +52992,8 @@ void weapon_railgun_fire (edict_t *ent)
 
 void Weapon_Railgun (edict_t *ent)
 {
-	static int	pause_frames[]	= {56, 0};
-	static int	fire_frames[]	= {4, 0};
+	procedure int	pause_frames[]	= {56, 0};
+	procedure int	fire_frames[]	= {4, 0};
 
 	Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 }
@@ -53121,8 +53054,8 @@ void weapon_bfg_fire (edict_t *ent)
 
 void Weapon_BFG (edict_t *ent)
 {
-	static int	pause_frames[]	= {39, 45, 50, 55, 0};
-	static int	fire_frames[]	= {9, 17, 0};
+	procedure int	pause_frames[]	= {39, 45, 50, 55, 0};
+	procedure int	fire_frames[]	= {9, 17, 0};
 
 	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
@@ -53242,7 +53175,7 @@ image_t *GL_LoadPic (char *name, u8 *pic, int width, int height, imagetype_t typ
 
 void	GL_FreeUnusedImages (void);
 
-static struct {
+global_variable struct {
 	float inverse_intensity;
 	unsigned char *d_16to8table;
 	int lightmap_textures;
@@ -53259,7 +53192,7 @@ global_variable image_t* draw_chars;
 extern	bool	scrap_dirty;
 void Scrap_Upload (void);
 
-static void GL_Bind(int texnum) {
+procedure void GL_Bind(int texnum) {
 	if (gl_state.currenttexture != texnum) {
 		gl_state.currenttexture = texnum;
 		glBindTexture(GL_TEXTURE_2D, texnum);
@@ -53302,7 +53235,7 @@ void Draw_Char(int x, int y, int num) {
 }
 
 // Finds or loads the given image
-static image_t* GL_FindImage(char* name, imagetype_t type) {
+procedure image_t* GL_FindImage(char* name, imagetype_t type) {
 	image_t* target_image = 0;
 
 	String name_str = string_from_cstring(name);
@@ -53482,8 +53415,8 @@ int		gl_tex_alpha_format = 4;
 int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
 int		gl_filter_max = GL_LINEAR;
 
-static void GL_TexEnv(GLenum mode) {
-	static int lastmode = -1;
+procedure void GL_TexEnv(GLenum mode) {
+	procedure int lastmode = -1;
 	if ((int)mode != lastmode) {
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
 		lastmode = mode;
@@ -53954,7 +53887,7 @@ done: ;
 }
 
 // Returns has_alpha
-static bool GL_Upload8(u8 *data, int width, int height,  bool mipmap) {
+procedure bool GL_Upload8(u8 *data, int width, int height,  bool mipmap) {
 	unsigned	trans[512*256];
 	int			i;
 	int			p;
@@ -54132,7 +54065,7 @@ void R_RenderDlight (dlight_t *light)
 	glColor3f (0,0,0);
 	for (i=16 ; i>=0 ; i--)
 	{
-		a = i/16.0 * M_PI*2;
+		a = i/16.0 * PI*2;
 		for (j=0 ; j<3 ; j++)
 			v[j] = light->origin[j] + vright[j]*cos(a)*rad
 				+ vup[j]*sin(a)*rad;
@@ -54950,7 +54883,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 		glEnable( GL_TEXTURE_2D );
 }
 
-static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
+procedure void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 	int		*order;
 	vec3_t	point;
 	float	height, lheight;
@@ -54998,7 +54931,7 @@ static void GL_DrawAliasShadow(dmdl_t *paliashdr) {
 /*
 ** R_CullAliasModel
 */
-static bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
+procedure bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
 {
 	int i;
 	vec3_t		mins, maxs;
@@ -55276,7 +55209,7 @@ void R_DrawAliasModel (Entity *e)
 
 	shadedots = r_avertexnormal_dots[((int)(currententity->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
 
-	an = currententity->angles[1]/180*M_PI;
+	an = currententity->angles[1]/180*PI;
 	shadevector[0] = cos(-an);
 	shadevector[1] = sin(-an);
 	shadevector[2] = 1;
@@ -55420,7 +55353,7 @@ Mod_DecompressVis
 */
 u8 *Mod_DecompressVis (u8 *in, model_t *model)
 {
-	static u8	decompressed[MAX_MAP_LEAFS/8];
+	procedure u8	decompressed[MAX_MAP_LEAFS/8];
 	int		c;
 	u8	*out;
 	int		row;
@@ -55470,7 +55403,7 @@ global_variable int hunk_cursize = 0;
 global_variable int hunkmaxsize = 0;
 global_variable u8* hunk_membase;
 
-static void* Hunk_Begin(int maxsize) {
+procedure void* Hunk_Begin(int maxsize) {
 	// reserve a huge chunk of memory, but don't commit any yet
 	hunk_cursize = 0;
 	hunkmaxsize = maxsize;
@@ -55572,7 +55505,7 @@ model_t *Mod_ForName (char *name, bool crash)
 
 u8	*mod_base;
 
-static void* Hunk_Alloc(int size) {
+procedure void* Hunk_Alloc(int size) {
 	// round to cacheline
 	size = (size + 31) & ~31;
 
@@ -55829,9 +55762,9 @@ void CalcSurfaceExtents (msurface_t *s)
 void GL_BuildPolygonFromSurface(msurface_t *fa);
 void GL_CreateSurfaceLightmap (msurface_t *surf);
 void GL_EndBuildingLightmaps (void);
-static void GL_BeginBuildingLightmaps();
+procedure void GL_BeginBuildingLightmaps();
 
-static void Mod_LoadFaces(lump_t *l) {
+procedure void Mod_LoadFaces(lump_t *l) {
 	dface_t		*in;
 	msurface_t 	*out;
 	int			i, count, surfnum;
@@ -56300,7 +56233,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	mod->type = mod_sprite;
 }
 
-static void Mod_Free(model_t* mod) {
+procedure void Mod_Free(model_t* mod) {
 	VirtualFree(mod->extradata, 0, MEM_RELEASE);
 	memset(mod, 0, sizeof(*mod));
 }
@@ -56537,13 +56470,13 @@ void R_DrawNullModel (void)
 	glBegin (GL_TRIANGLE_FAN);
 	glVertex3f (0, 0, -16);
 	for (i=0 ; i<=4 ; i++)
-		glVertex3f (16*cos(i*M_PI/2), 16*sin(i*M_PI/2), 0);
+		glVertex3f (16*cos(i*PI/2), 16*sin(i*PI/2), 0);
 	glEnd ();
 
 	glBegin (GL_TRIANGLE_FAN);
 	glVertex3f (0, 0, 16);
 	for (i=4 ; i>=0 ; i--)
-		glVertex3f (16*cos(i*M_PI/2), 16*sin(i*M_PI/2), 0);
+		glVertex3f (16*cos(i*PI/2), 16*sin(i*PI/2), 0);
 	glEnd ();
 
 	glColor3f (1,1,1);
@@ -56674,7 +56607,7 @@ void MYgluPerspective( GLdouble fovy, GLdouble aspect,
 {
    GLdouble xmin, xmax, ymin, ymax;
 
-   ymax = zNear * tan( fovy * M_PI / 360.0 );
+   ymax = zNear * tan( fovy * PI / 360.0 );
    ymin = -ymax;
 
    xmin = ymin * aspect;
@@ -56732,7 +56665,7 @@ void R_SetupGL (void)
 	glEnable(GL_DEPTH_TEST);
 }
 
-static void R_Clear() {
+procedure void R_Clear() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	gldepthmin = 0;
 	gldepthmax = 1;
@@ -56797,7 +56730,7 @@ void R_SetLightLevel (void)
 
 }
 
-static struct {
+global_variable struct {
 	void	*wndproc;
 	HDC     hDC;
 	HGLRC   hGLRC;
@@ -56806,7 +56739,7 @@ static struct {
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
 
-static void R_BeginFrame() {
+procedure void R_BeginFrame() {
 	GLimp_BeginFrame();
 
 	/*
@@ -56933,9 +56866,9 @@ typedef struct
 
 global_variable gllightmapstate_t gl_lms;
 
-static void		LM_InitBlock( void );
-static void		LM_UploadBlock( bool dynamic );
-static bool	LM_AllocBlock (int w, int h, int *x, int *y);
+procedure void		LM_InitBlock( void );
+procedure void		LM_UploadBlock( bool dynamic );
+procedure bool	LM_AllocBlock (int w, int h, int *x, int *y);
 
 extern void R_SetCacheState( msurface_t *surf );
 extern void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride);
@@ -57086,9 +57019,7 @@ void R_BlendLightmaps (void)
 
 	glBlendFunc (GL_ZERO, GL_SRC_COLOR );
 
-	/*
-	** render static lightmaps first
-	*/
+	// render non-dynamic lightmaps first
 	for ( i = 1; i < MAX_LIGHTMAPS; i++ )
 	{
 		if ( gl_lms.lightmap_surfaces[i] )
@@ -57710,12 +57641,12 @@ void R_MarkLeaves (void)
 =============================================================================
 */
 
-static void LM_InitBlock( void )
+procedure void LM_InitBlock( void )
 {
 	memset( gl_lms.allocated, 0, sizeof( gl_lms.allocated ) );
 }
 
-static void LM_UploadBlock( bool dynamic )
+procedure void LM_UploadBlock( bool dynamic )
 {
 	int texture;
 	int height = 0;
@@ -57767,7 +57698,7 @@ static void LM_UploadBlock( bool dynamic )
 }
 
 // returns a texture number and the position inside it
-static bool LM_AllocBlock (int w, int h, int *x, int *y)
+procedure bool LM_AllocBlock (int w, int h, int *x, int *y)
 {
 	int		i, j;
 	int		best, best2;
@@ -57909,8 +57840,8 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	R_BuildLightMap (surf, base, BLOCK_WIDTH*LIGHTMAP_BYTES);
 }
 
-static void GL_BeginBuildingLightmaps() {
-	static lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
+procedure void GL_BeginBuildingLightmaps() {
+	local_persist lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 	int				i;
 	unsigned		dummy[128*128];
 
@@ -58699,8 +58630,8 @@ bool	in_appactive;
 
 bool	mlooking;
 
-static void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
-static void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
+procedure void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
+procedure void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
 
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
@@ -58839,7 +58770,7 @@ typedef struct
 
 loopback_t	loopbacks[2];
 
-static bool NET_GetLoopPacket(netsrc_t for_, sizebuf_t* dest_msg) {
+procedure bool NET_GetLoopPacket(netsrc_t for_, sizebuf_t* dest_msg) {
 	loopback_t* loop = loopbacks + for_;
 	loop->get = max(loop->get, loop->send - MAX_LOOPBACK);
 
@@ -58855,7 +58786,7 @@ static bool NET_GetLoopPacket(netsrc_t for_, sizebuf_t* dest_msg) {
 	return should_get_a_msg;
 }
 
-static void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
+procedure void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
 	int		i;
 	loopback_t	*loop;
 
@@ -58874,8 +58805,8 @@ static void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
 
 int Sys_Milliseconds (void)
 {
-	static int		base;
-	static bool	initialized = false;
+	procedure int		base;
+	procedure bool	initialized = false;
 
 	if (!initialized)
 	{	// let base retain 16 bits of effectively random data
@@ -59081,7 +59012,7 @@ int MapKey (int key)
 	}
 }
 
-static LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+procedure LRESULT WINAPI MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	bool pass_to_default_window_proc = true;
 
 	switch (uMsg) {
@@ -59170,23 +59101,23 @@ global_variable menuframework_s	s_opengl_menu;
 global_variable menuaction_s		s_cancel_action;
 global_variable menuaction_s		s_defaults_action;
 
-static void ResetDefaults(void* unused) {
+procedure void ResetDefaults(void* unused) {
 	UNUSED(unused);
 	VID_MenuInit();
 }
 
-static void ApplyChanges(void* unused) {
+procedure void ApplyChanges(void* unused) {
 	UNUSED(unused);
 	M_ForceMenuOff();
 }
 
-static void CancelChanges(void* unused) {
+procedure void CancelChanges(void* unused) {
 	UNUSED(unused);
 	extern void M_PopMenu( void );
 	M_PopMenu();
 }
 
-static void VID_MenuInit() {
+procedure void VID_MenuInit() {
 	s_opengl_menu.x = viddef.width * 0.50;
 	s_opengl_menu.nitems = 0;
 
@@ -59209,7 +59140,7 @@ static void VID_MenuInit() {
 	s_opengl_menu.x -= 8;
 }
 
-static void VID_MenuDraw() {
+procedure void VID_MenuDraw() {
 	// draw the banner
 	int w = 0;
 	int h = 0;
@@ -59223,8 +59154,8 @@ static void VID_MenuDraw() {
 	Menu_Draw(&s_opengl_menu);
 }
 
-static char* VID_MenuKey(int key) {
-	static char* sound = "misc/menu1.wav";
+procedure char * VID_MenuKey(int key) {
+	procedure char * sound = "misc/menu1.wav";
 	menuframework_s *m = &s_opengl_menu;
 
 	switch (key) {
@@ -59271,7 +59202,7 @@ void GLimp_BeginFrame()
 	glDrawBuffer( GL_BACK );
 }
 
-static void GLimp_EndFrame() {
+procedure void GLimp_EndFrame() {
 	int err = glGetError();
 	assert(err == GL_NO_ERROR);
 	BOOL swap_buffers_result = SwapBuffers(glw_state.hDC);
@@ -59292,11 +59223,11 @@ typedef struct {
 	Named_Textures named_textures;
 } Windows_Platform_Data;
 
-static void windows_exit_process() {
+procedure void windows_exit_process() {
 	ExitProcess(0);
 }
 
-static void windows_write_to_file_handle(HANDLE file_handle, String text) {
+procedure void windows_write_to_file_handle(HANDLE file_handle, String text) {
 	assert(file_handle);
 	DWORD written = 0;
 	assert(text.len >= 0 && text.len <= 0xFFFFFFFF);
@@ -59304,21 +59235,21 @@ static void windows_write_to_file_handle(HANDLE file_handle, String text) {
 	assert(write_result && (i64)written == text.len);
 }
 
-static void windows_write_config_string(String text) {
+procedure void windows_write_config_string(String text) {
 	HANDLE file_handle = CreateFileA("baseq2/config.cfg", GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
 	windows_write_to_file_handle(file_handle, text);
 	CloseHandle(file_handle);
 }
 
-static void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
+procedure void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
 	// NOTE: must ensure null termination
 	String text_null_terminated = concat(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
 	char* debug_log_filepath = "debug_log.txt";
-	static HANDLE file_handle = 0;
+	local_persist HANDLE file_handle = 0;
 	if (file_handle == 0) {
 		file_handle = CreateFileA(debug_log_filepath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	}
@@ -59328,7 +59259,7 @@ static void windows_debug_log(String prefix, String text) { temp_memory_block(&c
 }}
 
 // Assumes file_path is null-terminated
-static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
+procedure u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	HANDLE file_handle = CreateFileA(file_path.ptr, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	assert(file_handle != INVALID_HANDLE_VALUE);
 
@@ -59348,7 +59279,7 @@ static u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	return result;
 }
 
-static Texture windows_load_texture(String name) {
+procedure Texture windows_load_texture(String name) {
 	Named_Textures named_textures = ((Windows_Platform_Data*)context.platform_data)->named_textures;
 
 	Texture result = {};
@@ -60570,8 +60501,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 					// Updates DMA time
 					{
-						static i32 buffers = 0;
-						static i32 oldsamplepos = 0;
+						local_persist i32 buffers = 0;
+						local_persist i32 oldsamplepos = 0;
 
 						i32 fullsamples = dma.samples / dma.channels;
 
