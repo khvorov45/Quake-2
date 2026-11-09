@@ -1920,9 +1920,6 @@ procedure int FS_LoadFile(char* path, void** buffer);
 
 procedure void FS_FreeFile(void* buffer);
 
-global_variable sizebuf_t	net_message;
-global_variable u8		net_message_buffer[MAX_MSGLEN];
-
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
 bool Netchan_NeedReliable (netchan_t *chan);
@@ -3508,7 +3505,7 @@ struct edict_s {
 	int			flags;
 
 	char		*model;
-	float		freetime;			// sv.time when the object was freed
+	float		freetime;
 
 	//
 	// only used locally in game, not by server
@@ -8144,7 +8141,7 @@ typedef struct {
 
 	bool	loadgame;			// client begins should reuse existing entity
 
-	unsigned	time;				// always sv.framenum * 100 msec
+	unsigned	time;
 	int			framenum;
 
 	char		name[MAX_QPATH];			// map name
@@ -8190,7 +8187,7 @@ typedef struct {
 
 	client_frame_t	frames[UPDATE_BACKUP];	// updates can be delta'd from here
 
-	int				lastmessage;		// sv.framenum when packet was last received
+	int				lastmessage;
 	int				lastconnect;
 
 	netchan_t		netchan;
@@ -8214,9 +8211,6 @@ typedef struct
 	int			next_client_entities;		// next client_entity to use
 	entity_state_t	*client_entities;		// [num_client_entities]
 } server_static_t;
-
-extern	server_static_t	svs;				// persistant server info
-extern	server_t		sv;					// local server
 
 int SV_ModelIndex (char *name);
 int SV_SoundIndex (char *name);
@@ -8281,23 +8275,11 @@ int SV_AreaEdicts (vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int a
 // returns the number of pointers filled in
 // ??? does this always return the world?
 
-//
-// functions that interact with everything apropriate
-//
 int SV_PointContents (vec3_t p);
-// returns the CONTENTS_* value from the world at the given point.
-// Quake 2 extends this to also check entities, to allow moving liquids
 
 trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
-// mins and maxs are relative
 
-// if the entire move stays in a solid volume, trace.allsolid will be set,
-// trace.startsolid will be set, and trace.fraction will be 0
-
-// if the starting point is in a solid, it will be allowed to move out
-// to an open area
-
-// passedict is explicitly excluded from clipping checks (normally NULL)
+global_variable server_static_t	svs;
 
 procedure void SV_GameMap_f(void* data) {
 	UNUSED(data);
@@ -8308,6 +8290,8 @@ procedure void SV_GameMap_f(void* data) {
 		add_line_to_console_log(STR("USAGE: gamemap <map>"));
 	}
 }
+
+global_variable server_t sv;
 
 procedure void SV_Map_f(void* data) {
 	UNUSED(data);
@@ -9022,9 +9006,6 @@ void SV_InitGameProgs() {
 	SV_ShutdownGameProgs();
 	InitGame();
 }
-
-global_variable server_static_t	svs;				// persistant server info
-global_variable server_t		sv;					// local server
 
 int SV_FindIndex (char *name, int start, int max, bool create)
 {
@@ -10458,11 +10439,6 @@ void	SCR_TouchPics (void);
 
 void	SCR_RunConsole (void);
 
-extern	float		scr_con_current;
-extern	float		scr_conlines;		// lines of console to display
-
-extern	vrect_t		scr_vrect;		// position of render window
-
 struct sfx_s;
 
 // if origin is NULL, the sound will be dynamically sourced from the entity
@@ -10478,11 +10454,6 @@ struct sfx_s *S_FindName (char *name, bool create);
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin (int ent, vec3_t org);
-
-extern	int		key_repeats[256];
-
-extern	int	anykeydown;
-
 void Key_Event (int key, bool down, unsigned time);
 void Key_ClearStates (void);
 
@@ -10497,7 +10468,7 @@ typedef struct
 	u8			areabits[MAX_MAP_AREAS/8];		// portalarea visibility bits
 	player_state_t	playerstate;
 	int				num_entities;
-	int				parse_entities;	// non-masked index into cl_parse_entities array
+	int				parse_entities;
 } frame_t;
 
 typedef struct
@@ -10527,16 +10498,13 @@ typedef struct
 	struct model_s	*weaponmodel[MAX_CLIENTWEAPONMODELS];
 } clientinfo_t;
 
-extern char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
-extern int num_cl_weaponmodels;
-
 #define	CMD_BACKUP 64
 
 global_variable struct {
 	bool refresh_prepped;
 	bool sound_prepped; // ambient sounds can start
 
-	int parse_entities; // index (not anded off) into cl_parse_entities[]
+	int parse_entities;
 
 	usercmd_t	cmd;
 	usercmd_t	cmds[CMD_BACKUP];	// each mesage will send several old cmds
@@ -10603,17 +10571,6 @@ typedef struct
 	float	decay;				// drop this each second
 	float	minlight;			// don't add when contributing less
 } cdlight_t;
-
-extern	centity_t	cl_entities[MAX_EDICTS];
-extern	cdlight_t	cl_dlights[MAX_DLIGHTS];
-
-// the cl_parse_entities must be large enough to hold UPDATE_BACKUP frames of
-// entities, so that when a delta compressed message arives from the server
-// it can be un-deltad from the original
-#define	MAX_PARSE_ENTITIES	1024
-extern	entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
-
-extern	sizebuf_t	net_message;
 
 void DrawString (int x, int y, char *s);
 void DrawAltString (int x, int y, char *s);	// toggle high bit
@@ -10731,7 +10688,7 @@ typedef struct
 	int			state;
 } kbutton_t;
 
-extern 	kbutton_t 	in_speed;
+global_variable kbutton_t in_speed, in_use, in_attack;
 
 void CL_SendMove (usercmd_t *cmd);
 
@@ -10740,20 +10697,12 @@ void CL_WriteToServer (usercmd_t *cmd);
 
 float CL_KeyState (kbutton_t *key);
 
-//
-// cl_parse.c
-//
-extern	char *svc_strings[256];
-
 void CL_ParseServerMessage (void);
 void CL_LoadClientinfo (clientinfo_t *ci, char *s);
 void CL_ParseClientinfo (int player);
 
-//
-// cl_view.c
-//
-extern	int			gun_frame;
-extern	struct model_s	*gun_model;
+global_variable int			gun_frame;
+global_variable struct model_s	*gun_model;
 
 void V_RenderView();
 void V_AddEntity (Entity *ent);
@@ -10800,7 +10749,9 @@ global_variable struct {
 	int height;
 } viddef;
 
-extern	struct model_s	*cl_mod_powerscreen;
+global_variable struct model_s	*cl_mod_powerscreen;
+global_variable sizebuf_t	net_message;
+global_variable u8		net_message_buffer[MAX_MSGLEN];
 
 // Returns the entity number and the header bits
 int CL_ParseEntityBits (unsigned *bits)
@@ -10914,14 +10865,11 @@ void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, int bi
 		to->solid = MSG_ReadShort (&net_message);
 }
 
-/*
-==================
-CL_DeltaEntity
+#define	MAX_PARSE_ENTITIES	1024
 
-Parses deltas from the given base and adds the resulting entity
-to the current frame
-==================
-*/
+global_variable centity_t cl_entities[MAX_EDICTS];
+global_variable entity_state_t cl_parse_entities[MAX_PARSE_ENTITIES];
+
 void CL_DeltaEntity (frame_t *frame, int newnum, entity_state_t *old, int bits)
 {
 	centity_t	*ent;
@@ -12005,17 +11953,6 @@ void CL_LogoutEffect (vec3_t org, int type);
 void CL_ItemRespawnParticles (vec3_t org);
 
 global_variable vec3_t avelocities [NUMVERTEXNORMALS];
-
-extern	struct model_s	*cl_mod_smoke;
-extern	struct model_s	*cl_mod_flash;
-
-/*
-==============================================================
-
-LIGHT STYLE MANAGEMENT
-
-==============================================================
-*/
 
 typedef struct
 {
@@ -13993,12 +13930,6 @@ void CL_BFGExplosionParticles (vec3_t org)
 	}
 }
 
-/*
-===============
-CL_TeleportParticles
-
-===============
-*/
 void CL_TeleportParticles (vec3_t org)
 {
 	int			i, j, k;
@@ -14109,16 +14040,7 @@ void CL_AddParticles (void)
 	active_particles = active;
 }
 
-/*
-==============
-CL_EntityEvent
-
-An entity has just been parsed that has an event value
-
-the female events are there for backwards compatability
-==============
-*/
-extern struct sfx_s	*cl_sfx_footsteps[4];
+global_variable struct sfx_s* cl_sfx_footsteps[4];
 
 void CL_EntityEvent (entity_state_t *ent)
 {
@@ -14185,7 +14107,7 @@ Key_Event (int key, bool down, unsigned time);
 
 global_variable kbutton_t	in_left, in_right, in_forward, in_back;
 global_variable kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
-global_variable kbutton_t	in_speed, in_use, in_attack;
+
 global_variable kbutton_t	in_up, in_down;
 
 global_variable int			in_impulse;
@@ -14356,15 +14278,13 @@ void CL_ClampPitch (void)
 }
 
 global_variable u8 cl_lightlevel;
+global_variable int	anykeydown;
 
 void CL_FinishMove (usercmd_t *cmd)
 {
 	int		ms;
 	int		i;
 
-//
-// figure button bits
-//
 	if ( in_attack.state & 3 )
 		cmd->buttons |= BUTTON_ATTACK;
 	in_attack.state &= ~2;
@@ -14376,10 +14296,9 @@ void CL_FinishMove (usercmd_t *cmd)
 	if (anykeydown && cls.key_dest == key_game)
 		cmd->buttons |= BUTTON_ANY;
 
-	// send milliseconds of time to apply the move
 	ms = cls.frametime * 1000;
 	if (ms > 250)
-		ms = 100;		// time was unreasonable
+		ms = 100;
 	cmd->msec = ms;
 
 	CL_ClampPitch ();
@@ -14389,7 +14308,6 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->impulse = in_impulse;
 	in_impulse = 0;
 
-	// send the ambient light level at the player's current position
 	cmd->lightlevel = cl_lightlevel;
 }
 
@@ -14492,10 +14410,6 @@ procedure void draw_inventory_table() {
 		current_item_topleft_px.y += temp_global_char_dim_px.y;
 	}
 }
-
-global_variable centity_t		cl_entities[MAX_EDICTS];
-
-global_variable entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
 void CL_ForwardToServer_f (void* data)
 {
@@ -14693,13 +14607,6 @@ procedure void CL_Precache_f(void* data) {
 	}
 }
 
-extern void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
-
-/*
-======
-vectoangles2 - this is duplicated in the game DLL, but I need it here.
-======
-*/
 void vectoangles2 (vec3_t value1, vec3_t angles)
 {
 	float	forward;
@@ -15147,16 +15054,12 @@ void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int color, int count, int m
 }
 
 void CL_ParticleSteamEffect2 (cl_sustain_t *self)
-//vec3_t org, vec3_t dir, int color, int count, int magnitude)
 {
 	int			i, j;
 	cparticle_t	*p;
 	float		d;
 	vec3_t		r, u;
 	vec3_t		dir;
-
-//	vectoangles2 (dir, angle_dir);
-//	AngleVectors (angle_dir, f, r, u);
 
 	VectorCopy (self->dir, dir);
 	MakeNormalVectors (dir, r, u);
@@ -15679,33 +15582,6 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
 	}
 }
 
-global_variable char *svc_strings[256] =
-{
-	"svc_bad",
-
-	"svc_muzzleflash",
-	"svc_muzzlflash2",
-	"svc_temp_entity",
-	"svc_layout",
-	"svc_inventory",
-
-	"svc_nop",
-	"svc_disconnect",
-	"svc_reconnect",
-	"svc_sound",
-	"svc_print",
-	"svc_stufftext",
-	"svc_serverdata",
-	"svc_configstring",
-	"svc_spawnbaseline",
-	"svc_centerprint",
-	"svc_download",
-	"svc_playerinfo",
-	"svc_packetentities",
-	"svc_deltapacketentities",
-	"svc_frame"
-};
-
 void CL_DownloadFileName(char *dest, int destlen, char *fn)
 {
 	Com_sprintf(dest, destlen, "baseq2/%s", fn);
@@ -15783,7 +15659,11 @@ typedef struct image_s
 	bool	has_alpha;
 } image_t;
 
+global_variable char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
+global_variable int num_cl_weaponmodels;
+
 image_t	*Draw_FindPic (char *name);
+
 void CL_LoadClientinfo (clientinfo_t *ci, char *s)
 {
 	int i;
@@ -17308,10 +17188,6 @@ global_variable laser_t		cl_lasers[MAX_LASERS];
 global_variable cl_sustain_t	cl_sustains[MAX_SUSTAINS];
 //ROGUE
 
-//PGM
-extern void CL_TeleportParticles (vec3_t org);
-//PGM
-
 void CL_BlasterParticles (vec3_t org, vec3_t dir);
 void CL_ExplosionParticles (vec3_t org);
 void CL_BFGExplosionParticles (vec3_t org);
@@ -17330,17 +17206,17 @@ global_variable struct sfx_s	*cl_sfx_rockexp;
 global_variable struct sfx_s	*cl_sfx_grenexp;
 global_variable struct sfx_s	*cl_sfx_watrexp;
 // RAFAEL
-global_variable struct sfx_s	*cl_sfx_footsteps[4];
+
 
 global_variable struct model_s	*cl_mod_explode;
-global_variable struct model_s	*cl_mod_smoke;
+
 global_variable struct model_s	*cl_mod_flash;
 global_variable struct model_s	*cl_mod_parasite_segment;
 global_variable struct model_s	*cl_mod_grapple_cable;
 global_variable struct model_s	*cl_mod_parasite_tip;
 global_variable struct model_s	*cl_mod_explo4;
 global_variable struct model_s	*cl_mod_bfg_explo;
-global_variable struct model_s	*cl_mod_powerscreen;
+
 // RAFAEL
 
 //ROGUE
@@ -17394,6 +17270,8 @@ void CL_RegisterTEntSounds (void)
 		name[0] = 'W';
 //PGM
 }
+
+global_variable struct model_s	*cl_mod_smoke;
 
 void CL_RegisterTEntModels (void)
 {
@@ -17460,11 +17338,6 @@ procedure Explosion* CL_AllocExplosion() {
 	return result;
 }
 
-/*
-=================
-CL_SmokeAndFlash
-=================
-*/
 void CL_SmokeAndFlash(vec3_t origin)
 {
 	Explosion	*ex;
@@ -18881,12 +18754,6 @@ void CL_AddTEnts (void)
 	CL_ProcessSustain();
 }
 
-//=============
-//
-// development tools for weapons
-//
-global_variable int			gun_frame;
-global_variable struct model_s	*gun_model;
 
 global_variable int			r_numdlights;
 global_variable dlight_t	r_dlights[MAX_DLIGHTS];
@@ -18898,9 +18765,6 @@ global_variable int			r_numparticles;
 global_variable particle_t	r_particles[MAX_PARTICLES];
 
 global_variable lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
-
-global_variable char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
-global_variable int num_cl_weaponmodels;
 
 /*
 ====================
@@ -19232,10 +19096,7 @@ void Con_DrawNotify() {
 }
 
 global_variable int shift_down;
-global_variable int	anykeydown;
-
 global_variable int		key_waiting;
-
 global_variable bool	consolekeys[256];	// if true, can't be rebound while in console
 global_variable bool	menubound[256];	// if true, can't be rebound while in menu
 global_variable int		keyshift[256];		// key to map to if shift held down in console
@@ -29504,17 +29365,6 @@ void SP_misc_deadsoldier (edict_t *ent)
 	SV_LinkEdict (ent);
 }
 
-/*QUAKED misc_viper (1 .5 0) (-16 -16 0) (16 16 32)
-This is the Viper for the flyby bombing.
-It is trigger_spawned, so you must have something use it for it to show up.
-There must be a path for it to follow once it is activated.
-
-"speed"		How fast the Viper should fly
-*/
-
-extern void train_use (edict_t* self, edict_t* other, edict_t* activator);
-extern void func_train_find (edict_t* self);
-
 void misc_viper_use  (edict_t* self, edict_t* other, edict_t* activator)
 {
 	self->svflags &= ~SVF_NOCLIENT;
@@ -29633,17 +29483,6 @@ void SP_misc_viper_bomb (edict_t* self)
 
 	SV_LinkEdict (self);
 }
-
-/*QUAKED misc_strogg_ship (1 .5 0) (-16 -16 0) (16 16 32)
-This is a Storgg ship for the flybys.
-It is trigger_spawned, so you must have something use it for it to show up.
-There must be a path for it to follow once it is activated.
-
-"speed"		How fast it should fly
-*/
-
-extern void train_use (edict_t* self, edict_t* other, edict_t* activator);
-extern void func_train_find (edict_t* self);
 
 void misc_strogg_ship_use  (edict_t* self, edict_t* other, edict_t* activator)
 {
@@ -37547,7 +37386,6 @@ void SP_monster_boss3_stand (edict_t* self)
 
 #define MODEL_SCALE		1.000000
 
-extern void SP_monster_makron (edict_t* self);
 bool visible (edict_t* self, edict_t* other);
 
 global_variable int	sound_pain1;
@@ -52417,8 +52255,6 @@ u8	*Mod_ClusterPVS (int cluster, model_t *model);
 void GL_BeginRendering (int *x, int *y, int *width, int *height);
 void GL_EndRendering (void);
 
-extern	float	gldepthmin, gldepthmax;
-
 typedef struct
 {
 	float	x, y, z;
@@ -52430,48 +52266,49 @@ typedef struct
 
 #define BACKFACE_EPSILON	0.01
 
-//====================================================
+global_variable image_t		gltextures[MAX_GLTEXTURES];
+global_variable int			numgltextures;
 
-extern	image_t		gltextures[MAX_GLTEXTURES];
-extern	int			numgltextures;
+global_variable u8			 intensitytable[256];
+global_variable unsigned char gammatable[256];
 
-extern	image_t		*r_notexture;
-extern	image_t		*r_particletexture;
-extern	Entity	*currententity;
-extern	model_t		*currentmodel;
-extern	int			r_visframecount;
-extern	int			r_framecount;
-extern	cplane_t	frustum[4];
+global_variable image_t		*r_notexture;		// use for bad textures
+global_variable image_t		*r_particletexture;	// little dot for particles
 
-extern	int			gl_filter_min, gl_filter_max;
+global_variable Entity	*currententity;
+global_variable model_t		*currentmodel;
 
-//
-// view origin
-//
-extern	vec3_t	vup;
-extern	vec3_t	vpn;
-extern	vec3_t	vright;
-extern	vec3_t	r_origin;
+global_variable cplane_t	frustum[4];
 
-//
-// screen size info
-//
-extern	int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
+global_variable int			r_visframecount;	// bumped when going to a new PVS
+global_variable int			r_framecount;		// used for dlight push checking
 
-extern	int		gl_solid_format;
-extern	int		gl_alpha_format;
-extern	int		gl_tex_solid_format;
-extern	int		gl_tex_alpha_format;
+global_variable float		v_blend[4];			// final blending color
 
-extern	float	r_world_matrix[16];
+global_variable vec3_t	vup;
+global_variable vec3_t	vpn;
+global_variable vec3_t	vright;
+global_variable vec3_t	r_origin;
+
+global_variable float	r_world_matrix[16];
+
+global_variable int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
+
+global_variable int		gl_solid_format = 3;
+global_variable int		gl_alpha_format = 4;
+
+global_variable int		gl_tex_solid_format = 3;
+global_variable int		gl_tex_alpha_format = 4;
+
+global_variable int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+global_variable int		gl_filter_max = GL_LINEAR;
 
 void R_TranslatePlayerSkin (int playernum);
 
 void R_LightPoint (vec3_t p, vec3_t color);
 
 global_variable unsigned d_8to24table[256];
-
-extern	int		registration_sequence;
+global_variable int registration_sequence;
 
 void V_AddBlend (float r, float g, float b, float a, float *v_blend);
 
@@ -52518,7 +52355,14 @@ void		GLimp_BeginFrame();
 
 global_variable image_t* draw_chars;
 
-extern	bool	scrap_dirty;
+#define	MAX_SCRAPS		1
+#define	BLOCK_WIDTH		256
+#define	BLOCK_HEIGHT	256
+
+global_variable int scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
+global_variable u8		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
+global_variable bool	scrap_dirty;
+
 void Scrap_Upload (void);
 
 procedure void GL_Bind(int texnum) {
@@ -52725,23 +52569,8 @@ void Draw_FadeScreen (void)
 	glDisable (GL_BLEND);
 }
 
-global_variable image_t		gltextures[MAX_GLTEXTURES];
-global_variable int			numgltextures;
-
-global_variable u8			 intensitytable[256];
-global_variable unsigned char gammatable[256];
-
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
-
-global_variable int		gl_solid_format = 3;
-global_variable int		gl_alpha_format = 4;
-
-global_variable int		gl_tex_solid_format = 3;
-global_variable int		gl_tex_alpha_format = 4;
-
-global_variable int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
-global_variable int		gl_filter_max = GL_LINEAR;
 
 procedure void GL_TexEnv(GLenum mode) {
 	local_persist int lastmode = -1;
@@ -52862,14 +52691,6 @@ void GL_TextureSolidMode( char *string )
 
 	gl_tex_solid_format = gl_solid_modes[i].mode;
 }
-
-#define	MAX_SCRAPS		1
-#define	BLOCK_WIDTH		256
-#define	BLOCK_HEIGHT	256
-
-global_variable int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-global_variable u8		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
-global_variable bool	scrap_dirty;
 
 // returns a texture number and the position inside it
 int Scrap_AllocBlock (int w, int h, int *x, int *y)
@@ -53252,7 +53073,6 @@ procedure bool GL_Upload8(u8 *data, int width, int height,  bool mipmap) {
 	return GL_Upload32 (trans, width, height, mipmap);
 }
 
-// This is also used as an entry point for the generated r_notexture
 image_t* GL_LoadPic(char* name, u8* pic, int width, int height, imagetype_t type, int bits)
 {
 	image_t		*image;
@@ -53352,7 +53172,6 @@ void GL_FreeUnusedImages (void)
 	int		i;
 	image_t	*image;
 
-	// never free r_notexture or particle texture
 	r_notexture->registration_sequence = registration_sequence;
 	r_particletexture->registration_sequence = registration_sequence;
 
@@ -54395,6 +54214,8 @@ procedure bool R_CullAliasModel( vec3_t bbox[8], Entity *e )
 	}
 }
 
+global_variable float gldepthmin, gldepthmax;
+
 void R_DrawAliasModel (Entity *e)
 {
 	int			i;
@@ -54642,8 +54463,6 @@ global_variable int		mod_numknown;
 
 // the inline * models from the current map are kept seperate
 global_variable model_t	mod_inline[MAX_MOD_KNOWN];
-
-global_variable int		registration_sequence;
 
 /*
 ===============
@@ -55640,33 +55459,6 @@ void R_EndRegistration (void)
 	GL_FreeUnusedImages ();
 }
 
-global_variable float		gldepthmin, gldepthmax;
-
-global_variable image_t		*r_notexture;		// use for bad textures
-global_variable image_t		*r_particletexture;	// little dot for particles
-
-global_variable Entity	*currententity;
-global_variable model_t		*currentmodel;
-
-global_variable cplane_t	frustum[4];
-
-global_variable int			r_visframecount;	// bumped when going to a new PVS
-global_variable int			r_framecount;		// used for dlight push checking
-
-global_variable float		v_blend[4];			// final blending color
-
-//
-// view origin
-//
-global_variable vec3_t	vup;
-global_variable vec3_t	vpn;
-global_variable vec3_t	vright;
-global_variable vec3_t	r_origin;
-
-global_variable float	r_world_matrix[16];
-
-global_variable int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
-
 // Returns true if the box is completely outside the frustom
 bool R_CullBox (vec3_t mins, vec3_t maxs)
 {
@@ -56197,24 +55989,6 @@ procedure void		LM_InitBlock( void );
 procedure void		LM_UploadBlock( bool dynamic );
 procedure bool	LM_AllocBlock (int w, int h, int *x, int *y);
 
-extern void R_SetCacheState( msurface_t *surf );
-extern void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride);
-
-/*
-=============================================================
-
-	BRUSH MODELS
-
-=============================================================
-*/
-
-/*
-===============
-R_TextureAnimation
-
-Returns the proper texture for a given time and base texture
-===============
-*/
 image_t *R_TextureAnimation (mtexinfo_t *tex)
 {
 	int		c;
@@ -57217,8 +56991,6 @@ void GL_EndBuildingLightmaps (void)
 	LM_UploadBlock( false );
 }
 
-extern	model_t	*loadmodel;
-
 global_variable char	skyname[MAX_QPATH];
 global_variable float	skyrotate;
 global_variable vec3_t	skyaxis;
@@ -57939,23 +57711,15 @@ void R_RenderFrame(refdef_t *fd) {
 
 #include <dsound.h>
 
-extern LPDIRECTSOUND pDS;
-extern LPDIRECTSOUNDBUFFER pDSBuf;
-
-extern DWORD gSndBufSize;
-
-extern HWND	cl_hwnd;
 global_variable bool ActiveApp;
 global_variable bool Minimized;
 
-void IN_MouseEvent (int mstate);
+global_variable int window_center_x, window_center_y;
+global_variable RECT window_rect;
+global_variable HWND cl_hwnd;
 
-extern int		window_center_x, window_center_y;
-extern RECT		window_rect;
-
-global_variable bool	in_appactive;
-
-global_variable bool	mlooking;
+global_variable bool in_appactive;
+global_variable bool mlooking;
 
 procedure void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
 procedure void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
@@ -57973,9 +57737,6 @@ global_variable bool	restore_spi;
 global_variable bool	mouseinitialized;
 global_variable int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
 global_variable bool	mouseparmsvalid;
-
-global_variable int			window_center_x, window_center_y;
-global_variable RECT		window_rect;
 
 // Called when the window gains focus or changes in some way
 void IN_ActivateMouse (void)
@@ -58247,8 +58008,6 @@ void Sys_AppActivate (void)
 	SetForegroundWindow ( cl_hwnd );
 }
 
-global_variable HWND        cl_hwnd;            // Main window handle for life of program
-
 global_variable u8        scantokey[128] =
 					{
 //  0           1       2       3       4       5       6       7
@@ -58436,7 +58195,6 @@ procedure void ApplyChanges(void* unused) {
 
 procedure void CancelChanges(void* unused) {
 	UNUSED(unused);
-	extern void M_PopMenu( void );
 	M_PopMenu();
 }
 
