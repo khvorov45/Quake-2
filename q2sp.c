@@ -27296,25 +27296,12 @@ procedure void Use_Areaportal(edict_t *ent, edict_t* other, edict_t* activator) 
 	CM_SetAreaPortalState (ent->style, ent->count);
 }
 
-/*QUAKED func_areaportal (0 0 0) ?
-
-This is a non-visible object that divides the world into
-areas that are seperated when this portal is not activated.
-Usually enclosed in the middle of a door.
-*/
 void SP_func_areaportal (edict_t *ent)
 {
 	ent->use = Use_Areaportal;
 	ent->count = 0;		// always start closed;
 }
 
-//=====================================================
-
-/*
-=================
-Misc functions
-=================
-*/
 void VelocityForDamage (int damage, vec3_t v)
 {
 	v[0] = 100.0 * crandom();
@@ -31206,22 +31193,6 @@ procedure void SP_info_player_coop(edict_t* self) {
 }
 
 procedure void SP_info_player_intermission(edict_t* ent) {UNUSED(ent);}
-
-void SP_func_plat (edict_t *ent);
-void SP_func_rotating (edict_t *ent);
-void SP_func_button (edict_t *ent);
-void SP_func_door (edict_t *ent);
-void SP_func_door_secret (edict_t *ent);
-void SP_func_door_rotating (edict_t *ent);
-void SP_func_water (edict_t *ent);
-void SP_func_train (edict_t *ent);
-void SP_func_wall (edict_t* self);
-void SP_func_object (edict_t* self);
-void SP_func_explosive (edict_t* self);
-void SP_func_timer (edict_t* self);
-void SP_func_areaportal (edict_t *ent);
-void SP_func_clock (edict_t *ent);
-void SP_func_killbox (edict_t *ent);
 
 void SP_trigger_always (edict_t *ent);
 void SP_trigger_once (edict_t *ent);
