@@ -1131,7 +1131,7 @@ procedure int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
 
 // does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
 procedure char * va(char *format, ...) {
-	procedure char  string[1024];
+	local_persist char  string[1024];
 	va_list argptr;
 	va_start(argptr, format);
 	Q_vsnprintf(string, sizeof(string), format, argptr);
@@ -1821,7 +1821,7 @@ procedure int MSG_ReadLong(sizebuf_t* msg_read) {
 }
 
 procedure char * MSG_ReadString(sizebuf_t* msg_read) {
-	procedure char 	string[2048];
+	local_persist char 	string[2048];
 
 	int l = 0;
 	do {
@@ -7913,7 +7913,7 @@ void PM_SnapPosition (void)
 	int		i, j, bits;
 	short	base[3];
 	// try all single bits first
-	procedure int jitterbits[8] = {0,4,1,2,3,5,6,7};
+	local_persist int jitterbits[8] = {0,4,1,2,3,5,6,7};
 
 	// snap velocity to eigths
 	for (i=0 ; i<3 ; i++)
@@ -7958,7 +7958,7 @@ void PM_InitialSnapPosition(void)
 {
 	int        x, y, z;
 	short      base[3];
-	procedure int offset[3] = { 0, -1, 1 };
+	local_persist int offset[3] = { 0, -1, 1 };
 
 	VectorCopy (pm->s.origin, base);
 
@@ -11764,7 +11764,7 @@ void CL_AddPacketEntities (frame_t *frame)
 			}
 			else if (effects & EF_BFG)
 			{
-				procedure int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
+				local_persist int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
 
 				if (effects & EF_ANIM_ALLFAST)
 				{
@@ -13111,7 +13111,7 @@ void CL_BigTeleportParticles (vec3_t org)
 	int			i;
 	cparticle_t	*p;
 	float		angle, dist;
-	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
+	local_persist int colortable[4] = {2*8,13*8,21*8,18*8};
 
 	for (i=0 ; i<4096 ; i++)
 	{
@@ -15345,7 +15345,7 @@ void CL_Widowbeamout (cl_sustain_t *self)
 	vec3_t			dir;
 	int				i;
 	cparticle_t		*p;
-	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
+	local_persist int colortable[4] = {2*8,13*8,21*8,18*8};
 	float			ratio;
 
 	ratio = 1.0 - (((float)self->endtime - (float)cl.time)/2100.0);
@@ -15381,7 +15381,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 	vec3_t			dir;
 	int				i;
 	cparticle_t		*p;
-	procedure int colortable[4] = {110, 112, 114, 116};
+	local_persist int colortable[4] = {110, 112, 114, 116};
 	float			ratio;
 
 	ratio = 1.0 - (((float)self->endtime - (float)cl.time)/1000.0);
@@ -15414,7 +15414,7 @@ void CL_Nukeblast (cl_sustain_t *self)
 
 void CL_WidowSplash (vec3_t org)
 {
-	procedure int colortable[4] = {2*8,13*8,21*8,18*8};
+	local_persist int colortable[4] = {2*8,13*8,21*8,18*8};
 	int			i;
 	cparticle_t	*p;
 	vec3_t		dir;
@@ -19933,7 +19933,7 @@ procedure char * Default_MenuKey(menuframework_s* m, int key) {
 procedure void M_DrawCursor( int x, int y, int f )
 {
 	char	cursorname[80];
-	procedure bool cached;
+	local_persist bool cached;
 
 	if ( !cached )
 	{
@@ -49883,7 +49883,7 @@ procedure void player_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 	{	// normal death
 		if (!self->deadflag)
 		{
-			procedure int i;
+			local_persist int i;
 
 			i = (i+1)%3;
 			// start a death animation
@@ -50835,7 +50835,7 @@ void P_DamageFeedback (edict_t *player)
 	// start a pain animation if still in the player model
 	if (client->anim_priority < ANIM_PAIN && player->s.modelindex == 255)
 	{
-		procedure int		i;
+		local_persist int		i;
 
 		client->anim_priority = ANIM_PAIN;
 		if (client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -52435,8 +52435,8 @@ void weapon_grenadelauncher_fire (edict_t *ent)
 
 void Weapon_GrenadeLauncher (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {34, 51, 59, 0};
-	procedure int	fire_frames[]	= {6, 0};
+	local_persist int	pause_frames[]	= {34, 51, 59, 0};
+	local_persist int	fire_frames[]	= {6, 0};
 
 	Weapon_Generic (ent, 5, 16, 59, 64, pause_frames, fire_frames, weapon_grenadelauncher_fire);
 }
@@ -52490,8 +52490,8 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 
 void Weapon_RocketLauncher (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {25, 33, 42, 50, 0};
-	procedure int	fire_frames[]	= {5, 0};
+	local_persist int	pause_frames[]	= {25, 33, 42, 50, 0};
+	local_persist int	fire_frames[]	= {5, 0};
 
 	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 }
@@ -52535,8 +52535,8 @@ void Weapon_Blaster_Fire (edict_t *ent)
 
 void Weapon_Blaster (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {19, 32, 0};
-	procedure int	fire_frames[]	= {5, 0};
+	local_persist int	pause_frames[]	= {19, 32, 0};
+	local_persist int	fire_frames[]	= {5, 0};
 
 	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
 }
@@ -52608,8 +52608,8 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 
 void Weapon_HyperBlaster (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {0};
-	procedure int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
+	local_persist int	pause_frames[]	= {0};
+	local_persist int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
 
 	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, Weapon_HyperBlaster_Fire);
 }
@@ -52706,8 +52706,8 @@ void Machinegun_Fire (edict_t *ent)
 
 void Weapon_Machinegun (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {23, 45, 0};
-	procedure int	fire_frames[]	= {4, 5, 0};
+	local_persist int	pause_frames[]	= {23, 45, 0};
+	local_persist int	fire_frames[]	= {4, 5, 0};
 
 	Weapon_Generic (ent, 3, 5, 45, 49, pause_frames, fire_frames, Machinegun_Fire);
 }
@@ -52829,8 +52829,8 @@ void Chaingun_Fire (edict_t *ent)
 
 void Weapon_Chaingun (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {38, 43, 51, 61, 0};
-	procedure int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
+	local_persist int	pause_frames[]	= {38, 43, 51, 61, 0};
+	local_persist int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
 
 	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 }
@@ -52887,8 +52887,8 @@ void weapon_shotgun_fire (edict_t *ent)
 
 void Weapon_Shotgun (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {22, 28, 34, 0};
-	procedure int	fire_frames[]	= {8, 9, 0};
+	local_persist int	pause_frames[]	= {22, 28, 34, 0};
+	local_persist int	fire_frames[]	= {8, 9, 0};
 
 	Weapon_Generic (ent, 7, 18, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
 }
@@ -52939,8 +52939,8 @@ void weapon_supershotgun_fire (edict_t *ent)
 
 void Weapon_SuperShotgun (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {29, 42, 57, 0};
-	procedure int	fire_frames[]	= {7, 0};
+	local_persist int	pause_frames[]	= {29, 42, 57, 0};
+	local_persist int	fire_frames[]	= {7, 0};
 
 	Weapon_Generic (ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
 }
@@ -52985,8 +52985,8 @@ void weapon_railgun_fire (edict_t *ent)
 
 void Weapon_Railgun (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {56, 0};
-	procedure int	fire_frames[]	= {4, 0};
+	local_persist int	pause_frames[]	= {56, 0};
+	local_persist int	fire_frames[]	= {4, 0};
 
 	Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 }
@@ -53047,8 +53047,8 @@ void weapon_bfg_fire (edict_t *ent)
 
 void Weapon_BFG (edict_t *ent)
 {
-	procedure int	pause_frames[]	= {39, 45, 50, 55, 0};
-	procedure int	fire_frames[]	= {9, 17, 0};
+	local_persist int	pause_frames[]	= {39, 45, 50, 55, 0};
+	local_persist int	fire_frames[]	= {9, 17, 0};
 
 	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
@@ -53409,7 +53409,7 @@ int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
 int		gl_filter_max = GL_LINEAR;
 
 procedure void GL_TexEnv(GLenum mode) {
-	procedure int lastmode = -1;
+	local_persist int lastmode = -1;
 	if ((int)mode != lastmode) {
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode);
 		lastmode = mode;
@@ -55346,7 +55346,7 @@ Mod_DecompressVis
 */
 u8 *Mod_DecompressVis (u8 *in, model_t *model)
 {
-	procedure u8	decompressed[MAX_MAP_LEAFS/8];
+	local_persist u8	decompressed[MAX_MAP_LEAFS/8];
 	int		c;
 	u8	*out;
 	int		row;
@@ -58798,8 +58798,8 @@ procedure void NET_SendLoopPacket(netsrc_t sock, int length, void *data) {
 
 int Sys_Milliseconds (void)
 {
-	procedure int		base;
-	procedure bool	initialized = false;
+	local_persist int		base;
+	local_persist bool	initialized = false;
 
 	if (!initialized)
 	{	// let base retain 16 bits of effectively random data
@@ -59148,7 +59148,7 @@ procedure void VID_MenuDraw() {
 }
 
 procedure char * VID_MenuKey(int key) {
-	procedure char * sound = "misc/menu1.wav";
+	local_persist char * sound = "misc/menu1.wav";
 	menuframework_s *m = &s_opengl_menu;
 
 	switch (key) {
