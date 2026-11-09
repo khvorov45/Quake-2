@@ -23052,8 +23052,6 @@ void ai_run (edict_t* self, float dist)
 		self->goalentity = save;
 }
 
-#define MODEL_SCALE		1.000000
-
 // argv(0) god
 void Cmd_God_f (edict_t *ent)
 {
@@ -34867,8 +34865,6 @@ void fire_bfg (edict_t* self, vec3_t start, vec3_t dir, int damage, int speed, f
 	SV_LinkEdict (bfg);
 }
 
-#define MODEL_SCALE 1.000000
-
 global_variable mframe_t actor_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -35273,7 +35269,7 @@ void SP_misc_actor (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &actor_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 
@@ -35409,33 +35405,21 @@ void SP_target_actor (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-/*
-==============================================================================
-
-BERSERK
-
-==============================================================================
-*/
-
-// G:\quake2\baseq2\models/monsters/berserk
-
-#define MODEL_SCALE		1.000000
-
-global_variable int sound_pain;
-global_variable int sound_die;
-global_variable int sound_idle;
-global_variable int sound_punch;
-global_variable int sound_sight;
-global_variable int sound_search;
+global_variable int berserk_sound_pain;
+global_variable int berserk_sound_die;
+global_variable int berserk_sound_idle;
+global_variable int berserk_sound_punch;
+global_variable int berserk_sound_sight;
+global_variable int berserk_sound_search;
 
 procedure void berserk_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, berserk_sound_sight, 1, ATTN_NORM, 0);
 }
 
 procedure void berserk_search(edict_t* self) {
-	PF_StartSound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, berserk_sound_search, 1, ATTN_NORM, 0);
 }
 
 void berserk_fidget (edict_t* self);
@@ -35486,7 +35470,7 @@ void berserk_fidget (edict_t* self)
 		return;
 
 	self->monsterinfo.currentmove = &berserk_move_stand_fidget;
-	PF_StartSound (self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, berserk_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 global_variable mframe_t berserk_frames_walk[] = {
@@ -35510,30 +35494,6 @@ void berserk_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &berserk_move_walk;
 }
-
-/*
-
-  *****************************
-  SKIPPED THIS FOR NOW!
-  *****************************
-
-   Running -> Arm raised in air
-
-void()	berserk_runb1	=[	$r_att1 ,	berserk_runb2	] {ai_run(21);};
-void()	berserk_runb2	=[	$r_att2 ,	berserk_runb3	] {ai_run(11);};
-void()	berserk_runb3	=[	$r_att3 ,	berserk_runb4	] {ai_run(21);};
-void()	berserk_runb4	=[	$r_att4 ,	berserk_runb5	] {ai_run(25);};
-void()	berserk_runb5	=[	$r_att5 ,	berserk_runb6	] {ai_run(18);};
-void()	berserk_runb6	=[	$r_att6 ,	berserk_runb7	] {ai_run(19);};
-// running with arm in air : start loop
-void()	berserk_runb7	=[	$r_att7 ,	berserk_runb8	] {ai_run(21);};
-void()	berserk_runb8	=[	$r_att8 ,	berserk_runb9	] {ai_run(11);};
-void()	berserk_runb9	=[	$r_att9 ,	berserk_runb10	] {ai_run(21);};
-void()	berserk_runb10	=[	$r_att10 ,	berserk_runb11	] {ai_run(25);};
-void()	berserk_runb11	=[	$r_att11 ,	berserk_runb12	] {ai_run(18);};
-void()	berserk_runb12	=[	$r_att12 ,	berserk_runb7	] {ai_run(19);};
-// running with arm in air : end loop
-*/
 
 global_variable mframe_t berserk_frames_run1[] = {
 	{ai_run, 21, NULL},
@@ -35562,7 +35522,7 @@ void berserk_attack_spike (edict_t* self)
 
 void berserk_swing (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, berserk_sound_punch, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t berserk_frames_attack_spike[] = {
@@ -35656,7 +35616,7 @@ procedure void berserk_pain(edict_t* self, edict_t* other, float kick, int damag
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, berserk_sound_pain, 1, ATTN_NORM, 0);
 
 	if ((damage < 20) || (random() < 0.5))
 		self->monsterinfo.currentmove = &berserk_move_pain1;
@@ -35727,7 +35687,7 @@ procedure void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker,
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, berserk_sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -35740,12 +35700,12 @@ procedure void berserk_die(edict_t* self, edict_t* inflictor, edict_t* attacker,
 void SP_monster_berserk (edict_t* self)
 {
 	// pre-caches
-	sound_pain  = SV_SoundIndex ("berserk/berpain2.wav");
-	sound_die   = SV_SoundIndex ("berserk/berdeth2.wav");
-	sound_idle  = SV_SoundIndex ("berserk/beridle1.wav");
-	sound_punch = SV_SoundIndex ("berserk/attack.wav");
-	sound_search = SV_SoundIndex ("berserk/bersrch1.wav");
-	sound_sight = SV_SoundIndex ("berserk/sight.wav");
+	berserk_sound_pain  = SV_SoundIndex ("berserk/berpain2.wav");
+	berserk_sound_die   = SV_SoundIndex ("berserk/berdeth2.wav");
+	berserk_sound_idle  = SV_SoundIndex ("berserk/beridle1.wav");
+	berserk_sound_punch = SV_SoundIndex ("berserk/attack.wav");
+	berserk_sound_search = SV_SoundIndex ("berserk/bersrch1.wav");
+	berserk_sound_sight = SV_SoundIndex ("berserk/sight.wav");
 
 	self->s.modelindex = SV_ModelIndex("models/monsters/berserk/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
@@ -35770,7 +35730,7 @@ void SP_monster_berserk (edict_t* self)
 	self->monsterinfo.search = berserk_search;
 
 	self->monsterinfo.currentmove = &berserk_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	SV_LinkEdict (self);
 
@@ -35787,22 +35747,20 @@ boss2
 
 // G:\quake2\baseq2\models/monsters/boss2
 
-#define MODEL_SCALE		1.000000
-
 void BossExplode (edict_t* self);
 
 bool infront (edict_t* self, edict_t* other);
 
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_pain3;
-global_variable int	sound_death;
-global_variable int	sound_search1;
+global_variable int	boss2_sound_pain1;
+global_variable int	boss2_sound_pain2;
+global_variable int	boss2_sound_pain3;
+global_variable int	boss2_sound_death;
+global_variable int	boss2_sound_search1;
 
 void boss2_search (edict_t* self)
 {
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, boss2_sound_search1, 1, ATTN_NONE, 0);
 }
 
 void boss2_run (edict_t* self);
@@ -36202,17 +36160,17 @@ procedure void boss2_pain(edict_t* self, edict_t* other, float kick, int damage)
 // American wanted these at no attenuation
 	if (damage < 10)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, boss2_sound_pain3, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
 	else if (damage < 30)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, boss2_sound_pain1, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_VOICE, boss2_sound_pain2, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_heavy;
 	}
 }
@@ -36232,7 +36190,7 @@ procedure void boss2_die (edict_t* self, edict_t* inflictor, edict_t* attacker, 
 	UNUSED(damage);
 	UNUSED(point);
 
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
+	PF_StartSound (self, CHAN_VOICE, boss2_sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->count = 0;
@@ -36330,11 +36288,11 @@ bool Boss2_CheckAttack (edict_t* self)
 
 void SP_monster_boss2 (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("bosshovr/bhvpain1.wav");
-	sound_pain2 = SV_SoundIndex ("bosshovr/bhvpain2.wav");
-	sound_pain3 = SV_SoundIndex ("bosshovr/bhvpain3.wav");
-	sound_death = SV_SoundIndex ("bosshovr/bhvdeth1.wav");
-	sound_search1 = SV_SoundIndex ("bosshovr/bhvunqv1.wav");
+	boss2_sound_pain1 = SV_SoundIndex ("bosshovr/bhvpain1.wav");
+	boss2_sound_pain2 = SV_SoundIndex ("bosshovr/bhvpain2.wav");
+	boss2_sound_pain3 = SV_SoundIndex ("bosshovr/bhvpain3.wav");
+	boss2_sound_death = SV_SoundIndex ("bosshovr/bhvdeth1.wav");
+	boss2_sound_search1 = SV_SoundIndex ("bosshovr/bhvunqv1.wav");
 
 	self->s.sound = SV_SoundIndex ("bosshovr/bhvengn1.wav");
 
@@ -36362,7 +36320,7 @@ void SP_monster_boss2 (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &boss2_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	flymonster_start (self);
 }
@@ -36376,8 +36334,6 @@ boss3
 */
 
 // G:\quake2\baseq2\models/monsters/boss3/rider
-
-#define MODEL_SCALE		1.000000
 
 procedure void Use_Boss3 (edict_t *ent, edict_t* other, edict_t* activator) {
 	UNUSED(other);
@@ -36418,24 +36374,22 @@ void SP_monster_boss3_stand (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_pain3;
-global_variable int	sound_idle;
-global_variable int	sound_death;
-global_variable int	sound_search1;
-global_variable int	sound_search2;
-global_variable int	sound_search3;
-global_variable int	sound_attack1;
-global_variable int	sound_attack2;
-global_variable int	sound_firegun;
-global_variable int	sound_step_left;
-global_variable int	sound_step_right;
-global_variable int	sound_death_hit;
+global_variable int	jorg_sound_pain1;
+global_variable int	jorg_sound_pain2;
+global_variable int	jorg_sound_pain3;
+global_variable int	jorg_sound_idle;
+global_variable int	jorg_sound_death;
+global_variable int	jorg_sound_search1;
+global_variable int	jorg_sound_search2;
+global_variable int	jorg_sound_search3;
+global_variable int	jorg_sound_attack1;
+global_variable int	jorg_sound_attack2;
+global_variable int	jorg_sound_firegun;
+global_variable int	jorg_sound_step_left;
+global_variable int	jorg_sound_step_right;
+global_variable int	jorg_sound_death_hit;
 
 void BossExplode (edict_t* self);
 void MakronToss (edict_t* self);
@@ -36447,11 +36401,11 @@ void jorg_search (edict_t* self)
 	r = random();
 
 	if (r <= 0.3)
-		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_search1, 1, ATTN_NORM, 0);
 	else if (r <= 0.6)
-		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_search2, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_search3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_search3, 1, ATTN_NORM, 0);
 }
 
 void jorg_dead (edict_t* self);
@@ -36526,22 +36480,22 @@ global_variable mmove_t	jorg_move_stand = {112, 162, jorg_frames_stand, NULL};
 
 void jorg_idle (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_VOICE, jorg_sound_idle, 1, ATTN_NORM,0);
 }
 
 void jorg_death_hit (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_death_hit, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, jorg_sound_death_hit, 1, ATTN_NORM,0);
 }
 
 void jorg_step_left (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, jorg_sound_step_left, 1, ATTN_NORM,0);
 }
 
 void jorg_step_right (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, jorg_sound_step_right, 1, ATTN_NORM,0);
 }
 
 void jorg_stand (edict_t* self)
@@ -36814,19 +36768,19 @@ procedure void jorg_pain(edict_t* self, edict_t* other, float kick, int damage) 
 
 	if (damage <= 50)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_pain1, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_pain1;
 	}
 	else if (damage <= 100)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_pain2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_pain2;
 	}
 	else
 	{
 		if (random() <= 0.3)
 		{
-			PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
+			PF_StartSound (self, CHAN_VOICE, jorg_sound_pain3, 1, ATTN_NORM,0);
 			self->monsterinfo.currentmove = &jorg_move_pain3;
 		}
 	}
@@ -36846,7 +36800,7 @@ void jorgBFG (edict_t* self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
-	PF_StartSound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, jorg_sound_attack2, 1, ATTN_NORM, 0);
 	monster_fire_bfg(self, start, dir, 50, 300, 200, MZ2_JORG_BFG_1);
 }
 
@@ -36892,13 +36846,13 @@ void jorg_attack(edict_t* self)
 {
 	if (random() <= 0.75)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_attack1, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_attack1, 1, ATTN_NORM,0);
 		self->s.sound = SV_SoundIndex ("boss3/w_loop.wav");
 		self->monsterinfo.currentmove = &jorg_move_start_attack1;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, jorg_sound_attack2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &jorg_move_attack2;
 	}
 }
@@ -36913,7 +36867,7 @@ procedure void jorg_die (edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	UNUSED(damage);
 	UNUSED(point);
 
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, jorg_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->s.sound = 0;
@@ -37014,20 +36968,20 @@ void MakronPrecache (void);
 
 void SP_monster_jorg (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("boss3/bs3pain1.wav");
-	sound_pain2 = SV_SoundIndex ("boss3/bs3pain2.wav");
-	sound_pain3 = SV_SoundIndex ("boss3/bs3pain3.wav");
-	sound_death = SV_SoundIndex ("boss3/bs3deth1.wav");
-	sound_attack1 = SV_SoundIndex ("boss3/bs3atck1.wav");
-	sound_attack2 = SV_SoundIndex ("boss3/bs3atck2.wav");
-	sound_search1 = SV_SoundIndex ("boss3/bs3srch1.wav");
-	sound_search2 = SV_SoundIndex ("boss3/bs3srch2.wav");
-	sound_search3 = SV_SoundIndex ("boss3/bs3srch3.wav");
-	sound_idle = SV_SoundIndex ("boss3/bs3idle1.wav");
-	sound_step_left = SV_SoundIndex ("boss3/step1.wav");
-	sound_step_right = SV_SoundIndex ("boss3/step2.wav");
-	sound_firegun = SV_SoundIndex ("boss3/xfire.wav");
-	sound_death_hit = SV_SoundIndex ("boss3/d_hit.wav");
+	jorg_sound_pain1 = SV_SoundIndex ("boss3/bs3pain1.wav");
+	jorg_sound_pain2 = SV_SoundIndex ("boss3/bs3pain2.wav");
+	jorg_sound_pain3 = SV_SoundIndex ("boss3/bs3pain3.wav");
+	jorg_sound_death = SV_SoundIndex ("boss3/bs3deth1.wav");
+	jorg_sound_attack1 = SV_SoundIndex ("boss3/bs3atck1.wav");
+	jorg_sound_attack2 = SV_SoundIndex ("boss3/bs3atck2.wav");
+	jorg_sound_search1 = SV_SoundIndex ("boss3/bs3srch1.wav");
+	jorg_sound_search2 = SV_SoundIndex ("boss3/bs3srch2.wav");
+	jorg_sound_search3 = SV_SoundIndex ("boss3/bs3srch3.wav");
+	jorg_sound_idle = SV_SoundIndex ("boss3/bs3idle1.wav");
+	jorg_sound_step_left = SV_SoundIndex ("boss3/step1.wav");
+	jorg_sound_step_right = SV_SoundIndex ("boss3/step2.wav");
+	jorg_sound_firegun = SV_SoundIndex ("boss3/xfire.wav");
+	jorg_sound_death_hit = SV_SoundIndex ("boss3/d_hit.wav");
 
 	MakronPrecache ();
 
@@ -37056,7 +37010,7 @@ void SP_monster_jorg (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &jorg_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start(self);
 }
@@ -37079,20 +37033,20 @@ void makron_step_right (edict_t* self);
 void makronBFG (edict_t* self);
 void makron_dead (edict_t* self);
 
-global_variable int	sound_pain4;
-global_variable int	sound_pain5;
-global_variable int	sound_pain6;
-global_variable int	sound_death;
-global_variable int	sound_step_left;
-global_variable int	sound_step_right;
-global_variable int	sound_attack_bfg;
-global_variable int	sound_brainsplorch;
-global_variable int	sound_prerailgun;
-global_variable int	sound_popup;
-global_variable int	sound_taunt1;
-global_variable int	sound_taunt2;
-global_variable int	sound_taunt3;
-global_variable int	sound_hit;
+global_variable int	makron_sound_pain4;
+global_variable int	makron_sound_pain5;
+global_variable int	makron_sound_pain6;
+global_variable int	makron_sound_death;
+global_variable int	makron_sound_step_left;
+global_variable int	makron_sound_step_right;
+global_variable int	makron_sound_attack_bfg;
+global_variable int	makron_sound_brainsplorch;
+global_variable int	makron_sound_prerailgun;
+global_variable int	makron_sound_popup;
+global_variable int	makron_sound_taunt1;
+global_variable int	makron_sound_taunt2;
+global_variable int	makron_sound_taunt3;
+global_variable int	makron_sound_hit;
 
 void makron_taunt (edict_t* self)
 {
@@ -37100,11 +37054,11 @@ void makron_taunt (edict_t* self)
 
 	r=random();
 	if (r <= 0.3)
-		PF_StartSound (self, CHAN_AUTO, sound_taunt1, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, makron_sound_taunt1, 1, ATTN_NONE, 0);
 	else if (r <= 0.6)
-		PF_StartSound (self, CHAN_AUTO, sound_taunt2, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, makron_sound_taunt2, 1, ATTN_NONE, 0);
 	else
-		PF_StartSound (self, CHAN_AUTO, sound_taunt3, 1, ATTN_NONE, 0);
+		PF_StartSound (self, CHAN_AUTO, makron_sound_taunt3, 1, ATTN_NONE, 0);
 }
 
 //
@@ -37198,32 +37152,32 @@ global_variable mmove_t	makron_move_run = {477, 486, makron_frames_run, NULL};
 
 void makron_hit (edict_t* self)
 {
-	PF_StartSound (self, CHAN_AUTO, sound_hit, 1, ATTN_NONE,0);
+	PF_StartSound (self, CHAN_AUTO, makron_sound_hit, 1, ATTN_NONE,0);
 }
 
 void makron_popup (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_popup, 1, ATTN_NONE,0);
+	PF_StartSound (self, CHAN_BODY, makron_sound_popup, 1, ATTN_NONE,0);
 }
 
 void makron_step_left (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_step_left, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, makron_sound_step_left, 1, ATTN_NORM,0);
 }
 
 void makron_step_right (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_step_right, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_BODY, makron_sound_step_right, 1, ATTN_NORM,0);
 }
 
 void makron_brainsplorch (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_brainsplorch, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_VOICE, makron_sound_brainsplorch, 1, ATTN_NORM,0);
 }
 
 void makron_prerailgun (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
+	PF_StartSound (self, CHAN_WEAPON, makron_sound_prerailgun, 1, ATTN_NORM,0);
 }
 
 global_variable mmove_t	makron_move_walk = {477, 486, makron_frames_run, NULL};
@@ -37423,7 +37377,7 @@ void makronBFG (edict_t* self)
 	vec[2] += self->enemy->viewheight;
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
-	PF_StartSound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, makron_sound_attack_bfg, 1, ATTN_NORM, 0);
 	monster_fire_bfg(self, start, dir, 50, 300, 300, MZ2_MAKRON_BFG);
 }
 
@@ -37571,12 +37525,12 @@ procedure void makron_pain(edict_t* self, edict_t* other, float kick, int damage
 
 	if (damage <= 40)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain4, 1, ATTN_NONE,0);
+		PF_StartSound (self, CHAN_VOICE, makron_sound_pain4, 1, ATTN_NONE,0);
 		self->monsterinfo.currentmove = &makron_move_pain4;
 	}
 	else if (damage <= 110)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain5, 1, ATTN_NONE,0);
+		PF_StartSound (self, CHAN_VOICE, makron_sound_pain5, 1, ATTN_NONE,0);
 		self->monsterinfo.currentmove = &makron_move_pain5;
 	}
 	else
@@ -37584,10 +37538,10 @@ procedure void makron_pain(edict_t* self, edict_t* other, float kick, int damage
 		if (damage <= 150)
 		{
 			if (random() <= 0.45) {
-				PF_StartSound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
+				PF_StartSound (self, CHAN_VOICE, makron_sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			} else if (random() <= 0.35) {
-				PF_StartSound (self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE,0);
+				PF_StartSound (self, CHAN_VOICE, makron_sound_pain6, 1, ATTN_NONE,0);
 				self->monsterinfo.currentmove = &makron_move_pain6;
 			}
 		}
@@ -37686,7 +37640,7 @@ procedure void makron_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 		return;
 
 // regular death
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
+	PF_StartSound (self, CHAN_VOICE, makron_sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -37791,20 +37745,20 @@ bool Makron_CheckAttack (edict_t* self)
 
 void MakronPrecache (void)
 {
-	sound_pain4 = SV_SoundIndex ("makron/pain3.wav");
-	sound_pain5 = SV_SoundIndex ("makron/pain2.wav");
-	sound_pain6 = SV_SoundIndex ("makron/pain1.wav");
-	sound_death = SV_SoundIndex ("makron/death.wav");
-	sound_step_left = SV_SoundIndex ("makron/step1.wav");
-	sound_step_right = SV_SoundIndex ("makron/step2.wav");
-	sound_attack_bfg = SV_SoundIndex ("makron/bfg_fire.wav");
-	sound_brainsplorch = SV_SoundIndex ("makron/brain1.wav");
-	sound_prerailgun = SV_SoundIndex ("makron/rail_up.wav");
-	sound_popup = SV_SoundIndex ("makron/popup.wav");
-	sound_taunt1 = SV_SoundIndex ("makron/voice4.wav");
-	sound_taunt2 = SV_SoundIndex ("makron/voice3.wav");
-	sound_taunt3 = SV_SoundIndex ("makron/voice.wav");
-	sound_hit = SV_SoundIndex ("makron/bhit.wav");
+	makron_sound_pain4 = SV_SoundIndex ("makron/pain3.wav");
+	makron_sound_pain5 = SV_SoundIndex ("makron/pain2.wav");
+	makron_sound_pain6 = SV_SoundIndex ("makron/pain1.wav");
+	makron_sound_death = SV_SoundIndex ("makron/death.wav");
+	makron_sound_step_left = SV_SoundIndex ("makron/step1.wav");
+	makron_sound_step_right = SV_SoundIndex ("makron/step2.wav");
+	makron_sound_attack_bfg = SV_SoundIndex ("makron/bfg_fire.wav");
+	makron_sound_brainsplorch = SV_SoundIndex ("makron/brain1.wav");
+	makron_sound_prerailgun = SV_SoundIndex ("makron/rail_up.wav");
+	makron_sound_popup = SV_SoundIndex ("makron/popup.wav");
+	makron_sound_taunt1 = SV_SoundIndex ("makron/voice4.wav");
+	makron_sound_taunt2 = SV_SoundIndex ("makron/voice3.wav");
+	makron_sound_taunt3 = SV_SoundIndex ("makron/voice.wav");
+	makron_sound_hit = SV_SoundIndex ("makron/bhit.wav");
 
 	SV_ModelIndex ("models/monsters/boss3/rider/tris.md2");
 }
@@ -37836,9 +37790,8 @@ void SP_monster_makron (edict_t* self)
 
 	SV_LinkEdict (self);
 
-//	self->monsterinfo.currentmove = &makron_move_stand;
 	self->monsterinfo.currentmove = &makron_move_sight;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start(self);
 }
@@ -37897,31 +37850,29 @@ brain
 
 // G:\quake2\baseq2\models/monsters/brain
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_chest_open;
-global_variable int	sound_tentacles_extend;
-global_variable int	sound_tentacles_retract;
-global_variable int	sound_death;
-global_variable int	sound_idle1;
-global_variable int	sound_idle2;
-global_variable int	sound_idle3;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_sight;
-global_variable int	sound_search;
-global_variable int	sound_melee1;
-global_variable int	sound_melee2;
-global_variable int	sound_melee3;
+global_variable int	brain_sound_chest_open;
+global_variable int	brain_sound_tentacles_extend;
+global_variable int	brain_sound_tentacles_retract;
+global_variable int	brain_sound_death;
+global_variable int	brain_sound_idle1;
+global_variable int	brain_sound_idle2;
+global_variable int	brain_sound_idle3;
+global_variable int	brain_sound_pain1;
+global_variable int	brain_sound_pain2;
+global_variable int	brain_sound_sight;
+global_variable int	brain_sound_search;
+global_variable int	brain_sound_melee1;
+global_variable int	brain_sound_melee2;
+global_variable int	brain_sound_melee3;
 
 procedure void brain_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, brain_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void brain_search (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, brain_sound_search, 1, ATTN_NORM, 0);
 }
 
 void brain_run (edict_t* self);
@@ -38016,7 +37967,7 @@ global_variable mmove_t brain_move_idle = {192, 221, brain_frames_idle, brain_st
 
 void brain_idle (edict_t* self)
 {
-	PF_StartSound (self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_AUTO, brain_sound_idle3, 1, ATTN_IDLE, 0);
 	self->monsterinfo.currentmove = &brain_move_idle;
 }
 
@@ -38188,7 +38139,7 @@ global_variable mmove_t brain_move_death1 = {123, 140, brain_frames_death1, brai
 
 void brain_swing_right (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_melee1, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, brain_sound_melee1, 1, ATTN_NORM, 0);
 }
 
 void brain_hit_right (edict_t* self)
@@ -38197,12 +38148,12 @@ void brain_hit_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 8);
 	if (fire_hit (self, aim, (15 + (rand() %5)), 40))
-		PF_StartSound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, brain_sound_melee3, 1, ATTN_NORM, 0);
 }
 
 void brain_swing_left (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_melee2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, brain_sound_melee2, 1, ATTN_NORM, 0);
 }
 
 void brain_hit_left (edict_t* self)
@@ -38211,7 +38162,7 @@ void brain_hit_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	if (fire_hit (self, aim, (15 + (rand() %5)), 40))
-		PF_StartSound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, brain_sound_melee3, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t brain_frames_attack1 [] =
@@ -38241,7 +38192,7 @@ void brain_chest_open (edict_t* self)
 {
 	self->spawnflags &= ~65536;
 	self->monsterinfo.power_armor_type = POWER_ARMOR_NONE;
-	PF_StartSound (self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, brain_sound_chest_open, 1, ATTN_NORM, 0);
 }
 
 void brain_tentacle_attack (edict_t* self)
@@ -38251,7 +38202,7 @@ void brain_tentacle_attack (edict_t* self)
 	VectorSet (aim, MELEE_DISTANCE, 0, 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), -600))
 		self->spawnflags |= 65536;
-	PF_StartSound (self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, brain_sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
 
 void brain_chest_closed (edict_t* self)
@@ -38341,17 +38292,17 @@ procedure void brain_pain(edict_t* self, edict_t* other, float kick, int damage)
 	r = random();
 	if (r < 0.33)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, brain_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain1;
 	}
 	else if (r < 0.66)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, brain_sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain2;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, brain_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &brain_move_pain3;
 	}
 }
@@ -38393,7 +38344,7 @@ procedure void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, 
 		return;
 
 	// regular death
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, brain_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	if (random() <= 0.5)
@@ -38404,20 +38355,20 @@ procedure void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, 
 
 void SP_monster_brain (edict_t* self)
 {
-	sound_chest_open = SV_SoundIndex ("brain/brnatck1.wav");
-	sound_tentacles_extend = SV_SoundIndex ("brain/brnatck2.wav");
-	sound_tentacles_retract = SV_SoundIndex ("brain/brnatck3.wav");
-	sound_death = SV_SoundIndex ("brain/brndeth1.wav");
-	sound_idle1 = SV_SoundIndex ("brain/brnidle1.wav");
-	sound_idle2 = SV_SoundIndex ("brain/brnidle2.wav");
-	sound_idle3 = SV_SoundIndex ("brain/brnlens1.wav");
-	sound_pain1 = SV_SoundIndex ("brain/brnpain1.wav");
-	sound_pain2 = SV_SoundIndex ("brain/brnpain2.wav");
-	sound_sight = SV_SoundIndex ("brain/brnsght1.wav");
-	sound_search = SV_SoundIndex ("brain/brnsrch1.wav");
-	sound_melee1 = SV_SoundIndex ("brain/melee1.wav");
-	sound_melee2 = SV_SoundIndex ("brain/melee2.wav");
-	sound_melee3 = SV_SoundIndex ("brain/melee3.wav");
+	brain_sound_chest_open = SV_SoundIndex ("brain/brnatck1.wav");
+	brain_sound_tentacles_extend = SV_SoundIndex ("brain/brnatck2.wav");
+	brain_sound_tentacles_retract = SV_SoundIndex ("brain/brnatck3.wav");
+	brain_sound_death = SV_SoundIndex ("brain/brndeth1.wav");
+	brain_sound_idle1 = SV_SoundIndex ("brain/brnidle1.wav");
+	brain_sound_idle2 = SV_SoundIndex ("brain/brnidle2.wav");
+	brain_sound_idle3 = SV_SoundIndex ("brain/brnlens1.wav");
+	brain_sound_pain1 = SV_SoundIndex ("brain/brnpain1.wav");
+	brain_sound_pain2 = SV_SoundIndex ("brain/brnpain2.wav");
+	brain_sound_sight = SV_SoundIndex ("brain/brnsght1.wav");
+	brain_sound_search = SV_SoundIndex ("brain/brnsrch1.wav");
+	brain_sound_melee1 = SV_SoundIndex ("brain/melee1.wav");
+	brain_sound_melee2 = SV_SoundIndex ("brain/melee2.wav");
+	brain_sound_melee3 = SV_SoundIndex ("brain/melee3.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -38436,7 +38387,6 @@ void SP_monster_brain (edict_t* self)
 	self->monsterinfo.walk = brain_walk;
 	self->monsterinfo.run = brain_run;
 	self->monsterinfo.dodge = brain_dodge;
-//	self->monsterinfo.attack = brain_attack;
 	self->monsterinfo.melee = brain_melee;
 	self->monsterinfo.sight = brain_sight;
 	self->monsterinfo.search = brain_search;
@@ -38448,7 +38398,7 @@ void SP_monster_brain (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &brain_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -38463,10 +38413,6 @@ chick
 
 // G:\quake2\baseq2\models/monsters/bitch
 
-// This file generated by qdata - Do NOT Modify
-
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
 void chick_stand (edict_t* self);
@@ -38475,28 +38421,28 @@ void chick_reslash(edict_t* self);
 void chick_rerocket(edict_t* self);
 void chick_attack1(edict_t* self);
 
-global_variable int	sound_missile_prelaunch;
-global_variable int	sound_missile_launch;
-global_variable int	sound_melee_swing;
-global_variable int	sound_melee_hit;
-global_variable int	sound_missile_reload;
-global_variable int	sound_death1;
-global_variable int	sound_death2;
-global_variable int	sound_fall_down;
-global_variable int	sound_idle1;
-global_variable int	sound_idle2;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_pain3;
-global_variable int	sound_sight;
-global_variable int	sound_search;
+global_variable int	chick_sound_missile_prelaunch;
+global_variable int	chick_sound_missile_launch;
+global_variable int	chick_sound_melee_swing;
+global_variable int	chick_sound_melee_hit;
+global_variable int	chick_sound_missile_reload;
+global_variable int	chick_sound_death1;
+global_variable int	chick_sound_death2;
+global_variable int	chick_sound_fall_down;
+global_variable int	chick_sound_idle1;
+global_variable int	chick_sound_idle2;
+global_variable int	chick_sound_pain1;
+global_variable int	chick_sound_pain2;
+global_variable int	chick_sound_pain3;
+global_variable int	chick_sound_sight;
+global_variable int	chick_sound_search;
 
 void ChickMoan (edict_t* self)
 {
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_idle1, 1, ATTN_IDLE, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_idle2, 1, ATTN_IDLE, 0);
 }
 
 global_variable mframe_t chick_frames_fidget [] =
@@ -38717,11 +38663,11 @@ procedure void chick_pain(edict_t* self, edict_t* other, float kick, int damage)
 
 	r = random();
 	if (r < 0.33)
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_pain1, 1, ATTN_NORM, 0);
 	else if (r < 0.66)
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_pain2, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_pain3, 1, ATTN_NORM, 0);
 
 	if (damage <= 10)
 		self->monsterinfo.currentmove = &chick_move_pain1;
@@ -38818,12 +38764,12 @@ procedure void chick_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &chick_move_death1;
-		PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_death1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &chick_move_death2;
-		PF_StartSound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, chick_sound_death2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -38882,7 +38828,7 @@ void ChickSlash (edict_t* self)
 	vec3_t	aim;
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 10);
-	PF_StartSound (self, CHAN_WEAPON, sound_melee_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, chick_sound_melee_swing, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, (10 + (rand() %6)), 100);
 }
 
@@ -38906,12 +38852,12 @@ void ChickRocket (edict_t* self)
 
 void Chick_PreAttack1 (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, chick_sound_missile_prelaunch, 1, ATTN_NORM, 0);
 }
 
 void ChickReload (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, chick_sound_missile_reload, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t chick_frames_start_attack1 [] =
@@ -39054,26 +39000,26 @@ void chick_attack(edict_t* self)
 procedure void chick_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, chick_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void SP_monster_chick (edict_t* self)
 {
-	sound_missile_prelaunch	= SV_SoundIndex ("chick/chkatck1.wav");
-	sound_missile_launch	= SV_SoundIndex ("chick/chkatck2.wav");
-	sound_melee_swing		= SV_SoundIndex ("chick/chkatck3.wav");
-	sound_melee_hit			= SV_SoundIndex ("chick/chkatck4.wav");
-	sound_missile_reload	= SV_SoundIndex ("chick/chkatck5.wav");
-	sound_death1			= SV_SoundIndex ("chick/chkdeth1.wav");
-	sound_death2			= SV_SoundIndex ("chick/chkdeth2.wav");
-	sound_fall_down			= SV_SoundIndex ("chick/chkfall1.wav");
-	sound_idle1				= SV_SoundIndex ("chick/chkidle1.wav");
-	sound_idle2				= SV_SoundIndex ("chick/chkidle2.wav");
-	sound_pain1				= SV_SoundIndex ("chick/chkpain1.wav");
-	sound_pain2				= SV_SoundIndex ("chick/chkpain2.wav");
-	sound_pain3				= SV_SoundIndex ("chick/chkpain3.wav");
-	sound_sight				= SV_SoundIndex ("chick/chksght1.wav");
-	sound_search			= SV_SoundIndex ("chick/chksrch1.wav");
+	chick_sound_missile_prelaunch	= SV_SoundIndex ("chick/chkatck1.wav");
+	chick_sound_missile_launch	= SV_SoundIndex ("chick/chkatck2.wav");
+	chick_sound_melee_swing		= SV_SoundIndex ("chick/chkatck3.wav");
+	chick_sound_melee_hit			= SV_SoundIndex ("chick/chkatck4.wav");
+	chick_sound_missile_reload	= SV_SoundIndex ("chick/chkatck5.wav");
+	chick_sound_death1			= SV_SoundIndex ("chick/chkdeth1.wav");
+	chick_sound_death2			= SV_SoundIndex ("chick/chkdeth2.wav");
+	chick_sound_fall_down			= SV_SoundIndex ("chick/chkfall1.wav");
+	chick_sound_idle1				= SV_SoundIndex ("chick/chkidle1.wav");
+	chick_sound_idle2				= SV_SoundIndex ("chick/chkidle2.wav");
+	chick_sound_pain1				= SV_SoundIndex ("chick/chkpain1.wav");
+	chick_sound_pain2				= SV_SoundIndex ("chick/chkpain2.wav");
+	chick_sound_pain3				= SV_SoundIndex ("chick/chkpain3.wav");
+	chick_sound_sight				= SV_SoundIndex ("chick/chksght1.wav");
+	chick_sound_search			= SV_SoundIndex ("chick/chksrch1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -39099,7 +39045,7 @@ void SP_monster_chick (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &chick_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -39114,16 +39060,14 @@ FLIPPER
 
 // G:\quake2\baseq2\models/monsters/flipper
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_chomp;
-global_variable int	sound_attack;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_death;
-global_variable int	sound_idle;
-global_variable int	sound_search;
-global_variable int	sound_sight;
+global_variable int	flipper_sound_chomp;
+global_variable int	flipper_sound_attack;
+global_variable int	flipper_sound_pain1;
+global_variable int	flipper_sound_pain2;
+global_variable int	flipper_sound_death;
+global_variable int	flipper_sound_idle;
+global_variable int	flipper_sound_search;
+global_variable int	flipper_sound_sight;
 
 void flipper_stand (edict_t* self);
 
@@ -39273,7 +39217,7 @@ void flipper_bite (edict_t* self)
 
 void flipper_preattack (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, flipper_sound_chomp, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t flipper_frames_attack [] =
@@ -39324,12 +39268,12 @@ procedure void flipper_pain(edict_t* self, edict_t* other, float kick, int damag
 	n = (rand() + 1) % 2;
 	if (n == 0)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, flipper_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flipper_move_pain1;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, flipper_sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flipper_move_pain2;
 	}
 }
@@ -39413,7 +39357,7 @@ global_variable mmove_t flipper_move_death = {104, 159, flipper_frames_death, fl
 procedure void flipper_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, flipper_sound_sight, 1, ATTN_NORM, 0);
 }
 
 procedure void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
@@ -39440,7 +39384,7 @@ procedure void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker
 		return;
 
 	// regular death
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, flipper_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &flipper_move_death;
@@ -39448,14 +39392,14 @@ procedure void flipper_die (edict_t* self, edict_t* inflictor, edict_t* attacker
 
 void SP_monster_flipper (edict_t* self)
 {
-	sound_pain1		= SV_SoundIndex ("flipper/flppain1.wav");
-	sound_pain2		= SV_SoundIndex ("flipper/flppain2.wav");
-	sound_death		= SV_SoundIndex ("flipper/flpdeth1.wav");
-	sound_chomp		= SV_SoundIndex ("flipper/flpatck1.wav");
-	sound_attack	= SV_SoundIndex ("flipper/flpatck2.wav");
-	sound_idle		= SV_SoundIndex ("flipper/flpidle1.wav");
-	sound_search	= SV_SoundIndex ("flipper/flpsrch1.wav");
-	sound_sight		= SV_SoundIndex ("flipper/flpsght1.wav");
+	flipper_sound_pain1		= SV_SoundIndex ("flipper/flppain1.wav");
+	flipper_sound_pain2		= SV_SoundIndex ("flipper/flppain2.wav");
+	flipper_sound_death		= SV_SoundIndex ("flipper/flpdeth1.wav");
+	flipper_sound_chomp		= SV_SoundIndex ("flipper/flpatck1.wav");
+	flipper_sound_attack	= SV_SoundIndex ("flipper/flpatck2.wav");
+	flipper_sound_idle		= SV_SoundIndex ("flipper/flpidle1.wav");
+	flipper_sound_search	= SV_SoundIndex ("flipper/flpsrch1.wav");
+	flipper_sound_sight		= SV_SoundIndex ("flipper/flpsght1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -39479,7 +39423,7 @@ void SP_monster_flipper (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &flipper_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	swimmonster_start (self);
 }
@@ -39494,24 +39438,22 @@ floater
 
 // G:\quake2\baseq2\models/monsters/float
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_attack2;
-global_variable int	sound_attack3;
-global_variable int	sound_death1;
-global_variable int	sound_idle;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_sight;
+global_variable int	floater_sound_attack2;
+global_variable int	floater_sound_attack3;
+global_variable int	floater_sound_death1;
+global_variable int	floater_sound_idle;
+global_variable int	floater_sound_pain1;
+global_variable int	floater_sound_pain2;
+global_variable int	floater_sound_sight;
 
 procedure void floater_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, floater_sound_sight, 1, ATTN_NORM, 0);
 }
 
 procedure void floater_idle (edict_t* self) {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, floater_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 //void floater_stand1 (edict_t* self);
@@ -39908,7 +39850,7 @@ void floater_walk (edict_t* self)
 void floater_wham (edict_t* self)
 {
 	local_persist	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
-	PF_StartSound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, floater_sound_attack3, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, 5 + rand() % 6, -50);
 }
 
@@ -39927,7 +39869,7 @@ void floater_zap (edict_t* self)
 	G_ProjectSource (self->s.origin, offset, forward, right, origin);
 //	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, origin);
 
-	PF_StartSound (self, CHAN_WEAPON, sound_attack2, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, floater_sound_attack2, 1, ATTN_NORM, 0);
 
 	//FIXME use the flash, Luke
 	PF_WriteByte (svc_temp_entity);
@@ -39971,12 +39913,12 @@ procedure void floater_pain (edict_t* self, edict_t* other, float kick, int dama
 	n = (rand() + 1) % 3;
 	if (n == 0)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, floater_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &floater_move_pain1;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, floater_sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &floater_move_pain2;
 	}
 }
@@ -39996,19 +39938,19 @@ procedure void floater_die(edict_t* self, edict_t* inflictor, edict_t* attacker,
 	UNUSED(damage);
 	UNUSED(point);
 
-	PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, floater_sound_death1, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
 
 void SP_monster_floater (edict_t* self)
 {
-	sound_attack2 = SV_SoundIndex ("floater/fltatck2.wav");
-	sound_attack3 = SV_SoundIndex ("floater/fltatck3.wav");
-	sound_death1 = SV_SoundIndex ("floater/fltdeth1.wav");
-	sound_idle = SV_SoundIndex ("floater/fltidle1.wav");
-	sound_pain1 = SV_SoundIndex ("floater/fltpain1.wav");
-	sound_pain2 = SV_SoundIndex ("floater/fltpain2.wav");
-	sound_sight = SV_SoundIndex ("floater/fltsght1.wav");
+	floater_sound_attack2 = SV_SoundIndex ("floater/fltatck2.wav");
+	floater_sound_attack3 = SV_SoundIndex ("floater/fltatck3.wav");
+	floater_sound_death1 = SV_SoundIndex ("floater/fltdeth1.wav");
+	floater_sound_idle = SV_SoundIndex ("floater/fltidle1.wav");
+	floater_sound_pain1 = SV_SoundIndex ("floater/fltpain1.wav");
+	floater_sound_pain2 = SV_SoundIndex ("floater/fltpain2.wav");
+	floater_sound_sight = SV_SoundIndex ("floater/fltsght1.wav");
 
 	SV_SoundIndex ("floater/fltatck1.wav");
 
@@ -40043,7 +39985,7 @@ void SP_monster_floater (edict_t* self)
 	else
 		self->monsterinfo.currentmove = &floater_move_stand2;
 
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	flymonster_start (self);
 }
@@ -40064,19 +40006,17 @@ flyer
 #define ACTION_run				3
 #define ACTION_walk				4
 
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
 global_variable int	nextmove;			// Used for start/stop frames
 
-global_variable int	sound_sight;
-global_variable int	sound_idle;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_slash;
-global_variable int	sound_sproing;
-global_variable int	sound_die;
+global_variable int	flyer_sound_sight;
+global_variable int	flyer_sound_idle;
+global_variable int	flyer_sound_pain1;
+global_variable int	flyer_sound_pain2;
+global_variable int	flyer_sound_slash;
+global_variable int	flyer_sound_sproing;
+global_variable int	flyer_sound_die;
 
 void flyer_check_melee(edict_t* self);
 void flyer_loop_melee (edict_t* self);
@@ -40088,17 +40028,17 @@ void flyer_nextmove (edict_t* self);
 procedure void flyer_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, flyer_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void flyer_idle (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, flyer_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void flyer_pop_blades (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, flyer_sound_sproing, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t flyer_frames_stand [] =
@@ -40394,7 +40334,7 @@ void flyer_slash_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 0);
 	fire_hit (self, aim, 5, 0);
-	PF_StartSound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, flyer_sound_slash, 1, ATTN_NORM, 0);
 }
 
 void flyer_slash_right (edict_t* self)
@@ -40403,7 +40343,7 @@ void flyer_slash_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 0);
 	fire_hit (self, aim, 5, 0);
-	PF_StartSound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, flyer_sound_slash, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t flyer_frames_start_melee [] =
@@ -40511,17 +40451,17 @@ procedure void flyer_pain(edict_t* self, edict_t* other, float kick, int damage)
 	n = rand() % 3;
 	if (n == 0)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, flyer_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain1;
 	}
 	else if (n == 1)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, flyer_sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain2;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, flyer_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &flyer_move_pain3;
 	}
 }
@@ -40532,7 +40472,7 @@ procedure void flyer_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 	UNUSED(damage);
 	UNUSED(point);
 
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, flyer_sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
 
@@ -40545,13 +40485,13 @@ void SP_monster_flyer (edict_t* self)
 		self->target = NULL;
 	}
 
-	sound_sight = SV_SoundIndex ("flyer/flysght1.wav");
-	sound_idle = SV_SoundIndex ("flyer/flysrch1.wav");
-	sound_pain1 = SV_SoundIndex ("flyer/flypain1.wav");
-	sound_pain2 = SV_SoundIndex ("flyer/flypain2.wav");
-	sound_slash = SV_SoundIndex ("flyer/flyatck2.wav");
-	sound_sproing = SV_SoundIndex ("flyer/flyatck1.wav");
-	sound_die = SV_SoundIndex ("flyer/flydeth1.wav");
+	flyer_sound_sight = SV_SoundIndex ("flyer/flysght1.wav");
+	flyer_sound_idle = SV_SoundIndex ("flyer/flysrch1.wav");
+	flyer_sound_pain1 = SV_SoundIndex ("flyer/flypain1.wav");
+	flyer_sound_pain2 = SV_SoundIndex ("flyer/flypain2.wav");
+	flyer_sound_slash = SV_SoundIndex ("flyer/flyatck2.wav");
+	flyer_sound_sproing = SV_SoundIndex ("flyer/flyatck1.wav");
+	flyer_sound_die = SV_SoundIndex ("flyer/flydeth1.wav");
 
 	SV_SoundIndex ("flyer/flyatck3.wav");
 
@@ -40580,7 +40520,7 @@ void SP_monster_flyer (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &flyer_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	flymonster_start (self);
 }
@@ -40595,38 +40535,36 @@ GLADIATOR
 
 // G:\quake2\baseq2\models/monsters/gladiatr
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_die;
-global_variable int	sound_gun;
-global_variable int	sound_cleaver_swing;
-global_variable int	sound_cleaver_hit;
-global_variable int	sound_cleaver_miss;
-global_variable int	sound_idle;
-global_variable int	sound_search;
-global_variable int	sound_sight;
+global_variable int	gladiator_sound_pain1;
+global_variable int	gladiator_sound_pain2;
+global_variable int	gladiator_sound_die;
+global_variable int	gladiator_sound_gun;
+global_variable int	gladiator_sound_cleaver_swing;
+global_variable int	gladiator_sound_cleaver_hit;
+global_variable int	gladiator_sound_cleaver_miss;
+global_variable int	gladiator_sound_idle;
+global_variable int	gladiator_sound_search;
+global_variable int	gladiator_sound_sight;
 
 void gladiator_idle (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, gladiator_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 procedure void gladiator_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_VOICE, gladiator_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gladiator_search (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, gladiator_sound_search, 1, ATTN_NORM, 0);
 }
 
 void gladiator_cleaver_swing (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, gladiator_sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t gladiator_frames_stand [] =
@@ -40697,9 +40635,9 @@ void GaldiatorMelee (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], -4);
 	if (fire_hit (self, aim, (20 + (rand() %5)), 300))
-		PF_StartSound (self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_AUTO, gladiator_sound_cleaver_hit, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_AUTO, gladiator_sound_cleaver_miss, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t gladiator_frames_attack_melee [] =
@@ -40771,7 +40709,7 @@ void gladiator_attack(edict_t* self)
 		return;
 
 	// charge up the railgun
-	PF_StartSound (self, CHAN_WEAPON, sound_gun, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, gladiator_sound_gun, 1, ATTN_NORM, 0);
 	VectorCopy (self->enemy->s.origin, self->pos1);	//save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 	self->monsterinfo.currentmove = &gladiator_move_attack_gun;
@@ -40818,9 +40756,9 @@ procedure void gladiator_pain (edict_t* self, edict_t* other, float kick, int da
 	self->pain_debounce_time = level.time + 3;
 
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, gladiator_sound_pain1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, gladiator_sound_pain2, 1, ATTN_NORM, 0);
 
 	if (self->velocity[2] > 100)
 		self->monsterinfo.currentmove = &gladiator_move_pain_air;
@@ -40890,7 +40828,7 @@ procedure void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attack
 		return;
 
 	// regular death
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, gladiator_sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -40899,16 +40837,16 @@ procedure void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attack
 
 void SP_monster_gladiator (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("gladiator/pain.wav");
-	sound_pain2 = SV_SoundIndex ("gladiator/gldpain2.wav");
-	sound_die = SV_SoundIndex ("gladiator/glddeth2.wav");
-	sound_gun = SV_SoundIndex ("gladiator/railgun.wav");
-	sound_cleaver_swing = SV_SoundIndex ("gladiator/melee1.wav");
-	sound_cleaver_hit = SV_SoundIndex ("gladiator/melee2.wav");
-	sound_cleaver_miss = SV_SoundIndex ("gladiator/melee3.wav");
-	sound_idle = SV_SoundIndex ("gladiator/gldidle1.wav");
-	sound_search = SV_SoundIndex ("gladiator/gldsrch1.wav");
-	sound_sight = SV_SoundIndex ("gladiator/sight.wav");
+	gladiator_sound_pain1 = SV_SoundIndex ("gladiator/pain.wav");
+	gladiator_sound_pain2 = SV_SoundIndex ("gladiator/gldpain2.wav");
+	gladiator_sound_die = SV_SoundIndex ("gladiator/glddeth2.wav");
+	gladiator_sound_gun = SV_SoundIndex ("gladiator/railgun.wav");
+	gladiator_sound_cleaver_swing = SV_SoundIndex ("gladiator/melee1.wav");
+	gladiator_sound_cleaver_hit = SV_SoundIndex ("gladiator/melee2.wav");
+	gladiator_sound_cleaver_miss = SV_SoundIndex ("gladiator/melee3.wav");
+	gladiator_sound_idle = SV_SoundIndex ("gladiator/gldidle1.wav");
+	gladiator_sound_search = SV_SoundIndex ("gladiator/gldsrch1.wav");
+	gladiator_sound_sight = SV_SoundIndex ("gladiator/sight.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -40935,7 +40873,7 @@ void SP_monster_gladiator (edict_t* self)
 
 	SV_LinkEdict (self);
 	self->monsterinfo.currentmove = &gladiator_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -40950,31 +40888,28 @@ GUNNER
 
 // G:\quake2\baseq2\models/gunner
 
-#undef MODEL_SCALE
-#define MODEL_SCALE		1.150000
-
-global_variable int	sound_pain;
-global_variable int	sound_pain2;
-global_variable int	sound_death;
-global_variable int	sound_idle;
-global_variable int	sound_open;
-global_variable int	sound_search;
-global_variable int	sound_sight;
+global_variable int	gunner_sound_pain;
+global_variable int	gunner_sound_pain2;
+global_variable int	gunner_sound_death;
+global_variable int	gunner_sound_idle;
+global_variable int	gunner_sound_open;
+global_variable int	gunner_sound_search;
+global_variable int	gunner_sound_sight;
 
 void gunner_idlesound (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, gunner_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 procedure void gunner_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, gunner_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gunner_search (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, gunner_sound_search, 1, ATTN_NORM, 0);
 }
 
 bool visible (edict_t* self, edict_t* other);
@@ -41214,9 +41149,9 @@ procedure void gunner_pain(edict_t* self, edict_t* other, float kick, int damage
 	self->pain_debounce_time = level.time + 3;
 
 	if (rand()&1)
-		PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, gunner_sound_pain, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, gunner_sound_pain2, 1, ATTN_NORM, 0);
 
 	if (damage <= 10)
 		self->monsterinfo.currentmove = &gunner_move_pain3;
@@ -41276,7 +41211,7 @@ procedure void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 		return;
 
 // regular death
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, gunner_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &gunner_move_death;
@@ -41337,7 +41272,7 @@ procedure void gunner_dodge(edict_t* self, edict_t* attacker, float eta) {
 
 void gunner_opengun (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, gunner_sound_open, 1, ATTN_IDLE, 0);
 }
 
 void GunnerFire (edict_t* self)
@@ -41495,13 +41430,13 @@ void gunner_refire_chain(edict_t* self)
 
 void SP_monster_gunner (edict_t* self)
 {
-	sound_death = SV_SoundIndex ("gunner/death1.wav");
-	sound_pain = SV_SoundIndex ("gunner/gunpain2.wav");
-	sound_pain2 = SV_SoundIndex ("gunner/gunpain1.wav");
-	sound_idle = SV_SoundIndex ("gunner/gunidle1.wav");
-	sound_open = SV_SoundIndex ("gunner/gunatck1.wav");
-	sound_search = SV_SoundIndex ("gunner/gunsrch1.wav");
-	sound_sight = SV_SoundIndex ("gunner/sight1.wav");
+	gunner_sound_death = SV_SoundIndex ("gunner/death1.wav");
+	gunner_sound_pain = SV_SoundIndex ("gunner/gunpain2.wav");
+	gunner_sound_pain2 = SV_SoundIndex ("gunner/gunpain1.wav");
+	gunner_sound_idle = SV_SoundIndex ("gunner/gunidle1.wav");
+	gunner_sound_open = SV_SoundIndex ("gunner/gunatck1.wav");
+	gunner_sound_search = SV_SoundIndex ("gunner/gunsrch1.wav");
+	gunner_sound_sight = SV_SoundIndex ("gunner/sight1.wav");
 
 	SV_SoundIndex ("gunner/gunatck2.wav");
 	SV_SoundIndex ("gunner/gunatck3.wav");
@@ -41531,7 +41466,7 @@ void SP_monster_gunner (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &gunner_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.15f;
 
 	walkmonster_start (self);
 }
@@ -41546,31 +41481,28 @@ hover
 
 // G:\quake2\baseq2\models/monsters/hover
 
-#undef MODEL_SCALE
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_death1;
-global_variable int	sound_death2;
-global_variable int	sound_sight;
-global_variable int	sound_search1;
-global_variable int	sound_search2;
+global_variable int	hover_sound_pain1;
+global_variable int	hover_sound_pain2;
+global_variable int	hover_sound_death1;
+global_variable int	hover_sound_death2;
+global_variable int	hover_sound_sight;
+global_variable int	hover_sound_search1;
+global_variable int	hover_sound_search2;
 
 procedure void hover_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, hover_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void hover_search (edict_t* self)
 {
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, hover_sound_search1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, hover_sound_search2, 1, ATTN_NORM, 0);
 }
 
 void hover_run (edict_t* self);
@@ -41878,18 +41810,18 @@ procedure void hover_pain(edict_t* self, edict_t* other, float kick, int damage)
 	{
 		if (random() < 0.5)
 		{
-			PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_VOICE, hover_sound_pain1, 1, ATTN_NORM, 0);
 			self->monsterinfo.currentmove = &hover_move_pain3;
 		}
 		else
 		{
-			PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_VOICE, hover_sound_pain2, 1, ATTN_NORM, 0);
 			self->monsterinfo.currentmove = &hover_move_pain2;
 		}
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, hover_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &hover_move_pain1;
 	}
 }
@@ -41940,9 +41872,9 @@ procedure void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 
 	// regular death
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, hover_sound_death1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, hover_sound_death2, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &hover_move_death1;
@@ -41950,13 +41882,13 @@ procedure void hover_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 
 void SP_monster_hover (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("hover/hovpain1.wav");
-	sound_pain2 = SV_SoundIndex ("hover/hovpain2.wav");
-	sound_death1 = SV_SoundIndex ("hover/hovdeth1.wav");
-	sound_death2 = SV_SoundIndex ("hover/hovdeth2.wav");
-	sound_sight = SV_SoundIndex ("hover/hovsght1.wav");
-	sound_search1 = SV_SoundIndex ("hover/hovsrch1.wav");
-	sound_search2 = SV_SoundIndex ("hover/hovsrch2.wav");
+	hover_sound_pain1 = SV_SoundIndex ("hover/hovpain1.wav");
+	hover_sound_pain2 = SV_SoundIndex ("hover/hovpain2.wav");
+	hover_sound_death1 = SV_SoundIndex ("hover/hovdeth1.wav");
+	hover_sound_death2 = SV_SoundIndex ("hover/hovdeth2.wav");
+	hover_sound_sight = SV_SoundIndex ("hover/hovsght1.wav");
+	hover_sound_search1 = SV_SoundIndex ("hover/hovsrch1.wav");
+	hover_sound_search2 = SV_SoundIndex ("hover/hovsrch2.wav");
 
 	SV_SoundIndex ("hover/hovatck1.wav");
 
@@ -41986,7 +41918,7 @@ void SP_monster_hover (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &hover_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	flymonster_start (self);
 }
@@ -42001,22 +41933,19 @@ INFANTRY
 
 // G:\quake2\baseq2\models/monsters/infantry
 
-#define MODEL_SCALE		1.000000
-
 void InfantryMachineGun (edict_t* self);
 
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_die1;
-global_variable int	sound_die2;
-
-global_variable int	sound_gunshot;
-global_variable int	sound_weapon_cock;
-global_variable int	sound_punch_swing;
-global_variable int	sound_punch_hit;
-global_variable int	sound_sight;
-global_variable int	sound_search;
-global_variable int	sound_idle;
+global_variable int	infantry_sound_pain1;
+global_variable int	infantry_sound_pain2;
+global_variable int	infantry_sound_die1;
+global_variable int	infantry_sound_die2;
+global_variable int	infantry_sound_gunshot;
+global_variable int	infantry_sound_weapon_cock;
+global_variable int	infantry_sound_punch_swing;
+global_variable int	infantry_sound_punch_hit;
+global_variable int	infantry_sound_sight;
+global_variable int	infantry_sound_search;
+global_variable int	infantry_sound_idle;
 
 global_variable mframe_t infantry_frames_stand [] =
 {
@@ -42107,7 +42036,7 @@ global_variable mmove_t infantry_move_fidget = {1, 49, infantry_frames_fidget, i
 void infantry_fidget (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_fidget;
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, infantry_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 global_variable mframe_t infantry_frames_walk [] =
@@ -42202,12 +42131,12 @@ procedure void infantry_pain (edict_t* self, edict_t* other, float kick, int dam
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &infantry_move_pain1;
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, infantry_sound_pain1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &infantry_move_pain2;
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, infantry_sound_pain2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -42268,7 +42197,7 @@ void InfantryMachineGun (edict_t* self)
 procedure void infantry_sight (edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound(self, CHAN_BODY, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound(self, CHAN_BODY, infantry_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void infantry_dead (edict_t* self)
@@ -42383,17 +42312,17 @@ procedure void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker
 	if (n == 0)
 	{
 		self->monsterinfo.currentmove = &infantry_move_death1;
-		PF_StartSound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, infantry_sound_die2, 1, ATTN_NORM, 0);
 	}
 	else if (n == 1)
 	{
 		self->monsterinfo.currentmove = &infantry_move_death2;
-		PF_StartSound (self, CHAN_VOICE, sound_die1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, infantry_sound_die1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &infantry_move_death3;
-		PF_StartSound (self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, infantry_sound_die2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -42450,7 +42379,7 @@ void infantry_cock_gun (edict_t* self)
 {
 	int		n;
 
-	PF_StartSound (self, CHAN_WEAPON, sound_weapon_cock, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, infantry_sound_weapon_cock, 1, ATTN_NORM, 0);
 	n = (rand() & 15) + 3 + 7;
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
@@ -42487,7 +42416,7 @@ global_variable mmove_t infantry_move_attack1 = {184, 198, infantry_frames_attac
 
 void infantry_swing (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, infantry_sound_punch_swing, 1, ATTN_NORM, 0);
 }
 
 void infantry_smack (edict_t* self)
@@ -42496,7 +42425,7 @@ void infantry_smack (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, 0, 0);
 	if (fire_hit (self, aim, (5 + (rand() % 5)), 50))
-		PF_StartSound (self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, infantry_sound_punch_hit, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t infantry_frames_attack2 [] =
@@ -42522,19 +42451,17 @@ void infantry_attack(edict_t* self)
 
 void SP_monster_infantry (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("infantry/infpain1.wav");
-	sound_pain2 = SV_SoundIndex ("infantry/infpain2.wav");
-	sound_die1 = SV_SoundIndex ("infantry/infdeth1.wav");
-	sound_die2 = SV_SoundIndex ("infantry/infdeth2.wav");
-
-	sound_gunshot = SV_SoundIndex ("infantry/infatck1.wav");
-	sound_weapon_cock = SV_SoundIndex ("infantry/infatck3.wav");
-	sound_punch_swing = SV_SoundIndex ("infantry/infatck2.wav");
-	sound_punch_hit = SV_SoundIndex ("infantry/melee2.wav");
-
-	sound_sight = SV_SoundIndex ("infantry/infsght1.wav");
-	sound_search = SV_SoundIndex ("infantry/infsrch1.wav");
-	sound_idle = SV_SoundIndex ("infantry/infidle1.wav");
+	infantry_sound_pain1 = SV_SoundIndex ("infantry/infpain1.wav");
+	infantry_sound_pain2 = SV_SoundIndex ("infantry/infpain2.wav");
+	infantry_sound_die1 = SV_SoundIndex ("infantry/infdeth1.wav");
+	infantry_sound_die2 = SV_SoundIndex ("infantry/infdeth2.wav");
+	infantry_sound_gunshot = SV_SoundIndex ("infantry/infatck1.wav");
+	infantry_sound_weapon_cock = SV_SoundIndex ("infantry/infatck3.wav");
+	infantry_sound_punch_swing = SV_SoundIndex ("infantry/infatck2.wav");
+	infantry_sound_punch_hit = SV_SoundIndex ("infantry/melee2.wav");
+	infantry_sound_sight = SV_SoundIndex ("infantry/infsght1.wav");
+	infantry_sound_search = SV_SoundIndex ("infantry/infsrch1.wav");
+	infantry_sound_idle = SV_SoundIndex ("infantry/infidle1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -42561,7 +42488,7 @@ void SP_monster_infantry (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &infantry_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -42576,31 +42503,29 @@ insane
 
 // G:\quake2\baseq2\models/monsters/insane
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_fist;
-global_variable int	sound_shake;
-global_variable int	sound_moan;
-global_variable int	sound_scream[8];
+global_variable int	insane_sound_fist;
+global_variable int	insane_sound_shake;
+global_variable int	insane_sound_moan;
+global_variable int	insane_sound_scream[8];
 
 void insane_fist (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, insane_sound_fist, 1, ATTN_IDLE, 0);
 }
 
 void insane_shake (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, insane_sound_shake, 1, ATTN_IDLE, 0);
 }
 
 void insane_moan (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, insane_sound_moan, 1, ATTN_IDLE, 0);
 }
 
 void insane_scream (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, insane_sound_scream[rand()%8], 1, ATTN_IDLE, 0);
 }
 
 void insane_stand (edict_t* self);
@@ -43165,17 +43090,17 @@ procedure void insane_die (edict_t* self, edict_t* inflictor, edict_t* attacker,
 
 void SP_misc_insane (edict_t* self)
 {
-	sound_fist = SV_SoundIndex ("insane/insane11.wav");
-	sound_shake = SV_SoundIndex ("insane/insane5.wav");
-	sound_moan = SV_SoundIndex ("insane/insane7.wav");
-	sound_scream[0] = SV_SoundIndex ("insane/insane1.wav");
-	sound_scream[1] = SV_SoundIndex ("insane/insane2.wav");
-	sound_scream[2] = SV_SoundIndex ("insane/insane3.wav");
-	sound_scream[3] = SV_SoundIndex ("insane/insane4.wav");
-	sound_scream[4] = SV_SoundIndex ("insane/insane6.wav");
-	sound_scream[5] = SV_SoundIndex ("insane/insane8.wav");
-	sound_scream[6] = SV_SoundIndex ("insane/insane9.wav");
-	sound_scream[7] = SV_SoundIndex ("insane/insane10.wav");
+	insane_sound_fist = SV_SoundIndex ("insane/insane11.wav");
+	insane_sound_shake = SV_SoundIndex ("insane/insane5.wav");
+	insane_sound_moan = SV_SoundIndex ("insane/insane7.wav");
+	insane_sound_scream[0] = SV_SoundIndex ("insane/insane1.wav");
+	insane_sound_scream[1] = SV_SoundIndex ("insane/insane2.wav");
+	insane_sound_scream[2] = SV_SoundIndex ("insane/insane3.wav");
+	insane_sound_scream[3] = SV_SoundIndex ("insane/insane4.wav");
+	insane_sound_scream[4] = SV_SoundIndex ("insane/insane6.wav");
+	insane_sound_scream[5] = SV_SoundIndex ("insane/insane8.wav");
+	insane_sound_scream[6] = SV_SoundIndex ("insane/insane9.wav");
+	insane_sound_scream[7] = SV_SoundIndex ("insane/insane10.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -43213,7 +43138,7 @@ void SP_misc_insane (edict_t* self)
 
 	self->monsterinfo.currentmove = &insane_move_stand_normal;
 
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	if (self->spawnflags & 8)					// Crucified ?
 	{
@@ -43239,20 +43164,18 @@ MEDIC
 
 // G:\quake2\baseq2\models/monsters/medic
 
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
-global_variable int	sound_idle1;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_die;
-global_variable int	sound_sight;
-global_variable int	sound_search;
-global_variable int	sound_hook_launch;
-global_variable int	sound_hook_hit;
-global_variable int	sound_hook_heal;
-global_variable int	sound_hook_retract;
+global_variable int	medic_sound_idle1;
+global_variable int	medic_sound_pain1;
+global_variable int	medic_sound_pain2;
+global_variable int	medic_sound_die;
+global_variable int	medic_sound_sight;
+global_variable int	medic_sound_search;
+global_variable int	medic_sound_hook_launch;
+global_variable int	medic_sound_hook_hit;
+global_variable int	medic_sound_hook_heal;
+global_variable int	medic_sound_hook_retract;
 
 edict_t *medic_FindDeadMonster (edict_t* self)
 {
@@ -43292,7 +43215,7 @@ void medic_idle (edict_t* self)
 {
 	edict_t	*ent;
 
-	PF_StartSound (self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, medic_sound_idle1, 1, ATTN_IDLE, 0);
 
 	ent = medic_FindDeadMonster(self);
 	if (ent)
@@ -43308,7 +43231,7 @@ void medic_search (edict_t* self)
 {
 	edict_t	*ent;
 
-	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, medic_sound_search, 1, ATTN_IDLE, 0);
 
 	if (!self->oldenemy)
 	{
@@ -43327,7 +43250,7 @@ void medic_search (edict_t* self)
 procedure void medic_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, medic_sound_sight, 1, ATTN_NORM, 0);
 }
 
 global_variable mframe_t medic_frames_stand [] =
@@ -43538,12 +43461,12 @@ procedure void medic_pain(edict_t* self, edict_t* other, float kick, int damage)
 	if (random() < 0.5)
 	{
 		self->monsterinfo.currentmove = &medic_move_pain1;
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, medic_sound_pain1, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		self->monsterinfo.currentmove = &medic_move_pain2;
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, medic_sound_pain2, 1, ATTN_NORM, 0);
 	}
 }
 
@@ -43645,7 +43568,7 @@ procedure void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, i
 		return;
 
 // regular death
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, medic_sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -43761,7 +43684,7 @@ global_variable mmove_t medic_move_attackBlaster = {177, 190, medic_frames_attac
 
 void medic_hook_launch (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_hook_launch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, medic_sound_hook_launch, 1, ATTN_NORM, 0);
 }
 
 void ED_CallSpawn (edict_t *ent);
@@ -43812,7 +43735,7 @@ void medic_cable_attack (edict_t* self)
 
 	if (self->s.frame == 219)
 	{
-		PF_StartSound (self->enemy, CHAN_AUTO, sound_hook_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self->enemy, CHAN_AUTO, medic_sound_hook_hit, 1, ATTN_NORM, 0);
 		self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;
 	}
 	else if (self->s.frame == 226)
@@ -43841,7 +43764,7 @@ void medic_cable_attack (edict_t* self)
 	else
 	{
 		if (self->s.frame == 220)
-			PF_StartSound (self, CHAN_WEAPON, sound_hook_heal, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_WEAPON, medic_sound_hook_heal, 1, ATTN_NORM, 0);
 	}
 
 	// adjust start for beam origin being in middle of a segment
@@ -43861,7 +43784,7 @@ void medic_cable_attack (edict_t* self)
 
 void medic_hook_retract (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, medic_sound_hook_retract, 1, ATTN_NORM, 0);
 	self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
 }
 
@@ -43919,16 +43842,16 @@ bool medic_checkattack (edict_t* self)
 
 void SP_monster_medic (edict_t* self)
 {
-	sound_idle1 = SV_SoundIndex ("medic/idle.wav");
-	sound_pain1 = SV_SoundIndex ("medic/medpain1.wav");
-	sound_pain2 = SV_SoundIndex ("medic/medpain2.wav");
-	sound_die = SV_SoundIndex ("medic/meddeth1.wav");
-	sound_sight = SV_SoundIndex ("medic/medsght1.wav");
-	sound_search = SV_SoundIndex ("medic/medsrch1.wav");
-	sound_hook_launch = SV_SoundIndex ("medic/medatck2.wav");
-	sound_hook_hit = SV_SoundIndex ("medic/medatck3.wav");
-	sound_hook_heal = SV_SoundIndex ("medic/medatck4.wav");
-	sound_hook_retract = SV_SoundIndex ("medic/medatck5.wav");
+	medic_sound_idle1 = SV_SoundIndex ("medic/idle.wav");
+	medic_sound_pain1 = SV_SoundIndex ("medic/medpain1.wav");
+	medic_sound_pain2 = SV_SoundIndex ("medic/medpain2.wav");
+	medic_sound_die = SV_SoundIndex ("medic/meddeth1.wav");
+	medic_sound_sight = SV_SoundIndex ("medic/medsght1.wav");
+	medic_sound_search = SV_SoundIndex ("medic/medsrch1.wav");
+	medic_sound_hook_launch = SV_SoundIndex ("medic/medatck2.wav");
+	medic_sound_hook_hit = SV_SoundIndex ("medic/medatck3.wav");
+	medic_sound_hook_heal = SV_SoundIndex ("medic/medatck4.wav");
+	medic_sound_hook_retract = SV_SoundIndex ("medic/medatck5.wav");
 
 	SV_SoundIndex ("medic/medatck1.wav");
 
@@ -43959,7 +43882,7 @@ void SP_monster_medic (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &medic_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -44500,21 +44423,19 @@ mutant
 
 // G:\quake2\baseq2\models/monsters/mutant
 
-#define MODEL_SCALE		1.000000
-
-global_variable int	sound_swing;
-global_variable int	sound_hit;
-global_variable int	sound_hit2;
-global_variable int	sound_death;
-global_variable int	sound_idle;
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_sight;
-global_variable int	sound_search;
-global_variable int	sound_step1;
-global_variable int	sound_step2;
-global_variable int	sound_step3;
-global_variable int	sound_thud;
+global_variable int	mutant_sound_swing;
+global_variable int	mutant_sound_hit;
+global_variable int	mutant_sound_hit2;
+global_variable int	mutant_sound_death;
+global_variable int	mutant_sound_idle;
+global_variable int	mutant_sound_pain1;
+global_variable int	mutant_sound_pain2;
+global_variable int	mutant_sound_sight;
+global_variable int	mutant_sound_search;
+global_variable int	mutant_sound_step1;
+global_variable int	mutant_sound_step2;
+global_variable int	mutant_sound_step3;
+global_variable int	mutant_sound_thud;
 
 //
 // SOUNDS
@@ -44525,27 +44446,27 @@ void mutant_step (edict_t* self)
 	int		n;
 	n = (rand() + 1) % 3;
 	if (n == 0)
-		PF_StartSound (self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_step1, 1, ATTN_NORM, 0);
 	else if (n == 1)
-		PF_StartSound (self, CHAN_VOICE, sound_step2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_step2, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_step3, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_step3, 1, ATTN_NORM, 0);
 }
 
 procedure void mutant_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void mutant_search (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_search, 1, ATTN_NORM, 0);
 }
 
 void mutant_swing (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_swing, 1, ATTN_NORM, 0);
 }
 
 //
@@ -44649,7 +44570,7 @@ global_variable mmove_t mutant_move_idle = {113, 125, mutant_frames_idle, mutant
 void mutant_idle (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_idle;
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 //
@@ -44727,9 +44648,9 @@ void mutant_hit_left (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), 100))
-		PF_StartSound (self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, mutant_sound_hit, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, mutant_sound_swing, 1, ATTN_NORM, 0);
 }
 
 void mutant_hit_right (edict_t* self)
@@ -44738,9 +44659,9 @@ void mutant_hit_right (edict_t* self)
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 8);
 	if (fire_hit (self, aim, (10 + (rand() %5)), 100))
-		PF_StartSound (self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, mutant_sound_hit2, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, mutant_sound_swing, 1, ATTN_NORM, 0);
 }
 
 void mutant_check_refire (edict_t* self)
@@ -44816,7 +44737,7 @@ void mutant_jump_takeoff (edict_t* self)
 {
 	vec3_t	forward;
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_sight, 1, ATTN_NORM, 0);
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	self->s.origin[2] += 1;
 	VectorScale (forward, 600, self->velocity);
@@ -44831,7 +44752,7 @@ void mutant_check_landing (edict_t* self)
 {
 	if (self->groundentity)
 	{
-		PF_StartSound (self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, mutant_sound_thud, 1, ATTN_NORM, 0);
 		self->monsterinfo.attack_finished = 0;
 		self->monsterinfo.aiflags &= ~AI_DUCKED;
 		return;
@@ -44979,17 +44900,17 @@ procedure void mutant_pain (edict_t* self, edict_t* other, float kick, int damag
 	r = random();
 	if (r < 0.33)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain1;
 	}
 	else if (r < 0.66)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_pain2, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain2;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, mutant_sound_pain1, 1, ATTN_NORM, 0);
 		self->monsterinfo.currentmove = &mutant_move_pain3;
 	}
 }
@@ -45060,7 +44981,7 @@ procedure void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 	if (self->deadflag == DEAD_DEAD)
 		return;
 
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, mutant_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->s.skinnum = 1;
@@ -45073,19 +44994,19 @@ procedure void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, 
 
 void SP_monster_mutant (edict_t* self)
 {
-	sound_swing = SV_SoundIndex ("mutant/mutatck1.wav");
-	sound_hit = SV_SoundIndex ("mutant/mutatck2.wav");
-	sound_hit2 = SV_SoundIndex ("mutant/mutatck3.wav");
-	sound_death = SV_SoundIndex ("mutant/mutdeth1.wav");
-	sound_idle = SV_SoundIndex ("mutant/mutidle1.wav");
-	sound_pain1 = SV_SoundIndex ("mutant/mutpain1.wav");
-	sound_pain2 = SV_SoundIndex ("mutant/mutpain2.wav");
-	sound_sight = SV_SoundIndex ("mutant/mutsght1.wav");
-	sound_search = SV_SoundIndex ("mutant/mutsrch1.wav");
-	sound_step1 = SV_SoundIndex ("mutant/step1.wav");
-	sound_step2 = SV_SoundIndex ("mutant/step2.wav");
-	sound_step3 = SV_SoundIndex ("mutant/step3.wav");
-	sound_thud = SV_SoundIndex ("mutant/thud1.wav");
+	mutant_sound_swing = SV_SoundIndex ("mutant/mutatck1.wav");
+	mutant_sound_hit = SV_SoundIndex ("mutant/mutatck2.wav");
+	mutant_sound_hit2 = SV_SoundIndex ("mutant/mutatck3.wav");
+	mutant_sound_death = SV_SoundIndex ("mutant/mutdeth1.wav");
+	mutant_sound_idle = SV_SoundIndex ("mutant/mutidle1.wav");
+	mutant_sound_pain1 = SV_SoundIndex ("mutant/mutpain1.wav");
+	mutant_sound_pain2 = SV_SoundIndex ("mutant/mutpain2.wav");
+	mutant_sound_sight = SV_SoundIndex ("mutant/mutsght1.wav");
+	mutant_sound_search = SV_SoundIndex ("mutant/mutsrch1.wav");
+	mutant_sound_step1 = SV_SoundIndex ("mutant/step1.wav");
+	mutant_sound_step2 = SV_SoundIndex ("mutant/step2.wav");
+	mutant_sound_step3 = SV_SoundIndex ("mutant/step3.wav");
+	mutant_sound_thud = SV_SoundIndex ("mutant/thud1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -45115,7 +45036,7 @@ void SP_monster_mutant (edict_t* self)
 
 	self->monsterinfo.currentmove = &mutant_move_stand;
 
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 	walkmonster_start (self);
 }
 
@@ -45129,19 +45050,17 @@ parasite
 
 // G:\quake2\baseq2\models/monsters/parasite
 
-#define MODEL_SCALE             1.000000
-
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_die;
-global_variable int	sound_launch;
-global_variable int	sound_impact;
-global_variable int	sound_suck;
-global_variable int	sound_reelin;
-global_variable int	sound_sight;
-global_variable int	sound_tap;
-global_variable int	sound_scratch;
-global_variable int	sound_search;
+global_variable int	parasite_sound_pain1;
+global_variable int	parasite_sound_pain2;
+global_variable int	parasite_sound_die;
+global_variable int	parasite_sound_launch;
+global_variable int	parasite_sound_impact;
+global_variable int	parasite_sound_suck;
+global_variable int	parasite_sound_reelin;
+global_variable int	parasite_sound_sight;
+global_variable int	parasite_sound_tap;
+global_variable int	parasite_sound_scratch;
+global_variable int	parasite_sound_search;
 
 void parasite_stand (edict_t* self);
 void parasite_start_run (edict_t* self);
@@ -45154,33 +45073,33 @@ void parasite_refidget (edict_t* self);
 
 void parasite_launch (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_launch, 1, ATTN_NORM, 0);
 }
 
 void parasite_reel_in (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_reelin, 1, ATTN_NORM, 0);
 }
 
 procedure void parasite_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void parasite_tap (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_tap, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_tap, 1, ATTN_IDLE, 0);
 }
 
 void parasite_scratch (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_scratch, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_scratch, 1, ATTN_IDLE, 0);
 }
 
 void parasite_search (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_WEAPON, parasite_sound_search, 1, ATTN_IDLE, 0);
 }
 
 global_variable mframe_t parasite_frames_start_fidget [] =
@@ -45359,9 +45278,9 @@ procedure void parasite_pain(edict_t* self, edict_t* other, float kick, int dama
 	self->pain_debounce_time = level.time + 3;
 
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, parasite_sound_pain1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, parasite_sound_pain2, 1, ATTN_NORM, 0);
 
 	self->monsterinfo.currentmove = &parasite_move_pain1;
 }
@@ -45415,12 +45334,12 @@ void parasite_drain_attack (edict_t* self)
 	if (self->s.frame == 41)
 	{
 		damage = 5;
-		PF_StartSound (self->enemy, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
+		PF_StartSound (self->enemy, CHAN_AUTO, parasite_sound_impact, 1, ATTN_NORM, 0);
 	}
 	else
 	{
 		if (self->s.frame == 42)
-			PF_StartSound (self, CHAN_WEAPON, sound_suck, 1, ATTN_NORM, 0);
+			PF_StartSound (self, CHAN_WEAPON, parasite_sound_suck, 1, ATTN_NORM, 0);
 		damage = 2;
 	}
 
@@ -45515,7 +45434,7 @@ procedure void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker
 		return;
 
 // regular death
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, parasite_sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &parasite_move_death;
@@ -45523,17 +45442,17 @@ procedure void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker
 
 void SP_monster_parasite (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("parasite/parpain1.wav");
-	sound_pain2 = SV_SoundIndex ("parasite/parpain2.wav");
-	sound_die = SV_SoundIndex ("parasite/pardeth1.wav");
-	sound_launch = SV_SoundIndex("parasite/paratck1.wav");
-	sound_impact = SV_SoundIndex("parasite/paratck2.wav");
-	sound_suck = SV_SoundIndex("parasite/paratck3.wav");
-	sound_reelin = SV_SoundIndex("parasite/paratck4.wav");
-	sound_sight = SV_SoundIndex("parasite/parsght1.wav");
-	sound_tap = SV_SoundIndex("parasite/paridle1.wav");
-	sound_scratch = SV_SoundIndex("parasite/paridle2.wav");
-	sound_search = SV_SoundIndex("parasite/parsrch1.wav");
+	parasite_sound_pain1 = SV_SoundIndex ("parasite/parpain1.wav");
+	parasite_sound_pain2 = SV_SoundIndex ("parasite/parpain2.wav");
+	parasite_sound_die = SV_SoundIndex ("parasite/pardeth1.wav");
+	parasite_sound_launch = SV_SoundIndex("parasite/paratck1.wav");
+	parasite_sound_impact = SV_SoundIndex("parasite/paratck2.wav");
+	parasite_sound_suck = SV_SoundIndex("parasite/paratck3.wav");
+	parasite_sound_reelin = SV_SoundIndex("parasite/paratck4.wav");
+	parasite_sound_sight = SV_SoundIndex("parasite/parsght1.wav");
+	parasite_sound_tap = SV_SoundIndex("parasite/paridle1.wav");
+	parasite_sound_scratch = SV_SoundIndex("parasite/paridle2.wav");
+	parasite_sound_search = SV_SoundIndex("parasite/parsrch1.wav");
 
 	self->s.modelindex = SV_ModelIndex ("models/monsters/parasite/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
@@ -45558,7 +45477,7 @@ void SP_monster_parasite (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &parasite_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start (self);
 }
@@ -45573,32 +45492,29 @@ SOLDIER
 
 // G:\quake2\baseq2\models/monsters/soldier
 
-#undef MODEL_SCALE
-#define MODEL_SCALE		1.200000
-
-global_variable int	sound_idle;
-global_variable int	sound_sight1;
-global_variable int	sound_sight2;
-global_variable int	sound_pain_light;
-global_variable int	sound_pain;
-global_variable int	sound_pain_ss;
-global_variable int	sound_death_light;
-global_variable int	sound_death;
-global_variable int	sound_death_ss;
-global_variable int	sound_cock;
+global_variable int	soldier_sound_idle;
+global_variable int	soldier_sound_sight1;
+global_variable int	soldier_sound_sight2;
+global_variable int	soldier_sound_pain_light;
+global_variable int	soldier_sound_pain;
+global_variable int	soldier_sound_pain_ss;
+global_variable int	soldier_sound_death_light;
+global_variable int	soldier_sound_death;
+global_variable int	soldier_sound_death_ss;
+global_variable int	soldier_sound_cock;
 
 void soldier_idle (edict_t* self)
 {
 	if (random() > 0.8)
-		PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void soldier_cock (edict_t* self)
 {
 	if (self->s.frame == 197)
-		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
+		PF_StartSound (self, CHAN_WEAPON, soldier_sound_cock, 1, ATTN_IDLE, 0);
 	else
-		PF_StartSound (self, CHAN_WEAPON, sound_cock, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_WEAPON, soldier_sound_cock, 1, ATTN_NORM, 0);
 }
 
 // STAND
@@ -45905,11 +45821,11 @@ procedure void soldier_pain (edict_t* self, edict_t* other, float kick, int dama
 
 	n = self->s.skinnum | 1;
 	if (n == 1)
-		PF_StartSound (self, CHAN_VOICE, sound_pain_light, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_pain_light, 1, ATTN_NORM, 0);
 	else if (n == 3)
-		PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_pain, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_pain_ss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_pain_ss, 1, ATTN_NORM, 0);
 
 	if (self->velocity[2] > 100)
 	{
@@ -46228,9 +46144,9 @@ procedure void soldier_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_sight1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_sight2, 1, ATTN_NORM, 0);
 
 	if ((range(self, self->enemy) >= RANGE_MID))
 	{
@@ -46587,11 +46503,11 @@ procedure void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker,
 	self->s.skinnum |= 1;
 
 	if (self->s.skinnum == 1)
-		PF_StartSound (self, CHAN_VOICE, sound_death_light, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_death_light, 1, ATTN_NORM, 0);
 	else if (self->s.skinnum == 3)
-		PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_death, 1, ATTN_NORM, 0);
 	else // (self->s.skinnum == 5)
-		PF_StartSound (self, CHAN_VOICE, sound_death_ss, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, soldier_sound_death_ss, 1, ATTN_NORM, 0);
 
 	if (fabs((self->s.origin[2] + self->viewheight) - point[2]) <= 4)
 	{
@@ -46621,16 +46537,16 @@ void SP_monster_soldier_x (edict_t* self)
 {
 
 	self->s.modelindex = SV_ModelIndex ("models/monsters/soldier/tris.md2");
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.2f;
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	sound_idle =	SV_SoundIndex ("soldier/solidle1.wav");
-	sound_sight1 =	SV_SoundIndex ("soldier/solsght1.wav");
-	sound_sight2 =	SV_SoundIndex ("soldier/solsrch1.wav");
-	sound_cock =	SV_SoundIndex ("infantry/infatck3.wav");
+	soldier_sound_idle =	SV_SoundIndex ("soldier/solidle1.wav");
+	soldier_sound_sight1 =	SV_SoundIndex ("soldier/solsght1.wav");
+	soldier_sound_sight2 =	SV_SoundIndex ("soldier/solsrch1.wav");
+	soldier_sound_cock =	SV_SoundIndex ("infantry/infatck3.wav");
 
 	self->mass = 100;
 
@@ -46656,8 +46572,8 @@ void SP_monster_soldier_light (edict_t* self)
 {
 	SP_monster_soldier_x (self);
 
-	sound_pain_light = SV_SoundIndex ("soldier/solpain2.wav");
-	sound_death_light =	SV_SoundIndex ("soldier/soldeth2.wav");
+	soldier_sound_pain_light = SV_SoundIndex ("soldier/solpain2.wav");
+	soldier_sound_death_light =	SV_SoundIndex ("soldier/soldeth2.wav");
 	SV_ModelIndex ("models/objects/laser/tris.md2");
 	SV_SoundIndex ("misc/lasfly.wav");
 	SV_SoundIndex ("soldier/solatck2.wav");
@@ -46671,8 +46587,8 @@ void SP_monster_soldier (edict_t* self)
 {
 	SP_monster_soldier_x (self);
 
-	sound_pain = SV_SoundIndex ("soldier/solpain1.wav");
-	sound_death = SV_SoundIndex ("soldier/soldeth1.wav");
+	soldier_sound_pain = SV_SoundIndex ("soldier/solpain1.wav");
+	soldier_sound_death = SV_SoundIndex ("soldier/soldeth1.wav");
 	SV_SoundIndex ("soldier/solatck1.wav");
 
 	self->s.skinnum = 2;
@@ -46684,8 +46600,8 @@ void SP_monster_soldier_ss (edict_t* self)
 {
 	SP_monster_soldier_x (self);
 
-	sound_pain_ss = SV_SoundIndex ("soldier/solpain3.wav");
-	sound_death_ss = SV_SoundIndex ("soldier/soldeth3.wav");
+	soldier_sound_pain_ss = SV_SoundIndex ("soldier/solpain3.wav");
+	soldier_sound_death_ss = SV_SoundIndex ("soldier/soldeth3.wav");
 	SV_SoundIndex ("soldier/solatck3.wav");
 
 	self->s.skinnum = 4;
@@ -46703,33 +46619,29 @@ SUPERTANK
 
 // G:\quake2\baseq2\models/monsters/boss1/backup
 
-#undef MODEL_SCALE
-#define MODEL_SCALE		1.000000
-
 bool visible (edict_t* self, edict_t* other);
 
-global_variable int	sound_pain1;
-global_variable int	sound_pain2;
-global_variable int	sound_pain3;
-global_variable int	sound_death;
-global_variable int	sound_search1;
-global_variable int	sound_search2;
-
-global_variable	int	tread_sound;
+global_variable int	supertank_sound_pain1;
+global_variable int	supertank_sound_pain2;
+global_variable int	supertank_sound_pain3;
+global_variable int	supertank_sound_death;
+global_variable int	supertank_sound_search1;
+global_variable int	supertank_sound_search2;
+global_variable	int	supertank_tread_sound;
 
 void BossExplode (edict_t* self);
 
 void TreadSound (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, tread_sound, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, supertank_tread_sound, 1, ATTN_NORM, 0);
 }
 
 void supertank_search (edict_t* self)
 {
 	if (random() < 0.5)
-		PF_StartSound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, supertank_sound_search1, 1, ATTN_NORM, 0);
 	else
-		PF_StartSound (self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
+		PF_StartSound (self, CHAN_VOICE, supertank_sound_search2, 1, ATTN_NORM, 0);
 }
 
 void supertank_dead (edict_t* self);
@@ -47028,17 +46940,17 @@ procedure void supertank_pain(edict_t* self, edict_t* other, float kick, int dam
 
 	if (damage <= 10)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, supertank_sound_pain1, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain1;
 	}
 	else if (damage <= 25)
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, supertank_sound_pain3, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain2;
 	}
 	else
 	{
-		PF_StartSound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM,0);
+		PF_StartSound (self, CHAN_VOICE, supertank_sound_pain2, 1, ATTN_NORM,0);
 		self->monsterinfo.currentmove = &supertank_move_pain3;
 	}
 };
@@ -47208,7 +47120,7 @@ procedure void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacke
 	UNUSED(damage);
 	UNUSED(point);
 
-	PF_StartSound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, supertank_sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
 	self->count = 0;
@@ -47217,14 +47129,13 @@ procedure void supertank_die(edict_t* self, edict_t* inflictor, edict_t* attacke
 
 void SP_monster_supertank (edict_t* self)
 {
-	sound_pain1 = SV_SoundIndex ("bosstank/btkpain1.wav");
-	sound_pain2 = SV_SoundIndex ("bosstank/btkpain2.wav");
-	sound_pain3 = SV_SoundIndex ("bosstank/btkpain3.wav");
-	sound_death = SV_SoundIndex ("bosstank/btkdeth1.wav");
-	sound_search1 = SV_SoundIndex ("bosstank/btkunqv1.wav");
-	sound_search2 = SV_SoundIndex ("bosstank/btkunqv2.wav");
-
-	tread_sound = SV_SoundIndex ("bosstank/btkengn1.wav");
+	supertank_sound_pain1 = SV_SoundIndex ("bosstank/btkpain1.wav");
+	supertank_sound_pain2 = SV_SoundIndex ("bosstank/btkpain2.wav");
+	supertank_sound_pain3 = SV_SoundIndex ("bosstank/btkpain3.wav");
+	supertank_sound_death = SV_SoundIndex ("bosstank/btkdeth1.wav");
+	supertank_sound_search1 = SV_SoundIndex ("bosstank/btkunqv1.wav");
+	supertank_sound_search2 = SV_SoundIndex ("bosstank/btkunqv2.wav");
+	supertank_tread_sound = SV_SoundIndex ("bosstank/btkengn1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -47250,25 +47161,23 @@ void SP_monster_supertank (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &supertank_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start(self);
 }
-
-#define MODEL_SCALE		1.000000
 
 void tank_refire_rocket (edict_t* self);
 void tank_doattack_rocket (edict_t* self);
 void tank_reattack_blaster (edict_t* self);
 
-global_variable int	sound_thud;
-global_variable int	sound_pain;
-global_variable int	sound_idle;
-global_variable int	sound_die;
-global_variable int	sound_step;
-global_variable int	sound_sight;
-global_variable int	sound_windup;
-global_variable int	sound_strike;
+global_variable int	tank_sound_thud;
+global_variable int	tank_sound_pain;
+global_variable int	tank_sound_idle;
+global_variable int	tank_sound_die;
+global_variable int	tank_sound_step;
+global_variable int	tank_sound_sight;
+global_variable int	tank_sound_windup;
+global_variable int	tank_sound_strike;
 
 //
 // misc
@@ -47277,27 +47186,27 @@ global_variable int	sound_strike;
 procedure void tank_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
 
-	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, tank_sound_sight, 1, ATTN_NORM, 0);
 }
 
 void tank_footstep (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, tank_sound_step, 1, ATTN_NORM, 0);
 }
 
 void tank_thud (edict_t* self)
 {
-	PF_StartSound (self, CHAN_BODY, sound_thud, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_BODY, tank_sound_thud, 1, ATTN_NORM, 0);
 }
 
 void tank_windup (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, tank_sound_windup, 1, ATTN_NORM, 0);
 }
 
 void tank_idle (edict_t* self)
 {
-	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
+	PF_StartSound (self, CHAN_VOICE, tank_sound_idle, 1, ATTN_IDLE, 0);
 }
 
 //
@@ -47494,7 +47403,7 @@ procedure void tank_pain(edict_t* self, edict_t* other, float kick, int damage) 
 			return;
 
 	self->pain_debounce_time = level.time + 3;
-	PF_StartSound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, tank_sound_pain, 1, ATTN_NORM, 0);
 
 	if (damage <= 30)
 		self->monsterinfo.currentmove = &tank_move_pain1;
@@ -47535,7 +47444,7 @@ void TankBlaster (edict_t* self)
 
 void TankStrike (edict_t* self)
 {
-	PF_StartSound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_WEAPON, tank_sound_strike, 1, ATTN_NORM, 0);
 }
 
 void TankRocket (edict_t* self)
@@ -47924,7 +47833,7 @@ procedure void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, in
 		return;
 
 	// regular death
-	PF_StartSound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
+	PF_StartSound (self, CHAN_VOICE, tank_sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
@@ -47940,14 +47849,14 @@ void SP_monster_tank (edict_t* self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	sound_pain = SV_SoundIndex ("tank/tnkpain2.wav");
-	sound_thud = SV_SoundIndex ("tank/tnkdeth2.wav");
-	sound_idle = SV_SoundIndex ("tank/tnkidle1.wav");
-	sound_die = SV_SoundIndex ("tank/death.wav");
-	sound_step = SV_SoundIndex ("tank/step.wav");
-	sound_windup = SV_SoundIndex ("tank/tnkatck4.wav");
-	sound_strike = SV_SoundIndex ("tank/tnkatck5.wav");
-	sound_sight = SV_SoundIndex ("tank/sight1.wav");
+	tank_sound_pain = SV_SoundIndex ("tank/tnkpain2.wav");
+	tank_sound_thud = SV_SoundIndex ("tank/tnkdeth2.wav");
+	tank_sound_idle = SV_SoundIndex ("tank/tnkidle1.wav");
+	tank_sound_die = SV_SoundIndex ("tank/death.wav");
+	tank_sound_step = SV_SoundIndex ("tank/step.wav");
+	tank_sound_windup = SV_SoundIndex ("tank/tnkatck4.wav");
+	tank_sound_strike = SV_SoundIndex ("tank/tnkatck5.wav");
+	tank_sound_sight = SV_SoundIndex ("tank/sight1.wav");
 
 	SV_SoundIndex ("tank/tnkatck1.wav");
 	SV_SoundIndex ("tank/tnkatk2a.wav");
@@ -47984,7 +47893,7 @@ void SP_monster_tank (edict_t* self)
 	SV_LinkEdict (self);
 
 	self->monsterinfo.currentmove = &tank_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = 1.0f;
 
 	walkmonster_start(self);
 
