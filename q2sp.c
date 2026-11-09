@@ -1920,8 +1920,8 @@ procedure int FS_LoadFile(char* path, void** buffer);
 
 procedure void FS_FreeFile(void* buffer);
 
-sizebuf_t	net_message;
-u8		net_message_buffer[MAX_MSGLEN];
+global_variable sizebuf_t	net_message;
+global_variable u8		net_message_buffer[MAX_MSGLEN];
 
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
@@ -5381,10 +5381,10 @@ procedure int CM_LeafArea(int leafnum) {
 	return map_leafs[leafnum].area;
 }
 
-cplane_t	*box_planes;
-int			box_headnode;
-cbrush_t	*box_brush;
-cleaf_t		*box_leaf;
+global_variable cplane_t	*box_planes;
+global_variable int			box_headnode;
+global_variable cbrush_t	*box_brush;
+global_variable cleaf_t		*box_leaf;
 
 /*
 ===================
@@ -5526,10 +5526,10 @@ CM_BoxLeafnums
 Fills in a list of all the leafs touched
 =============
 */
-int		leaf_count, leaf_maxcount;
-int		*leaf_list;
-float	*leaf_mins, *leaf_maxs;
-int		leaf_topnode;
+global_variable int		leaf_count, leaf_maxcount;
+global_variable int		*leaf_list;
+global_variable float	*leaf_mins, *leaf_maxs;
+global_variable int		leaf_topnode;
 
 void CM_BoxLeafnums_r (int nodenum)
 {
@@ -5655,13 +5655,13 @@ BOX TRACING
 // 1/32 epsilon to keep floating point happy
 #define	DIST_EPSILON	(0.03125)
 
-vec3_t	trace_start, trace_end;
-vec3_t	trace_mins, trace_maxs;
-vec3_t	trace_extents;
+global_variable vec3_t	trace_start, trace_end;
+global_variable vec3_t	trace_mins, trace_maxs;
+global_variable vec3_t	trace_extents;
 
-trace_t	trace_trace;
-int		trace_contents;
-bool	trace_ispoint;		// optimized case
+global_variable trace_t	trace_trace;
+global_variable int		trace_contents;
+global_variable bool	trace_ispoint;		// optimized case
 
 /*
 ================
@@ -6212,8 +6212,8 @@ void CM_DecompressVis (u8 *in, u8 *out)
 	} while (out_p - out < row);
 }
 
-u8	pvsrow[MAX_MAP_LEAFS/8];
-u8	phsrow[MAX_MAP_LEAFS/8];
+global_variable u8	pvsrow[MAX_MAP_LEAFS/8];
+global_variable u8	phsrow[MAX_MAP_LEAFS/8];
 
 u8	*CM_ClusterPVS (int cluster)
 {
@@ -6384,7 +6384,7 @@ typedef struct searchpath_s
 	struct searchpath_s *next;
 } searchpath_t;
 
-searchpath_t	*fs_searchpaths;
+global_variable searchpath_t	*fs_searchpaths;
 
 // All of Quake's data access is through a hierchal file system, but the contents of the file system can be transparently merged from several sources.
 // The "base directory" is the path to the directory holding the quake.exe and all game directories.
@@ -6408,7 +6408,7 @@ procedure int FS_filelength (FILE *f) {
 	return end;
 }
 
-int file_from_pak = 0;
+global_variable int file_from_pak = 0;
 
 // Finds the file in the search path.
 // returns filesize and an open FILE *
@@ -6968,8 +6968,8 @@ typedef struct
 	bool	ladder;
 } pml_t;
 
-pmove_t		*pm;
-pml_t		pml;
+global_variable pmove_t		*pm;
+global_variable pml_t		pml;
 
 /*
 
@@ -8644,7 +8644,7 @@ Build a client frame structure
 =============================================================================
 */
 
-u8		fatpvs[65536/8];	// 32767 is MAX_MAP_LEAFS
+global_variable u8		fatpvs[65536/8];	// 32767 is MAX_MAP_LEAFS
 
 /*
 ============
@@ -9033,8 +9033,8 @@ void SV_InitGameProgs() {
 	InitGame();
 }
 
-server_static_t	svs;				// persistant server info
-server_t		sv;					// local server
+global_variable server_static_t	svs;				// persistant server info
+global_variable server_t		sv;					// local server
 
 int SV_FindIndex (char *name, int start, int max, bool create)
 {
@@ -9808,13 +9808,13 @@ typedef struct areanode_s
 #define	AREA_DEPTH	4
 #define	AREA_NODES	32
 
-areanode_t	sv_areanodes[AREA_NODES];
-int			sv_numareanodes;
+global_variable areanode_t	sv_areanodes[AREA_NODES];
+global_variable int			sv_numareanodes;
 
-float	*area_mins, *area_maxs;
-edict_t	**area_list;
-int		area_count, area_maxcount;
-int		area_type;
+global_variable float	*area_mins, *area_maxs;
+global_variable edict_t	**area_list;
+global_variable int		area_count, area_maxcount;
+global_variable int		area_type;
 
 int SV_HullForEntity (edict_t *ent);
 
@@ -10480,8 +10480,6 @@ void	SCR_RunConsole (void);
 extern	float		scr_con_current;
 extern	float		scr_conlines;		// lines of console to display
 
-extern	int			sb_lines;
-
 extern	vrect_t		scr_vrect;		// position of render window
 
 struct sfx_s;
@@ -10503,9 +10501,6 @@ void CL_GetEntitySoundOrigin (int ent, vec3_t org);
 extern	int		key_repeats[256];
 
 extern	int	anykeydown;
-extern char chat_buffer[];
-extern	int chat_bufferlen;
-extern	bool	chat_team;
 
 void Key_Event (int key, bool down, unsigned time);
 void Key_ClearStates (void);
@@ -10755,7 +10750,6 @@ typedef struct
 	int			state;
 } kbutton_t;
 
-extern	kbutton_t	in_mlook;
 extern 	kbutton_t 	in_speed;
 
 void CL_SendMove (usercmd_t *cmd);
@@ -12049,8 +12043,8 @@ typedef struct
 	float	map[MAX_QPATH];
 } clightstyle_t;
 
-clightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
-int			lastofs;
+global_variable clightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
+global_variable int			lastofs;
 
 /*
 ================
@@ -12131,7 +12125,7 @@ DLIGHT MANAGEMENT
 ==============================================================
 */
 
-cdlight_t		cl_dlights[MAX_DLIGHTS];
+global_variable cdlight_t		cl_dlights[MAX_DLIGHTS];
 
 /*
 ================
@@ -12810,10 +12804,10 @@ procedure void CL_AddDLights() {
 	}
 }
 
-cparticle_t	*active_particles, *free_particles;
+global_variable cparticle_t	*active_particles, *free_particles;
 
-cparticle_t	particles[MAX_PARTICLES];
-int			cl_numparticles = MAX_PARTICLES;
+global_variable cparticle_t	particles[MAX_PARTICLES];
+global_variable int			cl_numparticles = MAX_PARTICLES;
 
 /*
 ===============
@@ -14208,12 +14202,12 @@ Key_Event (int key, bool down, unsigned time);
 ===============================================================================
 */
 
-kbutton_t	in_left, in_right, in_forward, in_back;
-kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
-kbutton_t	in_speed, in_use, in_attack;
-kbutton_t	in_up, in_down;
+global_variable kbutton_t	in_left, in_right, in_forward, in_back;
+global_variable kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
+global_variable kbutton_t	in_speed, in_use, in_attack;
+global_variable kbutton_t	in_up, in_down;
 
-int			in_impulse;
+global_variable int			in_impulse;
 
 void KeyDown (kbutton_t *b)
 {
@@ -14518,9 +14512,9 @@ procedure void draw_inventory_table() {
 	}
 }
 
-centity_t		cl_entities[MAX_EDICTS];
+global_variable centity_t		cl_entities[MAX_EDICTS];
 
-entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
+global_variable entity_state_t	cl_parse_entities[MAX_PARSE_ENTITIES];
 
 void CL_ForwardToServer_f (void* data)
 {
@@ -14635,12 +14629,12 @@ void CL_Changing_f(void* data) {
 	add_line_to_console_log(STR("\nChanging map..."));
 }
 
-int precache_check; // for autodownload of precache items
-int precache_spawncount;
-int precache_tex;
-int precache_model_skin;
+global_variable int precache_check; // for autodownload of precache items
+global_variable int precache_spawncount;
+global_variable int precache_tex;
+global_variable int precache_model_skin;
 
-u8 *precache_model; // used for skin checking in alias models
+global_variable u8 *precache_model; // used for skin checking in alias models
 
 #define PLAYER_MULT 5
 
@@ -15704,7 +15698,7 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
 	}
 }
 
-char *svc_strings[256] =
+global_variable char *svc_strings[256] =
 {
 	"svc_bad",
 
@@ -16307,15 +16301,15 @@ int		CL_PMpointcontents (vec3_t point)
 	return contents;
 }
 
-float		scr_con_current;	// console drop animation
-float		scr_conlines;		// 0.0 to 1.0 lines of console to display
+global_variable float		scr_con_current;	// console drop animation
+global_variable float		scr_conlines;		// 0.0 to 1.0 lines of console to display
 
-int			scr_draw_loading;
+global_variable int			scr_draw_loading;
 
-vrect_t		scr_vrect;		// position of render window on screen
+global_variable vrect_t		scr_vrect;		// position of render window on screen
 
-char		crosshair_pic[MAX_QPATH];
-int			crosshair_width, crosshair_height;
+global_variable char		crosshair_pic[MAX_QPATH];
+global_variable int			crosshair_width, crosshair_height;
 
 typedef struct
 {
@@ -16325,11 +16319,11 @@ typedef struct
 
 void Draw_Fill (int x, int y, int w, int h, int c);
 
-char		scr_centerstring[1024];
-float		scr_centertime_start;	// for slow victory printing
-float		scr_centertime_off;
-int			scr_center_lines;
-int			scr_erase_center;
+global_variable char		scr_centerstring[1024];
+global_variable float		scr_centertime_start;	// for slow victory printing
+global_variable float		scr_centertime_off;
+global_variable int			scr_center_lines;
+global_variable int			scr_erase_center;
 
 // Called for important messages that should stay in the center of the screen for a few moments
 void SCR_CenterPrint (char *str)
@@ -16834,7 +16828,7 @@ global_variable model_t* r_worldmodel;
 void R_RenderFrame(refdef_t *fd);
 
 #define STAT_MINUS		10	// num frame for '-' stats digit
-char		*sb_nums[2][11] =
+global_variable char		*sb_nums[2][11] =
 {
 	{"num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
 	"num_6", "num_7", "num_8", "num_9", "num_minus"},
@@ -17318,8 +17312,8 @@ typedef struct {
 	vec3_t	start, end;
 } beam_t;
 
-beam_t cl_beams[MAX_BEAMS];
-beam_t cl_playerbeams[MAX_BEAMS];
+global_variable beam_t cl_beams[MAX_BEAMS];
+global_variable beam_t cl_playerbeams[MAX_BEAMS];
 
 #define	MAX_LASERS	32
 typedef struct
@@ -17327,10 +17321,10 @@ typedef struct
 	Entity	ent;
 	int			endtime;
 } laser_t;
-laser_t		cl_lasers[MAX_LASERS];
+global_variable laser_t		cl_lasers[MAX_LASERS];
 
 //ROGUE
-cl_sustain_t	cl_sustains[MAX_SUSTAINS];
+global_variable cl_sustain_t	cl_sustains[MAX_SUSTAINS];
 //ROGUE
 
 //PGM
@@ -17343,40 +17337,38 @@ void CL_BFGExplosionParticles (vec3_t org);
 // RAFAEL
 void CL_BlueBlasterParticles (vec3_t org, vec3_t dir);
 
-struct sfx_s	*cl_sfx_ric1;
-struct sfx_s	*cl_sfx_ric2;
-struct sfx_s	*cl_sfx_ric3;
-struct sfx_s	*cl_sfx_lashit;
-struct sfx_s	*cl_sfx_spark5;
-struct sfx_s	*cl_sfx_spark6;
-struct sfx_s	*cl_sfx_spark7;
-struct sfx_s	*cl_sfx_railg;
-struct sfx_s	*cl_sfx_rockexp;
-struct sfx_s	*cl_sfx_grenexp;
-struct sfx_s	*cl_sfx_watrexp;
+global_variable struct sfx_s	*cl_sfx_ric1;
+global_variable struct sfx_s	*cl_sfx_ric2;
+global_variable struct sfx_s	*cl_sfx_ric3;
+global_variable struct sfx_s	*cl_sfx_lashit;
+global_variable struct sfx_s	*cl_sfx_spark5;
+global_variable struct sfx_s	*cl_sfx_spark6;
+global_variable struct sfx_s	*cl_sfx_spark7;
+global_variable struct sfx_s	*cl_sfx_railg;
+global_variable struct sfx_s	*cl_sfx_rockexp;
+global_variable struct sfx_s	*cl_sfx_grenexp;
+global_variable struct sfx_s	*cl_sfx_watrexp;
 // RAFAEL
-struct sfx_s	*cl_sfx_plasexp;
-struct sfx_s	*cl_sfx_footsteps[4];
+global_variable struct sfx_s	*cl_sfx_footsteps[4];
 
-struct model_s	*cl_mod_explode;
-struct model_s	*cl_mod_smoke;
-struct model_s	*cl_mod_flash;
-struct model_s	*cl_mod_parasite_segment;
-struct model_s	*cl_mod_grapple_cable;
-struct model_s	*cl_mod_parasite_tip;
-struct model_s	*cl_mod_explo4;
-struct model_s	*cl_mod_bfg_explo;
-struct model_s	*cl_mod_powerscreen;
+global_variable struct model_s	*cl_mod_explode;
+global_variable struct model_s	*cl_mod_smoke;
+global_variable struct model_s	*cl_mod_flash;
+global_variable struct model_s	*cl_mod_parasite_segment;
+global_variable struct model_s	*cl_mod_grapple_cable;
+global_variable struct model_s	*cl_mod_parasite_tip;
+global_variable struct model_s	*cl_mod_explo4;
+global_variable struct model_s	*cl_mod_bfg_explo;
+global_variable struct model_s	*cl_mod_powerscreen;
 // RAFAEL
-struct model_s	*cl_mod_plasmaexplo;
 
 //ROGUE
-struct sfx_s	*cl_sfx_lightning;
-struct sfx_s	*cl_sfx_disrexp;
-struct model_s	*cl_mod_lightning;
-struct model_s	*cl_mod_heatbeam;
-struct model_s	*cl_mod_monster_heatbeam;
-struct model_s	*cl_mod_explo4_big;
+global_variable struct sfx_s	*cl_sfx_lightning;
+global_variable struct sfx_s	*cl_sfx_disrexp;
+global_variable struct model_s	*cl_mod_lightning;
+global_variable struct model_s	*cl_mod_heatbeam;
+global_variable struct model_s	*cl_mod_monster_heatbeam;
+global_variable struct model_s	*cl_mod_explo4_big;
 
 //ROGUE
 /*
@@ -18912,22 +18904,22 @@ void CL_AddTEnts (void)
 //
 // development tools for weapons
 //
-int			gun_frame;
-struct model_s	*gun_model;
+global_variable int			gun_frame;
+global_variable struct model_s	*gun_model;
 
-int			r_numdlights;
-dlight_t	r_dlights[MAX_DLIGHTS];
+global_variable int			r_numdlights;
+global_variable dlight_t	r_dlights[MAX_DLIGHTS];
 
-int			r_numentities;
-Entity	r_entities[MAX_ENTITIES];
+global_variable int			r_numentities;
+global_variable Entity	r_entities[MAX_ENTITIES];
 
-int			r_numparticles;
-particle_t	r_particles[MAX_PARTICLES];
+global_variable int			r_numparticles;
+global_variable particle_t	r_particles[MAX_PARTICLES];
 
-lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
+global_variable lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
 
-char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
-int num_cl_weaponmodels;
+global_variable char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
+global_variable int num_cl_weaponmodels;
 
 /*
 ====================
@@ -19258,16 +19250,16 @@ void Con_DrawNotify() {
 	}
 }
 
-int shift_down;
-int	anykeydown;
+global_variable int shift_down;
+global_variable int	anykeydown;
 
-int		key_waiting;
+global_variable int		key_waiting;
 
-bool	consolekeys[256];	// if true, can't be rebound while in console
-bool	menubound[256];	// if true, can't be rebound while in menu
-int		keyshift[256];		// key to map to if shift held down in console
-int		key_repeats[256];	// if > 1, it is autorepeating
-bool	keydown[256];
+global_variable bool	consolekeys[256];	// if true, can't be rebound while in console
+global_variable bool	menubound[256];	// if true, can't be rebound while in menu
+global_variable int		keyshift[256];		// key to map to if shift held down in console
+global_variable int		key_repeats[256];	// if > 1, it is autorepeating
+global_variable bool	keydown[256];
 
 void Key_Console(int key) {
 
@@ -21135,15 +21127,12 @@ void S_Spatialize(channel_t *ch);
 
 #define		SOUND_LOOPATTENUATE	0.003
 
-int			s_registration_sequence;
+global_variable int			s_registration_sequence;
 
-bool	snd_initialized = false;
+global_variable bool	s_registering;
 
-
-bool	s_registering;
-
-int			soundtime;		// sample PAIRS
-int   		paintedtime; 	// sample PAIRS
+global_variable int			soundtime;		// sample PAIRS
+global_variable int   		paintedtime; 	// sample PAIRS
 
 // during registration it is possible to have more sounds
 // than could actually be referenced during gameplay,
@@ -21783,8 +21772,6 @@ void S_Play(void* data)
 	}
 }
 
-int cache_full_cycle;
-
 u8 *S_Alloc (int size);
 
 void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
@@ -21918,11 +21905,11 @@ WAV loading
 ===============================================================================
 */
 
-u8	*data_p;
-u8 	*iff_end;
-u8 	*last_chunk;
-u8 	*iff_data;
-int 	iff_chunk_len;
+global_variable u8	*data_p;
+global_variable u8 	*iff_end;
+global_variable u8 	*last_chunk;
+global_variable u8 	*iff_data;
+global_variable int 	iff_chunk_len;
 
 short GetLittleShort(void)
 {
@@ -22067,7 +22054,7 @@ wavinfo_t GetWavinfo(u8 *wav, int wavlength)
 }
 
 #define	PAINTBUFFER_SIZE	2048
-portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
+global_variable portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
 global_variable i32 snd_vol;
 
@@ -22226,10 +22213,10 @@ bool FindTarget (edict_t* self);
 
 procedure bool ai_checkattack(edict_t* self);
 
-bool	enemy_vis;
-bool	enemy_infront;
-int			enemy_range;
-float		enemy_yaw;
+global_variable bool	enemy_vis;
+global_variable bool	enemy_infront;
+global_variable int			enemy_range;
+global_variable float		enemy_yaw;
 
 // Called once each frame to set level.sight_client to the player to be checked for in findtarget.
 // If all clients are either dead or in notarget, sight_client will be null.
@@ -26343,9 +26330,9 @@ void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
 
-gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
-gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
-gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
+global_variable gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
+global_variable gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
+global_variable gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 
 #define HEALTH_IGNORE_MAX	1
 #define HEALTH_TIMED		2
@@ -31139,9 +31126,9 @@ typedef struct
 	vec3_t	angles;
 	float	deltayaw;
 } pushed_t;
-pushed_t	pushed[MAX_EDICTS], *pushed_p;
+global_variable pushed_t	pushed[MAX_EDICTS], *pushed_p;
 
-edict_t	*obstacle;
+global_variable edict_t	*obstacle;
 
 /*
 ============
@@ -32405,7 +32392,7 @@ void SP_turret_breach (edict_t* self);
 void SP_turret_base (edict_t* self);
 void SP_turret_driver (edict_t* self);
 
-spawn_t	spawns[] = {
+global_variable spawn_t	spawns[] = {
 	{"item_health", SP_item_health},
 	{"item_health_small", SP_item_health_small},
 	{"item_health_large", SP_item_health_large},
@@ -32804,7 +32791,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	PlayerTrail_Init ();
 }
 
-char *single_statusbar =
+global_variable char *single_statusbar =
 "yb	-24 "
 
 // health
@@ -34955,10 +34942,10 @@ char	*vtos (vec3_t v)
 	return s;
 }
 
-vec3_t VEC_UP		= {0, -1, 0};
-vec3_t MOVEDIR_UP	= {0, 0, 1};
-vec3_t VEC_DOWN		= {0, -2, 0};
-vec3_t MOVEDIR_DOWN	= {0, 0, -1};
+global_variable vec3_t VEC_UP		= {0, -1, 0};
+global_variable vec3_t MOVEDIR_UP	= {0, 0, 1};
+global_variable vec3_t VEC_DOWN		= {0, -2, 0};
+global_variable vec3_t MOVEDIR_DOWN	= {0, 0, -1};
 
 void G_SetMovedir (vec3_t angles, vec3_t movedir)
 {
@@ -37101,7 +37088,7 @@ void Boss2MachineGun (edict_t* self)
 	boss2_firebullet_right(self);
 }
 
-mframe_t boss2_frames_stand[] = {
+global_variable mframe_t boss2_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -37124,44 +37111,9 @@ mframe_t boss2_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	boss2_move_stand = {0, 20, boss2_frames_stand, NULL};
+global_variable mmove_t	boss2_move_stand = {0, 20, boss2_frames_stand, NULL};
 
-mframe_t boss2_frames_fidget [] =
-{
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-	{ai_stand, 0, NULL},
-};
-mmove_t boss2_move_fidget = {21, 0, boss2_frames_fidget, NULL};
-
-mframe_t boss2_frames_walk [] =
+global_variable mframe_t boss2_frames_walk [] =
 {
 	{ai_walk,	8,	NULL},
 	{ai_walk,	8,	NULL},
@@ -37184,9 +37136,9 @@ mframe_t boss2_frames_walk [] =
 	{ai_walk,	8,	NULL},
 	{ai_walk,	8,	NULL},
 };
-mmove_t boss2_move_walk = {50, 69, boss2_frames_walk, NULL};
+global_variable mmove_t boss2_move_walk = {50, 69, boss2_frames_walk, NULL};
 
-mframe_t boss2_frames_run [] =
+global_variable mframe_t boss2_frames_run [] =
 {
 	{ai_run,	8,	NULL},
 	{ai_run,	8,	NULL},
@@ -37209,9 +37161,9 @@ mframe_t boss2_frames_run [] =
 	{ai_run,	8,	NULL},
 	{ai_run,	8,	NULL},
 };
-mmove_t boss2_move_run = {50, 69, boss2_frames_run, NULL};
+global_variable mmove_t boss2_move_run = {50, 69, boss2_frames_run, NULL};
 
-mframe_t boss2_frames_attack_pre_mg [] =
+global_variable mframe_t boss2_frames_attack_pre_mg [] =
 {
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
@@ -37223,10 +37175,10 @@ mframe_t boss2_frames_attack_pre_mg [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	boss2_attack_mg},
 };
-mmove_t boss2_move_attack_pre_mg = {70, 78, boss2_frames_attack_pre_mg, NULL};
+global_variable mmove_t boss2_move_attack_pre_mg = {70, 78, boss2_frames_attack_pre_mg, NULL};
 
 // Loop this
-mframe_t boss2_frames_attack_mg [] =
+global_variable mframe_t boss2_frames_attack_mg [] =
 {
 	{ai_charge,	1,	Boss2MachineGun},
 	{ai_charge,	1,	Boss2MachineGun},
@@ -37235,18 +37187,18 @@ mframe_t boss2_frames_attack_mg [] =
 	{ai_charge,	1,	Boss2MachineGun},
 	{ai_charge,	1,	boss2_reattack_mg},
 };
-mmove_t boss2_move_attack_mg = {79, 84, boss2_frames_attack_mg, NULL};
+global_variable mmove_t boss2_move_attack_mg = {79, 84, boss2_frames_attack_mg, NULL};
 
-mframe_t boss2_frames_attack_post_mg [] =
+global_variable mframe_t boss2_frames_attack_post_mg [] =
 {
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t boss2_move_attack_post_mg = {85, 88, boss2_frames_attack_post_mg, boss2_run};
+global_variable mmove_t boss2_move_attack_post_mg = {85, 88, boss2_frames_attack_post_mg, boss2_run};
 
-mframe_t boss2_frames_attack_rocket [] =
+global_variable mframe_t boss2_frames_attack_rocket [] =
 {
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
@@ -37270,9 +37222,9 @@ mframe_t boss2_frames_attack_rocket [] =
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t boss2_move_attack_rocket = {89, 109, boss2_frames_attack_rocket, boss2_run};
+global_variable mmove_t boss2_move_attack_rocket = {89, 109, boss2_frames_attack_rocket, boss2_run};
 
-mframe_t boss2_frames_pain_heavy [] =
+global_variable mframe_t boss2_frames_pain_heavy [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -37293,18 +37245,18 @@ mframe_t boss2_frames_pain_heavy [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t boss2_move_pain_heavy = {110, 127, boss2_frames_pain_heavy, boss2_run};
+global_variable mmove_t boss2_move_pain_heavy = {110, 127, boss2_frames_pain_heavy, boss2_run};
 
-mframe_t boss2_frames_pain_light [] =
+global_variable mframe_t boss2_frames_pain_light [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t boss2_move_pain_light = {128, 131, boss2_frames_pain_light, boss2_run};
+global_variable mmove_t boss2_move_pain_light = {128, 131, boss2_frames_pain_light, boss2_run};
 
-mframe_t boss2_frames_death [] =
+global_variable mframe_t boss2_frames_death [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -37356,7 +37308,7 @@ mframe_t boss2_frames_death [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	BossExplode},
 };
-mmove_t boss2_move_death = {132, 180, boss2_frames_death, boss2_dead};
+global_variable mmove_t boss2_move_death = {132, 180, boss2_frames_death, boss2_dead};
 
 void boss2_stand (edict_t* self)
 {
@@ -37748,7 +37700,7 @@ global_variable mframe_t jorg_frames_stand[] = {
 	{ai_stand, -12, NULL},		// 50
 	{ai_stand, -14, jorg_step_right},	// 51
 };
-mmove_t	jorg_move_stand = {112, 162, jorg_frames_stand, NULL};
+global_variable mmove_t	jorg_move_stand = {112, 162, jorg_frames_stand, NULL};
 
 void jorg_idle (edict_t* self)
 {
@@ -37775,7 +37727,7 @@ void jorg_stand (edict_t* self)
 	self->monsterinfo.currentmove = &jorg_move_stand;
 }
 
-mframe_t jorg_frames_run [] =
+global_variable mframe_t jorg_frames_run [] =
 {
 	{ai_run, 17,	jorg_step_left},
 	{ai_run, 0,	NULL},
@@ -37792,23 +37744,13 @@ mframe_t jorg_frames_run [] =
 	{ai_run, 9,	NULL},
 	{ai_run, 9,	NULL},
 };
-mmove_t	jorg_move_run = {168, 181, jorg_frames_run, NULL};
+global_variable mmove_t	jorg_move_run = {168, 181, jorg_frames_run, NULL};
 
 //
 // walk
 //
 
-mframe_t jorg_frames_start_walk [] =
-{
-	{ai_walk,	5,	NULL},
-	{ai_walk,	6,	NULL},
-	{ai_walk,	7,	NULL},
-	{ai_walk,	9,	NULL},
-	{ai_walk,	15,	NULL},
-};
-mmove_t jorg_move_start_walk = {163, 167, jorg_frames_start_walk, NULL};
-
-mframe_t jorg_frames_walk [] =
+global_variable mframe_t jorg_frames_walk [] =
 {
 	{ai_walk, 17,	NULL},
 	{ai_walk, 0,	NULL},
@@ -37825,18 +37767,7 @@ mframe_t jorg_frames_walk [] =
 	{ai_walk, 9,	NULL},
 	{ai_walk, 9,	NULL},
 };
-mmove_t	jorg_move_walk = {168, 181, jorg_frames_walk, NULL};
-
-mframe_t jorg_frames_end_walk [] =
-{
-	{ai_walk,	11,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	0,	NULL},
-	{ai_walk,	8,	NULL},
-	{ai_walk,	-8,	NULL},
-};
-mmove_t jorg_move_end_walk = {182, 187, jorg_frames_end_walk, NULL};
+global_variable mmove_t	jorg_move_walk = {168, 181, jorg_frames_walk, NULL};
 
 void jorg_walk (edict_t* self)
 {
@@ -37851,7 +37782,7 @@ void jorg_run (edict_t* self)
 		self->monsterinfo.currentmove = &jorg_move_run;
 }
 
-mframe_t jorg_frames_pain3 [] =
+global_variable mframe_t jorg_frames_pain3 [] =
 {
 	{ai_move,	-28,	NULL},
 	{ai_move,	-6,	NULL},
@@ -37879,25 +37810,25 @@ mframe_t jorg_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	jorg_step_right},
 };
-mmove_t jorg_move_pain3 = {87, 111, jorg_frames_pain3, jorg_run};
+global_variable mmove_t jorg_move_pain3 = {87, 111, jorg_frames_pain3, jorg_run};
 
-mframe_t jorg_frames_pain2 [] =
+global_variable mframe_t jorg_frames_pain2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_pain2 = {84, 86, jorg_frames_pain2, jorg_run};
+global_variable mmove_t jorg_move_pain2 = {84, 86, jorg_frames_pain2, jorg_run};
 
-mframe_t jorg_frames_pain1 [] =
+global_variable mframe_t jorg_frames_pain1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_pain1 = {81, 83, jorg_frames_pain1, jorg_run};
+global_variable mmove_t jorg_move_pain1 = {81, 83, jorg_frames_pain1, jorg_run};
 
-mframe_t jorg_frames_death1[] = {
+global_variable mframe_t jorg_frames_death1[] = {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -37949,9 +37880,9 @@ mframe_t jorg_frames_death1[] = {
 	{ai_move,	0,	MakronToss},
 	{ai_move,	0,	BossExplode},		// 50
 };
-mmove_t jorg_move_death = {31, 80, jorg_frames_death1, jorg_dead};
+global_variable mmove_t jorg_move_death = {31, 80, jorg_frames_death1, jorg_dead};
 
-mframe_t jorg_frames_attack2 []=
+global_variable mframe_t jorg_frames_attack2 []=
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -37967,9 +37898,9 @@ mframe_t jorg_frames_attack2 []=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_attack2 = {18, 30, jorg_frames_attack2, jorg_run};
+global_variable mmove_t jorg_move_attack2 = {18, 30, jorg_frames_attack2, jorg_run};
 
-mframe_t jorg_frames_start_attack1 [] =
+global_variable mframe_t jorg_frames_start_attack1 [] =
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -37980,9 +37911,9 @@ mframe_t jorg_frames_start_attack1 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t jorg_move_start_attack1 = {0, 7, jorg_frames_start_attack1, jorg_attack1};
+global_variable mmove_t jorg_move_start_attack1 = {0, 7, jorg_frames_start_attack1, jorg_attack1};
 
-mframe_t jorg_frames_attack1[]=
+global_variable mframe_t jorg_frames_attack1[]=
 {
 	{ai_charge,	0,	jorg_firebullet},
 	{ai_charge,	0,	jorg_firebullet},
@@ -37991,16 +37922,16 @@ mframe_t jorg_frames_attack1[]=
 	{ai_charge,	0,	jorg_firebullet},
 	{ai_charge,	0,	jorg_firebullet},
 };
-mmove_t jorg_move_attack1 = {8, 13, jorg_frames_attack1, jorg_reattack1};
+global_variable mmove_t jorg_move_attack1 = {8, 13, jorg_frames_attack1, jorg_reattack1};
 
-mframe_t jorg_frames_end_attack1[]=
+global_variable mframe_t jorg_frames_end_attack1[]=
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t jorg_move_end_attack1 = {14, 17, jorg_frames_end_attack1, jorg_run};
+global_variable mmove_t jorg_move_end_attack1 = {14, 17, jorg_frames_end_attack1, jorg_run};
 
 void jorg_reattack1(edict_t* self)
 {
@@ -38428,7 +38359,7 @@ void makron_stand (edict_t* self)
 	self->monsterinfo.currentmove = &makron_move_stand;
 }
 
-mframe_t makron_frames_run [] =
+global_variable mframe_t makron_frames_run [] =
 {
 	{ai_run, 3,	makron_step_left},
 	{ai_run, 12,	NULL},
@@ -38441,7 +38372,7 @@ mframe_t makron_frames_run [] =
 	{ai_run, 6,	NULL},
 	{ai_run, 12,	NULL},
 };
-mmove_t	makron_move_run = {477, 486, makron_frames_run, NULL};
+global_variable mmove_t	makron_move_run = {477, 486, makron_frames_run, NULL};
 
 void makron_hit (edict_t* self)
 {
@@ -38473,20 +38404,7 @@ void makron_prerailgun (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM,0);
 }
 
-mframe_t makron_frames_walk [] =
-{
-	{ai_walk, 3,	makron_step_left},
-	{ai_walk, 12,	NULL},
-	{ai_walk, 8,	NULL},
-	{ai_walk, 8,	NULL},
-	{ai_walk, 8,	makron_step_right},
-	{ai_walk, 6,	NULL},
-	{ai_walk, 12,	NULL},
-	{ai_walk, 9,	NULL},
-	{ai_walk, 6,	NULL},
-	{ai_walk, 12,	NULL},
-};
-mmove_t	makron_move_walk = {477, 486, makron_frames_run, NULL};
+global_variable mmove_t	makron_move_walk = {477, 486, makron_frames_run, NULL};
 
 void makron_walk (edict_t* self)
 {
@@ -38501,7 +38419,7 @@ void makron_run (edict_t* self)
 		self->monsterinfo.currentmove = &makron_move_run;
 }
 
-mframe_t makron_frames_pain6 [] =
+global_variable mframe_t makron_frames_pain6 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -38531,27 +38449,27 @@ mframe_t makron_frames_pain6 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain6 = {387, 413, makron_frames_pain6, makron_run};
+global_variable mmove_t makron_move_pain6 = {387, 413, makron_frames_pain6, makron_run};
 
-mframe_t makron_frames_pain5 [] =
+global_variable mframe_t makron_frames_pain5 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain5 = {383, 386, makron_frames_pain5, makron_run};
+global_variable mmove_t makron_move_pain5 = {383, 386, makron_frames_pain5, makron_run};
 
-mframe_t makron_frames_pain4 [] =
+global_variable mframe_t makron_frames_pain4 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_pain4 = {379, 382, makron_frames_pain4, makron_run};
+global_variable mmove_t makron_move_pain4 = {379, 382, makron_frames_pain4, makron_run};
 
-mframe_t makron_frames_death2[] = {
+global_variable mframe_t makron_frames_death2[] = {
 	{ai_move,	-15,	NULL},
 	{ai_move,	3,	NULL},
 	{ai_move,	-12,	NULL},
@@ -38649,34 +38567,9 @@ mframe_t makron_frames_death2[] = {
 	{ai_move,	0,	NULL},			// 95
 };
 
-mmove_t makron_move_death2 = {251, 345, makron_frames_death2, makron_dead};
+global_variable mmove_t makron_move_death2 = {251, 345, makron_frames_death2, makron_dead};
 
-mframe_t makron_frames_death3 [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t makron_move_death3 = {346, 365, makron_frames_death3, NULL};
-
-mframe_t makron_frames_sight [] =
+global_variable mframe_t makron_frames_sight [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -38692,7 +38585,7 @@ mframe_t makron_frames_sight [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_sight= {188, 200, makron_frames_sight, makron_run};
+global_variable mmove_t makron_move_sight= {188, 200, makron_frames_sight, makron_run};
 
 void makronBFG (edict_t* self)
 {
@@ -38712,7 +38605,7 @@ void makronBFG (edict_t* self)
 	monster_fire_bfg(self, start, dir, 50, 300, 300, MZ2_MAKRON_BFG);
 }
 
-mframe_t makron_frames_attack3 []=
+global_variable mframe_t makron_frames_attack3 []=
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -38723,9 +38616,9 @@ mframe_t makron_frames_attack3 []=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack3 = {201, 208, makron_frames_attack3, makron_run};
+global_variable mmove_t makron_move_attack3 = {201, 208, makron_frames_attack3, makron_run};
 
-mframe_t makron_frames_attack4[]=
+global_variable mframe_t makron_frames_attack4[]=
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -38754,9 +38647,9 @@ mframe_t makron_frames_attack4[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack4 = {209, 234, makron_frames_attack4, makron_run};
+global_variable mmove_t makron_move_attack4 = {209, 234, makron_frames_attack4, makron_run};
 
-mframe_t makron_frames_attack5[]=
+global_variable mframe_t makron_frames_attack5[]=
 {
 	{ai_charge,	0,	makron_prerailgun},
 	{ai_charge,	0,	NULL},
@@ -38775,7 +38668,7 @@ mframe_t makron_frames_attack5[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t makron_move_attack5 = {235, 250, makron_frames_attack5, makron_run};
+global_variable mmove_t makron_move_attack5 = {235, 250, makron_frames_attack5, makron_run};
 
 void MakronSaveloc (edict_t* self)
 {
@@ -39216,7 +39109,7 @@ void brain_dead (edict_t* self);
 // STAND
 //
 
-mframe_t brain_frames_stand [] =
+global_variable mframe_t brain_frames_stand [] =
 {
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
@@ -39251,7 +39144,7 @@ mframe_t brain_frames_stand [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
 };
-mmove_t brain_move_stand = {162, 191, brain_frames_stand, NULL};
+global_variable mmove_t brain_move_stand = {162, 191, brain_frames_stand, NULL};
 
 void brain_stand (edict_t* self)
 {
@@ -39262,7 +39155,7 @@ void brain_stand (edict_t* self)
 // IDLE
 //
 
-mframe_t brain_frames_idle [] =
+global_variable mframe_t brain_frames_idle [] =
 {
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
@@ -39297,7 +39190,7 @@ mframe_t brain_frames_idle [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	NULL},
 };
-mmove_t brain_move_idle = {192, 221, brain_frames_idle, brain_stand};
+global_variable mmove_t brain_move_idle = {192, 221, brain_frames_idle, brain_stand};
 
 void brain_idle (edict_t* self)
 {
@@ -39308,7 +39201,7 @@ void brain_idle (edict_t* self)
 //
 // WALK
 //
-mframe_t brain_frames_walk1 [] =
+global_variable mframe_t brain_frames_walk1 [] =
 {
 	{ai_walk,	7,	NULL},
 	{ai_walk,	2,	NULL},
@@ -39322,28 +39215,14 @@ mframe_t brain_frames_walk1 [] =
 	{ai_walk,	-1,	NULL},
 	{ai_walk,	2,	NULL},
 };
-mmove_t brain_move_walk1 = {0, 10, brain_frames_walk1, NULL};
+global_variable mmove_t brain_move_walk1 = {0, 10, brain_frames_walk1, NULL};
 
 void brain_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &brain_move_walk1;
 }
 
-mframe_t brain_frames_defense [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t brain_move_defense = {154, 161, brain_frames_defense, NULL};
-
-mframe_t brain_frames_pain3 [] =
+global_variable mframe_t brain_frames_pain3 [] =
 {
 	{ai_move,	-2,	NULL},
 	{ai_move,	2,	NULL},
@@ -39352,9 +39231,9 @@ mframe_t brain_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	-4,	NULL},
 };
-mmove_t brain_move_pain3 = {117, 122, brain_frames_pain3, brain_run};
+global_variable mmove_t brain_move_pain3 = {117, 122, brain_frames_pain3, brain_run};
 
-mframe_t brain_frames_pain2 [] =
+global_variable mframe_t brain_frames_pain2 [] =
 {
 	{ai_move,	-2,	NULL},
 	{ai_move,	0,	NULL},
@@ -39365,9 +39244,9 @@ mframe_t brain_frames_pain2 [] =
 	{ai_move,	1,	NULL},
 	{ai_move,	-2,	NULL},
 };
-mmove_t brain_move_pain2 = {109, 116, brain_frames_pain2, brain_run};
+global_variable mmove_t brain_move_pain2 = {109, 116, brain_frames_pain2, brain_run};
 
-mframe_t brain_frames_pain1 [] =
+global_variable mframe_t brain_frames_pain1 [] =
 {
 	{ai_move,	-6,	NULL},
 	{ai_move,	-2,	NULL},
@@ -39391,7 +39270,7 @@ mframe_t brain_frames_pain1 [] =
 	{ai_move,	3,	NULL},
 	{ai_move,	-1,	NULL},
 };
-mmove_t brain_move_pain1 = {88, 108, brain_frames_pain1, brain_run};
+global_variable mmove_t brain_move_pain1 = {88, 108, brain_frames_pain1, brain_run};
 
 //
 // DUCK
@@ -39423,7 +39302,7 @@ void brain_duck_up (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t brain_frames_duck [] =
+global_variable mframe_t brain_frames_duck [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	-2,	brain_duck_down},
@@ -39434,7 +39313,7 @@ mframe_t brain_frames_duck [] =
 	{ai_move,	-6,	NULL},
 	{ai_move,	-6,	NULL},
 };
-mmove_t brain_move_duck = {146, 153, brain_frames_duck, brain_run};
+global_variable mmove_t brain_move_duck = {146, 153, brain_frames_duck, brain_run};
 
 void brain_dodge (edict_t* self, edict_t* attacker, float eta)
 {
@@ -39448,7 +39327,7 @@ void brain_dodge (edict_t* self, edict_t* attacker, float eta)
 	self->monsterinfo.currentmove = &brain_move_duck;
 }
 
-mframe_t brain_frames_death2 [] =
+global_variable mframe_t brain_frames_death2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -39456,9 +39335,9 @@ mframe_t brain_frames_death2 [] =
 	{ai_move,	9,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t brain_move_death2 = {141, 145, brain_frames_death2, brain_dead};
+global_variable mmove_t brain_move_death2 = {141, 145, brain_frames_death2, brain_dead};
 
-mframe_t brain_frames_death1 [] =
+global_variable mframe_t brain_frames_death1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -39479,7 +39358,7 @@ mframe_t brain_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t brain_move_death1 = {123, 140, brain_frames_death1, brain_dead};
+global_variable mmove_t brain_move_death1 = {123, 140, brain_frames_death1, brain_dead};
 
 //
 // MELEE
@@ -39513,7 +39392,7 @@ void brain_hit_left (edict_t* self)
 		PF_StartSound (self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
-mframe_t brain_frames_attack1 [] =
+global_variable mframe_t brain_frames_attack1 [] =
 {
 	{ai_charge,	8,	NULL},
 	{ai_charge,	3,	NULL},
@@ -39534,7 +39413,7 @@ mframe_t brain_frames_attack1 [] =
 	{ai_charge,	2,	NULL},
 	{ai_charge,	-11,NULL},
 };
-mmove_t brain_move_attack1 = {53, 70, brain_frames_attack1, brain_run};
+global_variable mmove_t brain_move_attack1 = {53, 70, brain_frames_attack1, brain_run};
 
 void brain_chest_open (edict_t* self)
 {
@@ -39563,7 +39442,7 @@ void brain_chest_closed (edict_t* self)
 	}
 }
 
-mframe_t brain_frames_attack2 [] =
+global_variable mframe_t brain_frames_attack2 [] =
 {
 	{ai_charge,	5,	NULL},
 	{ai_charge,	-4,	NULL},
@@ -39583,7 +39462,7 @@ mframe_t brain_frames_attack2 [] =
 	{ai_charge,	-3,	NULL},
 	{ai_charge,	-6,	NULL},
 };
-mmove_t brain_move_attack2 = {71, 87, brain_frames_attack2, brain_run};
+global_variable mmove_t brain_move_attack2 = {71, 87, brain_frames_attack2, brain_run};
 
 void brain_melee(edict_t* self)
 {
@@ -39597,7 +39476,7 @@ void brain_melee(edict_t* self)
 // RUN
 //
 
-mframe_t brain_frames_run [] =
+global_variable mframe_t brain_frames_run [] =
 {
 	{ai_run,	9,	NULL},
 	{ai_run,	2,	NULL},
@@ -39611,7 +39490,7 @@ mframe_t brain_frames_run [] =
 	{ai_run,	-1,	NULL},
 	{ai_run,	2,	NULL},
 };
-mmove_t brain_move_run = {0, 10, brain_frames_run, NULL};
+global_variable mmove_t brain_move_run = {0, 10, brain_frames_run, NULL};
 
 void brain_run (edict_t* self)
 {
@@ -39798,7 +39677,7 @@ void ChickMoan (edict_t* self)
 		PF_StartSound (self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
 }
 
-mframe_t chick_frames_fidget [] =
+global_variable mframe_t chick_frames_fidget [] =
 {
 	{ai_stand, 0,  NULL},
 	{ai_stand, 0,  NULL},
@@ -39831,7 +39710,7 @@ mframe_t chick_frames_fidget [] =
 	{ai_stand, 0,  NULL},
 	{ai_stand, 0,  NULL},
 };
-mmove_t chick_move_fidget = {151, 180, chick_frames_fidget, chick_stand};
+global_variable mmove_t chick_move_fidget = {151, 180, chick_frames_fidget, chick_stand};
 
 void chick_fidget (edict_t* self)
 {
@@ -39841,7 +39720,7 @@ void chick_fidget (edict_t* self)
 		self->monsterinfo.currentmove = &chick_move_fidget;
 }
 
-mframe_t chick_frames_stand [] =
+global_variable mframe_t chick_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -39875,14 +39754,14 @@ mframe_t chick_frames_stand [] =
 	{ai_stand, 0, chick_fidget},
 
 };
-mmove_t chick_move_stand = {121, 150, chick_frames_stand, NULL};
+global_variable mmove_t chick_move_stand = {121, 150, chick_frames_stand, NULL};
 
 void chick_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &chick_move_stand;
 }
 
-mframe_t chick_frames_start_run [] =
+global_variable mframe_t chick_frames_start_run [] =
 {
 	{ai_run, 1,  NULL},
 	{ai_run, 0,  NULL},
@@ -39895,9 +39774,9 @@ mframe_t chick_frames_start_run [] =
 	{ai_run, 6,	 NULL},
 	{ai_run, 3,	 NULL},
 };
-mmove_t chick_move_start_run = {181, 190, chick_frames_start_run, chick_run};
+global_variable mmove_t chick_move_start_run = {181, 190, chick_frames_start_run, chick_run};
 
-mframe_t chick_frames_run [] =
+global_variable mframe_t chick_frames_run [] =
 {
 	{ai_run, 6,	NULL},
 	{ai_run, 8,  NULL},
@@ -39912,9 +39791,9 @@ mframe_t chick_frames_run [] =
 
 };
 
-mmove_t chick_move_run = {191, 200, chick_frames_run, NULL};
+global_variable mmove_t chick_move_run = {191, 200, chick_frames_run, NULL};
 
-mframe_t chick_frames_walk [] =
+global_variable mframe_t chick_frames_walk [] =
 {
 	{ai_walk, 6,	 NULL},
 	{ai_walk, 8,  NULL},
@@ -39928,7 +39807,7 @@ mframe_t chick_frames_walk [] =
 	{ai_walk, 7,  NULL},
 };
 
-mmove_t chick_move_walk = {191, 200, chick_frames_walk, NULL};
+global_variable mmove_t chick_move_walk = {191, 200, chick_frames_walk, NULL};
 
 void chick_walk (edict_t* self)
 {
@@ -39954,7 +39833,7 @@ void chick_run (edict_t* self)
 	}
 }
 
-mframe_t chick_frames_pain1 [] =
+global_variable mframe_t chick_frames_pain1 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -39962,9 +39841,9 @@ mframe_t chick_frames_pain1 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t chick_move_pain1 = {90, 94, chick_frames_pain1, chick_run};
+global_variable mmove_t chick_move_pain1 = {90, 94, chick_frames_pain1, chick_run};
 
-mframe_t chick_frames_pain2 [] =
+global_variable mframe_t chick_frames_pain2 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -39972,9 +39851,9 @@ mframe_t chick_frames_pain2 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t chick_move_pain2 = {95, 99, chick_frames_pain2, chick_run};
+global_variable mmove_t chick_move_pain2 = {95, 99, chick_frames_pain2, chick_run};
 
-mframe_t chick_frames_pain3 [] =
+global_variable mframe_t chick_frames_pain3 [] =
 {
 	{ai_move, 0,		NULL},
 	{ai_move, 0,		NULL},
@@ -39998,7 +39877,7 @@ mframe_t chick_frames_pain3 [] =
 	{ai_move, -8,	NULL},
 	{ai_move, 2,		NULL},
 };
-mmove_t chick_move_pain3 = {100, 120, chick_frames_pain3, chick_run};
+global_variable mmove_t chick_move_pain3 = {100, 120, chick_frames_pain3, chick_run};
 
 procedure void chick_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -40040,7 +39919,7 @@ void chick_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t chick_frames_death2 [] =
+global_variable mframe_t chick_frames_death2 [] =
 {
 	{ai_move, -6, NULL},
 	{ai_move, 0,  NULL},
@@ -40066,7 +39945,7 @@ mframe_t chick_frames_death2 [] =
 	{ai_move, 14, NULL},
 	{ai_move, 1, NULL},
 };
-mmove_t chick_move_death2 = {60, 82, chick_frames_death2, chick_dead};
+global_variable mmove_t chick_move_death2 = {60, 82, chick_frames_death2, chick_dead};
 
 global_variable mframe_t chick_frames_death1 [] =
 {
@@ -40213,7 +40092,7 @@ void ChickReload (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
 
-mframe_t chick_frames_start_attack1 [] =
+global_variable mframe_t chick_frames_start_attack1 [] =
 {
 	{ai_charge, 0,	Chick_PreAttack1},
 	{ai_charge, 0,	NULL},
@@ -40230,9 +40109,9 @@ mframe_t chick_frames_start_attack1 [] =
 	{ai_charge, 0,	chick_attack1},
 };
 
-mmove_t chick_move_start_attack1 = {0, 12, chick_frames_start_attack1, NULL};
+global_variable mmove_t chick_move_start_attack1 = {0, 12, chick_frames_start_attack1, NULL};
 
-mframe_t chick_frames_attack1 [] =
+global_variable mframe_t chick_frames_attack1 [] =
 {
 	{ai_charge, 19,	ChickRocket},
 	{ai_charge, -6,	NULL},
@@ -40250,9 +40129,9 @@ mframe_t chick_frames_attack1 [] =
 	{ai_charge, 3,	chick_rerocket},
 };
 
-mmove_t chick_move_attack1 = {13, 26, chick_frames_attack1, NULL};
+global_variable mmove_t chick_move_attack1 = {13, 26, chick_frames_attack1, NULL};
 
-mframe_t chick_frames_end_attack1 [] =
+global_variable mframe_t chick_frames_end_attack1 [] =
 {
 	{ai_charge, -3,	NULL},
 	{ai_charge, 0,	NULL},
@@ -40260,7 +40139,7 @@ mframe_t chick_frames_end_attack1 [] =
 	{ai_charge, -4,	NULL},
 	{ai_charge, -2,  NULL},
 };
-mmove_t chick_move_end_attack1 = {27, 31, chick_frames_end_attack1, chick_run};
+global_variable mmove_t chick_move_end_attack1 = {27, 31, chick_frames_end_attack1, chick_run};
 
 void chick_rerocket(edict_t* self)
 {
@@ -40282,7 +40161,7 @@ void chick_attack1(edict_t* self)
 	self->monsterinfo.currentmove = &chick_move_attack1;
 }
 
-mframe_t chick_frames_slash [] =
+global_variable mframe_t chick_frames_slash [] =
 {
 	{ai_charge, 1,	NULL},
 	{ai_charge, 7,	ChickSlash},
@@ -40295,16 +40174,16 @@ mframe_t chick_frames_slash [] =
 	{ai_charge, -2,	chick_reslash},
 };
 
-mmove_t chick_move_slash = {35, 43, chick_frames_slash, NULL};
+global_variable mmove_t chick_move_slash = {35, 43, chick_frames_slash, NULL};
 
-mframe_t chick_frames_end_slash [] =
+global_variable mframe_t chick_frames_end_slash [] =
 {
 	{ai_charge, -6,	NULL},
 	{ai_charge, -1,	NULL},
 	{ai_charge, -6,	NULL},
 	{ai_charge, 0,	NULL},
 };
-mmove_t chick_move_end_slash = {44, 47, chick_frames_end_slash, chick_run};
+global_variable mmove_t chick_move_end_slash = {44, 47, chick_frames_end_slash, chick_run};
 
 void chick_reslash(edict_t* self)
 {
@@ -40332,13 +40211,13 @@ void chick_slash(edict_t* self)
 	self->monsterinfo.currentmove = &chick_move_slash;
 }
 
-mframe_t chick_frames_start_slash [] =
+global_variable mframe_t chick_frames_start_slash [] =
 {
 	{ai_charge, 1,	NULL},
 	{ai_charge, 8,	NULL},
 	{ai_charge, 3,	NULL},
 };
-mmove_t chick_move_start_slash = {32, 34, chick_frames_start_slash, chick_slash};
+global_variable mmove_t chick_move_start_slash = {32, 34, chick_frames_start_slash, chick_slash};
 
 void chick_melee(edict_t* self)
 {
@@ -40426,12 +40305,12 @@ global_variable int	sound_sight;
 
 void flipper_stand (edict_t* self);
 
-mframe_t flipper_frames_stand [] =
+global_variable mframe_t flipper_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 };
 
-mmove_t	flipper_move_stand = {41, 41, flipper_frames_stand, NULL};
+global_variable mmove_t	flipper_move_stand = {41, 41, flipper_frames_stand, NULL};
 
 void flipper_stand (edict_t* self)
 {
@@ -40440,7 +40319,7 @@ void flipper_stand (edict_t* self)
 
 #define FLIPPER_RUN_SPEED	24
 
-mframe_t flipper_frames_run [] =
+global_variable mframe_t flipper_frames_run [] =
 {
 	{ai_run, FLIPPER_RUN_SPEED, NULL},	// 6
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
@@ -40469,14 +40348,14 @@ mframe_t flipper_frames_run [] =
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},		// 29
 };
-mmove_t flipper_move_run_loop = {70, 93, flipper_frames_run, NULL};
+global_variable mmove_t flipper_move_run_loop = {70, 93, flipper_frames_run, NULL};
 
 void flipper_run_loop (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_run_loop;
 }
 
-mframe_t flipper_frames_run_start [] =
+global_variable mframe_t flipper_frames_run_start [] =
 {
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
@@ -40485,7 +40364,7 @@ mframe_t flipper_frames_run_start [] =
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
 };
-mmove_t flipper_move_run_start = {65, 70, flipper_frames_run_start, flipper_run_loop};
+global_variable mmove_t flipper_move_run_start = {65, 70, flipper_frames_run_start, flipper_run_loop};
 
 void flipper_run (edict_t* self)
 {
@@ -40493,7 +40372,7 @@ void flipper_run (edict_t* self)
 }
 
 /* Standard Swimming */
-mframe_t flipper_frames_walk [] =
+global_variable mframe_t flipper_frames_walk [] =
 {
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
@@ -40520,14 +40399,14 @@ mframe_t flipper_frames_walk [] =
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 };
-mmove_t flipper_move_walk = {41, 64, flipper_frames_walk, NULL};
+global_variable mmove_t flipper_move_walk = {41, 64, flipper_frames_walk, NULL};
 
 void flipper_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_walk;
 }
 
-mframe_t flipper_frames_start_run [] =
+global_variable mframe_t flipper_frames_start_run [] =
 {
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
@@ -40535,14 +40414,14 @@ mframe_t flipper_frames_start_run [] =
 	{ai_run, 8, NULL},
 	{ai_run, 8, flipper_run},
 };
-mmove_t flipper_move_start_run = {41, 45, flipper_frames_start_run, NULL};
+global_variable mmove_t flipper_move_start_run = {41, 45, flipper_frames_start_run, NULL};
 
 void flipper_start_run (edict_t* self)
 {
 	self->monsterinfo.currentmove = &flipper_move_start_run;
 }
 
-mframe_t flipper_frames_pain2 [] =
+global_variable mframe_t flipper_frames_pain2 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -40550,9 +40429,9 @@ mframe_t flipper_frames_pain2 [] =
 	{ai_move, 0,	NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t flipper_move_pain2 = {94, 98, flipper_frames_pain2, flipper_run};
+global_variable mmove_t flipper_move_pain2 = {94, 98, flipper_frames_pain2, flipper_run};
 
-mframe_t flipper_frames_pain1 [] =
+global_variable mframe_t flipper_frames_pain1 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -40560,7 +40439,7 @@ mframe_t flipper_frames_pain1 [] =
 	{ai_move, 0,	NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t flipper_move_pain1 = {99, 103, flipper_frames_pain1, flipper_run};
+global_variable mmove_t flipper_move_pain1 = {99, 103, flipper_frames_pain1, flipper_run};
 
 void flipper_bite (edict_t* self)
 {
@@ -40575,7 +40454,7 @@ void flipper_preattack (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
 
-mframe_t flipper_frames_attack [] =
+global_variable mframe_t flipper_frames_attack [] =
 {
 	{ai_charge, 0,	flipper_preattack},
 	{ai_charge, 0,	NULL},
@@ -40598,7 +40477,7 @@ mframe_t flipper_frames_attack [] =
 	{ai_charge, 0,	flipper_bite},
 	{ai_charge, 0,	NULL},
 };
-mmove_t flipper_move_attack = {0, 19, flipper_frames_attack, flipper_run};
+global_variable mmove_t flipper_move_attack = {0, 19, flipper_frames_attack, flipper_run};
 
 void flipper_melee(edict_t* self)
 {
@@ -40643,7 +40522,7 @@ void flipper_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t flipper_frames_death [] =
+global_variable mframe_t flipper_frames_death [] =
 {
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
@@ -40707,7 +40586,7 @@ mframe_t flipper_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t flipper_move_death = {104, 159, flipper_frames_death, flipper_dead};
+global_variable mmove_t flipper_move_death = {104, 159, flipper_frames_death, flipper_dead};
 
 procedure void flipper_sight(edict_t* self, edict_t* other) {
 	UNUSED(other);
@@ -40842,7 +40721,7 @@ void floater_fire_blaster (edict_t* self)
 	monster_fire_blaster (self, start, dir, 1, 1000, MZ2_FLOAT_BLASTER_1, effect);
 }
 
-mframe_t floater_frames_stand1 [] =
+global_variable mframe_t floater_frames_stand1 [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -40897,9 +40776,9 @@ mframe_t floater_frames_stand1 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	floater_move_stand1 = {144, 195, floater_frames_stand1, NULL};
+global_variable mmove_t	floater_move_stand1 = {144, 195, floater_frames_stand1, NULL};
 
-mframe_t floater_frames_stand2 [] =
+global_variable mframe_t floater_frames_stand2 [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -40954,7 +40833,7 @@ mframe_t floater_frames_stand2 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	floater_move_stand2 = {196, 247, floater_frames_stand2, NULL};
+global_variable mmove_t	floater_move_stand2 = {196, 247, floater_frames_stand2, NULL};
 
 void floater_stand (edict_t* self)
 {
@@ -40964,42 +40843,7 @@ void floater_stand (edict_t* self)
 		self->monsterinfo.currentmove = &floater_move_stand2;
 }
 
-mframe_t floater_frames_activate [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t floater_move_activate = {0, 30, floater_frames_activate, NULL};
-
-mframe_t floater_frames_attack1 [] =
+global_variable mframe_t floater_frames_attack1 [] =
 {
 	{ai_charge,	0,	NULL},			// Blaster attack
 	{ai_charge,	0,	NULL},
@@ -41016,9 +40860,9 @@ mframe_t floater_frames_attack1 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},			//							-- LOOP Ends
 };
-mmove_t floater_move_attack1 = {31, 44, floater_frames_attack1, floater_run};
+global_variable mmove_t floater_move_attack1 = {31, 44, floater_frames_attack1, floater_run};
 
-mframe_t floater_frames_attack2 [] =
+global_variable mframe_t floater_frames_attack2 [] =
 {
 	{ai_charge,	0,	NULL},			// Claws
 	{ai_charge,	0,	NULL},
@@ -41046,9 +40890,9 @@ mframe_t floater_frames_attack2 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t floater_move_attack2 = {45, 69, floater_frames_attack2, floater_run};
+global_variable mmove_t floater_move_attack2 = {45, 69, floater_frames_attack2, floater_run};
 
-mframe_t floater_frames_attack3 [] =
+global_variable mframe_t floater_frames_attack3 [] =
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -41085,27 +40929,9 @@ mframe_t floater_frames_attack3 [] =
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
 };
-mmove_t floater_move_attack3 = {70, 103, floater_frames_attack3, floater_run};
+global_variable mmove_t floater_move_attack3 = {70, 103, floater_frames_attack3, floater_run};
 
-mframe_t floater_frames_death [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t floater_move_death = {104, 116, floater_frames_death, floater_dead};
-
-mframe_t floater_frames_pain1 [] =
+global_variable mframe_t floater_frames_pain1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -41115,9 +40941,9 @@ mframe_t floater_frames_pain1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_pain1 = {117, 123, floater_frames_pain1, floater_run};
+global_variable mmove_t floater_move_pain1 = {117, 123, floater_frames_pain1, floater_run};
 
-mframe_t floater_frames_pain2 [] =
+global_variable mframe_t floater_frames_pain2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -41128,26 +40954,9 @@ mframe_t floater_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t floater_move_pain2 = {124, 131, floater_frames_pain2, floater_run};
+global_variable mmove_t floater_move_pain2 = {124, 131, floater_frames_pain2, floater_run};
 
-mframe_t floater_frames_pain3 [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t floater_move_pain3 = {132, 143, floater_frames_pain3, floater_run};
-
-mframe_t floater_frames_walk [] =
+global_variable mframe_t floater_frames_walk [] =
 {
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
@@ -41202,9 +41011,9 @@ mframe_t floater_frames_walk [] =
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
 };
-mmove_t	floater_move_walk = {144, 195, floater_frames_walk, NULL};
+global_variable mmove_t	floater_move_walk = {144, 195, floater_frames_walk, NULL};
 
-mframe_t floater_frames_run [] =
+global_variable mframe_t floater_frames_run [] =
 {
 	{ai_run, 13, NULL},
 	{ai_run, 13, NULL},
@@ -41259,7 +41068,7 @@ mframe_t floater_frames_run [] =
 	{ai_run, 13, NULL},
 	{ai_run, 13, NULL},
 };
-mmove_t	floater_move_run = {144, 195, floater_frames_run, NULL};
+global_variable mmove_t	floater_move_run = {144, 195, floater_frames_run, NULL};
 
 void floater_run (edict_t* self)
 {
@@ -41470,7 +41279,7 @@ void flyer_pop_blades (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
 
-mframe_t flyer_frames_stand [] =
+global_variable mframe_t flyer_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -41518,9 +41327,9 @@ mframe_t flyer_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	flyer_move_stand = {13, 57, flyer_frames_stand, NULL};
+global_variable mmove_t	flyer_move_stand = {13, 57, flyer_frames_stand, NULL};
 
-mframe_t flyer_frames_walk [] =
+global_variable mframe_t flyer_frames_walk [] =
 {
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
@@ -41568,9 +41377,9 @@ mframe_t flyer_frames_walk [] =
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
 };
-mmove_t	flyer_move_walk = {13, 57, flyer_frames_walk, NULL};
+global_variable mmove_t	flyer_move_walk = {13, 57, flyer_frames_walk, NULL};
 
-mframe_t flyer_frames_run [] =
+global_variable mframe_t flyer_frames_run [] =
 {
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
@@ -41618,7 +41427,7 @@ mframe_t flyer_frames_run [] =
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
 };
-mmove_t	flyer_move_run = {13, 57, flyer_frames_run, NULL};
+global_variable mmove_t	flyer_move_run = {13, 57, flyer_frames_run, NULL};
 
 void flyer_run (edict_t* self)
 {
@@ -41638,7 +41447,7 @@ void flyer_stand (edict_t* self)
 		self->monsterinfo.currentmove = &flyer_move_stand;
 }
 
-mframe_t flyer_frames_start [] =
+global_variable mframe_t flyer_frames_start [] =
 {
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	NULL},
@@ -41647,9 +41456,9 @@ mframe_t flyer_frames_start [] =
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	flyer_nextmove},
 };
-mmove_t flyer_move_start = {0, 5, flyer_frames_start, NULL};
+global_variable mmove_t flyer_move_start = {0, 5, flyer_frames_start, NULL};
 
-mframe_t flyer_frames_stop [] =
+global_variable mframe_t flyer_frames_stop [] =
 {
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	NULL},
@@ -41659,7 +41468,7 @@ mframe_t flyer_frames_stop [] =
 		{ai_move, 0,	NULL},
 		{ai_move, 0,	flyer_nextmove},
 };
-mmove_t flyer_move_stop = {6, 12, flyer_frames_stop, NULL};
+global_variable mmove_t flyer_move_stop = {6, 12, flyer_frames_stop, NULL};
 
 void flyer_stop (edict_t* self)
 {
@@ -41671,53 +41480,25 @@ void flyer_start (edict_t* self)
 		self->monsterinfo.currentmove = &flyer_move_start;
 }
 
-mframe_t flyer_frames_rollright [] =
+global_variable mframe_t flyer_frames_pain3 [] =
 {
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_rollright = {119, 127, flyer_frames_rollright, NULL};
+global_variable mmove_t flyer_move_pain3 = {147, 150, flyer_frames_pain3, flyer_run};
 
-mframe_t flyer_frames_rollleft [] =
+global_variable mframe_t flyer_frames_pain2 [] =
 {
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_rollleft = {110, 118, flyer_frames_rollleft, NULL};
+global_variable mmove_t flyer_move_pain2 = {143, 146, flyer_frames_pain2, flyer_run};
 
-mframe_t flyer_frames_pain3 [] =
-{
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-};
-mmove_t flyer_move_pain3 = {147, 150, flyer_frames_pain3, flyer_run};
-
-mframe_t flyer_frames_pain2 [] =
-{
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-};
-mmove_t flyer_move_pain2 = {143, 146, flyer_frames_pain2, flyer_run};
-
-mframe_t flyer_frames_pain1 [] =
+global_variable mframe_t flyer_frames_pain1 [] =
 {
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
@@ -41729,42 +41510,7 @@ mframe_t flyer_frames_pain1 [] =
 		{ai_move, 0, NULL},
 		{ai_move, 0, NULL},
 };
-mmove_t flyer_move_pain1 = {134, 142, flyer_frames_pain1, flyer_run};
-
-mframe_t flyer_frames_defense [] =
-{
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},		// Hold this frame
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-};
-mmove_t flyer_move_defense = {128, 133, flyer_frames_defense, NULL};
-
-mframe_t flyer_frames_bankright [] =
-{
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-};
-mmove_t flyer_move_bankright = {103, 109, flyer_frames_bankright, NULL};
-
-mframe_t flyer_frames_bankleft [] =
-{
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL},
-};
-mmove_t flyer_move_bankleft = {96, 102, flyer_frames_bankleft, NULL};
+global_variable mmove_t flyer_move_pain1 = {134, 142, flyer_frames_pain1, flyer_run};
 
 void flyer_fire (edict_t* self, int flash_number)
 {
@@ -41798,7 +41544,7 @@ void flyer_fireright (edict_t* self)
 	flyer_fire (self, MZ2_FLYER_BLASTER_2);
 }
 
-mframe_t flyer_frames_attack2 [] =
+global_variable mframe_t flyer_frames_attack2 [] =
 {
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
@@ -41818,7 +41564,7 @@ mframe_t flyer_frames_attack2 [] =
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_attack2 = {79, 95, flyer_frames_attack2, flyer_run};
+global_variable mmove_t flyer_move_attack2 = {79, 95, flyer_frames_attack2, flyer_run};
 
 void flyer_slash_left (edict_t* self)
 {
@@ -41838,7 +41584,7 @@ void flyer_slash_right (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
-mframe_t flyer_frames_start_melee [] =
+global_variable mframe_t flyer_frames_start_melee [] =
 {
 		{ai_charge, 0, flyer_pop_blades},
 		{ai_charge, 0, NULL},
@@ -41847,17 +41593,17 @@ mframe_t flyer_frames_start_melee [] =
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_start_melee = {58, 63, flyer_frames_start_melee, flyer_loop_melee};
+global_variable mmove_t flyer_move_start_melee = {58, 63, flyer_frames_start_melee, flyer_loop_melee};
 
-mframe_t flyer_frames_end_melee [] =
+global_variable mframe_t flyer_frames_end_melee [] =
 {
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 		{ai_charge, 0, NULL},
 };
-mmove_t flyer_move_end_melee = {76, 78, flyer_frames_end_melee, flyer_run};
+global_variable mmove_t flyer_move_end_melee = {76, 78, flyer_frames_end_melee, flyer_run};
 
-mframe_t flyer_frames_loop_melee [] =
+global_variable mframe_t flyer_frames_loop_melee [] =
 {
 		{ai_charge, 0, NULL},		// Loop Start
 		{ai_charge, 0, NULL},
@@ -41873,7 +41619,7 @@ mframe_t flyer_frames_loop_melee [] =
 		{ai_charge, 0, NULL}		// Loop Ends
 
 };
-mmove_t flyer_move_loop_melee = {64, 75, flyer_frames_loop_melee, flyer_check_melee};
+global_variable mmove_t flyer_move_loop_melee = {64, 75, flyer_frames_loop_melee, flyer_check_melee};
 
 void flyer_loop_melee (edict_t* self)
 {
@@ -42061,7 +41807,7 @@ void gladiator_cleaver_swing (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
-mframe_t gladiator_frames_stand [] =
+global_variable mframe_t gladiator_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -42071,14 +41817,14 @@ mframe_t gladiator_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t gladiator_move_stand = {0, 6, gladiator_frames_stand, NULL};
+global_variable mmove_t gladiator_move_stand = {0, 6, gladiator_frames_stand, NULL};
 
 void gladiator_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_stand;
 }
 
-mframe_t gladiator_frames_walk [] =
+global_variable mframe_t gladiator_frames_walk [] =
 {
 	{ai_walk, 15, NULL},
 	{ai_walk, 7,  NULL},
@@ -42097,14 +41843,14 @@ mframe_t gladiator_frames_walk [] =
 	{ai_walk, 1,  NULL},
 	{ai_walk, 8,  NULL},
 };
-mmove_t gladiator_move_walk = {7, 22, gladiator_frames_walk, NULL};
+global_variable mmove_t gladiator_move_walk = {7, 22, gladiator_frames_walk, NULL};
 
 void gladiator_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gladiator_move_walk;
 }
 
-mframe_t gladiator_frames_run [] =
+global_variable mframe_t gladiator_frames_run [] =
 {
 	{ai_run, 23,	NULL},
 	{ai_run, 14,	NULL},
@@ -42113,7 +41859,7 @@ mframe_t gladiator_frames_run [] =
 	{ai_run, 12,	NULL},
 	{ai_run, 13,	NULL},
 };
-mmove_t gladiator_move_run = {23, 28, gladiator_frames_run, NULL};
+global_variable mmove_t gladiator_move_run = {23, 28, gladiator_frames_run, NULL};
 
 void gladiator_run (edict_t* self)
 {
@@ -42134,7 +41880,7 @@ void GaldiatorMelee (edict_t* self)
 		PF_StartSound (self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
 }
 
-mframe_t gladiator_frames_attack_melee [] =
+global_variable mframe_t gladiator_frames_attack_melee [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -42154,7 +41900,7 @@ mframe_t gladiator_frames_attack_melee [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gladiator_move_attack_melee = {29, 45, gladiator_frames_attack_melee, gladiator_run};
+global_variable mmove_t gladiator_move_attack_melee = {29, 45, gladiator_frames_attack_melee, gladiator_run};
 
 void gladiator_melee(edict_t* self)
 {
@@ -42177,7 +41923,7 @@ void GladiatorGun (edict_t* self)
 	monster_fire_railgun (self, start, dir, 50, 100, MZ2_GLADIATOR_RAILGUN_1);
 }
 
-mframe_t gladiator_frames_attack_gun [] =
+global_variable mframe_t gladiator_frames_attack_gun [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -42189,7 +41935,7 @@ mframe_t gladiator_frames_attack_gun [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gladiator_move_attack_gun = {46, 54, gladiator_frames_attack_gun, gladiator_run};
+global_variable mmove_t gladiator_move_attack_gun = {46, 54, gladiator_frames_attack_gun, gladiator_run};
 
 void gladiator_attack(edict_t* self)
 {
@@ -42209,7 +41955,7 @@ void gladiator_attack(edict_t* self)
 	self->monsterinfo.currentmove = &gladiator_move_attack_gun;
 }
 
-mframe_t gladiator_frames_pain [] =
+global_variable mframe_t gladiator_frames_pain [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -42218,9 +41964,9 @@ mframe_t gladiator_frames_pain [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_pain = {55, 60, gladiator_frames_pain, gladiator_run};
+global_variable mmove_t gladiator_move_pain = {55, 60, gladiator_frames_pain, gladiator_run};
 
-mframe_t gladiator_frames_pain_air [] =
+global_variable mframe_t gladiator_frames_pain_air [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -42230,7 +41976,7 @@ mframe_t gladiator_frames_pain_air [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_pain_air = {83, 89, gladiator_frames_pain_air, gladiator_run};
+global_variable mmove_t gladiator_move_pain_air = {83, 89, gladiator_frames_pain_air, gladiator_run};
 
 procedure void gladiator_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -42271,7 +42017,7 @@ void gladiator_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t gladiator_frames_death [] =
+global_variable mframe_t gladiator_frames_death [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -42296,7 +42042,7 @@ mframe_t gladiator_frames_death [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t gladiator_move_death = {61, 82, gladiator_frames_death, gladiator_dead};
+global_variable mmove_t gladiator_move_death = {61, 82, gladiator_frames_death, gladiator_dead};
 
 procedure void gladiator_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -42417,7 +42163,7 @@ void gunner_refire_chain(edict_t* self);
 
 void gunner_stand (edict_t* self);
 
-mframe_t gunner_frames_fidget [] =
+global_variable mframe_t gunner_frames_fidget [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -42473,7 +42219,7 @@ mframe_t gunner_frames_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	gunner_move_fidget = {30, 69, gunner_frames_fidget, gunner_stand};
+global_variable mmove_t	gunner_move_fidget = {30, 69, gunner_frames_fidget, gunner_stand};
 
 void gunner_fidget (edict_t* self)
 {
@@ -42483,7 +42229,7 @@ void gunner_fidget (edict_t* self)
 		self->monsterinfo.currentmove = &gunner_move_fidget;
 }
 
-mframe_t gunner_frames_stand [] =
+global_variable mframe_t gunner_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -42518,14 +42264,14 @@ mframe_t gunner_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, gunner_fidget},
 };
-mmove_t	gunner_move_stand = {0, 29, gunner_frames_stand, NULL};
+global_variable mmove_t	gunner_move_stand = {0, 29, gunner_frames_stand, NULL};
 
 void gunner_stand (edict_t* self)
 {
 		self->monsterinfo.currentmove = &gunner_move_stand;
 }
 
-mframe_t gunner_frames_walk [] =
+global_variable mframe_t gunner_frames_walk [] =
 {
 	{ai_walk, 0, NULL},
 	{ai_walk, 3, NULL},
@@ -42541,14 +42287,14 @@ mframe_t gunner_frames_walk [] =
 	{ai_walk, 7, NULL},
 	{ai_walk, 4, NULL},
 };
-mmove_t gunner_move_walk = {76, 88, gunner_frames_walk, NULL};
+global_variable mmove_t gunner_move_walk = {76, 88, gunner_frames_walk, NULL};
 
 void gunner_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gunner_move_walk;
 }
 
-mframe_t gunner_frames_run [] =
+global_variable mframe_t gunner_frames_run [] =
 {
 	{ai_run, 26, NULL},
 	{ai_run, 9,  NULL},
@@ -42560,7 +42306,7 @@ mframe_t gunner_frames_run [] =
 	{ai_run, 6,  NULL},
 };
 
-mmove_t gunner_move_run = {94, 101, gunner_frames_run, NULL};
+global_variable mmove_t gunner_move_run = {94, 101, gunner_frames_run, NULL};
 
 void gunner_run (edict_t* self)
 {
@@ -42570,7 +42316,7 @@ void gunner_run (edict_t* self)
 		self->monsterinfo.currentmove = &gunner_move_run;
 }
 
-mframe_t gunner_frames_runandshoot [] =
+global_variable mframe_t gunner_frames_runandshoot [] =
 {
 	{ai_run, 32, NULL},
 	{ai_run, 15, NULL},
@@ -42580,14 +42326,14 @@ mframe_t gunner_frames_runandshoot [] =
 	{ai_run, 20, NULL},
 };
 
-mmove_t gunner_move_runandshoot = {102, 107, gunner_frames_runandshoot, NULL};
+global_variable mmove_t gunner_move_runandshoot = {102, 107, gunner_frames_runandshoot, NULL};
 
 void gunner_runandshoot (edict_t* self)
 {
 	self->monsterinfo.currentmove = &gunner_move_runandshoot;
 }
 
-mframe_t gunner_frames_pain3 [] =
+global_variable mframe_t gunner_frames_pain3 [] =
 {
 	{ai_move, -3, NULL},
 	{ai_move, 1,	 NULL},
@@ -42595,9 +42341,9 @@ mframe_t gunner_frames_pain3 [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 1,	 NULL},
 };
-mmove_t gunner_move_pain3 = {185, 189, gunner_frames_pain3, gunner_run};
+global_variable mmove_t gunner_move_pain3 = {185, 189, gunner_frames_pain3, gunner_run};
 
-mframe_t gunner_frames_pain2 [] =
+global_variable mframe_t gunner_frames_pain2 [] =
 {
 	{ai_move, -2, NULL},
 	{ai_move, 11, NULL},
@@ -42608,9 +42354,9 @@ mframe_t gunner_frames_pain2 [] =
 	{ai_move, -2, NULL},
 	{ai_move, -7, NULL},
 };
-mmove_t gunner_move_pain2 = {177, 184, gunner_frames_pain2, gunner_run};
+global_variable mmove_t gunner_move_pain2 = {177, 184, gunner_frames_pain2, gunner_run};
 
-mframe_t gunner_frames_pain1 [] =
+global_variable mframe_t gunner_frames_pain1 [] =
 {
 	{ai_move, 2,	 NULL},
 	{ai_move, 0,	 NULL},
@@ -42631,7 +42377,7 @@ mframe_t gunner_frames_pain1 [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t gunner_move_pain1 = {159, 176, gunner_frames_pain1, gunner_run};
+global_variable mmove_t gunner_move_pain1 = {159, 176, gunner_frames_pain1, gunner_run};
 
 procedure void gunner_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -42668,7 +42414,7 @@ void gunner_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t gunner_frames_death [] =
+global_variable mframe_t gunner_frames_death [] =
 {
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
@@ -42682,7 +42428,7 @@ mframe_t gunner_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t gunner_move_death = {190, 200, gunner_frames_death, gunner_dead};
+global_variable mmove_t gunner_move_death = {190, 200, gunner_frames_death, gunner_dead};
 
 procedure void gunner_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -42820,7 +42566,7 @@ void GunnerGrenade (edict_t* self)
 	monster_fire_grenade (self, start, aim, 50, 600, flash_number);
 }
 
-mframe_t gunner_frames_attack_chain [] =
+global_variable mframe_t gunner_frames_attack_chain [] =
 {
 	/*
 	{ai_charge, 0, NULL},
@@ -42840,9 +42586,9 @@ mframe_t gunner_frames_attack_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_attack_chain = {137, 143, gunner_frames_attack_chain, gunner_fire_chain};
+global_variable mmove_t gunner_move_attack_chain = {137, 143, gunner_frames_attack_chain, gunner_fire_chain};
 
-mframe_t gunner_frames_fire_chain [] =
+global_variable mframe_t gunner_frames_fire_chain [] =
 {
 	{ai_charge,   0, GunnerFire},
 	{ai_charge,   0, GunnerFire},
@@ -42853,9 +42599,9 @@ mframe_t gunner_frames_fire_chain [] =
 	{ai_charge,   0, GunnerFire},
 	{ai_charge,   0, GunnerFire},
 };
-mmove_t gunner_move_fire_chain = {144, 151, gunner_frames_fire_chain, gunner_refire_chain};
+global_variable mmove_t gunner_move_fire_chain = {144, 151, gunner_frames_fire_chain, gunner_refire_chain};
 
-mframe_t gunner_frames_endfire_chain [] =
+global_variable mframe_t gunner_frames_endfire_chain [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -42865,9 +42611,9 @@ mframe_t gunner_frames_endfire_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_endfire_chain = {152, 158, gunner_frames_endfire_chain, gunner_run};
+global_variable mmove_t gunner_move_endfire_chain = {152, 158, gunner_frames_endfire_chain, gunner_run};
 
-mframe_t gunner_frames_attack_grenade [] =
+global_variable mframe_t gunner_frames_attack_grenade [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -42891,7 +42637,7 @@ mframe_t gunner_frames_attack_grenade [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t gunner_move_attack_grenade = {108, 128, gunner_frames_attack_grenade, gunner_run};
+global_variable mmove_t gunner_move_attack_grenade = {108, 128, gunner_frames_attack_grenade, gunner_run};
 
 void gunner_attack(edict_t* self)
 {
@@ -43013,7 +42759,7 @@ void hover_reattack (edict_t* self);
 void hover_fire_blaster (edict_t* self);
 void hover_die (edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point);
 
-mframe_t hover_frames_stand [] =
+global_variable mframe_t hover_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -43046,9 +42792,9 @@ mframe_t hover_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	hover_move_stand = {0, 29, hover_frames_stand, NULL};
+global_variable mmove_t	hover_move_stand = {0, 29, hover_frames_stand, NULL};
 
-mframe_t hover_frames_stop1 [] =
+global_variable mframe_t hover_frames_pain3 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -43060,71 +42806,9 @@ mframe_t hover_frames_stop1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_stop1 = {65, 73, hover_frames_stop1, NULL};
+global_variable mmove_t hover_move_pain3 = {153, 161, hover_frames_pain3, hover_run};
 
-mframe_t hover_frames_stop2 [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_stop2 = {74, 81, hover_frames_stop2, NULL};
-
-mframe_t hover_frames_takeoff [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	-2,	NULL},
-	{ai_move,	5,	NULL},
-	{ai_move,	-1,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	-1,	NULL},
-	{ai_move,	-1,	NULL},
-	{ai_move,	-1,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	-6,	NULL},
-	{ai_move,	-9,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	1,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	3,	NULL},
-	{ai_move,	2,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_takeoff = {82, 111, hover_frames_takeoff, NULL};
-
-mframe_t hover_frames_pain3 [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_pain3 = {153, 161, hover_frames_pain3, hover_run};
-
-mframe_t hover_frames_pain2 [] =
+global_variable mframe_t hover_frames_pain2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -43139,9 +42823,9 @@ mframe_t hover_frames_pain2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t hover_move_pain2 = {141, 152, hover_frames_pain2, hover_run};
+global_variable mmove_t hover_move_pain2 = {141, 152, hover_frames_pain2, hover_run};
 
-mframe_t hover_frames_pain1 [] =
+global_variable mframe_t hover_frames_pain1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -43172,55 +42856,9 @@ mframe_t hover_frames_pain1 [] =
 	{ai_move,	3,	NULL},
 	{ai_move,	4,	NULL},
 };
-mmove_t hover_move_pain1 = {113, 140, hover_frames_pain1, hover_run};
+global_variable mmove_t hover_move_pain1 = {113, 140, hover_frames_pain1, hover_run};
 
-mframe_t hover_frames_land [] =
-{
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_land = {112, 112, hover_frames_land, NULL};
-
-mframe_t hover_frames_forward [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_forward = {30, 64, hover_frames_forward, NULL};
-
-mframe_t hover_frames_walk [] =
+global_variable mframe_t hover_frames_walk [] =
 {
 	{ai_walk,	4,	NULL},
 	{ai_walk,	4,	NULL},
@@ -43258,9 +42896,9 @@ mframe_t hover_frames_walk [] =
 	{ai_walk,	4,	NULL},
 	{ai_walk,	4,	NULL},
 };
-mmove_t hover_move_walk = {30, 64, hover_frames_walk, NULL};
+global_variable mmove_t hover_move_walk = {30, 64, hover_frames_walk, NULL};
 
-mframe_t hover_frames_run [] =
+global_variable mframe_t hover_frames_run [] =
 {
 	{ai_run,	10,	NULL},
 	{ai_run,	10,	NULL},
@@ -43298,9 +42936,9 @@ mframe_t hover_frames_run [] =
 	{ai_run,	10,	NULL},
 	{ai_run,	10,	NULL},
 };
-mmove_t hover_move_run = {30, 64, hover_frames_run, NULL};
+global_variable mmove_t hover_move_run = {30, 64, hover_frames_run, NULL};
 
-mframe_t hover_frames_death1 [] =
+global_variable mframe_t hover_frames_death1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -43314,59 +42952,30 @@ mframe_t hover_frames_death1 [] =
 	{ai_move,	4,	NULL},
 	{ai_move,	7,	NULL},
 };
-mmove_t hover_move_death1 = {162, 172, hover_frames_death1, hover_dead};
+global_variable mmove_t hover_move_death1 = {162, 172, hover_frames_death1, hover_dead};
 
-mframe_t hover_frames_backward [] =
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t hover_move_backward = {173, 196, hover_frames_backward, NULL};
-
-mframe_t hover_frames_start_attack [] =
+global_variable mframe_t hover_frames_start_attack [] =
 {
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t hover_move_start_attack = {197, 199, hover_frames_start_attack, hover_attack};
+global_variable mmove_t hover_move_start_attack = {197, 199, hover_frames_start_attack, hover_attack};
 
-mframe_t hover_frames_attack1 [] =
+global_variable mframe_t hover_frames_attack1 [] =
 {
 	{ai_charge,	-10,	hover_fire_blaster},
 	{ai_charge,	-10,	hover_fire_blaster},
 	{ai_charge,	0,		hover_reattack},
 };
-mmove_t hover_move_attack1 = {200, 202, hover_frames_attack1, NULL};
+global_variable mmove_t hover_move_attack1 = {200, 202, hover_frames_attack1, NULL};
 
-mframe_t hover_frames_end_attack [] =
+global_variable mframe_t hover_frames_end_attack [] =
 {
 	{ai_charge,	1,	NULL},
 	{ai_charge,	1,	NULL},
 };
-mmove_t hover_move_end_attack = {203, 204, hover_frames_end_attack, hover_run};
+global_variable mmove_t hover_move_end_attack = {203, 204, hover_frames_end_attack, hover_run};
 
 void hover_reattack (edict_t* self)
 {
@@ -43587,7 +43196,7 @@ global_variable int	sound_sight;
 global_variable int	sound_search;
 global_variable int	sound_idle;
 
-mframe_t infantry_frames_stand [] =
+global_variable mframe_t infantry_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -43612,14 +43221,14 @@ mframe_t infantry_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t infantry_move_stand = {50, 71, infantry_frames_stand, NULL};
+global_variable mmove_t infantry_move_stand = {50, 71, infantry_frames_stand, NULL};
 
 void infantry_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_stand;
 }
 
-mframe_t infantry_frames_fidget [] =
+global_variable mframe_t infantry_frames_fidget [] =
 {
 	{ai_stand, 1,  NULL},
 	{ai_stand, 0,  NULL},
@@ -43671,7 +43280,7 @@ mframe_t infantry_frames_fidget [] =
 	{ai_stand, -3, NULL},
 	{ai_stand, -2, NULL},
 };
-mmove_t infantry_move_fidget = {1, 49, infantry_frames_fidget, infantry_stand};
+global_variable mmove_t infantry_move_fidget = {1, 49, infantry_frames_fidget, infantry_stand};
 
 void infantry_fidget (edict_t* self)
 {
@@ -43679,7 +43288,7 @@ void infantry_fidget (edict_t* self)
 	PF_StartSound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-mframe_t infantry_frames_walk [] =
+global_variable mframe_t infantry_frames_walk [] =
 {
 	{ai_walk, 5,  NULL},
 	{ai_walk, 4,  NULL},
@@ -43694,14 +43303,14 @@ mframe_t infantry_frames_walk [] =
 	{ai_walk, 4,  NULL},
 	{ai_walk, 5,  NULL},
 };
-mmove_t infantry_move_walk = {74, 85, infantry_frames_walk, NULL};
+global_variable mmove_t infantry_move_walk = {74, 85, infantry_frames_walk, NULL};
 
 void infantry_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &infantry_move_walk;
 }
 
-mframe_t infantry_frames_run [] =
+global_variable mframe_t infantry_frames_run [] =
 {
 	{ai_run, 10, NULL},
 	{ai_run, 20, NULL},
@@ -43712,7 +43321,7 @@ mframe_t infantry_frames_run [] =
 	{ai_run, 2,  NULL},
 	{ai_run, 6,  NULL},
 };
-mmove_t infantry_move_run = {92, 99, infantry_frames_run, NULL};
+global_variable mmove_t infantry_move_run = {92, 99, infantry_frames_run, NULL};
 
 void infantry_run (edict_t* self)
 {
@@ -43722,7 +43331,7 @@ void infantry_run (edict_t* self)
 		self->monsterinfo.currentmove = &infantry_move_run;
 }
 
-mframe_t infantry_frames_pain1 [] =
+global_variable mframe_t infantry_frames_pain1 [] =
 {
 	{ai_move, -3, NULL},
 	{ai_move, -2, NULL},
@@ -43735,9 +43344,9 @@ mframe_t infantry_frames_pain1 [] =
 	{ai_move, 6,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t infantry_move_pain1 = {100, 109, infantry_frames_pain1, infantry_run};
+global_variable mmove_t infantry_move_pain1 = {100, 109, infantry_frames_pain1, infantry_run};
 
-mframe_t infantry_frames_pain2 [] =
+global_variable mframe_t infantry_frames_pain2 [] =
 {
 	{ai_move, -3, NULL},
 	{ai_move, -3, NULL},
@@ -43750,7 +43359,7 @@ mframe_t infantry_frames_pain2 [] =
 	{ai_move, 5,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t infantry_move_pain2 = {110, 119, infantry_frames_pain2, infantry_run};
+global_variable mmove_t infantry_move_pain2 = {110, 119, infantry_frames_pain2, infantry_run};
 
 procedure void infantry_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -43851,7 +43460,7 @@ void infantry_dead (edict_t* self)
 	M_FlyCheck (self);
 }
 
-mframe_t infantry_frames_death1 [] =
+global_variable mframe_t infantry_frames_death1 [] =
 {
 	{ai_move, -4, NULL},
 	{ai_move, 0,  NULL},
@@ -43874,10 +43483,10 @@ mframe_t infantry_frames_death1 [] =
 	{ai_move, -3, NULL},
 	{ai_move, -3, NULL},
 };
-mmove_t infantry_move_death1 = {125, 144, infantry_frames_death1, infantry_dead};
+global_variable mmove_t infantry_move_death1 = {125, 144, infantry_frames_death1, infantry_dead};
 
 // Off with his head
-mframe_t infantry_frames_death2 [] =
+global_variable mframe_t infantry_frames_death2 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, 1,   NULL},
@@ -43905,9 +43514,9 @@ mframe_t infantry_frames_death2 [] =
 	{ai_move, 4,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t infantry_move_death2 = {145, 169, infantry_frames_death2, infantry_dead};
+global_variable mmove_t infantry_move_death2 = {145, 169, infantry_frames_death2, infantry_dead};
 
-mframe_t infantry_frames_death3 [] =
+global_variable mframe_t infantry_frames_death3 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
@@ -43919,7 +43528,7 @@ mframe_t infantry_frames_death3 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t infantry_move_death3 = {170, 178, infantry_frames_death3, infantry_dead};
+global_variable mmove_t infantry_move_death3 = {170, 178, infantry_frames_death3, infantry_dead};
 
 procedure void infantry_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -44034,7 +43643,7 @@ void infantry_fire (edict_t* self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-mframe_t infantry_frames_attack1 [] =
+global_variable mframe_t infantry_frames_attack1 [] =
 {
 	{ai_charge, 4,  NULL},
 	{ai_charge, -1, NULL},
@@ -44052,7 +43661,7 @@ mframe_t infantry_frames_attack1 [] =
 	{ai_charge, -2, NULL},
 	{ai_charge, -3, NULL},
 };
-mmove_t infantry_move_attack1 = {184, 198, infantry_frames_attack1, infantry_run};
+global_variable mmove_t infantry_move_attack1 = {184, 198, infantry_frames_attack1, infantry_run};
 
 void infantry_swing (edict_t* self)
 {
@@ -44068,7 +43677,7 @@ void infantry_smack (edict_t* self)
 		PF_StartSound (self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
 }
 
-mframe_t infantry_frames_attack2 [] =
+global_variable mframe_t infantry_frames_attack2 [] =
 {
 	{ai_charge, 3, NULL},
 	{ai_charge, 6, NULL},
@@ -44079,7 +43688,7 @@ mframe_t infantry_frames_attack2 [] =
 	{ai_charge, 6, NULL},
 	{ai_charge, 3, NULL},
 };
-mmove_t infantry_move_attack2 = {199, 206, infantry_frames_attack2, infantry_run};
+global_variable mmove_t infantry_move_attack2 = {199, 206, infantry_frames_attack2, infantry_run};
 
 void infantry_attack(edict_t* self)
 {
@@ -44181,7 +43790,7 @@ void insane_checkdown (edict_t* self);
 void insane_checkup (edict_t* self);
 void insane_onground (edict_t* self);
 
-mframe_t insane_frames_stand_normal [] =
+global_variable mframe_t insane_frames_stand_normal [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -44190,9 +43799,9 @@ mframe_t insane_frames_stand_normal [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, insane_checkdown},
 };
-mmove_t insane_move_stand_normal = {59, 64, insane_frames_stand_normal, insane_stand};
+global_variable mmove_t insane_move_stand_normal = {59, 64, insane_frames_stand_normal, insane_stand};
 
-mframe_t insane_frames_stand_insane [] =
+global_variable mframe_t insane_frames_stand_insane [] =
 {
 	{ai_stand,	0,	insane_shake},
 	{ai_stand,	0,	NULL},
@@ -44225,9 +43834,9 @@ mframe_t insane_frames_stand_insane [] =
 	{ai_stand,	0,	NULL},
 	{ai_stand,	0,	insane_checkdown},
 };
-mmove_t insane_move_stand_insane = {64, 93, insane_frames_stand_insane, insane_stand};
+global_variable mmove_t insane_move_stand_insane = {64, 93, insane_frames_stand_insane, insane_stand};
 
-mframe_t insane_frames_uptodown [] =
+global_variable mframe_t insane_frames_uptodown [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -44273,9 +43882,9 @@ mframe_t insane_frames_uptodown [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t insane_move_uptodown = {0, 39, insane_frames_uptodown, insane_onground};
+global_variable mmove_t insane_move_uptodown = {0, 39, insane_frames_uptodown, insane_onground};
 
-mframe_t insane_frames_downtoup [] =
+global_variable mframe_t insane_frames_downtoup [] =
 {
 	{ai_move,	-0.7,	NULL},			// 41
 	{ai_move,	-1.2,	NULL},			// 42
@@ -44297,9 +43906,9 @@ mframe_t insane_frames_downtoup [] =
 	{ai_move,	0,	NULL},				// 58
 	{ai_move,	0,	NULL},				// 59
 };
-mmove_t insane_move_downtoup = {40, 58, insane_frames_downtoup, insane_stand};
+global_variable mmove_t insane_move_downtoup = {40, 58, insane_frames_downtoup, insane_stand};
 
-mframe_t insane_frames_jumpdown [] =
+global_variable mframe_t insane_frames_jumpdown [] =
 {
 	{ai_move,	0.2,	NULL},
 	{ai_move,	11.5,	NULL},
@@ -44307,9 +43916,9 @@ mframe_t insane_frames_jumpdown [] =
 	{ai_move,	7.1,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t insane_move_jumpdown = {95, 99, insane_frames_jumpdown, insane_onground};
+global_variable mmove_t insane_move_jumpdown = {95, 99, insane_frames_jumpdown, insane_onground};
 
-mframe_t insane_frames_down [] =
+global_variable mframe_t insane_frames_down [] =
 {
 	{ai_move,	0,		NULL},		// 100
 	{ai_move,	0,		NULL},
@@ -44373,7 +43982,7 @@ mframe_t insane_frames_down [] =
 	{ai_move,	0.7,		NULL},
 	{ai_move,	0,		insane_checkup},		// 160
 };
-mmove_t insane_move_down = {99, 159, insane_frames_down, insane_onground};
+global_variable mmove_t insane_move_down = {99, 159, insane_frames_down, insane_onground};
 
 global_variable mframe_t insane_frames_walk_normal [] =
 {
@@ -44423,10 +44032,10 @@ global_variable mframe_t insane_frames_walk_insane[] = {
 	{ai_walk,	1.8,	NULL},		// 25
 	{ai_walk,	0,	NULL},		// 26
 };
-mmove_t insane_move_walk_insane = {173, 198, insane_frames_walk_insane, insane_walk};
-mmove_t insane_move_run_insane = {173, 198, insane_frames_walk_insane, insane_run};
+global_variable mmove_t insane_move_walk_insane = {173, 198, insane_frames_walk_insane, insane_walk};
+global_variable mmove_t insane_move_run_insane = {173, 198, insane_frames_walk_insane, insane_run};
 
-mframe_t insane_frames_stand_pain [] =
+global_variable mframe_t insane_frames_stand_pain [] =
 {
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
@@ -44440,9 +44049,9 @@ mframe_t insane_frames_stand_pain [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_stand_pain = {199, 209, insane_frames_stand_pain, insane_run};
+global_variable mmove_t insane_move_stand_pain = {199, 209, insane_frames_stand_pain, insane_run};
 
-mframe_t insane_frames_stand_death [] =
+global_variable mframe_t insane_frames_stand_death [] =
 {
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
@@ -44462,9 +44071,9 @@ mframe_t insane_frames_stand_death [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_stand_death = {210, 226, insane_frames_stand_death, insane_dead};
+global_variable mmove_t insane_move_stand_death = {210, 226, insane_frames_stand_death, insane_dead};
 
-mframe_t insane_frames_crawl [] =
+global_variable mframe_t insane_frames_crawl [] =
 {
 	{ai_walk,	0,		insane_scream},
 	{ai_walk,	1.5,	NULL},
@@ -44476,10 +44085,10 @@ mframe_t insane_frames_crawl [] =
 	{ai_walk,	3.4,	NULL},
 	{ai_walk,	2.4,	NULL},
 };
-mmove_t insane_move_crawl = {227, 235, insane_frames_crawl, NULL};
-mmove_t insane_move_runcrawl = {227, 235, insane_frames_crawl, NULL};
+global_variable mmove_t insane_move_crawl = {227, 235, insane_frames_crawl, NULL};
+global_variable mmove_t insane_move_runcrawl = {227, 235, insane_frames_crawl, NULL};
 
-mframe_t insane_frames_crawl_pain [] =
+global_variable mframe_t insane_frames_crawl_pain [] =
 {
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
@@ -44491,9 +44100,9 @@ mframe_t insane_frames_crawl_pain [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_crawl_pain = {236, 244, insane_frames_crawl_pain, insane_run};
+global_variable mmove_t insane_move_crawl_pain = {236, 244, insane_frames_crawl_pain, insane_run};
 
-mframe_t insane_frames_crawl_death [] =
+global_variable mframe_t insane_frames_crawl_death [] =
 {
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
@@ -44503,9 +44112,9 @@ mframe_t insane_frames_crawl_death [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_crawl_death = {245, 251, insane_frames_crawl_death, insane_dead};
+global_variable mmove_t insane_move_crawl_death = {245, 251, insane_frames_crawl_death, insane_dead};
 
-mframe_t insane_frames_cross [] =
+global_variable mframe_t insane_frames_cross [] =
 {
 	{ai_move,	0,		insane_moan},
 	{ai_move,	0,		NULL},
@@ -44523,9 +44132,9 @@ mframe_t insane_frames_cross [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_cross = {252, 266, insane_frames_cross, insane_cross};
+global_variable mmove_t insane_move_cross = {252, 266, insane_frames_cross, insane_cross};
 
-mframe_t insane_frames_struggle_cross [] =
+global_variable mframe_t insane_frames_struggle_cross [] =
 {
 	{ai_move,	0,		insane_scream},
 	{ai_move,	0,		NULL},
@@ -44543,7 +44152,7 @@ mframe_t insane_frames_struggle_cross [] =
 	{ai_move,	0,		NULL},
 	{ai_move,	0,		NULL},
 };
-mmove_t insane_move_struggle_cross = {267, 281, insane_frames_struggle_cross, insane_cross};
+global_variable mmove_t insane_move_struggle_cross = {267, 281, insane_frames_struggle_cross, insane_cross};
 
 void insane_cross (edict_t* self)
 {
@@ -44899,7 +44508,7 @@ procedure void medic_sight(edict_t* self, edict_t* other) {
 	PF_StartSound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-mframe_t medic_frames_stand [] =
+global_variable mframe_t medic_frames_stand [] =
 {
 	{ai_stand, 0, medic_idle},
 	{ai_stand, 0, NULL},
@@ -44993,14 +44602,14 @@ mframe_t medic_frames_stand [] =
 	{ai_stand, 0, NULL},
 
 };
-mmove_t medic_move_stand = {12, 101, medic_frames_stand, NULL};
+global_variable mmove_t medic_move_stand = {12, 101, medic_frames_stand, NULL};
 
 void medic_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &medic_move_stand;
 }
 
-mframe_t medic_frames_walk [] =
+global_variable mframe_t medic_frames_walk [] =
 {
 	{ai_walk, 6.2,	NULL},
 	{ai_walk, 18.1,  NULL},
@@ -45015,14 +44624,14 @@ mframe_t medic_frames_walk [] =
 	{ai_walk, 14,	NULL},
 	{ai_walk, 9.3,	NULL},
 };
-mmove_t medic_move_walk = {0, 11, medic_frames_walk, NULL};
+global_variable mmove_t medic_move_walk = {0, 11, medic_frames_walk, NULL};
 
 void medic_walk (edict_t* self)
 {
 	self->monsterinfo.currentmove = &medic_move_walk;
 }
 
-mframe_t medic_frames_run [] =
+global_variable mframe_t medic_frames_run [] =
 {
 	{ai_run, 18,		NULL},
 	{ai_run, 22.5,	NULL},
@@ -45032,7 +44641,7 @@ mframe_t medic_frames_run [] =
 	{ai_run, 35.6,	NULL},
 
 };
-mmove_t medic_move_run = {102, 107, medic_frames_run, NULL};
+global_variable mmove_t medic_move_run = {102, 107, medic_frames_run, NULL};
 
 void medic_run (edict_t* self)
 {
@@ -45058,7 +44667,7 @@ void medic_run (edict_t* self)
 		self->monsterinfo.currentmove = &medic_move_run;
 }
 
-mframe_t medic_frames_pain1 [] =
+global_variable mframe_t medic_frames_pain1 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -45069,7 +44678,7 @@ mframe_t medic_frames_pain1 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t medic_move_pain1 = {108, 115, medic_frames_pain1, medic_run};
+global_variable mmove_t medic_move_pain1 = {108, 115, medic_frames_pain1, medic_run};
 
 global_variable mframe_t medic_frames_pain2[] = {
 	{ai_move, 0, NULL},
@@ -45151,7 +44760,7 @@ void medic_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t medic_frames_death [] =
+global_variable mframe_t medic_frames_death [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -45184,7 +44793,7 @@ mframe_t medic_frames_death [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t medic_move_death = {147, 176, medic_frames_death, medic_dead};
+global_variable mmove_t medic_move_death = {147, 176, medic_frames_death, medic_dead};
 
 procedure void medic_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -45248,7 +44857,7 @@ void medic_duck_up (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t medic_frames_duck [] =
+global_variable mframe_t medic_frames_duck [] =
 {
 	{ai_move, -1,	NULL},
 	{ai_move, -1,	NULL},
@@ -45267,7 +44876,7 @@ mframe_t medic_frames_duck [] =
 	{ai_move, -1,	NULL},
 	{ai_move, -1,	NULL},
 };
-mmove_t medic_move_duck = {131, 146, medic_frames_duck, medic_run};
+global_variable mmove_t medic_move_duck = {131, 146, medic_frames_duck, medic_run};
 
 procedure void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
 	UNUSED(eta);
@@ -45281,7 +44890,7 @@ procedure void medic_dodge(edict_t* self, edict_t* attacker, float eta) {
 	self->monsterinfo.currentmove = &medic_move_duck;
 }
 
-mframe_t medic_frames_attackHyperBlaster [] =
+global_variable mframe_t medic_frames_attackHyperBlaster [] =
 {
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	NULL},
@@ -45300,7 +44909,7 @@ mframe_t medic_frames_attackHyperBlaster [] =
 	{ai_charge, 0,	medic_fire_blaster},
 	{ai_charge, 0,	medic_fire_blaster},
 };
-mmove_t medic_move_attackHyperBlaster = {191, 206, medic_frames_attackHyperBlaster, medic_run};
+global_variable mmove_t medic_move_attackHyperBlaster = {191, 206, medic_frames_attackHyperBlaster, medic_run};
 
 void medic_continue (edict_t* self)
 {
@@ -45309,7 +44918,7 @@ void medic_continue (edict_t* self)
 			self->monsterinfo.currentmove = &medic_move_attackHyperBlaster;
 }
 
-mframe_t medic_frames_attackBlaster [] =
+global_variable mframe_t medic_frames_attackBlaster [] =
 {
 	{ai_charge, 0,	NULL},
 	{ai_charge, 5,	NULL},
@@ -45326,7 +44935,7 @@ mframe_t medic_frames_attackBlaster [] =
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	medic_continue},	// Change to medic_continue... Else, go to frame 32
 };
-mmove_t medic_move_attackBlaster = {177, 190, medic_frames_attackBlaster, medic_run};
+global_variable mmove_t medic_move_attackBlaster = {177, 190, medic_frames_attackBlaster, medic_run};
 
 void medic_hook_launch (edict_t* self)
 {
@@ -45434,7 +45043,7 @@ void medic_hook_retract (edict_t* self)
 	self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
 }
 
-mframe_t medic_frames_attackCable [] =
+global_variable mframe_t medic_frames_attackCable [] =
 {
 	{ai_move, 2,		NULL},
 	{ai_move, 3,		NULL},
@@ -45465,7 +45074,7 @@ mframe_t medic_frames_attackCable [] =
 	{ai_move, 1.2,	NULL},
 	{ai_move, 1.3,	NULL},
 };
-mmove_t medic_move_attackCable = {209, 236, medic_frames_attackCable, medic_run};
+global_variable mmove_t medic_move_attackCable = {209, 236, medic_frames_attackCable, medic_run};
 
 void medic_attack(edict_t* self)
 {
@@ -45546,7 +45155,7 @@ is not a staircase.
 
 =============
 */
-int c_yes, c_no;
+global_variable int c_yes, c_no;
 
 bool M_CheckBottom (edict_t *ent)
 {
@@ -46121,7 +45730,7 @@ void mutant_swing (edict_t* self)
 // STAND
 //
 
-mframe_t mutant_frames_stand [] =
+global_variable mframe_t mutant_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -46180,7 +45789,7 @@ mframe_t mutant_frames_stand [] =
 
 	{ai_stand, 0, NULL},
 };
-mmove_t mutant_move_stand = {62, 112, mutant_frames_stand, NULL};
+global_variable mmove_t mutant_move_stand = {62, 112, mutant_frames_stand, NULL};
 
 void mutant_stand (edict_t* self)
 {
@@ -46227,7 +45836,7 @@ void mutant_idle (edict_t* self)
 
 void mutant_walk (edict_t* self);
 
-mframe_t mutant_frames_walk [] =
+global_variable mframe_t mutant_frames_walk [] =
 {
 	{ai_walk,	3,		NULL},
 	{ai_walk,	1,		NULL},
@@ -46242,21 +45851,21 @@ mframe_t mutant_frames_walk [] =
 	{ai_walk,	15,		NULL},
 	{ai_walk,	6,		NULL},
 };
-mmove_t mutant_move_walk = {130, 141, mutant_frames_walk, NULL};
+global_variable mmove_t mutant_move_walk = {130, 141, mutant_frames_walk, NULL};
 
 void mutant_walk_loop (edict_t* self)
 {
 	self->monsterinfo.currentmove = &mutant_move_walk;
 }
 
-mframe_t mutant_frames_start_walk [] =
+global_variable mframe_t mutant_frames_start_walk [] =
 {
 	{ai_walk,	5,		NULL},
 	{ai_walk,	5,		NULL},
 	{ai_walk,	-2,		NULL},
 	{ai_walk,	1,		NULL},
 };
-mmove_t mutant_move_start_walk = {126, 129, mutant_frames_start_walk, mutant_walk_loop};
+global_variable mmove_t mutant_move_start_walk = {126, 129, mutant_frames_start_walk, mutant_walk_loop};
 
 void mutant_walk (edict_t* self)
 {
@@ -46267,7 +45876,7 @@ void mutant_walk (edict_t* self)
 // RUN
 //
 
-mframe_t mutant_frames_run [] =
+global_variable mframe_t mutant_frames_run [] =
 {
 	{ai_run,	40,		NULL},
 	{ai_run,	40,		mutant_step},
@@ -46276,7 +45885,7 @@ mframe_t mutant_frames_run [] =
 	{ai_run,	17,		NULL},
 	{ai_run,	10,		NULL},
 };
-mmove_t mutant_move_run = {56, 61, mutant_frames_run, NULL};
+global_variable mmove_t mutant_move_run = {56, 61, mutant_frames_run, NULL};
 
 void mutant_run (edict_t* self)
 {
@@ -46321,7 +45930,7 @@ void mutant_check_refire (edict_t* self)
 		self->monsterinfo.nextframe = 8;
 }
 
-mframe_t mutant_frames_attack [] =
+global_variable mframe_t mutant_frames_attack [] =
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -46331,7 +45940,7 @@ mframe_t mutant_frames_attack [] =
 	{ai_charge,	0,	mutant_hit_right},
 	{ai_charge,	0,	mutant_check_refire},
 };
-mmove_t mutant_move_attack = {8, 14, mutant_frames_attack, mutant_run};
+global_variable mmove_t mutant_move_attack = {8, 14, mutant_frames_attack, mutant_run};
 
 void mutant_melee (edict_t* self)
 {
@@ -46412,7 +46021,7 @@ void mutant_check_landing (edict_t* self)
 		self->monsterinfo.nextframe = 4;
 }
 
-mframe_t mutant_frames_jump [] =
+global_variable mframe_t mutant_frames_jump [] =
 {
 	{ai_charge,	 0,	NULL},
 	{ai_charge,	17,	NULL},
@@ -46423,7 +46032,7 @@ mframe_t mutant_frames_jump [] =
 	{ai_charge,	 3,	NULL},
 	{ai_charge,	 0,	NULL},
 };
-mmove_t mutant_move_jump = {0, 7, mutant_frames_jump, mutant_run};
+global_variable mmove_t mutant_move_jump = {0, 7, mutant_frames_jump, mutant_run};
 
 void mutant_jump (edict_t* self)
 {
@@ -46493,7 +46102,7 @@ bool mutant_checkattack (edict_t* self)
 // PAIN
 //
 
-mframe_t mutant_frames_pain1 [] =
+global_variable mframe_t mutant_frames_pain1 [] =
 {
 	{ai_move,	4,	NULL},
 	{ai_move,	-3,	NULL},
@@ -46501,9 +46110,9 @@ mframe_t mutant_frames_pain1 [] =
 	{ai_move,	2,	NULL},
 	{ai_move,	5,	NULL},
 };
-mmove_t mutant_move_pain1 = {34, 38, mutant_frames_pain1, mutant_run};
+global_variable mmove_t mutant_move_pain1 = {34, 38, mutant_frames_pain1, mutant_run};
 
-mframe_t mutant_frames_pain2 [] =
+global_variable mframe_t mutant_frames_pain2 [] =
 {
 	{ai_move,	-24,NULL},
 	{ai_move,	11,	NULL},
@@ -46512,9 +46121,9 @@ mframe_t mutant_frames_pain2 [] =
 	{ai_move,	6,	NULL},
 	{ai_move,	4,	NULL},
 };
-mmove_t mutant_move_pain2 = {39, 44, mutant_frames_pain2, mutant_run};
+global_variable mmove_t mutant_move_pain2 = {39, 44, mutant_frames_pain2, mutant_run};
 
-mframe_t mutant_frames_pain3 [] =
+global_variable mframe_t mutant_frames_pain3 [] =
 {
 	{ai_move,	-22,NULL},
 	{ai_move,	3,	NULL},
@@ -46528,7 +46137,7 @@ mframe_t mutant_frames_pain3 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	1,	NULL},
 };
-mmove_t mutant_move_pain3 = {45, 55, mutant_frames_pain3, mutant_run};
+global_variable mmove_t mutant_move_pain3 = {45, 55, mutant_frames_pain3, mutant_run};
 
 procedure void mutant_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -46578,7 +46187,7 @@ void mutant_dead (edict_t* self)
 	M_FlyCheck (self);
 }
 
-mframe_t mutant_frames_death1 [] =
+global_variable mframe_t mutant_frames_death1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -46590,9 +46199,9 @@ mframe_t mutant_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t mutant_move_death1 = {15, 23, mutant_frames_death1, mutant_dead};
+global_variable mmove_t mutant_move_death1 = {15, 23, mutant_frames_death1, mutant_dead};
 
-mframe_t mutant_frames_death2 [] =
+global_variable mframe_t mutant_frames_death2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -46605,7 +46214,7 @@ mframe_t mutant_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t mutant_move_death2 = {24, 33, mutant_frames_death2, mutant_dead};
+global_variable mmove_t mutant_move_death2 = {24, 33, mutant_frames_death2, mutant_dead};
 
 procedure void mutant_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -46752,16 +46361,16 @@ void parasite_search (edict_t* self)
 	PF_StartSound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
 
-mframe_t parasite_frames_start_fidget [] =
+global_variable mframe_t parasite_frames_start_fidget [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_start_fidget = {100, 103, parasite_frames_start_fidget, parasite_do_fidget};
+global_variable mmove_t parasite_move_start_fidget = {100, 103, parasite_frames_start_fidget, parasite_do_fidget};
 
-mframe_t parasite_frames_fidget [] =
+global_variable mframe_t parasite_frames_fidget [] =
 {
 	{ai_stand, 0, parasite_scratch},
 	{ai_stand, 0, NULL},
@@ -46770,9 +46379,9 @@ mframe_t parasite_frames_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_fidget = {104, 109, parasite_frames_fidget, parasite_refidget};
+global_variable mmove_t parasite_move_fidget = {104, 109, parasite_frames_fidget, parasite_refidget};
 
-mframe_t parasite_frames_end_fidget [] =
+global_variable mframe_t parasite_frames_end_fidget [] =
 {
 	{ai_stand, 0, parasite_scratch},
 	{ai_stand, 0, NULL},
@@ -46783,7 +46392,7 @@ mframe_t parasite_frames_end_fidget [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t parasite_move_end_fidget = {110, 117, parasite_frames_end_fidget, parasite_stand};
+global_variable mmove_t parasite_move_end_fidget = {110, 117, parasite_frames_end_fidget, parasite_stand};
 
 void parasite_end_fidget (edict_t* self)
 {
@@ -46808,7 +46417,7 @@ void parasite_idle (edict_t* self)
 	self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
 
-mframe_t parasite_frames_stand [] =
+global_variable mframe_t parasite_frames_stand [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -46828,14 +46437,14 @@ mframe_t parasite_frames_stand [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, parasite_tap},
 };
-mmove_t	parasite_move_stand = {83, 99, parasite_frames_stand, parasite_stand};
+global_variable mmove_t	parasite_move_stand = {83, 99, parasite_frames_stand, parasite_stand};
 
 void parasite_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &parasite_move_stand;
 }
 
-mframe_t parasite_frames_run [] =
+global_variable mframe_t parasite_frames_run [] =
 {
 	{ai_run, 30, NULL},
 	{ai_run, 30, NULL},
@@ -46845,25 +46454,14 @@ mframe_t parasite_frames_run [] =
 	{ai_run, 28, NULL},
 	{ai_run, 25, NULL},
 };
-mmove_t parasite_move_run = {70, 76, parasite_frames_run, NULL};
+global_variable mmove_t parasite_move_run = {70, 76, parasite_frames_run, NULL};
 
-mframe_t parasite_frames_start_run [] =
+global_variable mframe_t parasite_frames_start_run [] =
 {
 	{ai_run, 0,	NULL},
 	{ai_run, 30, NULL},
 };
-mmove_t parasite_move_start_run = {68, 69, parasite_frames_start_run, parasite_run};
-
-mframe_t parasite_frames_stop_run [] =
-{
-	{ai_run, 20, NULL},
-	{ai_run, 20,	NULL},
-	{ai_run, 12, NULL},
-	{ai_run, 10, NULL},
-	{ai_run, 0,  NULL},
-	{ai_run, 0,  NULL},
-};
-mmove_t parasite_move_stop_run = {77, 82, parasite_frames_stop_run, NULL};
+global_variable mmove_t parasite_move_start_run = {68, 69, parasite_frames_start_run, parasite_run};
 
 void parasite_start_run (edict_t* self)
 {
@@ -46881,7 +46479,7 @@ void parasite_run (edict_t* self)
 		self->monsterinfo.currentmove = &parasite_move_run;
 }
 
-mframe_t parasite_frames_walk [] =
+global_variable mframe_t parasite_frames_walk [] =
 {
 	{ai_walk, 30, NULL},
 	{ai_walk, 30, NULL},
@@ -46891,7 +46489,7 @@ mframe_t parasite_frames_walk [] =
 	{ai_walk, 28, NULL},
 	{ai_walk, 25, NULL},
 };
-mmove_t parasite_move_walk = {70, 76, parasite_frames_walk, parasite_walk};
+global_variable mmove_t parasite_move_walk = {70, 76, parasite_frames_walk, parasite_walk};
 
 global_variable mframe_t parasite_frames_start_walk[] = {
 	{ai_walk, 0,	NULL},
@@ -46899,16 +46497,6 @@ global_variable mframe_t parasite_frames_start_walk[] = {
 };
 
 global_variable mmove_t parasite_move_start_walk = {68, 69, parasite_frames_start_walk, NULL};
-
-mframe_t parasite_frames_stop_walk[] = {
-	{ai_walk, 20, NULL},
-	{ai_walk, 20,	NULL},
-	{ai_walk, 12, NULL},
-	{ai_walk, 10, NULL},
-	{ai_walk, 0,  NULL},
-	{ai_walk, 0,  NULL},
-};
-mmove_t parasite_move_stop_walk = {77, 82, parasite_frames_stop_walk, NULL};
 
 void parasite_start_walk (edict_t* self)
 {
@@ -47025,7 +46613,7 @@ void parasite_drain_attack (edict_t* self)
 	T_Damage (self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, damage, 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
 }
 
-mframe_t parasite_frames_drain [] =
+global_variable mframe_t parasite_frames_drain [] =
 {
 	{ai_charge, 0,	parasite_launch},
 	{ai_charge, 0,	NULL},
@@ -47046,57 +46634,11 @@ mframe_t parasite_frames_drain [] =
 	{ai_charge, -3,	NULL},
 	{ai_charge, 0,	NULL},
 };
-mmove_t parasite_move_drain = {39, 56, parasite_frames_drain, parasite_start_run};
-
-mframe_t parasite_frames_break [] =
-{
-	{ai_charge, 0,	NULL},
-	{ai_charge, -3,	NULL},
-	{ai_charge, 1,	NULL},
-	{ai_charge, 2,	NULL},
-	{ai_charge, -3,	NULL},
-	{ai_charge, 1,	NULL},
-	{ai_charge, 1,	NULL},
-	{ai_charge, 3,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, -18,	NULL},
-	{ai_charge, 3,	NULL},
-	{ai_charge, 9,	NULL},
-	{ai_charge, 6,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, -18,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, 8,	NULL},
-	{ai_charge, 9,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, -18,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, 0,	NULL},		// airborne,
-	{ai_charge, 0,	NULL},		// airborne,
-	{ai_charge, 0,	NULL},		// slides,
-	{ai_charge, 0,	NULL},		// slides,
-	{ai_charge, 0,	NULL},		// slides,
-	{ai_charge, 0,	NULL},		// slides,
-	{ai_charge, 4,	NULL},
-	{ai_charge, 11,	NULL},
-	{ai_charge, -2,	NULL},
-	{ai_charge, -5,	NULL},
-	{ai_charge, 1,	NULL},
-};
-mmove_t parasite_move_break = {0, 31, parasite_frames_break, parasite_start_run};
-
-/*
-===
-Break Stuff Ends
-===
-*/
+global_variable mmove_t parasite_move_drain = {39, 56, parasite_frames_drain, parasite_start_run};
 
 void parasite_attack (edict_t* self)
 {
-//	if (random() <= 0.2)
-//		self->monsterinfo.currentmove = &parasite_move_break;
-//	else
-		self->monsterinfo.currentmove = &parasite_move_drain;
+	self->monsterinfo.currentmove = &parasite_move_drain;
 }
 
 /*
@@ -47115,7 +46657,7 @@ void parasite_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t parasite_frames_death [] =
+global_variable mframe_t parasite_frames_death [] =
 {
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
@@ -47125,7 +46667,7 @@ mframe_t parasite_frames_death [] =
 	{ai_move, 0,	 NULL},
 	{ai_move, 0,	 NULL},
 };
-mmove_t parasite_move_death = {32, 38, parasite_frames_death, parasite_dead};
+global_variable mmove_t parasite_move_death = {32, 38, parasite_frames_death, parasite_dead};
 
 procedure void parasite_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
@@ -47241,7 +46783,7 @@ void soldier_cock (edict_t* self)
 
 void soldier_stand (edict_t* self);
 
-mframe_t soldier_frames_stand1 [] =
+global_variable mframe_t soldier_frames_stand1 [] =
 {
 	{ai_stand, 0, soldier_idle},
 	{ai_stand, 0, NULL},
@@ -47276,9 +46818,9 @@ mframe_t soldier_frames_stand1 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t soldier_move_stand1 = {146, 175, soldier_frames_stand1, soldier_stand};
+global_variable mmove_t soldier_move_stand1 = {146, 175, soldier_frames_stand1, soldier_stand};
 
-mframe_t soldier_frames_stand3 [] =
+global_variable mframe_t soldier_frames_stand3 [] =
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -47323,7 +46865,7 @@ mframe_t soldier_frames_stand3 [] =
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t soldier_move_stand3 = {176, 214, soldier_frames_stand3, soldier_stand};
+global_variable mmove_t soldier_move_stand3 = {176, 214, soldier_frames_stand3, soldier_stand};
 
 void soldier_stand (edict_t* self)
 {
@@ -47343,7 +46885,7 @@ void soldier_walk1_random (edict_t* self)
 		self->monsterinfo.nextframe = 215;
 }
 
-mframe_t soldier_frames_walk1 [] =
+global_variable mframe_t soldier_frames_walk1 [] =
 {
 	{ai_walk, 3,  NULL},
 	{ai_walk, 6,  NULL},
@@ -47379,9 +46921,9 @@ mframe_t soldier_frames_walk1 [] =
 	{ai_walk, 0,  NULL},
 	{ai_walk, 0,  NULL},
 };
-mmove_t soldier_move_walk1 = {215, 247, soldier_frames_walk1, NULL};
+global_variable mmove_t soldier_move_walk1 = {215, 247, soldier_frames_walk1, NULL};
 
-mframe_t soldier_frames_walk2 [] =
+global_variable mframe_t soldier_frames_walk2 [] =
 {
 	{ai_walk, 4,  NULL},
 	{ai_walk, 4,  NULL},
@@ -47394,7 +46936,7 @@ mframe_t soldier_frames_walk2 [] =
 	{ai_walk, 6,  NULL},
 	{ai_walk, 7,  NULL},
 };
-mmove_t soldier_move_walk2 = {256, 265, soldier_frames_walk2, NULL};
+global_variable mmove_t soldier_move_walk2 = {256, 265, soldier_frames_walk2, NULL};
 
 void soldier_walk (edict_t* self)
 {
@@ -47410,14 +46952,14 @@ void soldier_walk (edict_t* self)
 
 void soldier_run (edict_t* self);
 
-mframe_t soldier_frames_start_run [] =
+global_variable mframe_t soldier_frames_start_run [] =
 {
 	{ai_run, 7,  NULL},
 	{ai_run, 5,  NULL},
 };
-mmove_t soldier_move_start_run = {97, 98, soldier_frames_start_run, soldier_run};
+global_variable mmove_t soldier_move_start_run = {97, 98, soldier_frames_start_run, soldier_run};
 
-mframe_t soldier_frames_run [] =
+global_variable mframe_t soldier_frames_run [] =
 {
 	{ai_run, 10, NULL},
 	{ai_run, 11, NULL},
@@ -47426,7 +46968,7 @@ mframe_t soldier_frames_run [] =
 	{ai_run, 10, NULL},
 	{ai_run, 15, NULL},
 };
-mmove_t soldier_move_run = {99, 104, soldier_frames_run, NULL};
+global_variable mmove_t soldier_move_run = {99, 104, soldier_frames_run, NULL};
 
 void soldier_run (edict_t* self)
 {
@@ -47452,7 +46994,7 @@ void soldier_run (edict_t* self)
 // PAIN
 //
 
-mframe_t soldier_frames_pain1 [] =
+global_variable mframe_t soldier_frames_pain1 [] =
 {
 	{ai_move, -3, NULL},
 	{ai_move, 4,  NULL},
@@ -47460,9 +47002,9 @@ mframe_t soldier_frames_pain1 [] =
 	{ai_move, 1,  NULL},
 	{ai_move, 0,  NULL},
 };
-mmove_t soldier_move_pain1 = {50, 54, soldier_frames_pain1, soldier_run};
+global_variable mmove_t soldier_move_pain1 = {50, 54, soldier_frames_pain1, soldier_run};
 
-mframe_t soldier_frames_pain2 [] =
+global_variable mframe_t soldier_frames_pain2 [] =
 {
 	{ai_move, -13, NULL},
 	{ai_move, -1,  NULL},
@@ -47472,9 +47014,9 @@ mframe_t soldier_frames_pain2 [] =
 	{ai_move, 3,   NULL},
 	{ai_move, 2,   NULL},
 };
-mmove_t soldier_move_pain2 = {55, 61, soldier_frames_pain2, soldier_run};
+global_variable mmove_t soldier_move_pain2 = {55, 61, soldier_frames_pain2, soldier_run};
 
-mframe_t soldier_frames_pain3 [] =
+global_variable mframe_t soldier_frames_pain3 [] =
 {
 	{ai_move, -8, NULL},
 	{ai_move, 10, NULL},
@@ -47495,9 +47037,9 @@ mframe_t soldier_frames_pain3 [] =
 	{ai_move, 3,  NULL},
 	{ai_move, 2,  NULL},
 };
-mmove_t soldier_move_pain3 = {62, 79, soldier_frames_pain3, soldier_run};
+global_variable mmove_t soldier_move_pain3 = {62, 79, soldier_frames_pain3, soldier_run};
 
-mframe_t soldier_frames_pain4 [] =
+global_variable mframe_t soldier_frames_pain4 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
@@ -47517,7 +47059,7 @@ mframe_t soldier_frames_pain4 [] =
 	{ai_move, 2,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_pain4 = {80, 96, soldier_frames_pain4, soldier_run};
+global_variable mmove_t soldier_move_pain4 = {80, 96, soldier_frames_pain4, soldier_run};
 
 procedure void soldier_pain (edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -47668,7 +47210,7 @@ void soldier_attack1_refire2 (edict_t* self)
 		self->monsterinfo.nextframe = 1;
 }
 
-mframe_t soldier_frames_attack1 [] =
+global_variable mframe_t soldier_frames_attack1 [] =
 {
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
@@ -47683,7 +47225,7 @@ mframe_t soldier_frames_attack1 [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
 };
-mmove_t soldier_move_attack1 = {0, 11, soldier_frames_attack1, soldier_run};
+global_variable mmove_t soldier_move_attack1 = {0, 11, soldier_frames_attack1, soldier_run};
 
 // ATTACK2 (blaster/shotgun)
 
@@ -47718,7 +47260,7 @@ void soldier_attack2_refire2 (edict_t* self)
 		self->monsterinfo.nextframe = 15;
 }
 
-mframe_t soldier_frames_attack2 [] =
+global_variable mframe_t soldier_frames_attack2 [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -47739,7 +47281,7 @@ mframe_t soldier_frames_attack2 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack2 = {12, 29, soldier_frames_attack2, soldier_run};
+global_variable mmove_t soldier_move_attack2 = {12, 29, soldier_frames_attack2, soldier_run};
 
 // ATTACK3 (duck and shoot)
 
@@ -47774,7 +47316,7 @@ void soldier_attack3_refire (edict_t* self)
 		self->monsterinfo.nextframe = 32;
 }
 
-mframe_t soldier_frames_attack3 [] =
+global_variable mframe_t soldier_frames_attack3 [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -47786,7 +47328,7 @@ mframe_t soldier_frames_attack3 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack3 = {30, 38, soldier_frames_attack3, soldier_run};
+global_variable mmove_t soldier_move_attack3 = {30, 38, soldier_frames_attack3, soldier_run};
 
 // ATTACK4 (machinegun)
 
@@ -47795,7 +47337,7 @@ void soldier_fire4 (edict_t* self)
 	soldier_fire (self, 3);
 }
 
-mframe_t soldier_frames_attack4 [] =
+global_variable mframe_t soldier_frames_attack4 [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -47804,7 +47346,7 @@ mframe_t soldier_frames_attack4 [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t soldier_move_attack4 = {39, 44, soldier_frames_attack4, soldier_run};
+global_variable mmove_t soldier_move_attack4 = {39, 44, soldier_frames_attack4, soldier_run};
 
 // ATTACK6 (run & shoot)
 
@@ -47822,7 +47364,7 @@ void soldier_attack6_refire (edict_t* self)
 		return;
 }
 
-mframe_t soldier_frames_attack6 [] =
+global_variable mframe_t soldier_frames_attack6 [] =
 {
 	{ai_charge, 10, NULL},
 	{ai_charge,  4, NULL},
@@ -47839,7 +47381,7 @@ mframe_t soldier_frames_attack6 [] =
 	{ai_charge, 12, NULL},
 	{ai_charge, 17, soldier_attack6_refire},
 };
-mmove_t soldier_move_attack6 = {109, 122, soldier_frames_attack6, soldier_run};
+global_variable mmove_t soldier_move_attack6 = {109, 122, soldier_frames_attack6, soldier_run};
 
 void soldier_attack(edict_t* self)
 {
@@ -47887,7 +47429,7 @@ void soldier_duck_hold (edict_t* self)
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-mframe_t soldier_frames_duck [] =
+global_variable mframe_t soldier_frames_duck [] =
 {
 	{ai_move, 5, soldier_duck_down},
 	{ai_move, -1, soldier_duck_hold},
@@ -47895,7 +47437,7 @@ mframe_t soldier_frames_duck [] =
 	{ai_move, 0,  soldier_duck_up},
 	{ai_move, 5,  NULL},
 };
-mmove_t soldier_move_duck = {45, 49, soldier_frames_duck, soldier_run};
+global_variable mmove_t soldier_move_duck = {45, 49, soldier_frames_duck, soldier_run};
 
 void soldier_dodge (edict_t* self, edict_t* attacker, float eta)
 {
@@ -47946,7 +47488,7 @@ void soldier_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t soldier_frames_death1 [] =
+global_variable mframe_t soldier_frames_death1 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, -10, NULL},
@@ -47988,9 +47530,9 @@ mframe_t soldier_frames_death1 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death1 = {272, 307, soldier_frames_death1, soldier_dead};
+global_variable mmove_t soldier_move_death1 = {272, 307, soldier_frames_death1, soldier_dead};
 
-mframe_t soldier_frames_death2 [] =
+global_variable mframe_t soldier_frames_death2 [] =
 {
 	{ai_move, -5,  NULL},
 	{ai_move, -5,  NULL},
@@ -48031,9 +47573,9 @@ mframe_t soldier_frames_death2 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death2 = {308, 342, soldier_frames_death2, soldier_dead};
+global_variable mmove_t soldier_move_death2 = {308, 342, soldier_frames_death2, soldier_dead};
 
-mframe_t soldier_frames_death3 [] =
+global_variable mframe_t soldier_frames_death3 [] =
 {
 	{ai_move, -5,  NULL},
 	{ai_move, -5,  NULL},
@@ -48085,9 +47627,9 @@ mframe_t soldier_frames_death3 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death3 = {343, 387, soldier_frames_death3, soldier_dead};
+global_variable mmove_t soldier_move_death3 = {343, 387, soldier_frames_death3, soldier_dead};
 
-mframe_t soldier_frames_death4 [] =
+global_variable mframe_t soldier_frames_death4 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
@@ -48148,9 +47690,9 @@ mframe_t soldier_frames_death4 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death4 = {388, 440, soldier_frames_death4, soldier_dead};
+global_variable mmove_t soldier_move_death4 = {388, 440, soldier_frames_death4, soldier_dead};
 
-mframe_t soldier_frames_death5 [] =
+global_variable mframe_t soldier_frames_death5 [] =
 {
 	{ai_move, -5,  NULL},
 	{ai_move, -5,  NULL},
@@ -48179,9 +47721,9 @@ mframe_t soldier_frames_death5 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death5 = {441, 464, soldier_frames_death5, soldier_dead};
+global_variable mmove_t soldier_move_death5 = {441, 464, soldier_frames_death5, soldier_dead};
 
-mframe_t soldier_frames_death6 [] =
+global_variable mframe_t soldier_frames_death6 [] =
 {
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
@@ -48194,7 +47736,7 @@ mframe_t soldier_frames_death6 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t soldier_move_death6 = {465, 474, soldier_frames_death6, soldier_dead};
+global_variable mmove_t soldier_move_death6 = {465, 474, soldier_frames_death6, soldier_dead};
 
 procedure void soldier_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(attacker);
@@ -48377,7 +47919,7 @@ void supertank_reattack1(edict_t* self);
 // stand
 //
 
-mframe_t supertank_frames_stand []=
+global_variable mframe_t supertank_frames_stand []=
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -48440,14 +47982,14 @@ mframe_t supertank_frames_stand []=
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	supertank_move_stand = {194, 253, supertank_frames_stand, NULL};
+global_variable mmove_t	supertank_move_stand = {194, 253, supertank_frames_stand, NULL};
 
 void supertank_stand (edict_t* self)
 {
 	self->monsterinfo.currentmove = &supertank_move_stand;
 }
 
-mframe_t supertank_frames_run [] =
+global_variable mframe_t supertank_frames_run [] =
 {
 	{ai_run, 12,	TreadSound},
 	{ai_run, 12,	NULL},
@@ -48468,13 +48010,13 @@ mframe_t supertank_frames_run [] =
 	{ai_run, 12,	NULL},
 	{ai_run, 12,	NULL},
 };
-mmove_t	supertank_move_run = {128, 145, supertank_frames_run, NULL};
+global_variable mmove_t	supertank_move_run = {128, 145, supertank_frames_run, NULL};
 
 //
 // walk
 //
 
-mframe_t supertank_frames_forward [] =
+global_variable mframe_t supertank_frames_forward [] =
 {
 	{ai_walk, 4,	TreadSound},
 	{ai_walk, 4,	NULL},
@@ -48495,7 +48037,7 @@ mframe_t supertank_frames_forward [] =
 	{ai_walk, 4,	NULL},
 	{ai_walk, 4,	NULL},
 };
-mmove_t	supertank_move_forward = {128, 145, supertank_frames_forward, NULL};
+global_variable mmove_t	supertank_move_forward = {128, 145, supertank_frames_forward, NULL};
 
 void supertank_forward (edict_t* self)
 {
@@ -48515,80 +48057,34 @@ void supertank_run (edict_t* self)
 		self->monsterinfo.currentmove = &supertank_move_run;
 }
 
-mframe_t supertank_frames_turn_right [] =
-{
-	{ai_move,	0,	TreadSound},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t supertank_move_turn_right = {176, 193, supertank_frames_turn_right, supertank_run};
-
-mframe_t supertank_frames_turn_left [] =
-{
-	{ai_move,	0,	TreadSound},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t supertank_move_turn_left = {146, 163, supertank_frames_turn_left, supertank_run};
-
-mframe_t supertank_frames_pain3 [] =
+global_variable mframe_t supertank_frames_pain3 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain3 = {172, 175, supertank_frames_pain3, supertank_run};
+global_variable mmove_t supertank_move_pain3 = {172, 175, supertank_frames_pain3, supertank_run};
 
-mframe_t supertank_frames_pain2 [] =
+global_variable mframe_t supertank_frames_pain2 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain2 = {168, 171, supertank_frames_pain2, supertank_run};
+global_variable mmove_t supertank_move_pain2 = {168, 171, supertank_frames_pain2, supertank_run};
 
-mframe_t supertank_frames_pain1 [] =
+global_variable mframe_t supertank_frames_pain1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_pain1 = {164, 167, supertank_frames_pain1, supertank_run};
+global_variable mmove_t supertank_move_pain1 = {164, 167, supertank_frames_pain1, supertank_run};
 
-mframe_t supertank_frames_death1 [] =
+global_variable mframe_t supertank_frames_death1 [] =
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -48615,75 +48111,9 @@ mframe_t supertank_frames_death1 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	BossExplode},
 };
-mmove_t supertank_move_death = {98, 121, supertank_frames_death1, supertank_dead};
+global_variable mmove_t supertank_move_death = {98, 121, supertank_frames_death1, supertank_dead};
 
-mframe_t supertank_frames_backward[] =
-{
-	{ai_walk, 0,	TreadSound},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-	{ai_walk, 0,	NULL},
-};
-mmove_t	supertank_move_backward = {80, 97, supertank_frames_backward, NULL};
-
-mframe_t supertank_frames_attack4[]=
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t supertank_move_attack4 = {74, 79, supertank_frames_attack4, supertank_run};
-
-mframe_t supertank_frames_attack3[]=
-{
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},
-};
-mmove_t supertank_move_attack3 = {47, 73, supertank_frames_attack3, supertank_run};
-
-mframe_t supertank_frames_attack2[]=
+global_variable mframe_t supertank_frames_attack2[]=
 {
 	{ai_charge,	0,	NULL},
 	{ai_charge,	0,	NULL},
@@ -48713,9 +48143,9 @@ mframe_t supertank_frames_attack2[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_attack2 = {20, 46, supertank_frames_attack2, supertank_run};
+global_variable mmove_t supertank_move_attack2 = {20, 46, supertank_frames_attack2, supertank_run};
 
-mframe_t supertank_frames_attack1[]=
+global_variable mframe_t supertank_frames_attack1[]=
 {
 	{ai_charge,	0,	supertankMachineGun},
 	{ai_charge,	0,	supertankMachineGun},
@@ -48725,9 +48155,9 @@ mframe_t supertank_frames_attack1[]=
 	{ai_charge,	0,	supertankMachineGun},
 
 };
-mmove_t supertank_move_attack1 = {0, 5, supertank_frames_attack1, supertank_reattack1};
+global_variable mmove_t supertank_move_attack1 = {0, 5, supertank_frames_attack1, supertank_reattack1};
 
-mframe_t supertank_frames_end_attack1[]=
+global_variable mframe_t supertank_frames_end_attack1[]=
 {
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -48744,7 +48174,7 @@ mframe_t supertank_frames_end_attack1[]=
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 };
-mmove_t supertank_move_end_attack1 = {6, 19, supertank_frames_end_attack1, supertank_run};
+global_variable mmove_t supertank_move_end_attack1 = {6, 19, supertank_frames_end_attack1, supertank_run};
 
 void supertank_reattack1(edict_t* self)
 {
@@ -49052,7 +48482,7 @@ void tank_idle (edict_t* self)
 // stand
 //
 
-mframe_t tank_frames_stand []=
+global_variable mframe_t tank_frames_stand []=
 {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -49085,7 +48515,7 @@ mframe_t tank_frames_stand []=
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 };
-mmove_t	tank_move_stand = {0, 29, tank_frames_stand, NULL};
+global_variable mmove_t	tank_move_stand = {0, 29, tank_frames_stand, NULL};
 
 void tank_stand (edict_t* self)
 {
@@ -49098,16 +48528,7 @@ void tank_stand (edict_t* self)
 
 void tank_walk (edict_t* self);
 
-mframe_t tank_frames_start_walk [] =
-{
-	{ai_walk,  0, NULL},
-	{ai_walk,  6, NULL},
-	{ai_walk,  6, NULL},
-	{ai_walk, 11, tank_footstep},
-};
-mmove_t	tank_move_start_walk = {30, 33, tank_frames_start_walk, tank_walk};
-
-mframe_t tank_frames_walk [] =
+global_variable mframe_t tank_frames_walk [] =
 {
 	{ai_walk, 4,	NULL},
 	{ai_walk, 5,	NULL},
@@ -49127,39 +48548,25 @@ mframe_t tank_frames_walk [] =
 	{ai_walk, 6,	tank_footstep},
 };
 
-mmove_t	tank_move_walk = {34, 49, tank_frames_walk, NULL};
-
-mframe_t tank_frames_stop_walk [] =
-{
-	{ai_walk,  3, NULL},
-	{ai_walk,  3, NULL},
-	{ai_walk,  2, NULL},
-	{ai_walk,  2, NULL},
-	{ai_walk,  4, tank_footstep},
-};
-mmove_t	tank_move_stop_walk = {50, 54, tank_frames_stop_walk, tank_stand};
+global_variable mmove_t	tank_move_walk = {34, 49, tank_frames_walk, NULL};
 
 void tank_walk (edict_t* self)
 {
-		self->monsterinfo.currentmove = &tank_move_walk;
+	self->monsterinfo.currentmove = &tank_move_walk;
 }
-
-//
-// run
-//
 
 void tank_run (edict_t* self);
 
-mframe_t tank_frames_start_run [] =
+global_variable mframe_t tank_frames_start_run [] =
 {
 	{ai_run,  0, NULL},
 	{ai_run,  6, NULL},
 	{ai_run,  6, NULL},
 	{ai_run, 11, tank_footstep},
 };
-mmove_t	tank_move_start_run = {30, 33, tank_frames_start_run, tank_run};
+global_variable mmove_t	tank_move_start_run = {30, 33, tank_frames_start_run, tank_run};
 
-mframe_t tank_frames_run [] =
+global_variable mframe_t tank_frames_run [] =
 {
 	{ai_run, 4,	NULL},
 	{ai_run, 5,	NULL},
@@ -49178,17 +48585,7 @@ mframe_t tank_frames_run [] =
 	{ai_run, 6,	NULL},
 	{ai_run, 6,	tank_footstep},
 };
-mmove_t	tank_move_run = {34, 49, tank_frames_run, NULL};
-
-mframe_t tank_frames_stop_run [] =
-{
-	{ai_run,  3, NULL},
-	{ai_run,  3, NULL},
-	{ai_run,  2, NULL},
-	{ai_run,  2, NULL},
-	{ai_run,  4, tank_footstep},
-};
-mmove_t	tank_move_stop_run = {50, 54, tank_frames_stop_run, tank_walk};
+global_variable mmove_t	tank_move_run = {34, 49, tank_frames_run, NULL};
 
 void tank_run (edict_t* self)
 {
@@ -49218,16 +48615,16 @@ void tank_run (edict_t* self)
 // pain
 //
 
-mframe_t tank_frames_pain1 [] =
+global_variable mframe_t tank_frames_pain1 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t tank_move_pain1 = {197, 200, tank_frames_pain1, tank_run};
+global_variable mmove_t tank_move_pain1 = {197, 200, tank_frames_pain1, tank_run};
 
-mframe_t tank_frames_pain2 [] =
+global_variable mframe_t tank_frames_pain2 [] =
 {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -49235,9 +48632,9 @@ mframe_t tank_frames_pain2 [] =
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 };
-mmove_t tank_move_pain2 = {201, 205, tank_frames_pain2, tank_run};
+global_variable mmove_t tank_move_pain2 = {201, 205, tank_frames_pain2, tank_run};
 
-mframe_t tank_frames_pain3 [] =
+global_variable mframe_t tank_frames_pain3 [] =
 {
 	{ai_move, -7, NULL},
 	{ai_move, 0,  NULL},
@@ -49256,7 +48653,7 @@ mframe_t tank_frames_pain3 [] =
 	{ai_move, 0,  NULL},
 	{ai_move, 0,  tank_footstep},
 };
-mmove_t	tank_move_pain3 = {206, 221, tank_frames_pain3, tank_run};
+global_variable mmove_t	tank_move_pain3 = {206, 221, tank_frames_pain3, tank_run};
 
 procedure void tank_pain(edict_t* self, edict_t* other, float kick, int damage) {
 	UNUSED(other);
@@ -49381,7 +48778,7 @@ void TankMachineGun (edict_t* self)
 	monster_fire_bullet (self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-mframe_t tank_frames_attack_blast [] =
+global_variable mframe_t tank_frames_attack_blast [] =
 {
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	NULL},
@@ -49400,20 +48797,9 @@ mframe_t tank_frames_attack_blast [] =
 	{ai_charge, 0,	NULL},
 	{ai_charge, 0,	TankBlaster}			// 16
 };
-mmove_t tank_move_attack_blast = {55, 70, tank_frames_attack_blast, tank_reattack_blaster};
+global_variable mmove_t tank_move_attack_blast = {55, 70, tank_frames_attack_blast, tank_reattack_blaster};
 
-mframe_t tank_frames_reattack_blast [] =
-{
-	{ai_charge, 0,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, 0,	TankBlaster},
-	{ai_charge, 0,	NULL},
-	{ai_charge, 0,	NULL},
-	{ai_charge, 0,	TankBlaster}			// 16
-};
-mmove_t tank_move_reattack_blast = {65, 70, tank_frames_reattack_blast, tank_reattack_blaster};
-
-mframe_t tank_frames_attack_post_blast [] =
+global_variable mframe_t tank_frames_attack_post_blast [] =
 {
 	{ai_move, 0,		NULL},				// 17
 	{ai_move, 0,		NULL},
@@ -49422,7 +48808,7 @@ mframe_t tank_frames_attack_post_blast [] =
 	{ai_move, 2,		NULL},
 	{ai_move, -2,	tank_footstep}		// 22
 };
-mmove_t tank_move_attack_post_blast = {71, 76, tank_frames_attack_post_blast, tank_run};
+global_variable mmove_t tank_move_attack_post_blast = {71, 76, tank_frames_attack_post_blast, tank_run};
 
 void tank_reattack_blaster (edict_t* self)
 {
@@ -49435,7 +48821,7 @@ void tank_poststrike (edict_t* self)
 	tank_run (self);
 }
 
-mframe_t tank_frames_attack_strike [] =
+global_variable mframe_t tank_frames_attack_strike [] =
 {
 	{ai_move, 3,   NULL},
 	{ai_move, 2,   NULL},
@@ -49476,9 +48862,9 @@ mframe_t tank_frames_attack_strike [] =
 	{ai_move, -3,  NULL},
 	{ai_move, -2,  tank_footstep},
 };
-mmove_t tank_move_attack_strike = {77, 114, tank_frames_attack_strike, tank_poststrike};
+global_variable mmove_t tank_move_attack_strike = {77, 114, tank_frames_attack_strike, tank_poststrike};
 
-mframe_t tank_frames_attack_pre_rocket [] =
+global_variable mframe_t tank_frames_attack_pre_rocket [] =
 {
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
@@ -49504,9 +48890,9 @@ mframe_t tank_frames_attack_pre_rocket [] =
 
 	{ai_charge, -3, NULL},
 };
-mmove_t tank_move_attack_pre_rocket = {115, 135, tank_frames_attack_pre_rocket, tank_doattack_rocket};
+global_variable mmove_t tank_move_attack_pre_rocket = {115, 135, tank_frames_attack_pre_rocket, tank_doattack_rocket};
 
-mframe_t tank_frames_attack_fire_rocket [] =
+global_variable mframe_t tank_frames_attack_fire_rocket [] =
 {
 	{ai_charge, -3, NULL},			// Loop Start	22
 	{ai_charge, 0,  NULL},
@@ -49518,9 +48904,9 @@ mframe_t tank_frames_attack_fire_rocket [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, -1, TankRocket}		// 30	Loop End,
 };
-mmove_t tank_move_attack_fire_rocket = {136, 144, tank_frames_attack_fire_rocket, tank_refire_rocket};
+global_variable mmove_t tank_move_attack_fire_rocket = {136, 144, tank_frames_attack_fire_rocket, tank_refire_rocket};
 
-mframe_t tank_frames_attack_post_rocket [] =
+global_variable mframe_t tank_frames_attack_post_rocket [] =
 {
 	{ai_charge, 0,  NULL},			// 31
 	{ai_charge, -1, NULL},
@@ -49548,9 +48934,9 @@ mframe_t tank_frames_attack_post_rocket [] =
 	{ai_charge, 0,  NULL},
 	{ai_charge, 0,  NULL},
 };
-mmove_t tank_move_attack_post_rocket = {145, 167, tank_frames_attack_post_rocket, tank_run};
+global_variable mmove_t tank_move_attack_post_rocket = {145, 167, tank_frames_attack_post_rocket, tank_run};
 
-mframe_t tank_frames_attack_chain [] =
+global_variable mframe_t tank_frames_attack_chain [] =
 {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -49582,7 +48968,7 @@ mframe_t tank_frames_attack_chain [] =
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 };
-mmove_t tank_move_attack_chain = {168, 196, tank_frames_attack_chain, tank_run};
+global_variable mmove_t tank_move_attack_chain = {168, 196, tank_frames_attack_chain, tank_run};
 
 void tank_refire_rocket (edict_t* self)
 {
@@ -49654,7 +49040,7 @@ void tank_dead (edict_t* self)
 	SV_LinkEdict (self);
 }
 
-mframe_t tank_frames_death1 [] =
+global_variable mframe_t tank_frames_death1 [] =
 {
 	{ai_move, -7,  NULL},
 	{ai_move, -2,  NULL},
@@ -49689,7 +49075,7 @@ mframe_t tank_frames_death1 [] =
 	{ai_move, 0,   NULL},
 	{ai_move, 0,   NULL},
 };
-mmove_t	tank_move_death = {222, 253, tank_frames_death1, tank_dead};
+global_variable mmove_t	tank_move_death = {222, 253, tank_frames_death1, tank_dead};
 
 procedure void tank_die(edict_t* self, edict_t* inflictor, edict_t* attacker, int damage, vec3_t point) {
 	UNUSED(inflictor);
@@ -50186,7 +49572,7 @@ void ClientDisconnect (edict_t *ent)
 
 //==============================================================
 
-edict_t	*pm_passent;
+global_variable edict_t	*pm_passent;
 
 // pmove doesn't need to know about passent and contentmask
 trace_t	PM_trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
@@ -50675,9 +50061,9 @@ void G_SetStats (edict_t *ent)
 
 #define	TRAIL_LENGTH	8
 
-edict_t		*trail[TRAIL_LENGTH];
-int			trail_head;
-bool	trail_active = false;
+global_variable edict_t		*trail[TRAIL_LENGTH];
+global_variable int			trail_head;
+global_variable bool	trail_active = false;
 
 #define NEXT(n)		(((n) + 1) & (TRAIL_LENGTH - 1))
 #define PREV(n)		(((n) - 1) & (TRAIL_LENGTH - 1))
@@ -50779,11 +50165,11 @@ global_variable	edict_t		*current_player;
 global_variable	gclient_t	*current_client;
 
 global_variable	vec3_t	forward, right, up;
-float	xyspeed;
+global_variable float	xyspeed;
 
-float	bobmove;
-int		bobcycle;		// odd cycles are right foot going forward
-float	bobfracsin;		// sin(bobfrac*PI)
+global_variable float	bobmove;
+global_variable int		bobcycle;		// odd cycles are right foot going forward
+global_variable float	bobfracsin;		// sin(bobfrac*PI)
 
 procedure float SV_CalcRoll(vec3_t velocity) {
 	float side = DotProduct (velocity, right);
@@ -53389,9 +52775,8 @@ void Draw_FadeScreen (void)
 	glDisable (GL_BLEND);
 }
 
-image_t		gltextures[MAX_GLTEXTURES];
-int			numgltextures;
-int			base_textureid;		// gltextures[i] = base_textureid+i
+global_variable image_t		gltextures[MAX_GLTEXTURES];
+global_variable int			numgltextures;
 
 global_variable u8			 intensitytable[256];
 global_variable unsigned char gammatable[256];
@@ -53399,14 +52784,14 @@ global_variable unsigned char gammatable[256];
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap);
 
-int		gl_solid_format = 3;
-int		gl_alpha_format = 4;
+global_variable int		gl_solid_format = 3;
+global_variable int		gl_alpha_format = 4;
 
-int		gl_tex_solid_format = 3;
-int		gl_tex_alpha_format = 4;
+global_variable int		gl_tex_solid_format = 3;
+global_variable int		gl_tex_alpha_format = 4;
 
-int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
-int		gl_filter_max = GL_LINEAR;
+global_variable int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+global_variable int		gl_filter_max = GL_LINEAR;
 
 procedure void GL_TexEnv(GLenum mode) {
 	local_persist int lastmode = -1;
@@ -53422,7 +52807,7 @@ typedef struct
 	int	minimize, maximize;
 } glmode_t;
 
-glmode_t modes[] = {
+global_variable glmode_t modes[] = {
 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
 	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
@@ -53437,7 +52822,7 @@ typedef struct
 	int mode;
 } gltmode_t;
 
-gltmode_t gl_alpha_modes[] = {
+global_variable gltmode_t gl_alpha_modes[] = {
 	{"default", 4},
 	{"GL_RGBA", GL_RGBA},
 	{"GL_RGBA8", GL_RGBA8},
@@ -53446,7 +52831,7 @@ gltmode_t gl_alpha_modes[] = {
 	{"GL_RGBA2", GL_RGBA2},
 };
 
-gltmode_t gl_solid_modes[] = {
+global_variable gltmode_t gl_solid_modes[] = {
 	{"default", 3},
 	{"GL_RGB", GL_RGB},
 	{"GL_RGB8", GL_RGB8},
@@ -53532,9 +52917,9 @@ void GL_TextureSolidMode( char *string )
 #define	BLOCK_WIDTH		256
 #define	BLOCK_HEIGHT	256
 
-int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-u8		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
-bool	scrap_dirty;
+global_variable int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
+global_variable u8		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
+global_variable bool	scrap_dirty;
 
 // returns a texture number and the position inside it
 int Scrap_AllocBlock (int w, int h, int *x, int *y)
@@ -53577,7 +52962,7 @@ int Scrap_AllocBlock (int w, int h, int *x, int *y)
 	return -1;
 }
 
-int	scrap_uploads;
+global_variable int	scrap_uploads;
 
 void Scrap_Upload (void)
 {
@@ -53772,7 +53157,7 @@ void GL_MipMap (u8 *in, int width, int height)
 	}
 }
 
-int		upload_width, upload_height;
+global_variable int		upload_width, upload_height;
 
 bool GL_Upload32 (unsigned *data, int width, int height,  bool mipmap)
 {
@@ -54035,7 +53420,7 @@ void GL_FreeUnusedImages (void)
 	}
 }
 
-int	r_dlightframecount;
+global_variable int	r_dlightframecount;
 
 #define	DLIGHT_CUTOFF	64
 
@@ -54115,9 +53500,9 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-vec3_t			pointcolor;
-cplane_t		*lightplane;		// used as shadow plane
-vec3_t			lightspot;
+global_variable vec3_t			pointcolor;
+global_variable cplane_t		*lightplane;		// used as shadow plane
+global_variable vec3_t			lightspot;
 
 int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 {
@@ -54536,7 +53921,7 @@ void R_BuildLightMap (msurface_t *surf, u8 *dest, int stride)
 
 #define NUMVERTEXNORMALS 162
 
-float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
+global_variable float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 {-0.525731, 0.000000, 0.850651},
 {-0.442863, 0.238856, 0.864188},
 {-0.295242, 0.000000, 0.955423},
@@ -54705,12 +54090,12 @@ typedef float vec4_t[4];
 
 global_variable	vec4_t	s_lerped[MAX_VERTS];
 
-vec3_t	shadevector;
-float	shadelight[3];
+global_variable vec3_t	shadevector;
+global_variable float	shadelight[3];
 
 // precalculated dot products for quantized angles
 #define SHADEDOT_QUANT 16
-float r_avertexnormal_dots[SHADEDOT_QUANT][256] =
+global_variable float r_avertexnormal_dots[SHADEDOT_QUANT][256] =
 {
 {1.23,1.30,1.47,1.35,1.56,1.71,1.37,1.38,1.59,1.60,1.79,1.97,1.88,1.92,1.79,1.02,0.93,1.07,0.82,0.87,0.88,0.94,0.96,1.14,1.11,0.82,0.83,0.89,0.89,0.86,0.94,0.91,1.00,1.21,0.98,1.48,1.30,1.57,0.96,1.07,1.14,1.60,1.61,1.40,1.37,1.72,1.78,1.79,1.93,1.99,1.90,1.68,1.71,1.86,1.60,1.68,1.78,1.86,1.93,1.99,1.97,1.44,1.22,1.49,0.93,0.99,0.99,1.23,1.22,1.44,1.49,0.89,0.89,0.97,0.91,0.98,1.19,0.82,0.76,0.82,0.71,0.72,0.73,0.76,0.79,0.86,0.83,0.72,0.76,0.76,0.89,0.82,0.89,0.82,0.89,0.91,0.83,0.96,1.14,0.97,1.40,1.19,0.98,0.94,1.00,1.07,1.37,1.21,1.48,1.30,1.57,1.61,1.37,0.86,0.83,0.91,0.82,0.82,0.88,0.89,0.96,1.14,0.98,0.87,0.93,0.94,1.02,1.30,1.07,1.35,1.38,1.11,1.56,1.92,1.79,1.79,1.59,1.60,1.72,1.90,1.79,0.80,0.85,0.79,0.93,0.80,0.85,0.77,0.74,0.72,0.77,0.74,0.72,0.70,0.70,0.71,0.76,0.73,0.79,0.79,0.73,0.76,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
 {1.26,1.26,1.48,1.23,1.50,1.71,1.14,1.19,1.38,1.46,1.64,1.94,1.87,1.84,1.71,1.02,0.92,1.00,0.79,0.85,0.84,0.91,0.90,0.98,0.99,0.77,0.77,0.83,0.82,0.79,0.86,0.84,0.92,0.99,0.91,1.24,1.03,1.33,0.88,0.94,0.97,1.41,1.39,1.18,1.11,1.51,1.61,1.59,1.80,1.91,1.76,1.54,1.65,1.76,1.70,1.70,1.85,1.85,1.97,1.99,1.93,1.28,1.09,1.39,0.92,0.97,0.99,1.18,1.26,1.52,1.48,0.83,0.85,0.90,0.88,0.93,1.00,0.77,0.73,0.78,0.72,0.71,0.74,0.75,0.79,0.86,0.81,0.75,0.81,0.79,0.96,0.88,0.94,0.86,0.93,0.92,0.85,1.08,1.33,1.05,1.55,1.31,1.01,1.05,1.27,1.31,1.60,1.47,1.70,1.54,1.76,1.76,1.57,0.93,0.90,0.99,0.88,0.88,0.95,0.97,1.11,1.39,1.20,0.92,0.97,1.01,1.10,1.39,1.22,1.51,1.58,1.32,1.64,1.97,1.85,1.91,1.77,1.74,1.88,1.99,1.91,0.79,0.86,0.80,0.94,0.84,0.88,0.74,0.74,0.71,0.82,0.77,0.76,0.70,0.73,0.72,0.73,0.70,0.74,0.85,0.77,0.82,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00},
@@ -54730,7 +54115,7 @@ float r_avertexnormal_dots[SHADEDOT_QUANT][256] =
 {1.26,1.39,1.48,1.51,1.64,1.71,1.60,1.58,1.77,1.74,1.91,1.94,1.87,1.97,1.85,1.10,0.97,1.22,0.88,0.92,0.95,1.01,1.11,1.39,1.32,0.88,0.90,0.97,0.96,0.93,1.05,0.99,1.27,1.47,1.20,1.70,1.54,1.76,1.08,1.31,1.33,1.70,1.76,1.55,1.57,1.88,1.85,1.91,1.97,1.99,1.99,1.70,1.65,1.85,1.41,1.54,1.61,1.76,1.80,1.91,1.93,1.52,1.26,1.48,0.92,0.99,0.97,1.18,1.09,1.28,1.39,0.94,0.93,1.05,0.92,1.01,1.31,0.88,0.81,0.86,0.72,0.75,0.74,0.79,0.79,0.86,0.85,0.71,0.73,0.75,0.82,0.77,0.83,0.78,0.85,0.88,0.81,0.88,0.97,0.90,1.18,1.00,0.93,0.86,0.92,0.94,1.14,0.99,1.24,1.03,1.33,1.39,1.11,0.79,0.77,0.84,0.79,0.77,0.84,0.83,0.90,0.98,0.91,0.85,0.92,0.91,1.02,1.26,1.00,1.23,1.19,0.99,1.50,1.84,1.71,1.64,1.38,1.46,1.51,1.76,1.59,0.84,0.88,0.80,0.94,0.79,0.86,0.82,0.77,0.76,0.74,0.74,0.71,0.73,0.70,0.72,0.82,0.77,0.85,0.74,0.70,0.73,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00}
 };
 
-float	*shadedots = r_avertexnormal_dots[0];
+global_variable float	*shadedots = r_avertexnormal_dots[0];
 
 void GL_LerpVerts( int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *verts, float *lerp, float move[3], float frontv[3], float backv[3] )
 {
@@ -55291,24 +54676,24 @@ void R_DrawAliasModel (Entity *e)
 	glColor4f (1,1,1,1);
 }
 
-model_t	*loadmodel;
-int		modfilelen;
+global_variable model_t	*loadmodel;
+global_variable int		modfilelen;
 
 void Mod_LoadSpriteModel (model_t *mod, void *buffer);
 void Mod_LoadBrushModel (model_t *mod, void *buffer);
 void Mod_LoadAliasModel (model_t *mod, void *buffer);
 model_t *Mod_LoadModel (model_t *mod, bool crash);
 
-u8	mod_novis[MAX_MAP_LEAFS/8];
+global_variable u8	mod_novis[MAX_MAP_LEAFS/8];
 
 #define	MAX_MOD_KNOWN	512
-model_t	mod_known[MAX_MOD_KNOWN];
-int		mod_numknown;
+global_variable model_t	mod_known[MAX_MOD_KNOWN];
+global_variable int		mod_numknown;
 
 // the inline * models from the current map are kept seperate
-model_t	mod_inline[MAX_MOD_KNOWN];
+global_variable model_t	mod_inline[MAX_MOD_KNOWN];
 
-int		registration_sequence;
+global_variable int		registration_sequence;
 
 /*
 ===============
@@ -55496,7 +54881,7 @@ model_t *Mod_ForName (char *name, bool crash)
 	return mod;
 }
 
-u8	*mod_base;
+global_variable u8	*mod_base;
 
 procedure void* Hunk_Alloc(int size) {
 	// round to cacheline
@@ -56305,33 +55690,32 @@ void R_EndRegistration (void)
 	GL_FreeUnusedImages ();
 }
 
-float		gldepthmin, gldepthmax;
+global_variable float		gldepthmin, gldepthmax;
 
-image_t		*r_notexture;		// use for bad textures
-image_t		*r_particletexture;	// little dot for particles
+global_variable image_t		*r_notexture;		// use for bad textures
+global_variable image_t		*r_particletexture;	// little dot for particles
 
-Entity	*currententity;
-model_t		*currentmodel;
+global_variable Entity	*currententity;
+global_variable model_t		*currentmodel;
 
-cplane_t	frustum[4];
+global_variable cplane_t	frustum[4];
 
-int			r_visframecount;	// bumped when going to a new PVS
-int			r_framecount;		// used for dlight push checking
+global_variable int			r_visframecount;	// bumped when going to a new PVS
+global_variable int			r_framecount;		// used for dlight push checking
 
-float		v_blend[4];			// final blending color
+global_variable float		v_blend[4];			// final blending color
 
 //
 // view origin
 //
-vec3_t	vup;
-vec3_t	vpn;
-vec3_t	vright;
-vec3_t	r_origin;
+global_variable vec3_t	vup;
+global_variable vec3_t	vpn;
+global_variable vec3_t	vright;
+global_variable vec3_t	r_origin;
 
-float	r_world_matrix[16];
-float	r_base_world_matrix[16];
+global_variable float	r_world_matrix[16];
 
-int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
+global_variable int		r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
 // Returns true if the box is completely outside the frustom
 bool R_CullBox (vec3_t mins, vec3_t maxs)
@@ -56827,7 +56211,7 @@ void R_DrawBeam( Entity *e )
 
 global_variable vec3_t	modelorg;		// relative to viewpoint
 
-msurface_t	*r_alpha_surfaces;
+global_variable msurface_t	*r_alpha_surfaces;
 
 #define DYNAMIC_LIGHT_WIDTH  128
 #define DYNAMIC_LIGHT_HEIGHT 128
@@ -57885,12 +57269,12 @@ void GL_EndBuildingLightmaps (void)
 
 extern	model_t	*loadmodel;
 
-char	skyname[MAX_QPATH];
-float	skyrotate;
-vec3_t	skyaxis;
-image_t	*sky_images[6];
+global_variable char	skyname[MAX_QPATH];
+global_variable float	skyrotate;
+global_variable vec3_t	skyaxis;
+global_variable image_t	*sky_images[6];
 
-msurface_t	*warpface;
+global_variable msurface_t	*warpface;
 
 #define	SUBDIVIDE_SIZE	64
 //#define	SUBDIVIDE_SIZE	1024
@@ -58091,7 +57475,7 @@ void EmitWaterPolys (msurface_t *fa)
 	}
 }
 
-vec3_t	skyclip[6] = {
+global_variable vec3_t	skyclip[6] = {
 	{1,1,0},
 	{1,-1,0},
 	{0,-1,1},
@@ -58101,7 +57485,7 @@ vec3_t	skyclip[6] = {
 };
 
 // 1 = s, 2 = t, 3 = 2048
-int	st_to_vec[6][3] =
+global_variable int	st_to_vec[6][3] =
 {
 	{3,-1,2},
 	{-3,1,2},
@@ -58117,7 +57501,7 @@ int	st_to_vec[6][3] =
 };
 
 // s = [0]/[2], t = [1]/[2]
-int	vec_to_st[6][3] =
+global_variable int	vec_to_st[6][3] =
 {
 	{-2,3,1},
 	{2,3,-1},
@@ -58132,8 +57516,8 @@ int	vec_to_st[6][3] =
 //	{1,2,-3}
 };
 
-float	skymins[2][6], skymaxs[2][6];
-float	sky_min, sky_max;
+global_variable float	skymins[2][6], skymaxs[2][6];
+global_variable float	sky_min, sky_max;
 
 void DrawSkyPolygon (int nump, vec3_t vecs)
 {
@@ -58377,7 +57761,7 @@ void MakeSkyVec (float s, float t, int axis)
 R_DrawSkyBox
 ==============
 */
-int	skytexorder[6] = {0,2,1,3,4,5};
+global_variable int	skytexorder[6] = {0,2,1,3,4,5};
 void R_DrawSkyBox (void)
 {
 	int		i;
@@ -58422,7 +57806,7 @@ glPopMatrix ();
 }
 
 // 3dstudio environment map names
-char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+global_variable char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 void R_SetSky (char *name, float rotate, vec3_t axis)
 {
 	int		i;
@@ -58619,29 +58003,29 @@ void IN_MouseEvent (int mstate);
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
 
-bool	in_appactive;
+global_variable bool	in_appactive;
 
-bool	mlooking;
+global_variable bool	mlooking;
 
 procedure void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
 procedure void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
 
-int			mouse_buttons;
-int			mouse_oldbuttonstate;
-POINT		current_pos;
-int			mouse_x, mouse_y, mx_accum, my_accum;
+global_variable int			mouse_buttons;
+global_variable int			mouse_oldbuttonstate;
+global_variable POINT		current_pos;
+global_variable int			mouse_x, mouse_y, mx_accum, my_accum;
 
-int			old_x, old_y;
+global_variable int			old_x, old_y;
 
-bool	mouseactive;	// false when not focus app
+global_variable bool	mouseactive;	// false when not focus app
 
-bool	restore_spi;
-bool	mouseinitialized;
-int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
-bool	mouseparmsvalid;
+global_variable bool	restore_spi;
+global_variable bool	mouseinitialized;
+global_variable int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
+global_variable bool	mouseparmsvalid;
 
-int			window_center_x, window_center_y;
-RECT		window_rect;
+global_variable int			window_center_x, window_center_y;
+global_variable RECT		window_rect;
 
 // Called when the window gains focus or changes in some way
 void IN_ActivateMouse (void)
@@ -58761,7 +58145,7 @@ typedef struct
 	int			get, send;
 } loopback_t;
 
-loopback_t	loopbacks[2];
+global_variable loopback_t	loopbacks[2];
 
 procedure bool NET_GetLoopPacket(netsrc_t for_, sizebuf_t* dest_msg) {
 	loopback_t* loop = loopbacks + for_;
@@ -58811,12 +58195,12 @@ int Sys_Milliseconds (void)
 	return curtime;
 }
 
-DWORD	gSndBufSize;
+global_variable DWORD	gSndBufSize;
 
-MMTIME		mmstarttime;
+global_variable MMTIME		mmstarttime;
 
-LPDIRECTSOUND pDS;
-LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
+global_variable LPDIRECTSOUND pDS;
+global_variable LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 
 // return the current sample position (in mono samples read) inside the recirculating dma buffer, so the mixing code will know how many sample are required to fill it up.
 int SNDDMA_GetDMAPos(void)
@@ -58838,7 +58222,7 @@ int SNDDMA_GetDMAPos(void)
 	return s;
 }
 
-DWORD locksize;
+global_variable DWORD locksize;
 
 void SNDDMA_BeginPainting() {
 	if (pDSBuf) {
@@ -58913,13 +58297,9 @@ void Sys_AppActivate (void)
 	SetForegroundWindow ( cl_hwnd );
 }
 
-// Global variables used internally by this module
+global_variable HWND        cl_hwnd;            // Main window handle for life of program
 
-HINSTANCE	reflib_library;		// Handle to refresh DLL
-
-HWND        cl_hwnd;            // Main window handle for life of program
-
-u8        scantokey[128] =
+global_variable u8        scantokey[128] =
 					{
 //  0           1       2       3       4       5       6       7
 //  8           9       A       B       C       D       E       F

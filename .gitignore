@@ -7,3 +7,4 @@ debug
 build.bat
 .github
 *temp*
+*codeql*
