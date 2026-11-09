@@ -3484,7 +3484,6 @@ struct edict_s {
 	bool	inuse;
 	int			linkcount;
 
-	// FIXME: move these fields to a server private sv_entity_t
 	link_t		area;				// linked to a division node or leaf
 
 	int			num_clusters;		// if -1, use headnode instead
@@ -4615,7 +4614,6 @@ typedef enum {
 typedef struct {
 	pmove_state_t	pmove;		// for prediction
 
-	// these fields do not need to be communicated bit-precise
 	vec3_t		viewangles;		// for fixed views
 	vec3_t		viewoffset;		// add to pmovestate->origin
 	vec3_t		kick_angles;	// add to view direction to get render angles set by weapon kicks, pain effects, etc
@@ -5126,10 +5124,6 @@ global_variable edict_t* g_edicts;
 #define	DROPPED_PLAYER_ITEM		0x00020000
 #define ITEM_TARGETS_USED		0x00040000
 
-//
-// fields are needed for spawning from the entity string
-// and saving / loading games
-//
 #define FFL_SPAWNTEMP		1
 #define FFL_NOSPAWN			2
 
@@ -5156,8 +5150,7 @@ typedef struct
 	int		flags;
 } field_t;
 
-extern	field_t fields[];
-extern	gitem_t	itemlist[];
+
 
 //
 // g_cmds.c
@@ -5171,7 +5164,7 @@ void PrecacheItem (gitem_t *it);
 void InitItems (void);
 gitem_t	*FindItem (char *pickup_name);
 gitem_t	*FindItemByClassname (char *classname);
-#define	ITEM_INDEX(x) ((x)-itemlist)
+
 edict_t *Drop_Item (edict_t *ent, gitem_t *item);
 void ChangeWeapon (edict_t *ent);
 void SpawnItem (edict_t *ent, gitem_t *item);
@@ -7480,13 +7473,10 @@ void PM_AirMove (void)
 		pml.velocity[2] = 0; //!!! this is before the accel
 		PM_Accelerate (wishdir, wishspeed, pm_accelerate);
 
-// PGM	-- fix for negative trigger_gravity fields
-//		pml.velocity[2] = 0;
 		if(pm->s.gravity > 0)
 			pml.velocity[2] = 0;
 		else
 			pml.velocity[2] -= pm->s.gravity * pml.frametime;
-// PGM
 
 		if (!pml.velocity[0] && !pml.velocity[1])
 			return;
@@ -9081,15 +9071,6 @@ int SV_ImageIndex (char *name)
 	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES, true);
 }
 
-/*
-================
-SV_CreateBaseline
-
-Entity baselines are used to compress the update messages
-to the clients -- only the fields that differ from the
-baseline will be transmitted
-================
-*/
 void SV_CreateBaseline (void)
 {
 	edict_t			*svent;
@@ -23213,6 +23194,8 @@ void ai_run (edict_t* self, float dist)
 
 #define MODEL_SCALE		1.000000
 
+global_variable gitem_t itemlist[];
+
 void SelectNextItem (edict_t *ent, int itflags)
 {
 	gclient_t	*cl;
@@ -23279,7 +23262,8 @@ void ValidateSelectedItem (edict_t *ent)
 	SelectNextItem (ent, -1);
 }
 
-// Give items to a client
+#define	ITEM_INDEX(x) ((x)-itemlist)
+
 procedure void Cmd_Give_f (edict_t *ent)
 {
 	char		*name;
@@ -26376,54 +26360,174 @@ gitem_t	*FindItemByClassname (char *classname)
 	return NULL;
 }
 
-/*
-===============
-FindItem
-
-===============
-*/
-gitem_t	*FindItem (char *pickup_name)
+bool Pickup_Armor (edict_t *ent, edict_t* other)
 {
-	int		i;
-	gitem_t	*it;
+	int				old_armor_index;
+	gitem_armor_t	*oldinfo;
+	gitem_armor_t	*newinfo;
+	int				newcount;
+	float			salvage;
+	int				salvagecount;
 
-	it = itemlist;
-	for (i=0 ; i<game.num_items ; i++, it++)
+	// get info on new armor
+	newinfo = (gitem_armor_t *)ent->item->info;
+
+	old_armor_index = ArmorIndex (other);
+
+	// handle armor shards specially
+	if (ent->item->tag == ARMOR_SHARD)
 	{
-		if (!it->pickup_name)
-			continue;
-		if (!Q_stricmp(it->pickup_name, pickup_name))
-			return it;
+		if (!old_armor_index)
+			other->client->pers.inventory[jacket_armor_index] = 2;
+		else
+			other->client->pers.inventory[old_armor_index] += 2;
 	}
 
-	return NULL;
+	// if player has no armor, just use it
+	else if (!old_armor_index)
+	{
+		other->client->pers.inventory[ITEM_INDEX(ent->item)] = newinfo->base_count;
+	}
+
+	// use the better armor
+	else
+	{
+		// get info on old armor
+		if (old_armor_index == jacket_armor_index)
+			oldinfo = &jacketarmor_info;
+		else if (old_armor_index == combat_armor_index)
+			oldinfo = &combatarmor_info;
+		else // (old_armor_index == body_armor_index)
+			oldinfo = &bodyarmor_info;
+
+		if (newinfo->normal_protection > oldinfo->normal_protection)
+		{
+			// calc new armor values
+			salvage = oldinfo->normal_protection / newinfo->normal_protection;
+			salvagecount = salvage * other->client->pers.inventory[old_armor_index];
+			newcount = newinfo->base_count + salvagecount;
+			if (newcount > newinfo->max_count)
+				newcount = newinfo->max_count;
+
+			// zero count of old armor so it goes away
+			other->client->pers.inventory[old_armor_index] = 0;
+
+			// change armor to new item with computed value
+			other->client->pers.inventory[ITEM_INDEX(ent->item)] = newcount;
+		}
+		else
+		{
+			// calc new armor values
+			salvage = newinfo->normal_protection / oldinfo->normal_protection;
+			salvagecount = salvage * newinfo->base_count;
+			newcount = other->client->pers.inventory[old_armor_index] + salvagecount;
+			if (newcount > oldinfo->max_count)
+				newcount = oldinfo->max_count;
+
+			// if we're already maxed out then we don't need the new armor
+			if (other->client->pers.inventory[old_armor_index] >= newcount)
+				return false;
+
+			// update current armor value
+			other->client->pers.inventory[old_armor_index] = newcount;
+		}
+	}
+
+	return true;
 }
 
-void DoRespawn (edict_t *ent)
-{
-	if (ent->team)
+procedure void Use_PowerArmor(edict_t *ent, gitem_t *item) {
+	UNUSED(item);
+
+	int		index;
+
+	if (ent->flags & FL_POWER_ARMOR)
 	{
-		edict_t	*master;
-		int	count;
-		int choice;
+		ent->flags &= ~FL_POWER_ARMOR;
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power2.wav"), 1, ATTN_NORM, 0);
+	}
+	else
+	{
+		index = ITEM_INDEX(FindItem("cells"));
+		if (!ent->client->pers.inventory[index])
+		{
+			PF_cprintf (ent, PRINT_HIGH, "No cells for power armor.\n");
+			return;
+		}
+		ent->flags |= FL_POWER_ARMOR;
+		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power1.wav"), 1, ATTN_NORM, 0);
+	}
+}
 
-		master = ent->teammaster;
+bool Pickup_PowerArmor (edict_t *ent, edict_t* other)
+{
+	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
+	return true;
+}
 
-		for (count = 0, ent = master; ent; ent = ent->chain, count++)
-			;
+void Drop_General (edict_t *ent, gitem_t *item)
+{
+	Drop_Item (ent, item);
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+}
 
-		choice = rand() % count;
+void Drop_PowerArmor (edict_t *ent, gitem_t *item)
+{
+	if ((ent->flags & FL_POWER_ARMOR) && (ent->client->pers.inventory[ITEM_INDEX(item)] == 1))
+		Use_PowerArmor (ent, item);
+	Drop_General (ent, item);
+}
 
-		for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
-			;
+bool Pickup_Ammo (edict_t *ent, edict_t* other)
+{
+	int			oldcount;
+	int			count;
+	bool	weapon;
+
+	weapon = (ent->item->flags & IT_WEAPON);
+	if (ent->count)
+		count = ent->count;
+	else
+		count = ent->item->quantity;
+
+	oldcount = other->client->pers.inventory[ITEM_INDEX(ent->item)];
+
+	if (!Add_Ammo (other, ent->item, count))
+		return false;
+
+	if (weapon && !oldcount)
+	{
+		if (other->client->pers.weapon != ent->item)
+			other->client->newweapon = ent->item;
 	}
 
-	ent->svflags &= ~SVF_NOCLIENT;
-	ent->solid = SOLID_TRIGGER;
-	SV_LinkEdict (ent);
+	return true;
+}
 
-	// send an effect
-	ent->s.event = EV_ITEM_RESPAWN;
+void Drop_Ammo (edict_t *ent, gitem_t *item)
+{
+	edict_t	*dropped;
+	int		index;
+
+	index = ITEM_INDEX(item);
+	dropped = Drop_Item (ent, item);
+	if (ent->client->pers.inventory[index] >= item->quantity)
+		dropped->count = item->quantity;
+	else
+		dropped->count = ent->client->pers.inventory[index];
+
+	if (ent->client->pers.weapon &&
+		ent->client->pers.weapon->tag == AMMO_GRENADES &&
+		item->tag == AMMO_GRENADES &&
+		ent->client->pers.inventory[index] - dropped->count <= 0) {
+		PF_cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
+		G_FreeEdict(dropped);
+		return;
+	}
+
+	ent->client->pers.inventory[index] -= dropped->count;
+	ValidateSelectedItem (ent);
 }
 
 bool Pickup_Powerup (edict_t *ent, edict_t* other)
@@ -26439,11 +26543,76 @@ bool Pickup_Powerup (edict_t *ent, edict_t* other)
 	return true;
 }
 
-void Drop_General (edict_t *ent, gitem_t *item)
+void	Use_Invulnerability (edict_t *ent, gitem_t *item)
 {
-	Drop_Item (ent, item);
 	ent->client->pers.inventory[ITEM_INDEX(item)]--;
 	ValidateSelectedItem (ent);
+
+	if (ent->client->invincible_framenum > level.framenum)
+		ent->client->invincible_framenum += 300;
+	else
+		ent->client->invincible_framenum = level.framenum + 300;
+
+	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/protect.wav"), 1, ATTN_NORM, 0);
+}
+
+void Use_Quad (edict_t *ent, gitem_t *item)
+{
+	int		timeout;
+
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+
+	if (quad_drop_timeout_hack)
+	{
+		timeout = quad_drop_timeout_hack;
+		quad_drop_timeout_hack = 0;
+	}
+	else
+	{
+		timeout = 300;
+	}
+
+	if (ent->client->quad_framenum > level.framenum)
+		ent->client->quad_framenum += timeout;
+	else
+		ent->client->quad_framenum = level.framenum + timeout;
+
+	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
+}
+
+void Use_Breather (edict_t *ent, gitem_t *item)
+{
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+
+	if (ent->client->breather_framenum > level.framenum)
+		ent->client->breather_framenum += 300;
+	else
+		ent->client->breather_framenum = level.framenum + 300;
+}
+
+void Use_Envirosuit (edict_t *ent, gitem_t *item)
+{
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+
+	if (ent->client->enviro_framenum > level.framenum)
+		ent->client->enviro_framenum += 300;
+	else
+		ent->client->enviro_framenum = level.framenum + 300;
+}
+
+void	Use_Silencer (edict_t *ent, gitem_t *item)
+{
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+	ent->client->silencer_shots += 30;
+}
+
+procedure bool Pickup_Key(edict_t* ent, edict_t* other) {
+	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
+	return true;
 }
 
 bool Pickup_Adrenaline (edict_t *ent, edict_t* other)
@@ -26462,6 +26631,45 @@ bool Pickup_AncientHead (edict_t *ent, edict_t* other)
 {
 	UNUSED(ent);
 	other->max_health += 2;
+	return true;
+}
+
+void MegaHealth_think (edict_t* self)
+{
+	if (self->owner->health > self->owner->max_health)
+	{
+		self->nextthink = level.time + 1;
+		self->owner->health -= 1;
+		return;
+	}
+
+	G_FreeEdict (self);
+}
+
+bool Pickup_Health (edict_t *ent, edict_t* other)
+{
+	if (!(ent->style & HEALTH_IGNORE_MAX))
+		if (other->health >= other->max_health)
+			return false;
+
+	other->health += ent->count;
+
+	if (!(ent->style & HEALTH_IGNORE_MAX))
+	{
+		if (other->health > other->max_health)
+			other->health = other->max_health;
+	}
+
+	if (ent->style & HEALTH_TIMED)
+	{
+		ent->think = MegaHealth_think;
+		ent->nextthink = level.time + 5;
+		ent->owner = other;
+		ent->flags |= FL_RESPAWN;
+		ent->svflags |= SVF_NOCLIENT;
+		ent->solid = SOLID_NOT;
+	}
+
 	return true;
 }
 
@@ -26577,670 +26785,11 @@ bool Pickup_Pack (edict_t *ent, edict_t* other)
 	return true;
 }
 
-void Use_Quad (edict_t *ent, gitem_t *item)
-{
-	int		timeout;
-
-	ent->client->pers.inventory[ITEM_INDEX(item)]--;
-	ValidateSelectedItem (ent);
-
-	if (quad_drop_timeout_hack)
-	{
-		timeout = quad_drop_timeout_hack;
-		quad_drop_timeout_hack = 0;
-	}
-	else
-	{
-		timeout = 300;
-	}
-
-	if (ent->client->quad_framenum > level.framenum)
-		ent->client->quad_framenum += timeout;
-	else
-		ent->client->quad_framenum = level.framenum + timeout;
-
-	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
-}
-
-void Use_Breather (edict_t *ent, gitem_t *item)
-{
-	ent->client->pers.inventory[ITEM_INDEX(item)]--;
-	ValidateSelectedItem (ent);
-
-	if (ent->client->breather_framenum > level.framenum)
-		ent->client->breather_framenum += 300;
-	else
-		ent->client->breather_framenum = level.framenum + 300;
-
-//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
-}
-
-void Use_Envirosuit (edict_t *ent, gitem_t *item)
-{
-	ent->client->pers.inventory[ITEM_INDEX(item)]--;
-	ValidateSelectedItem (ent);
-
-	if (ent->client->enviro_framenum > level.framenum)
-		ent->client->enviro_framenum += 300;
-	else
-		ent->client->enviro_framenum = level.framenum + 300;
-
-//	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/damage.wav"), 1, ATTN_NORM, 0);
-}
-
-void	Use_Invulnerability (edict_t *ent, gitem_t *item)
-{
-	ent->client->pers.inventory[ITEM_INDEX(item)]--;
-	ValidateSelectedItem (ent);
-
-	if (ent->client->invincible_framenum > level.framenum)
-		ent->client->invincible_framenum += 300;
-	else
-		ent->client->invincible_framenum = level.framenum + 300;
-
-	PF_StartSound(ent, CHAN_ITEM, SV_SoundIndex("items/protect.wav"), 1, ATTN_NORM, 0);
-}
-
-void	Use_Silencer (edict_t *ent, gitem_t *item)
-{
-	ent->client->pers.inventory[ITEM_INDEX(item)]--;
-	ValidateSelectedItem (ent);
-	ent->client->silencer_shots += 30;
-}
-
-procedure bool Pickup_Key(edict_t* ent, edict_t* other) {
-	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
-	return true;
-}
-
-bool Add_Ammo (edict_t *ent, gitem_t *item, int count)
-{
-	int			index;
-	int			max;
-
-	if (!ent->client)
-		return false;
-
-	if (item->tag == AMMO_BULLETS)
-		max = ent->client->pers.max_bullets;
-	else if (item->tag == AMMO_SHELLS)
-		max = ent->client->pers.max_shells;
-	else if (item->tag == AMMO_ROCKETS)
-		max = ent->client->pers.max_rockets;
-	else if (item->tag == AMMO_GRENADES)
-		max = ent->client->pers.max_grenades;
-	else if (item->tag == AMMO_CELLS)
-		max = ent->client->pers.max_cells;
-	else if (item->tag == AMMO_SLUGS)
-		max = ent->client->pers.max_slugs;
-	else
-		return false;
-
-	index = ITEM_INDEX(item);
-
-	if (ent->client->pers.inventory[index] == max)
-		return false;
-
-	ent->client->pers.inventory[index] += count;
-
-	if (ent->client->pers.inventory[index] > max)
-		ent->client->pers.inventory[index] = max;
-
-	return true;
-}
-
-bool Pickup_Ammo (edict_t *ent, edict_t* other)
-{
-	int			oldcount;
-	int			count;
-	bool	weapon;
-
-	weapon = (ent->item->flags & IT_WEAPON);
-	if (ent->count)
-		count = ent->count;
-	else
-		count = ent->item->quantity;
-
-	oldcount = other->client->pers.inventory[ITEM_INDEX(ent->item)];
-
-	if (!Add_Ammo (other, ent->item, count))
-		return false;
-
-	if (weapon && !oldcount)
-	{
-		if (other->client->pers.weapon != ent->item)
-			other->client->newweapon = ent->item;
-	}
-
-	return true;
-}
-
-void Drop_Ammo (edict_t *ent, gitem_t *item)
-{
-	edict_t	*dropped;
-	int		index;
-
-	index = ITEM_INDEX(item);
-	dropped = Drop_Item (ent, item);
-	if (ent->client->pers.inventory[index] >= item->quantity)
-		dropped->count = item->quantity;
-	else
-		dropped->count = ent->client->pers.inventory[index];
-
-	if (ent->client->pers.weapon &&
-		ent->client->pers.weapon->tag == AMMO_GRENADES &&
-		item->tag == AMMO_GRENADES &&
-		ent->client->pers.inventory[index] - dropped->count <= 0) {
-		PF_cprintf (ent, PRINT_HIGH, "Can't drop current weapon\n");
-		G_FreeEdict(dropped);
-		return;
-	}
-
-	ent->client->pers.inventory[index] -= dropped->count;
-	ValidateSelectedItem (ent);
-}
-
-void MegaHealth_think (edict_t* self)
-{
-	if (self->owner->health > self->owner->max_health)
-	{
-		self->nextthink = level.time + 1;
-		self->owner->health -= 1;
-		return;
-	}
-
-	G_FreeEdict (self);
-}
-
-bool Pickup_Health (edict_t *ent, edict_t* other)
-{
-	if (!(ent->style & HEALTH_IGNORE_MAX))
-		if (other->health >= other->max_health)
-			return false;
-
-	other->health += ent->count;
-
-	if (!(ent->style & HEALTH_IGNORE_MAX))
-	{
-		if (other->health > other->max_health)
-			other->health = other->max_health;
-	}
-
-	if (ent->style & HEALTH_TIMED)
-	{
-		ent->think = MegaHealth_think;
-		ent->nextthink = level.time + 5;
-		ent->owner = other;
-		ent->flags |= FL_RESPAWN;
-		ent->svflags |= SVF_NOCLIENT;
-		ent->solid = SOLID_NOT;
-	}
-
-	return true;
-}
-
-int ArmorIndex (edict_t *ent)
-{
-	if (!ent->client)
-		return 0;
-
-	if (ent->client->pers.inventory[jacket_armor_index] > 0)
-		return jacket_armor_index;
-
-	if (ent->client->pers.inventory[combat_armor_index] > 0)
-		return combat_armor_index;
-
-	if (ent->client->pers.inventory[body_armor_index] > 0)
-		return body_armor_index;
-
-	return 0;
-}
-
-bool Pickup_Armor (edict_t *ent, edict_t* other)
-{
-	int				old_armor_index;
-	gitem_armor_t	*oldinfo;
-	gitem_armor_t	*newinfo;
-	int				newcount;
-	float			salvage;
-	int				salvagecount;
-
-	// get info on new armor
-	newinfo = (gitem_armor_t *)ent->item->info;
-
-	old_armor_index = ArmorIndex (other);
-
-	// handle armor shards specially
-	if (ent->item->tag == ARMOR_SHARD)
-	{
-		if (!old_armor_index)
-			other->client->pers.inventory[jacket_armor_index] = 2;
-		else
-			other->client->pers.inventory[old_armor_index] += 2;
-	}
-
-	// if player has no armor, just use it
-	else if (!old_armor_index)
-	{
-		other->client->pers.inventory[ITEM_INDEX(ent->item)] = newinfo->base_count;
-	}
-
-	// use the better armor
-	else
-	{
-		// get info on old armor
-		if (old_armor_index == jacket_armor_index)
-			oldinfo = &jacketarmor_info;
-		else if (old_armor_index == combat_armor_index)
-			oldinfo = &combatarmor_info;
-		else // (old_armor_index == body_armor_index)
-			oldinfo = &bodyarmor_info;
-
-		if (newinfo->normal_protection > oldinfo->normal_protection)
-		{
-			// calc new armor values
-			salvage = oldinfo->normal_protection / newinfo->normal_protection;
-			salvagecount = salvage * other->client->pers.inventory[old_armor_index];
-			newcount = newinfo->base_count + salvagecount;
-			if (newcount > newinfo->max_count)
-				newcount = newinfo->max_count;
-
-			// zero count of old armor so it goes away
-			other->client->pers.inventory[old_armor_index] = 0;
-
-			// change armor to new item with computed value
-			other->client->pers.inventory[ITEM_INDEX(ent->item)] = newcount;
-		}
-		else
-		{
-			// calc new armor values
-			salvage = newinfo->normal_protection / oldinfo->normal_protection;
-			salvagecount = salvage * newinfo->base_count;
-			newcount = other->client->pers.inventory[old_armor_index] + salvagecount;
-			if (newcount > oldinfo->max_count)
-				newcount = oldinfo->max_count;
-
-			// if we're already maxed out then we don't need the new armor
-			if (other->client->pers.inventory[old_armor_index] >= newcount)
-				return false;
-
-			// update current armor value
-			other->client->pers.inventory[old_armor_index] = newcount;
-		}
-	}
-
-	return true;
-}
-
-int PowerArmorType (edict_t *ent)
-{
-	if (!ent->client)
-		return POWER_ARMOR_NONE;
-
-	if (!(ent->flags & FL_POWER_ARMOR))
-		return POWER_ARMOR_NONE;
-
-	if (ent->client->pers.inventory[power_shield_index] > 0)
-		return POWER_ARMOR_SHIELD;
-
-	if (ent->client->pers.inventory[power_screen_index] > 0)
-		return POWER_ARMOR_SCREEN;
-
-	return POWER_ARMOR_NONE;
-}
-
-procedure void Use_PowerArmor(edict_t *ent, gitem_t *item) {
-	UNUSED(item);
-
-	int		index;
-
-	if (ent->flags & FL_POWER_ARMOR)
-	{
-		ent->flags &= ~FL_POWER_ARMOR;
-		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power2.wav"), 1, ATTN_NORM, 0);
-	}
-	else
-	{
-		index = ITEM_INDEX(FindItem("cells"));
-		if (!ent->client->pers.inventory[index])
-		{
-			PF_cprintf (ent, PRINT_HIGH, "No cells for power armor.\n");
-			return;
-		}
-		ent->flags |= FL_POWER_ARMOR;
-		PF_StartSound(ent, CHAN_AUTO, SV_SoundIndex("misc/power1.wav"), 1, ATTN_NORM, 0);
-	}
-}
-
-bool Pickup_PowerArmor (edict_t *ent, edict_t* other)
-{
-	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
-	return true;
-}
-
-void Drop_PowerArmor (edict_t *ent, gitem_t *item)
-{
-	if ((ent->flags & FL_POWER_ARMOR) && (ent->client->pers.inventory[ITEM_INDEX(item)] == 1))
-		Use_PowerArmor (ent, item);
-	Drop_General (ent, item);
-}
-
-procedure void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
-	UNUSED(plane);
-	UNUSED(surf);
-
-	bool	taken;
-
-	if (!other->client)
-		return;
-	if (other->health < 1)
-		return;		// dead people can't pickup
-	if (!ent->item->pickup)
-		return;		// not a grabbable item?
-
-	taken = ent->item->pickup(ent, other);
-
-	if (taken)
-	{
-		// flash the screen
-		other->client->bonus_alpha = 0.25;
-
-		// show icon and name on status bar
-		other->client->ps.stats[STAT_PICKUP_ICON] = SV_ImageIndex(ent->item->icon);
-		other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS+ITEM_INDEX(ent->item);
-		other->client->pickup_msg_time = level.time + 3.0;
-
-		// change selected item
-		if (ent->item->use)
-			other->client->pers.selected_item = other->client->ps.stats[STAT_SELECTED_ITEM] = ITEM_INDEX(ent->item);
-
-		if (ent->item->pickup == Pickup_Health)
-		{
-			if (ent->count == 2)
-				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/s_health.wav"), 1, ATTN_NORM, 0);
-			else if (ent->count == 10)
-				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/n_health.wav"), 1, ATTN_NORM, 0);
-			else if (ent->count == 25)
-				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/l_health.wav"), 1, ATTN_NORM, 0);
-			else // (ent->count == 100)
-				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/m_health.wav"), 1, ATTN_NORM, 0);
-		}
-		else if (ent->item->pickup_sound)
-		{
-			PF_StartSound(other, CHAN_ITEM, SV_SoundIndex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
-		}
-	}
-
-	if (!(ent->spawnflags & ITEM_TARGETS_USED))
-	{
-		G_UseTargets (ent, other);
-		ent->spawnflags |= ITEM_TARGETS_USED;
-	}
-
-	if (!taken)
-		return;
-
-	if (ent->flags & FL_RESPAWN)
-		ent->flags &= ~FL_RESPAWN;
-	else
-		G_FreeEdict (ent);
-}
-
-procedure void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
-{
-	if (other == ent->owner)
-		return;
-
-	Touch_Item (ent, other, plane, surf);
-}
-
-procedure void drop_make_touchable (edict_t *ent)
-{
-	ent->touch = Touch_Item;
-}
-
-edict_t *Drop_Item (edict_t *ent, gitem_t *item)
-{
-	edict_t	*dropped;
-	vec3_t	forward, right;
-	vec3_t	offset;
-
-	dropped = G_Spawn();
-
-	dropped->classname = item->classname;
-	dropped->item = item;
-	dropped->spawnflags = DROPPED_ITEM;
-	dropped->s.effects = item->world_model_flags;
-	dropped->s.renderfx = RF_GLOW;
-	VectorSet (dropped->mins, -15, -15, -15);
-	VectorSet (dropped->maxs, 15, 15, 15);
-	PF_setmodel (dropped, dropped->item->world_model);
-	dropped->solid = SOLID_TRIGGER;
-	dropped->movetype = MOVETYPE_TOSS;
-	dropped->touch = drop_temp_touch;
-	dropped->owner = ent;
-
-	if (ent->client)
-	{
-		trace_t	trace;
-
-		AngleVectors (ent->client->v_angle, forward, right, NULL);
-		VectorSet(offset, 24, 0, -16);
-		G_ProjectSource (ent->s.origin, offset, forward, right, dropped->s.origin);
-		trace = SV_Trace (ent->s.origin, dropped->mins, dropped->maxs,
-			dropped->s.origin, ent, CONTENTS_SOLID);
-		VectorCopy (trace.endpos, dropped->s.origin);
-	}
-	else
-	{
-		AngleVectors (ent->s.angles, forward, right, NULL);
-		VectorCopy (ent->s.origin, dropped->s.origin);
-	}
-
-	VectorScale (forward, 100, dropped->velocity);
-	dropped->velocity[2] = 300;
-
-	dropped->think = drop_make_touchable;
-	dropped->nextthink = level.time + 1;
-
-	SV_LinkEdict (dropped);
-
-	return dropped;
-}
-
-procedure void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
-	UNUSED(other);
-	UNUSED(activator);
-
-	ent->svflags &= ~SVF_NOCLIENT;
-	ent->use = NULL;
-
-	if (ent->spawnflags & ITEM_NO_TOUCH)
-	{
-		ent->solid = SOLID_BBOX;
-		ent->touch = NULL;
-	}
-	else
-	{
-		ent->solid = SOLID_TRIGGER;
-		ent->touch = Touch_Item;
-	}
-
-	SV_LinkEdict (ent);
-}
-
-/*
-================
-droptofloor
-================
-*/
-void droptofloor (edict_t *ent)
-{
-	trace_t		tr;
-	vec3_t		dest;
-	float		*v;
-
-	v = tv(-15,-15,-15);
-	VectorCopy (v, ent->mins);
-	v = tv(15,15,15);
-	VectorCopy (v, ent->maxs);
-
-	if (ent->model)
-		PF_setmodel (ent, ent->model);
-	else
-		PF_setmodel (ent, ent->item->world_model);
-	ent->solid = SOLID_TRIGGER;
-	ent->movetype = MOVETYPE_TOSS;
-	ent->touch = Touch_Item;
-
-	v = tv(0,0,-128);
-	VectorAdd (ent->s.origin, v, dest);
-
-	tr = SV_Trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
-	if (tr.startsolid)
-	{
-		G_FreeEdict (ent);
-		return;
-	}
-
-	VectorCopy (tr.endpos, ent->s.origin);
-
-	if (ent->team)
-	{
-		ent->flags &= ~FL_TEAMSLAVE;
-		ent->chain = ent->teamchain;
-		ent->teamchain = NULL;
-
-		ent->svflags |= SVF_NOCLIENT;
-		ent->solid = SOLID_NOT;
-		if (ent == ent->teammaster)
-		{
-			ent->nextthink = level.time + FRAMETIME;
-			ent->think = DoRespawn;
-		}
-	}
-
-	if (ent->spawnflags & ITEM_NO_TOUCH)
-	{
-		ent->solid = SOLID_BBOX;
-		ent->touch = NULL;
-		ent->s.effects &= ~EF_ROTATE;
-		ent->s.renderfx &= ~RF_GLOW;
-	}
-
-	if (ent->spawnflags & ITEM_TRIGGER_SPAWN)
-	{
-		ent->svflags |= SVF_NOCLIENT;
-		ent->solid = SOLID_NOT;
-		ent->use = Use_Item;
-	}
-
-	SV_LinkEdict (ent);
-}
-
-/*
-===============
-PrecacheItem
-
-Precaches all data needed for a given item.
-This will be called for each item spawned in a level,
-and for each item in each client's inventory.
-===============
-*/
-void PrecacheItem (gitem_t *it)
-{
-	char	*s, *start;
-	char	data[MAX_QPATH];
-	int		len;
-	gitem_t	*ammo;
-
-	if (!it)
-		return;
-
-	if (it->pickup_sound)
-		SV_SoundIndex (it->pickup_sound);
-	if (it->world_model)
-		SV_ModelIndex (it->world_model);
-	if (it->view_model)
-		SV_ModelIndex (it->view_model);
-	if (it->icon)
-		SV_ImageIndex (it->icon);
-
-	// parse everything for its ammo
-	if (it->ammo && it->ammo[0])
-	{
-		ammo = FindItem (it->ammo);
-		if (ammo != it)
-			PrecacheItem (ammo);
-	}
-
-	// parse the space seperated precache string for other items
-	s = it->precaches;
-	if (!s || !s[0])
-		return;
-
-	while (*s)
-	{
-		start = s;
-		while (*s && *s != ' ')
-			s++;
-
-		len = s-start;
-		assert(len >= 5 && len < MAX_QPATH);
-		memcpy (data, start, len);
-		data[len] = 0;
-		if (*s)
-			s++;
-
-		// determine type based on extension
-		if (!strcmp(data+len-3, "md2"))
-			SV_ModelIndex (data);
-		else if (!strcmp(data+len-3, "sp2"))
-			SV_ModelIndex (data);
-		else if (!strcmp(data+len-3, "wav"))
-			SV_SoundIndex (data);
-		if (!strcmp(data+len-3, "pcx"))
-			SV_ImageIndex (data);
-	}
-}
-
-/*
-============
-SpawnItem
-
-Sets the clipping size and plants the object on the floor.
-
-Items can't be immediately dropped to floor, because they might
-be on an entity that hasn't spawned yet.
-============
-*/
-void SpawnItem (edict_t *ent, gitem_t *item)
-{
-	PrecacheItem (item);
-
-	if (ent->spawnflags)
-	{
-		if (strcmp(ent->classname, "key_power_cube") != 0)
-		{
-			ent->spawnflags = 0;
-		}
-	}
-
-	ent->item = item;
-	ent->nextthink = level.time + 2 * FRAMETIME;    // items start after other solids
-	ent->think = droptofloor;
-	ent->s.effects = item->world_model_flags;
-	ent->s.renderfx = RF_GLOW;
-	if (ent->model)
-		SV_ModelIndex (ent->model);
-}
-
 global_variable gitem_t itemlist[] = {
 	{},	// leave index 0 alone
 
 	// ARMOR
 
-	/*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
 		"item_armor_body",
 		Pickup_Armor,
@@ -28152,6 +27701,430 @@ global_variable gitem_t itemlist[] = {
 	// end of list marker
 	{}
 };
+
+gitem_t	*FindItem (char *pickup_name)
+{
+	int		i;
+	gitem_t	*it;
+
+	it = itemlist;
+	for (i=0 ; i<game.num_items ; i++, it++)
+	{
+		if (!it->pickup_name)
+			continue;
+		if (!Q_stricmp(it->pickup_name, pickup_name))
+			return it;
+	}
+
+	return NULL;
+}
+
+void DoRespawn (edict_t *ent)
+{
+	if (ent->team)
+	{
+		edict_t	*master;
+		int	count;
+		int choice;
+
+		master = ent->teammaster;
+
+		for (count = 0, ent = master; ent; ent = ent->chain, count++)
+			;
+
+		choice = rand() % count;
+
+		for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
+			;
+	}
+
+	ent->svflags &= ~SVF_NOCLIENT;
+	ent->solid = SOLID_TRIGGER;
+	SV_LinkEdict (ent);
+
+	// send an effect
+	ent->s.event = EV_ITEM_RESPAWN;
+}
+
+bool Add_Ammo (edict_t *ent, gitem_t *item, int count)
+{
+	int			index;
+	int			max;
+
+	if (!ent->client)
+		return false;
+
+	if (item->tag == AMMO_BULLETS)
+		max = ent->client->pers.max_bullets;
+	else if (item->tag == AMMO_SHELLS)
+		max = ent->client->pers.max_shells;
+	else if (item->tag == AMMO_ROCKETS)
+		max = ent->client->pers.max_rockets;
+	else if (item->tag == AMMO_GRENADES)
+		max = ent->client->pers.max_grenades;
+	else if (item->tag == AMMO_CELLS)
+		max = ent->client->pers.max_cells;
+	else if (item->tag == AMMO_SLUGS)
+		max = ent->client->pers.max_slugs;
+	else
+		return false;
+
+	index = ITEM_INDEX(item);
+
+	if (ent->client->pers.inventory[index] == max)
+		return false;
+
+	ent->client->pers.inventory[index] += count;
+
+	if (ent->client->pers.inventory[index] > max)
+		ent->client->pers.inventory[index] = max;
+
+	return true;
+}
+
+int ArmorIndex (edict_t *ent)
+{
+	if (!ent->client)
+		return 0;
+
+	if (ent->client->pers.inventory[jacket_armor_index] > 0)
+		return jacket_armor_index;
+
+	if (ent->client->pers.inventory[combat_armor_index] > 0)
+		return combat_armor_index;
+
+	if (ent->client->pers.inventory[body_armor_index] > 0)
+		return body_armor_index;
+
+	return 0;
+}
+
+int PowerArmorType (edict_t *ent)
+{
+	if (!ent->client)
+		return POWER_ARMOR_NONE;
+
+	if (!(ent->flags & FL_POWER_ARMOR))
+		return POWER_ARMOR_NONE;
+
+	if (ent->client->pers.inventory[power_shield_index] > 0)
+		return POWER_ARMOR_SHIELD;
+
+	if (ent->client->pers.inventory[power_screen_index] > 0)
+		return POWER_ARMOR_SCREEN;
+
+	return POWER_ARMOR_NONE;
+}
+
+procedure void Touch_Item(edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf) {
+	UNUSED(plane);
+	UNUSED(surf);
+
+	bool	taken;
+
+	if (!other->client)
+		return;
+	if (other->health < 1)
+		return;		// dead people can't pickup
+	if (!ent->item->pickup)
+		return;		// not a grabbable item?
+
+	taken = ent->item->pickup(ent, other);
+
+	if (taken)
+	{
+		// flash the screen
+		other->client->bonus_alpha = 0.25;
+
+		// show icon and name on status bar
+		other->client->ps.stats[STAT_PICKUP_ICON] = SV_ImageIndex(ent->item->icon);
+		other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS+ITEM_INDEX(ent->item);
+		other->client->pickup_msg_time = level.time + 3.0;
+
+		// change selected item
+		if (ent->item->use)
+			other->client->pers.selected_item = other->client->ps.stats[STAT_SELECTED_ITEM] = ITEM_INDEX(ent->item);
+
+		if (ent->item->pickup == Pickup_Health)
+		{
+			if (ent->count == 2)
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/s_health.wav"), 1, ATTN_NORM, 0);
+			else if (ent->count == 10)
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/n_health.wav"), 1, ATTN_NORM, 0);
+			else if (ent->count == 25)
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/l_health.wav"), 1, ATTN_NORM, 0);
+			else // (ent->count == 100)
+				PF_StartSound(other, CHAN_ITEM, SV_SoundIndex("items/m_health.wav"), 1, ATTN_NORM, 0);
+		}
+		else if (ent->item->pickup_sound)
+		{
+			PF_StartSound(other, CHAN_ITEM, SV_SoundIndex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
+		}
+	}
+
+	if (!(ent->spawnflags & ITEM_TARGETS_USED))
+	{
+		G_UseTargets (ent, other);
+		ent->spawnflags |= ITEM_TARGETS_USED;
+	}
+
+	if (!taken)
+		return;
+
+	if (ent->flags & FL_RESPAWN)
+		ent->flags &= ~FL_RESPAWN;
+	else
+		G_FreeEdict (ent);
+}
+
+procedure void drop_temp_touch (edict_t *ent, edict_t* other, cplane_t* plane, csurface_t* surf)
+{
+	if (other == ent->owner)
+		return;
+
+	Touch_Item (ent, other, plane, surf);
+}
+
+procedure void drop_make_touchable (edict_t *ent)
+{
+	ent->touch = Touch_Item;
+}
+
+edict_t *Drop_Item (edict_t *ent, gitem_t *item)
+{
+	edict_t	*dropped;
+	vec3_t	forward, right;
+	vec3_t	offset;
+
+	dropped = G_Spawn();
+
+	dropped->classname = item->classname;
+	dropped->item = item;
+	dropped->spawnflags = DROPPED_ITEM;
+	dropped->s.effects = item->world_model_flags;
+	dropped->s.renderfx = RF_GLOW;
+	VectorSet (dropped->mins, -15, -15, -15);
+	VectorSet (dropped->maxs, 15, 15, 15);
+	PF_setmodel (dropped, dropped->item->world_model);
+	dropped->solid = SOLID_TRIGGER;
+	dropped->movetype = MOVETYPE_TOSS;
+	dropped->touch = drop_temp_touch;
+	dropped->owner = ent;
+
+	if (ent->client)
+	{
+		trace_t	trace;
+
+		AngleVectors (ent->client->v_angle, forward, right, NULL);
+		VectorSet(offset, 24, 0, -16);
+		G_ProjectSource (ent->s.origin, offset, forward, right, dropped->s.origin);
+		trace = SV_Trace (ent->s.origin, dropped->mins, dropped->maxs,
+			dropped->s.origin, ent, CONTENTS_SOLID);
+		VectorCopy (trace.endpos, dropped->s.origin);
+	}
+	else
+	{
+		AngleVectors (ent->s.angles, forward, right, NULL);
+		VectorCopy (ent->s.origin, dropped->s.origin);
+	}
+
+	VectorScale (forward, 100, dropped->velocity);
+	dropped->velocity[2] = 300;
+
+	dropped->think = drop_make_touchable;
+	dropped->nextthink = level.time + 1;
+
+	SV_LinkEdict (dropped);
+
+	return dropped;
+}
+
+procedure void Use_Item(edict_t *ent, edict_t* other, edict_t* activator) {
+	UNUSED(other);
+	UNUSED(activator);
+
+	ent->svflags &= ~SVF_NOCLIENT;
+	ent->use = NULL;
+
+	if (ent->spawnflags & ITEM_NO_TOUCH)
+	{
+		ent->solid = SOLID_BBOX;
+		ent->touch = NULL;
+	}
+	else
+	{
+		ent->solid = SOLID_TRIGGER;
+		ent->touch = Touch_Item;
+	}
+
+	SV_LinkEdict (ent);
+}
+
+/*
+================
+droptofloor
+================
+*/
+void droptofloor (edict_t *ent)
+{
+	trace_t		tr;
+	vec3_t		dest;
+	float		*v;
+
+	v = tv(-15,-15,-15);
+	VectorCopy (v, ent->mins);
+	v = tv(15,15,15);
+	VectorCopy (v, ent->maxs);
+
+	if (ent->model)
+		PF_setmodel (ent, ent->model);
+	else
+		PF_setmodel (ent, ent->item->world_model);
+	ent->solid = SOLID_TRIGGER;
+	ent->movetype = MOVETYPE_TOSS;
+	ent->touch = Touch_Item;
+
+	v = tv(0,0,-128);
+	VectorAdd (ent->s.origin, v, dest);
+
+	tr = SV_Trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
+	if (tr.startsolid)
+	{
+		G_FreeEdict (ent);
+		return;
+	}
+
+	VectorCopy (tr.endpos, ent->s.origin);
+
+	if (ent->team)
+	{
+		ent->flags &= ~FL_TEAMSLAVE;
+		ent->chain = ent->teamchain;
+		ent->teamchain = NULL;
+
+		ent->svflags |= SVF_NOCLIENT;
+		ent->solid = SOLID_NOT;
+		if (ent == ent->teammaster)
+		{
+			ent->nextthink = level.time + FRAMETIME;
+			ent->think = DoRespawn;
+		}
+	}
+
+	if (ent->spawnflags & ITEM_NO_TOUCH)
+	{
+		ent->solid = SOLID_BBOX;
+		ent->touch = NULL;
+		ent->s.effects &= ~EF_ROTATE;
+		ent->s.renderfx &= ~RF_GLOW;
+	}
+
+	if (ent->spawnflags & ITEM_TRIGGER_SPAWN)
+	{
+		ent->svflags |= SVF_NOCLIENT;
+		ent->solid = SOLID_NOT;
+		ent->use = Use_Item;
+	}
+
+	SV_LinkEdict (ent);
+}
+
+/*
+===============
+PrecacheItem
+
+Precaches all data needed for a given item.
+This will be called for each item spawned in a level,
+and for each item in each client's inventory.
+===============
+*/
+void PrecacheItem (gitem_t *it)
+{
+	char	*s, *start;
+	char	data[MAX_QPATH];
+	int		len;
+	gitem_t	*ammo;
+
+	if (!it)
+		return;
+
+	if (it->pickup_sound)
+		SV_SoundIndex (it->pickup_sound);
+	if (it->world_model)
+		SV_ModelIndex (it->world_model);
+	if (it->view_model)
+		SV_ModelIndex (it->view_model);
+	if (it->icon)
+		SV_ImageIndex (it->icon);
+
+	// parse everything for its ammo
+	if (it->ammo && it->ammo[0])
+	{
+		ammo = FindItem (it->ammo);
+		if (ammo != it)
+			PrecacheItem (ammo);
+	}
+
+	// parse the space seperated precache string for other items
+	s = it->precaches;
+	if (!s || !s[0])
+		return;
+
+	while (*s)
+	{
+		start = s;
+		while (*s && *s != ' ')
+			s++;
+
+		len = s-start;
+		assert(len >= 5 && len < MAX_QPATH);
+		memcpy (data, start, len);
+		data[len] = 0;
+		if (*s)
+			s++;
+
+		// determine type based on extension
+		if (!strcmp(data+len-3, "md2"))
+			SV_ModelIndex (data);
+		else if (!strcmp(data+len-3, "sp2"))
+			SV_ModelIndex (data);
+		else if (!strcmp(data+len-3, "wav"))
+			SV_SoundIndex (data);
+		if (!strcmp(data+len-3, "pcx"))
+			SV_ImageIndex (data);
+	}
+}
+
+/*
+============
+SpawnItem
+
+Sets the clipping size and plants the object on the floor.
+
+Items can't be immediately dropped to floor, because they might
+be on an entity that hasn't spawned yet.
+============
+*/
+void SpawnItem (edict_t *ent, gitem_t *item)
+{
+	PrecacheItem (item);
+
+	if (ent->spawnflags)
+	{
+		if (strcmp(ent->classname, "key_power_cube") != 0)
+		{
+			ent->spawnflags = 0;
+		}
+	}
+
+	ent->item = item;
+	ent->nextthink = level.time + 2 * FRAMETIME;    // items start after other solids
+	ent->think = droptofloor;
+	ent->s.effects = item->world_model_flags;
+	ent->s.renderfx = RF_GLOW;
+	if (ent->model)
+		SV_ModelIndex (ent->model);
+}
 
 void SP_item_health (edict_t* self)
 {
@@ -30794,29 +30767,6 @@ void swimmonster_start (edict_t* self)
 	monster_start (self);
 }
 
-/*
-
-pushmove objects do not obey gravity, and do not interact with each other or trigger fields, but block normal movement and push normal objects when they move.
-
-onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects
-
-doors, plats, etc are SOLID_BSP, and MOVETYPE_PUSH
-bonus items are SOLID_TRIGGER touch, and MOVETYPE_TOSS
-corpses are SOLID_NOT and MOVETYPE_TOSS
-crates are SOLID_BBOX and MOVETYPE_TOSS
-walking monsters are SOLID_SLIDEBOX and MOVETYPE_STEP
-flying/floating monsters are SOLID_SLIDEBOX and MOVETYPE_FLY
-
-solid_edge items only clip against bsp models.
-
-*/
-
-/*
-============
-SV_TestEntityPosition
-
-============
-*/
 edict_t	*SV_TestEntityPosition (edict_t *ent)
 {
 	trace_t	trace;
@@ -31687,101 +31637,6 @@ void G_RunEntity (edict_t *ent)
 
 global_variable mmove_t mmove_reloc;
 
-global_variable field_t fields[] = {
-	{"classname", FOFS(classname), F_LSTRING, 0},
-	{"model", FOFS(model), F_LSTRING, 0},
-	{"spawnflags", FOFS(spawnflags), F_INT, 0},
-	{"speed", FOFS(speed), F_FLOAT, 0},
-	{"accel", FOFS(accel), F_FLOAT, 0},
-	{"decel", FOFS(decel), F_FLOAT, 0},
-	{"target", FOFS(target), F_LSTRING, 0},
-	{"targetname", FOFS(targetname), F_LSTRING, 0},
-	{"pathtarget", FOFS(pathtarget), F_LSTRING, 0},
-	{"deathtarget", FOFS(deathtarget), F_LSTRING, 0},
-	{"killtarget", FOFS(killtarget), F_LSTRING, 0},
-	{"combattarget", FOFS(combattarget), F_LSTRING, 0},
-	{"message", FOFS(message), F_LSTRING, 0},
-	{"team", FOFS(team), F_LSTRING, 0},
-	{"wait", FOFS(wait), F_FLOAT, 0},
-	{"delay", FOFS(delay), F_FLOAT, 0},
-	{"random", FOFS(random), F_FLOAT, 0},
-	{"move_origin", FOFS(move_origin), F_VECTOR, 0},
-	{"move_angles", FOFS(move_angles), F_VECTOR, 0},
-	{"style", FOFS(style), F_INT, 0},
-	{"count", FOFS(count), F_INT, 0},
-	{"health", FOFS(health), F_INT, 0},
-	{"sounds", FOFS(sounds), F_INT, 0},
-	{"light", 0, F_IGNORE, 0},
-	{"dmg", FOFS(dmg), F_INT, 0},
-	{"mass", FOFS(mass), F_INT, 0},
-	{"volume", FOFS(volume), F_FLOAT, 0},
-	{"attenuation", FOFS(attenuation), F_FLOAT, 0},
-	{"map", FOFS(map), F_LSTRING, 0},
-	{"origin", FOFS(s.origin), F_VECTOR, 0},
-	{"angles", FOFS(s.angles), F_VECTOR, 0},
-	{"angle", FOFS(s.angles), F_ANGLEHACK, 0},
-
-	{"goalentity", FOFS(goalentity), F_EDICT, FFL_NOSPAWN},
-	{"movetarget", FOFS(movetarget), F_EDICT, FFL_NOSPAWN},
-	{"enemy", FOFS(enemy), F_EDICT, FFL_NOSPAWN},
-	{"oldenemy", FOFS(oldenemy), F_EDICT, FFL_NOSPAWN},
-	{"activator", FOFS(activator), F_EDICT, FFL_NOSPAWN},
-	{"groundentity", FOFS(groundentity), F_EDICT, FFL_NOSPAWN},
-	{"teamchain", FOFS(teamchain), F_EDICT, FFL_NOSPAWN},
-	{"teammaster", FOFS(teammaster), F_EDICT, FFL_NOSPAWN},
-	{"owner", FOFS(owner), F_EDICT, FFL_NOSPAWN},
-	{"mynoise", FOFS(mynoise), F_EDICT, FFL_NOSPAWN},
-	{"mynoise2", FOFS(mynoise2), F_EDICT, FFL_NOSPAWN},
-	{"target_ent", FOFS(target_ent), F_EDICT, FFL_NOSPAWN},
-	{"chain", FOFS(chain), F_EDICT, FFL_NOSPAWN},
-
-	{"prethink", FOFS(prethink), F_FUNCTION, FFL_NOSPAWN},
-	{"think", FOFS(think), F_FUNCTION, FFL_NOSPAWN},
-	{"blocked", FOFS(blocked), F_FUNCTION, FFL_NOSPAWN},
-	{"touch", FOFS(touch), F_FUNCTION, FFL_NOSPAWN},
-	{"use", FOFS(use), F_FUNCTION, FFL_NOSPAWN},
-	{"pain", FOFS(pain), F_FUNCTION, FFL_NOSPAWN},
-	{"die", FOFS(die), F_FUNCTION, FFL_NOSPAWN},
-
-	{"stand", FOFS(monsterinfo.stand), F_FUNCTION, FFL_NOSPAWN},
-	{"idle", FOFS(monsterinfo.idle), F_FUNCTION, FFL_NOSPAWN},
-	{"search", FOFS(monsterinfo.search), F_FUNCTION, FFL_NOSPAWN},
-	{"walk", FOFS(monsterinfo.walk), F_FUNCTION, FFL_NOSPAWN},
-	{"run", FOFS(monsterinfo.run), F_FUNCTION, FFL_NOSPAWN},
-	{"dodge", FOFS(monsterinfo.dodge), F_FUNCTION, FFL_NOSPAWN},
-	{"attack", FOFS(monsterinfo.attack), F_FUNCTION, FFL_NOSPAWN},
-	{"melee", FOFS(monsterinfo.melee), F_FUNCTION, FFL_NOSPAWN},
-	{"sight", FOFS(monsterinfo.sight), F_FUNCTION, FFL_NOSPAWN},
-	{"checkattack", FOFS(monsterinfo.checkattack), F_FUNCTION, FFL_NOSPAWN},
-	{"currentmove", FOFS(monsterinfo.currentmove), F_MMOVE, FFL_NOSPAWN},
-
-	{"endfunc", FOFS(moveinfo.endfunc), F_FUNCTION, FFL_NOSPAWN},
-
-	// temp spawn vars -- only valid when the spawn function is called
-	{"lip", STOFS(lip), F_INT, FFL_SPAWNTEMP},
-	{"distance", STOFS(distance), F_INT, FFL_SPAWNTEMP},
-	{"height", STOFS(height), F_INT, FFL_SPAWNTEMP},
-	{"noise", STOFS(noise), F_LSTRING, FFL_SPAWNTEMP},
-	{"pausetime", STOFS(pausetime), F_FLOAT, FFL_SPAWNTEMP},
-	{"item", STOFS(item), F_LSTRING, FFL_SPAWNTEMP},
-
-	//need for item field in edict struct, FFL_SPAWNTEMP item will be skipped on saves
-	{"item", FOFS(item), F_ITEM, 0},
-
-	{"gravity", STOFS(gravity), F_LSTRING, FFL_SPAWNTEMP},
-	{"sky", STOFS(sky), F_LSTRING, FFL_SPAWNTEMP},
-	{"skyrotate", STOFS(skyrotate), F_FLOAT, FFL_SPAWNTEMP},
-	{"skyaxis", STOFS(skyaxis), F_VECTOR, FFL_SPAWNTEMP},
-	{"minyaw", STOFS(minyaw), F_FLOAT, FFL_SPAWNTEMP},
-	{"maxyaw", STOFS(maxyaw), F_FLOAT, FFL_SPAWNTEMP},
-	{"minpitch", STOFS(minpitch), F_FLOAT, FFL_SPAWNTEMP},
-	{"maxpitch", STOFS(maxpitch), F_FLOAT, FFL_SPAWNTEMP},
-	{"nextmap", STOFS(nextmap), F_LSTRING, FFL_SPAWNTEMP},
-
-	{0, 0, 0, 0}
-
-};
-
 global_variable field_t levelfields[] = {
 	{"changemap", LLOFS(changemap), F_LSTRING, 0},
 
@@ -32054,6 +31909,101 @@ void ReadGame (char *filename)
 
 	fclose (f);
 }
+
+global_variable field_t fields[] = {
+	{"classname", FOFS(classname), F_LSTRING, 0},
+	{"model", FOFS(model), F_LSTRING, 0},
+	{"spawnflags", FOFS(spawnflags), F_INT, 0},
+	{"speed", FOFS(speed), F_FLOAT, 0},
+	{"accel", FOFS(accel), F_FLOAT, 0},
+	{"decel", FOFS(decel), F_FLOAT, 0},
+	{"target", FOFS(target), F_LSTRING, 0},
+	{"targetname", FOFS(targetname), F_LSTRING, 0},
+	{"pathtarget", FOFS(pathtarget), F_LSTRING, 0},
+	{"deathtarget", FOFS(deathtarget), F_LSTRING, 0},
+	{"killtarget", FOFS(killtarget), F_LSTRING, 0},
+	{"combattarget", FOFS(combattarget), F_LSTRING, 0},
+	{"message", FOFS(message), F_LSTRING, 0},
+	{"team", FOFS(team), F_LSTRING, 0},
+	{"wait", FOFS(wait), F_FLOAT, 0},
+	{"delay", FOFS(delay), F_FLOAT, 0},
+	{"random", FOFS(random), F_FLOAT, 0},
+	{"move_origin", FOFS(move_origin), F_VECTOR, 0},
+	{"move_angles", FOFS(move_angles), F_VECTOR, 0},
+	{"style", FOFS(style), F_INT, 0},
+	{"count", FOFS(count), F_INT, 0},
+	{"health", FOFS(health), F_INT, 0},
+	{"sounds", FOFS(sounds), F_INT, 0},
+	{"light", 0, F_IGNORE, 0},
+	{"dmg", FOFS(dmg), F_INT, 0},
+	{"mass", FOFS(mass), F_INT, 0},
+	{"volume", FOFS(volume), F_FLOAT, 0},
+	{"attenuation", FOFS(attenuation), F_FLOAT, 0},
+	{"map", FOFS(map), F_LSTRING, 0},
+	{"origin", FOFS(s.origin), F_VECTOR, 0},
+	{"angles", FOFS(s.angles), F_VECTOR, 0},
+	{"angle", FOFS(s.angles), F_ANGLEHACK, 0},
+
+	{"goalentity", FOFS(goalentity), F_EDICT, FFL_NOSPAWN},
+	{"movetarget", FOFS(movetarget), F_EDICT, FFL_NOSPAWN},
+	{"enemy", FOFS(enemy), F_EDICT, FFL_NOSPAWN},
+	{"oldenemy", FOFS(oldenemy), F_EDICT, FFL_NOSPAWN},
+	{"activator", FOFS(activator), F_EDICT, FFL_NOSPAWN},
+	{"groundentity", FOFS(groundentity), F_EDICT, FFL_NOSPAWN},
+	{"teamchain", FOFS(teamchain), F_EDICT, FFL_NOSPAWN},
+	{"teammaster", FOFS(teammaster), F_EDICT, FFL_NOSPAWN},
+	{"owner", FOFS(owner), F_EDICT, FFL_NOSPAWN},
+	{"mynoise", FOFS(mynoise), F_EDICT, FFL_NOSPAWN},
+	{"mynoise2", FOFS(mynoise2), F_EDICT, FFL_NOSPAWN},
+	{"target_ent", FOFS(target_ent), F_EDICT, FFL_NOSPAWN},
+	{"chain", FOFS(chain), F_EDICT, FFL_NOSPAWN},
+
+	{"prethink", FOFS(prethink), F_FUNCTION, FFL_NOSPAWN},
+	{"think", FOFS(think), F_FUNCTION, FFL_NOSPAWN},
+	{"blocked", FOFS(blocked), F_FUNCTION, FFL_NOSPAWN},
+	{"touch", FOFS(touch), F_FUNCTION, FFL_NOSPAWN},
+	{"use", FOFS(use), F_FUNCTION, FFL_NOSPAWN},
+	{"pain", FOFS(pain), F_FUNCTION, FFL_NOSPAWN},
+	{"die", FOFS(die), F_FUNCTION, FFL_NOSPAWN},
+
+	{"stand", FOFS(monsterinfo.stand), F_FUNCTION, FFL_NOSPAWN},
+	{"idle", FOFS(monsterinfo.idle), F_FUNCTION, FFL_NOSPAWN},
+	{"search", FOFS(monsterinfo.search), F_FUNCTION, FFL_NOSPAWN},
+	{"walk", FOFS(monsterinfo.walk), F_FUNCTION, FFL_NOSPAWN},
+	{"run", FOFS(monsterinfo.run), F_FUNCTION, FFL_NOSPAWN},
+	{"dodge", FOFS(monsterinfo.dodge), F_FUNCTION, FFL_NOSPAWN},
+	{"attack", FOFS(monsterinfo.attack), F_FUNCTION, FFL_NOSPAWN},
+	{"melee", FOFS(monsterinfo.melee), F_FUNCTION, FFL_NOSPAWN},
+	{"sight", FOFS(monsterinfo.sight), F_FUNCTION, FFL_NOSPAWN},
+	{"checkattack", FOFS(monsterinfo.checkattack), F_FUNCTION, FFL_NOSPAWN},
+	{"currentmove", FOFS(monsterinfo.currentmove), F_MMOVE, FFL_NOSPAWN},
+
+	{"endfunc", FOFS(moveinfo.endfunc), F_FUNCTION, FFL_NOSPAWN},
+
+	// temp spawn vars -- only valid when the spawn function is called
+	{"lip", STOFS(lip), F_INT, FFL_SPAWNTEMP},
+	{"distance", STOFS(distance), F_INT, FFL_SPAWNTEMP},
+	{"height", STOFS(height), F_INT, FFL_SPAWNTEMP},
+	{"noise", STOFS(noise), F_LSTRING, FFL_SPAWNTEMP},
+	{"pausetime", STOFS(pausetime), F_FLOAT, FFL_SPAWNTEMP},
+	{"item", STOFS(item), F_LSTRING, FFL_SPAWNTEMP},
+
+	//need for item field in edict struct, FFL_SPAWNTEMP item will be skipped on saves
+	{"item", FOFS(item), F_ITEM, 0},
+
+	{"gravity", STOFS(gravity), F_LSTRING, FFL_SPAWNTEMP},
+	{"sky", STOFS(sky), F_LSTRING, FFL_SPAWNTEMP},
+	{"skyrotate", STOFS(skyrotate), F_FLOAT, FFL_SPAWNTEMP},
+	{"skyaxis", STOFS(skyaxis), F_VECTOR, FFL_SPAWNTEMP},
+	{"minyaw", STOFS(minyaw), F_FLOAT, FFL_SPAWNTEMP},
+	{"maxyaw", STOFS(maxyaw), F_FLOAT, FFL_SPAWNTEMP},
+	{"minpitch", STOFS(minpitch), F_FLOAT, FFL_SPAWNTEMP},
+	{"maxpitch", STOFS(maxpitch), F_FLOAT, FFL_SPAWNTEMP},
+	{"nextmap", STOFS(nextmap), F_LSTRING, FFL_SPAWNTEMP},
+
+	{0, 0, 0, 0}
+
+};
 
 // All pointer variables (except function pointers) must be handled specially.
 void WriteEdict (FILE *f, edict_t *ent)
