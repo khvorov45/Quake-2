@@ -5200,7 +5200,6 @@ void vectoangles (vec3_t vec, vec3_t angles);
 // g_combat.c
 //
 bool CanDamage (edict_t *targ, edict_t* inflictor);
-void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod);
 
 // damage flags
@@ -23055,177 +23054,6 @@ void ai_run (edict_t* self, float dist)
 
 #define MODEL_SCALE		1.000000
 
-global_variable gitem_t itemlist[];
-
-void SelectPrevItem (edict_t *ent, int itflags)
-{
-	gclient_t	*cl;
-	int			i, index;
-	gitem_t		*it;
-
-	cl = ent->client;
-
-	// scan  for the next valid one
-	for (i=1 ; i<=MAX_ITEMS ; i++)
-	{
-		index = (cl->pers.selected_item + MAX_ITEMS - i)%MAX_ITEMS;
-		if (!cl->pers.inventory[index])
-			continue;
-		it = &itemlist[index];
-		if (!it->use)
-			continue;
-		if (!(it->flags & itflags))
-			continue;
-
-		cl->pers.selected_item = index;
-		return;
-	}
-
-	cl->pers.selected_item = -1;
-}
-
-#define	ITEM_INDEX(x) ((x)-itemlist)
-
-procedure void Cmd_Give_f (edict_t *ent)
-{
-	char		*name;
-	gitem_t		*it;
-	int			index;
-	int			i;
-	bool	give_all;
-	edict_t		*it_ent;
-
-	name = Cmd_Args();
-
-	if (Q_stricmp(name, "all") == 0)
-		give_all = true;
-	else
-		give_all = false;
-
-	if (give_all || Q_stricmp(Cmd_Argv(1), "health") == 0)
-	{
-		if (cmd_argc == 3)
-			ent->health = atoi(Cmd_Argv(2));
-		else
-			ent->health = ent->max_health;
-		if (!give_all)
-			return;
-	}
-
-	if (give_all || Q_stricmp(name, "weapons") == 0)
-	{
-		for (i=0 ; i<game.num_items ; i++)
-		{
-			it = itemlist + i;
-			if (!it->pickup)
-				continue;
-			if (!(it->flags & IT_WEAPON))
-				continue;
-			ent->client->pers.inventory[i] += 1;
-		}
-		if (!give_all)
-			return;
-	}
-
-	if (give_all || Q_stricmp(name, "ammo") == 0)
-	{
-		for (i=0 ; i<game.num_items ; i++)
-		{
-			it = itemlist + i;
-			if (!it->pickup)
-				continue;
-			if (!(it->flags & IT_AMMO))
-				continue;
-			Add_Ammo (ent, it, 1000);
-		}
-		if (!give_all)
-			return;
-	}
-
-	if (give_all || Q_stricmp(name, "armor") == 0)
-	{
-		gitem_armor_t	*info;
-
-		it = FindItem("Jacket Armor");
-		ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
-
-		it = FindItem("Combat Armor");
-		ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
-
-		it = FindItem("Body Armor");
-		info = (gitem_armor_t *)it->info;
-		ent->client->pers.inventory[ITEM_INDEX(it)] = info->max_count;
-
-		if (!give_all)
-			return;
-	}
-
-	if (give_all || Q_stricmp(name, "Power Shield") == 0)
-	{
-		it = FindItem("Power Shield");
-		it_ent = G_Spawn();
-		it_ent->classname = it->classname;
-		SpawnItem (it_ent, it);
-		Touch_Item (it_ent, ent, NULL, NULL);
-		if (it_ent->inuse)
-			G_FreeEdict(it_ent);
-
-		if (!give_all)
-			return;
-	}
-
-	if (give_all)
-	{
-		for (i=0 ; i<game.num_items ; i++)
-		{
-			it = itemlist + i;
-			if (!it->pickup)
-				continue;
-			if (it->flags & (IT_ARMOR|IT_WEAPON|IT_AMMO))
-				continue;
-			ent->client->pers.inventory[i] = 1;
-		}
-		return;
-	}
-
-	it = FindItem (name);
-	if (!it)
-	{
-		name = Cmd_Argv(1);
-		it = FindItem (name);
-		if (!it)
-		{
-			PF_cprintf (ent, PRINT_HIGH, "unknown item\n");
-			return;
-		}
-	}
-
-	if (!it->pickup)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "non-pickup item\n");
-		return;
-	}
-
-	index = ITEM_INDEX(it);
-
-	if (it->flags & IT_AMMO)
-	{
-		if (cmd_argc == 3)
-			ent->client->pers.inventory[index] = atoi(Cmd_Argv(2));
-		else
-			ent->client->pers.inventory[index] += it->quantity;
-	}
-	else
-	{
-		it_ent = G_Spawn();
-		it_ent->classname = it->classname;
-		SpawnItem (it_ent, it);
-		Touch_Item (it_ent, ent, NULL, NULL);
-		if (it_ent->inuse)
-			G_FreeEdict(it_ent);
-	}
-}
-
 // argv(0) god
 void Cmd_God_f (edict_t *ent)
 {
@@ -23273,64 +23101,6 @@ void Cmd_Noclip_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-// Use an inventory item
-void Cmd_Use_f (edict_t *ent)
-{
-	int			index;
-	gitem_t		*it;
-	char		*s;
-
-	s = Cmd_Args();
-	it = FindItem (s);
-	if (!it)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
-		return;
-	}
-	if (!it->use)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
-		return;
-	}
-	index = ITEM_INDEX(it);
-	if (!ent->client->pers.inventory[index])
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
-		return;
-	}
-
-	it->use (ent, it);
-}
-
-// Drop an inventory item
-void Cmd_Drop_f (edict_t *ent)
-{
-	int			index;
-	gitem_t		*it;
-	char		*s;
-
-	s = Cmd_Args();
-	it = FindItem (s);
-	if (!it)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
-		return;
-	}
-	if (!it->drop)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
-		return;
-	}
-	index = ITEM_INDEX(it);
-	if (!ent->client->pers.inventory[index])
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
-		return;
-	}
-
-	it->drop (ent, it);
-}
-
 void Cmd_Inven_f (edict_t *ent)
 {
 	int			i;
@@ -23354,157 +23124,6 @@ void Cmd_Inven_f (edict_t *ent)
 		PF_WriteShort (cl->pers.inventory[i]);
 	}
 	PF_Unicast (ent, true);
-}
-
-/*
-=================
-Cmd_InvUse_f
-=================
-*/
-void Cmd_InvUse_f (edict_t *ent)
-{
-	gitem_t		*it;
-
-	ValidateSelectedItem (ent);
-
-	if (ent->client->pers.selected_item == -1)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "No item to use.\n");
-		return;
-	}
-
-	it = &itemlist[ent->client->pers.selected_item];
-	if (!it->use)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
-		return;
-	}
-	it->use (ent, it);
-}
-
-/*
-=================
-Cmd_WeapPrev_f
-=================
-*/
-void Cmd_WeapPrev_f (edict_t *ent)
-{
-	gclient_t	*cl;
-	int			i, index;
-	gitem_t		*it;
-	int			selected_weapon;
-
-	cl = ent->client;
-
-	if (!cl->pers.weapon)
-		return;
-
-	selected_weapon = ITEM_INDEX(cl->pers.weapon);
-
-	// scan  for the next valid one
-	for (i=1 ; i<=MAX_ITEMS ; i++)
-	{
-		index = (selected_weapon + i)%MAX_ITEMS;
-		if (!cl->pers.inventory[index])
-			continue;
-		it = &itemlist[index];
-		if (!it->use)
-			continue;
-		if (! (it->flags & IT_WEAPON) )
-			continue;
-		it->use (ent, it);
-		if (cl->pers.weapon == it)
-			return;	// successful
-	}
-}
-
-/*
-=================
-Cmd_WeapNext_f
-=================
-*/
-void Cmd_WeapNext_f (edict_t *ent)
-{
-	gclient_t	*cl;
-	int			i, index;
-	gitem_t		*it;
-	int			selected_weapon;
-
-	cl = ent->client;
-
-	if (!cl->pers.weapon)
-		return;
-
-	selected_weapon = ITEM_INDEX(cl->pers.weapon);
-
-	// scan  for the next valid one
-	for (i=1 ; i<=MAX_ITEMS ; i++)
-	{
-		index = (selected_weapon + MAX_ITEMS - i)%MAX_ITEMS;
-		if (!cl->pers.inventory[index])
-			continue;
-		it = &itemlist[index];
-		if (!it->use)
-			continue;
-		if (! (it->flags & IT_WEAPON) )
-			continue;
-		it->use (ent, it);
-		if (cl->pers.weapon == it)
-			return;	// successful
-	}
-}
-
-/*
-=================
-Cmd_WeapLast_f
-=================
-*/
-void Cmd_WeapLast_f (edict_t *ent)
-{
-	gclient_t	*cl;
-	int			index;
-	gitem_t		*it;
-
-	cl = ent->client;
-
-	if (!cl->pers.weapon || !cl->pers.lastweapon)
-		return;
-
-	index = ITEM_INDEX(cl->pers.lastweapon);
-	if (!cl->pers.inventory[index])
-		return;
-	it = &itemlist[index];
-	if (!it->use)
-		return;
-	if (! (it->flags & IT_WEAPON) )
-		return;
-	it->use (ent, it);
-}
-
-/*
-=================
-Cmd_InvDrop_f
-=================
-*/
-void Cmd_InvDrop_f (edict_t *ent)
-{
-	gitem_t		*it;
-
-	ValidateSelectedItem (ent);
-
-	if (ent->client->pers.selected_item == -1)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "No item to drop.\n");
-		return;
-	}
-
-	it = &itemlist[ent->client->pers.selected_item];
-	if (!it->drop)
-	{
-		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
-		return;
-	}
-	it->drop (ent, it);
 }
 
 procedure void Cmd_Kill_f(edict_t* ent) {
@@ -23630,114 +23249,6 @@ void SpawnDamage (int type, vec3_t origin, vec3_t normal, int damage)
 	SV_Multicast (origin, MULTICAST_PVS);
 }
 
-/*
-============
-T_Damage
-
-targ		entity that is being damaged
-inflictor	entity that is causing the damage
-attacker	entity that caused the inflictor to damage targ
-	example: targ=monster, inflictor=rocket, attacker=player
-
-dir			direction of the attack
-point		point at which the damage is being inflicted
-normal		normal vector from that point
-damage		amount of damage being inflicted
-knockback	force to be applied against targ as a result of the damage
-
-dflags		these flags are used to control how T_Damage works
-	DAMAGE_RADIUS			damage was indirect (from a nearby explosion)
-	DAMAGE_NO_ARMOR			armor does not protect from this damage
-	DAMAGE_ENERGY			damage is from an energy based weapon
-	DAMAGE_NO_KNOCKBACK		do not affect velocity, just view angles
-	DAMAGE_BULLET			damage is from a bullet (used for ricochets)
-	DAMAGE_NO_PROTECTION	kills godmode, armor, everything
-============
-*/
-procedure int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
-{
-	gclient_t	*client;
-	int			save;
-	int			power_armor_type;
-	int			index;
-	int			damagePerCell;
-	int			pa_te_type;
-	int			power;
-	int			power_used;
-
-	if (!damage)
-		return 0;
-
-	client = ent->client;
-
-	if (dflags & DAMAGE_NO_ARMOR)
-		return 0;
-
-	if (client)
-	{
-		power_armor_type = PowerArmorType (ent);
-		if (power_armor_type != POWER_ARMOR_NONE)
-		{
-			index = ITEM_INDEX(FindItem("Cells"));
-			power = client->pers.inventory[index];
-		}
-	}
-	else if (ent->svflags & SVF_MONSTER)
-	{
-		power_armor_type = ent->monsterinfo.power_armor_type;
-		power = ent->monsterinfo.power_armor_power;
-	}
-	else
-		return 0;
-
-	if (power_armor_type == POWER_ARMOR_NONE)
-		return 0;
-	if (!power)
-		return 0;
-
-	if (power_armor_type == POWER_ARMOR_SCREEN)
-	{
-		vec3_t		vec;
-		float		dot;
-		vec3_t		forward;
-
-		// only works if damage point is in front
-		AngleVectors (ent->s.angles, forward, NULL, NULL);
-		VectorSubtract (point, ent->s.origin, vec);
-		VectorNormalize (vec);
-		dot = DotProduct (vec, forward);
-		if (dot <= 0.3)
-			return 0;
-
-		damagePerCell = 1;
-		pa_te_type = TE_SCREEN_SPARKS;
-		damage = damage / 3;
-	}
-	else
-	{
-		damagePerCell = 2;
-		pa_te_type = TE_SHIELD_SPARKS;
-		damage = (2 * damage) / 3;
-	}
-
-	save = power * damagePerCell;
-	if (!save)
-		return 0;
-	if (save > damage)
-		save = damage;
-
-	SpawnDamage (pa_te_type, point, normal, save);
-	ent->powerarmor_time = level.time + 0.2;
-
-	power_used = save / damagePerCell;
-
-	if (client)
-		client->pers.inventory[index] -= power_used;
-	else
-		ent->monsterinfo.power_armor_power -= power_used;
-	return save;
-}
-
 procedure int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sparks, int dflags)
 {
 	gclient_t	*client;
@@ -23857,181 +23368,6 @@ procedure bool CheckTeamDamage(edict_t *targ, edict_t* attacker) {
 	UNUSED(targ);
 	UNUSED(attacker);
 	return false;
-}
-
-void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
-{
-	UNUSED(mod);
-
-	gclient_t	*client;
-	int			take;
-	int			save;
-	int			asave;
-	int			psave;
-	int			te_sparks;
-
-	if (!targ->takedamage)
-		return;
-
-	client = targ->client;
-
-	if (dflags & DAMAGE_BULLET)
-		te_sparks = TE_BULLET_SPARKS;
-	else
-		te_sparks = TE_SPARKS;
-
-	VectorNormalize(dir);
-
-// bonus damage for suprising a monster
-	if (!(dflags & DAMAGE_RADIUS) && (targ->svflags & SVF_MONSTER) && (attacker->client) && (!targ->enemy) && (targ->health > 0))
-		damage *= 2;
-
-	if (targ->flags & FL_NO_KNOCKBACK)
-		knockback = 0;
-
-// figure momentum add
-	if (!(dflags & DAMAGE_NO_KNOCKBACK))
-	{
-		if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
-		{
-			vec3_t	kvel;
-			float	mass;
-
-			if (targ->mass < 50)
-				mass = 50;
-			else
-				mass = targ->mass;
-
-			if (targ->client  && attacker == targ)
-				VectorScale (dir, 1600.0 * (float)knockback / mass, kvel);	// the rocket jump hack...
-			else
-				VectorScale (dir, 500.0 * (float)knockback / mass, kvel);
-
-			VectorAdd (targ->velocity, kvel, targ->velocity);
-		}
-	}
-
-	take = damage;
-	save = 0;
-
-	// check for godmode
-	if ( (targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) )
-	{
-		take = 0;
-		save = damage;
-		SpawnDamage (te_sparks, point, normal, save);
-	}
-
-	// check for invincibility
-	if ((client && client->invincible_framenum > level.framenum ) && !(dflags & DAMAGE_NO_PROTECTION))
-	{
-		if (targ->pain_debounce_time < level.time)
-		{
-			PF_StartSound(targ, CHAN_ITEM, SV_SoundIndex("items/protect4.wav"), 1, ATTN_NORM, 0);
-			targ->pain_debounce_time = level.time + 2;
-		}
-		take = 0;
-		save = damage;
-	}
-
-	psave = CheckPowerArmor (targ, point, normal, take, dflags);
-	take -= psave;
-
-	asave = CheckArmor (targ, point, normal, take, te_sparks, dflags);
-	take -= asave;
-
-	//treat cheat/powerup savings the same as armor
-	asave += save;
-
-	// team damage avoidance
-	if (!(dflags & DAMAGE_NO_PROTECTION) && CheckTeamDamage (targ, attacker))
-		return;
-
-// do the damage
-	if (take)
-	{
-		if ((targ->svflags & SVF_MONSTER) || (client))
-			SpawnDamage (TE_BLOOD, point, normal, take);
-		else
-			SpawnDamage (te_sparks, point, normal, take);
-
-		targ->health = targ->health - take;
-
-		if (targ->health <= 0)
-		{
-			if ((targ->svflags & SVF_MONSTER) || (client))
-				targ->flags |= FL_NO_KNOCKBACK;
-			Killed (targ, inflictor, attacker, take, point);
-			return;
-		}
-	}
-
-	if (targ->svflags & SVF_MONSTER)
-	{
-		M_ReactToDamage (targ, attacker);
-		if (!(targ->monsterinfo.aiflags & AI_DUCKED) && (take))
-		{
-			targ->pain (targ, attacker, knockback, take);
-		}
-	}
-	else if (client)
-	{
-		if (!(targ->flags & FL_GODMODE) && (take))
-			targ->pain (targ, attacker, knockback, take);
-	}
-	else if (take)
-	{
-		if (targ->pain)
-			targ->pain (targ, attacker, knockback, take);
-	}
-
-	// add to the damage inflicted on a player this frame
-	// the total will be turned into screen blends and view angle kicks
-	// at the end of the frame
-	if (client)
-	{
-		client->damage_parmor += psave;
-		client->damage_armor += asave;
-		client->damage_blood += take;
-		client->damage_knockback += knockback;
-		VectorCopy (point, client->damage_from);
-	}
-}
-
-/*
-============
-T_RadiusDamage
-============
-*/
-void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod)
-{
-	float	points;
-	edict_t	*ent = NULL;
-	vec3_t	v;
-	vec3_t	dir;
-
-	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
-	{
-		if (ent == ignore)
-			continue;
-		if (!ent->takedamage)
-			continue;
-
-		VectorAdd (ent->mins, ent->maxs, v);
-		VectorMA (ent->s.origin, 0.5, v, v);
-		VectorSubtract (inflictor->s.origin, v, v);
-		points = damage - 0.5 * VectorLength (v);
-		if (ent == attacker)
-			points = points * 0.5;
-		if (points > 0)
-		{
-			if (CanDamage (ent, inflictor))
-			{
-				VectorSubtract (ent->s.origin, inflictor->s.origin, dir);
-				T_Damage (ent, inflictor, attacker, dir, inflictor->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS, mod);
-			}
-		}
-	}
 }
 
 /*
@@ -24413,6 +23749,8 @@ void plat_go_up (edict_t *ent)
 	ent->moveinfo.state = STATE_UP;
 	Move_Calc (ent, ent->moveinfo.start_origin, plat_hit_top);
 }
+
+void T_Damage(edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 
 void plat_blocked (edict_t* self, edict_t* other)
 {
@@ -26080,41 +25418,8 @@ global_variable gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 void Use_Quad (edict_t *ent, gitem_t *item);
 global_variable int	quad_drop_timeout_hack;
 
-/*
-===============
-GetItemByIndex
-===============
-*/
-gitem_t	*GetItemByIndex (int index)
-{
-	if (index == 0 || index >= game.num_items)
-		return NULL;
-
-	return &itemlist[index];
-}
-
-/*
-===============
-FindItemByClassname
-
-===============
-*/
-gitem_t	*FindItemByClassname (char *classname)
-{
-	int		i;
-	gitem_t	*it;
-
-	it = itemlist;
-	for (i=0 ; i<game.num_items ; i++, it++)
-	{
-		if (!it->classname)
-			continue;
-		if (!Q_stricmp(it->classname, classname))
-			return it;
-	}
-
-	return NULL;
-}
+global_variable gitem_t itemlist[];
+#define	ITEM_INDEX(x) ((x)-itemlist)
 
 bool Pickup_Armor (edict_t *ent, edict_t* other)
 {
@@ -26618,6 +25923,632 @@ void SelectNextItem (edict_t *ent, int itflags)
 	}
 
 	cl->pers.selected_item = -1;
+}
+
+void SelectPrevItem (edict_t *ent, int itflags)
+{
+	gclient_t	*cl;
+	int			i, index;
+	gitem_t		*it;
+
+	cl = ent->client;
+
+	// scan  for the next valid one
+	for (i=1 ; i<=MAX_ITEMS ; i++)
+	{
+		index = (cl->pers.selected_item + MAX_ITEMS - i)%MAX_ITEMS;
+		if (!cl->pers.inventory[index])
+			continue;
+		it = &itemlist[index];
+		if (!it->use)
+			continue;
+		if (!(it->flags & itflags))
+			continue;
+
+		cl->pers.selected_item = index;
+		return;
+	}
+
+	cl->pers.selected_item = -1;
+}
+
+procedure void Cmd_Give_f (edict_t *ent)
+{
+	char		*name;
+	gitem_t		*it;
+	int			index;
+	int			i;
+	bool	give_all;
+	edict_t		*it_ent;
+
+	name = Cmd_Args();
+
+	if (Q_stricmp(name, "all") == 0)
+		give_all = true;
+	else
+		give_all = false;
+
+	if (give_all || Q_stricmp(Cmd_Argv(1), "health") == 0)
+	{
+		if (cmd_argc == 3)
+			ent->health = atoi(Cmd_Argv(2));
+		else
+			ent->health = ent->max_health;
+		if (!give_all)
+			return;
+	}
+
+	if (give_all || Q_stricmp(name, "weapons") == 0)
+	{
+		for (i=0 ; i<game.num_items ; i++)
+		{
+			it = itemlist + i;
+			if (!it->pickup)
+				continue;
+			if (!(it->flags & IT_WEAPON))
+				continue;
+			ent->client->pers.inventory[i] += 1;
+		}
+		if (!give_all)
+			return;
+	}
+
+	if (give_all || Q_stricmp(name, "ammo") == 0)
+	{
+		for (i=0 ; i<game.num_items ; i++)
+		{
+			it = itemlist + i;
+			if (!it->pickup)
+				continue;
+			if (!(it->flags & IT_AMMO))
+				continue;
+			Add_Ammo (ent, it, 1000);
+		}
+		if (!give_all)
+			return;
+	}
+
+	if (give_all || Q_stricmp(name, "armor") == 0)
+	{
+		gitem_armor_t	*info;
+
+		it = FindItem("Jacket Armor");
+		ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
+
+		it = FindItem("Combat Armor");
+		ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
+
+		it = FindItem("Body Armor");
+		info = (gitem_armor_t *)it->info;
+		ent->client->pers.inventory[ITEM_INDEX(it)] = info->max_count;
+
+		if (!give_all)
+			return;
+	}
+
+	if (give_all || Q_stricmp(name, "Power Shield") == 0)
+	{
+		it = FindItem("Power Shield");
+		it_ent = G_Spawn();
+		it_ent->classname = it->classname;
+		SpawnItem (it_ent, it);
+		Touch_Item (it_ent, ent, NULL, NULL);
+		if (it_ent->inuse)
+			G_FreeEdict(it_ent);
+
+		if (!give_all)
+			return;
+	}
+
+	if (give_all)
+	{
+		for (i=0 ; i<game.num_items ; i++)
+		{
+			it = itemlist + i;
+			if (!it->pickup)
+				continue;
+			if (it->flags & (IT_ARMOR|IT_WEAPON|IT_AMMO))
+				continue;
+			ent->client->pers.inventory[i] = 1;
+		}
+		return;
+	}
+
+	it = FindItem (name);
+	if (!it)
+	{
+		name = Cmd_Argv(1);
+		it = FindItem (name);
+		if (!it)
+		{
+			PF_cprintf (ent, PRINT_HIGH, "unknown item\n");
+			return;
+		}
+	}
+
+	if (!it->pickup)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "non-pickup item\n");
+		return;
+	}
+
+	index = ITEM_INDEX(it);
+
+	if (it->flags & IT_AMMO)
+	{
+		if (cmd_argc == 3)
+			ent->client->pers.inventory[index] = atoi(Cmd_Argv(2));
+		else
+			ent->client->pers.inventory[index] += it->quantity;
+	}
+	else
+	{
+		it_ent = G_Spawn();
+		it_ent->classname = it->classname;
+		SpawnItem (it_ent, it);
+		Touch_Item (it_ent, ent, NULL, NULL);
+		if (it_ent->inuse)
+			G_FreeEdict(it_ent);
+	}
+}
+
+gitem_t	*FindItemByClassname (char *classname)
+{
+	int		i;
+	gitem_t	*it;
+
+	it = itemlist;
+	for (i=0 ; i<game.num_items ; i++, it++)
+	{
+		if (!it->classname)
+			continue;
+		if (!Q_stricmp(it->classname, classname))
+			return it;
+	}
+
+	return NULL;
+}
+
+gitem_t	*GetItemByIndex (int index)
+{
+	if (index == 0 || index >= game.num_items)
+		return NULL;
+
+	return &itemlist[index];
+}
+
+void Cmd_InvDrop_f (edict_t *ent)
+{
+	gitem_t		*it;
+
+	ValidateSelectedItem (ent);
+
+	if (ent->client->pers.selected_item == -1)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "No item to drop.\n");
+		return;
+	}
+
+	it = &itemlist[ent->client->pers.selected_item];
+	if (!it->drop)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
+		return;
+	}
+	it->drop (ent, it);
+}
+
+void Cmd_WeapLast_f (edict_t *ent)
+{
+	gclient_t	*cl;
+	int			index;
+	gitem_t		*it;
+
+	cl = ent->client;
+
+	if (!cl->pers.weapon || !cl->pers.lastweapon)
+		return;
+
+	index = ITEM_INDEX(cl->pers.lastweapon);
+	if (!cl->pers.inventory[index])
+		return;
+	it = &itemlist[index];
+	if (!it->use)
+		return;
+	if (! (it->flags & IT_WEAPON) )
+		return;
+	it->use (ent, it);
+}
+
+void Cmd_InvUse_f (edict_t *ent)
+{
+	gitem_t		*it;
+
+	ValidateSelectedItem (ent);
+
+	if (ent->client->pers.selected_item == -1)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "No item to use.\n");
+		return;
+	}
+
+	it = &itemlist[ent->client->pers.selected_item];
+	if (!it->use)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
+		return;
+	}
+	it->use (ent, it);
+}
+
+void Cmd_WeapNext_f (edict_t *ent)
+{
+	gclient_t	*cl;
+	int			i, index;
+	gitem_t		*it;
+	int			selected_weapon;
+
+	cl = ent->client;
+
+	if (!cl->pers.weapon)
+		return;
+
+	selected_weapon = ITEM_INDEX(cl->pers.weapon);
+
+	// scan  for the next valid one
+	for (i=1 ; i<=MAX_ITEMS ; i++)
+	{
+		index = (selected_weapon + MAX_ITEMS - i)%MAX_ITEMS;
+		if (!cl->pers.inventory[index])
+			continue;
+		it = &itemlist[index];
+		if (!it->use)
+			continue;
+		if (! (it->flags & IT_WEAPON) )
+			continue;
+		it->use (ent, it);
+		if (cl->pers.weapon == it)
+			return;	// successful
+	}
+}
+
+void Cmd_WeapPrev_f (edict_t *ent)
+{
+	gclient_t	*cl;
+	int			i, index;
+	gitem_t		*it;
+	int			selected_weapon;
+
+	cl = ent->client;
+
+	if (!cl->pers.weapon)
+		return;
+
+	selected_weapon = ITEM_INDEX(cl->pers.weapon);
+
+	// scan  for the next valid one
+	for (i=1 ; i<=MAX_ITEMS ; i++)
+	{
+		index = (selected_weapon + i)%MAX_ITEMS;
+		if (!cl->pers.inventory[index])
+			continue;
+		it = &itemlist[index];
+		if (!it->use)
+			continue;
+		if (! (it->flags & IT_WEAPON) )
+			continue;
+		it->use (ent, it);
+		if (cl->pers.weapon == it)
+			return;	// successful
+	}
+}
+
+void Cmd_Use_f (edict_t *ent)
+{
+	int			index;
+	gitem_t		*it;
+	char		*s;
+
+	s = Cmd_Args();
+	it = FindItem (s);
+	if (!it)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
+		return;
+	}
+	if (!it->use)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Item is not usable.\n");
+		return;
+	}
+	index = ITEM_INDEX(it);
+	if (!ent->client->pers.inventory[index])
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
+		return;
+	}
+
+	it->use (ent, it);
+}
+
+procedure int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
+{
+	gclient_t	*client;
+	int			save;
+	int			power_armor_type;
+	int			index;
+	int			damagePerCell;
+	int			pa_te_type;
+	int			power;
+	int			power_used;
+
+	if (!damage)
+		return 0;
+
+	client = ent->client;
+
+	if (dflags & DAMAGE_NO_ARMOR)
+		return 0;
+
+	if (client)
+	{
+		power_armor_type = PowerArmorType (ent);
+		if (power_armor_type != POWER_ARMOR_NONE)
+		{
+			index = ITEM_INDEX(FindItem("Cells"));
+			power = client->pers.inventory[index];
+		}
+	}
+	else if (ent->svflags & SVF_MONSTER)
+	{
+		power_armor_type = ent->monsterinfo.power_armor_type;
+		power = ent->monsterinfo.power_armor_power;
+	}
+	else
+		return 0;
+
+	if (power_armor_type == POWER_ARMOR_NONE)
+		return 0;
+	if (!power)
+		return 0;
+
+	if (power_armor_type == POWER_ARMOR_SCREEN)
+	{
+		vec3_t		vec;
+		float		dot;
+		vec3_t		forward;
+
+		// only works if damage point is in front
+		AngleVectors (ent->s.angles, forward, NULL, NULL);
+		VectorSubtract (point, ent->s.origin, vec);
+		VectorNormalize (vec);
+		dot = DotProduct (vec, forward);
+		if (dot <= 0.3)
+			return 0;
+
+		damagePerCell = 1;
+		pa_te_type = TE_SCREEN_SPARKS;
+		damage = damage / 3;
+	}
+	else
+	{
+		damagePerCell = 2;
+		pa_te_type = TE_SHIELD_SPARKS;
+		damage = (2 * damage) / 3;
+	}
+
+	save = power * damagePerCell;
+	if (!save)
+		return 0;
+	if (save > damage)
+		save = damage;
+
+	SpawnDamage (pa_te_type, point, normal, save);
+	ent->powerarmor_time = level.time + 0.2;
+
+	power_used = save / damagePerCell;
+
+	if (client)
+		client->pers.inventory[index] -= power_used;
+	else
+		ent->monsterinfo.power_armor_power -= power_used;
+	return save;
+}
+
+// Drop an inventory item
+void Cmd_Drop_f (edict_t *ent)
+{
+	int			index;
+	gitem_t		*it;
+	char		*s;
+
+	s = Cmd_Args();
+	it = FindItem (s);
+	if (!it)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
+		return;
+	}
+	if (!it->drop)
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
+		return;
+	}
+	index = ITEM_INDEX(it);
+	if (!ent->client->pers.inventory[index])
+	{
+		PF_cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
+		return;
+	}
+
+	it->drop (ent, it);
+}
+
+void T_Damage (edict_t *targ, edict_t* inflictor, edict_t* attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
+{
+	UNUSED(mod);
+
+	gclient_t	*client;
+	int			take;
+	int			save;
+	int			asave;
+	int			psave;
+	int			te_sparks;
+
+	if (!targ->takedamage)
+		return;
+
+	client = targ->client;
+
+	if (dflags & DAMAGE_BULLET)
+		te_sparks = TE_BULLET_SPARKS;
+	else
+		te_sparks = TE_SPARKS;
+
+	VectorNormalize(dir);
+
+	if (!(dflags & DAMAGE_RADIUS) && (targ->svflags & SVF_MONSTER) && (attacker->client) && (!targ->enemy) && (targ->health > 0))
+		damage *= 2;
+
+	if (targ->flags & FL_NO_KNOCKBACK)
+		knockback = 0;
+
+	if (!(dflags & DAMAGE_NO_KNOCKBACK))
+	{
+		if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
+		{
+			vec3_t	kvel;
+			float	mass;
+
+			if (targ->mass < 50)
+				mass = 50;
+			else
+				mass = targ->mass;
+
+			if (targ->client  && attacker == targ)
+				VectorScale (dir, 1600.0 * (float)knockback / mass, kvel);	// the rocket jump hack...
+			else
+				VectorScale (dir, 500.0 * (float)knockback / mass, kvel);
+
+			VectorAdd (targ->velocity, kvel, targ->velocity);
+		}
+	}
+
+	take = damage;
+	save = 0;
+
+	// check for godmode
+	if ( (targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) )
+	{
+		take = 0;
+		save = damage;
+		SpawnDamage (te_sparks, point, normal, save);
+	}
+
+	// check for invincibility
+	if ((client && client->invincible_framenum > level.framenum ) && !(dflags & DAMAGE_NO_PROTECTION))
+	{
+		if (targ->pain_debounce_time < level.time)
+		{
+			PF_StartSound(targ, CHAN_ITEM, SV_SoundIndex("items/protect4.wav"), 1, ATTN_NORM, 0);
+			targ->pain_debounce_time = level.time + 2;
+		}
+		take = 0;
+		save = damage;
+	}
+
+	psave = CheckPowerArmor (targ, point, normal, take, dflags);
+	take -= psave;
+
+	asave = CheckArmor (targ, point, normal, take, te_sparks, dflags);
+	take -= asave;
+
+	//treat cheat/powerup savings the same as armor
+	asave += save;
+
+	// team damage avoidance
+	if (!(dflags & DAMAGE_NO_PROTECTION) && CheckTeamDamage (targ, attacker))
+		return;
+
+	if (take)
+	{
+		if ((targ->svflags & SVF_MONSTER) || (client))
+			SpawnDamage (TE_BLOOD, point, normal, take);
+		else
+			SpawnDamage (te_sparks, point, normal, take);
+
+		targ->health = targ->health - take;
+
+		if (targ->health <= 0)
+		{
+			if ((targ->svflags & SVF_MONSTER) || (client))
+				targ->flags |= FL_NO_KNOCKBACK;
+			Killed (targ, inflictor, attacker, take, point);
+			return;
+		}
+	}
+
+	if (targ->svflags & SVF_MONSTER)
+	{
+		M_ReactToDamage (targ, attacker);
+		if (!(targ->monsterinfo.aiflags & AI_DUCKED) && (take))
+		{
+			targ->pain (targ, attacker, knockback, take);
+		}
+	}
+	else if (client)
+	{
+		if (!(targ->flags & FL_GODMODE) && (take))
+			targ->pain (targ, attacker, knockback, take);
+	}
+	else if (take)
+	{
+		if (targ->pain)
+			targ->pain (targ, attacker, knockback, take);
+	}
+
+	// add to the damage inflicted on a player this frame
+	// the total will be turned into screen blends and view angle kicks
+	// at the end of the frame
+	if (client)
+	{
+		client->damage_parmor += psave;
+		client->damage_armor += asave;
+		client->damage_blood += take;
+		client->damage_knockback += knockback;
+		VectorCopy (point, client->damage_from);
+	}
+}
+
+void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_t *ignore, float radius, int mod)
+{
+	float	points;
+	edict_t	*ent = NULL;
+	vec3_t	v;
+	vec3_t	dir;
+
+	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
+	{
+		if (ent == ignore)
+			continue;
+		if (!ent->takedamage)
+			continue;
+
+		VectorAdd (ent->mins, ent->maxs, v);
+		VectorMA (ent->s.origin, 0.5, v, v);
+		VectorSubtract (inflictor->s.origin, v, v);
+		points = damage - 0.5 * VectorLength (v);
+		if (ent == attacker)
+			points = points * 0.5;
+		if (points > 0)
+		{
+			if (CanDamage (ent, inflictor))
+			{
+				VectorSubtract (ent->s.origin, inflictor->s.origin, dir);
+				T_Damage (ent, inflictor, attacker, dir, inflictor->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS, mod);
+			}
+		}
+	}
 }
 
 void ClientCommand (edict_t *ent)
