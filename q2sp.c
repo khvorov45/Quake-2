@@ -4660,8 +4660,7 @@ typedef struct {
 	char		userinfo[MAX_INFO_STRING];
 	char		netname[16];
 
-	bool	connected;			// a loadgame will leave valid entities that
-									// just don't have a connection yet
+	bool	connected;
 
 	// values saved and restored from edicts when changing levels
 	int			health;
@@ -8134,8 +8133,6 @@ typedef enum {
 typedef struct {
 	server_state_t	state;			// precache commands are only valid during load
 
-	bool	loadgame;			// client begins should reuse existing entity
-
 	unsigned	time;
 	int			framenum;
 
@@ -8989,8 +8986,7 @@ void SV_CreateBaseline (void)
 
 void G_RunFrame();
 
-// Change the server to a new map, taking all connected clients along with it.
-procedure void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
+procedure void SV_SpawnServer(char* server, char* spawnpoint) {
 	int			i;
 	unsigned	checksum;
 
@@ -9000,7 +8996,6 @@ procedure void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame) {
 	// wipe the entire per-level structure
 	memset (&sv, 0, sizeof(sv));
 	svs.realtime = 0;
-	sv.loadgame = loadgame;
 
 	// save name for levels that don't set message
 	strcpy (sv.configstrings[CS_NAME], server);
@@ -25741,84 +25736,72 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
-procedure void SV_Map(char* levelstring, bool loadgame) {
-	char	level[MAX_QPATH];
-	char	*ch;
-	int		l;
-	char	spawnpoint[MAX_QPATH];
-
-	sv.loadgame = loadgame;
-
-	if (sv.state == ss_dead && !sv.loadgame) {
-		// NOTE: Init game
-
-		assert(cls.state == ca_disconnected);
-
-		SCR_BeginLoadingPlaque();
-
-		svs.spawncount = rand();
-		svs.num_client_entities = UPDATE_BACKUP * 64;
-		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
-
-		tml_free_all(TAG_LEVEL);
-		tml_free_all(TAG_GAME);
-
-		game.num_items = carray_count(itemlist) - 1;
-		Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
-		Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
-
-		// initialize all entities for this game
-		game.maxentities = 1024;
-		g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
-
-		// initialize all clients for this game
-		global_num_edicts = 2;
-
-		edict_t* ent = EDICT_NUM(1);
-		ent->s.number = 1;
-		svs.client.edict = ent;
-	}
-
-	strcpy(level, levelstring);
-
-	// if there is a $, use the remainder as a spawnpoint
-	ch = strstr(level, "$");
-	if (ch) {
-		*ch = 0;
-		strcpy (spawnpoint, ch+1);
-	} else {
-		spawnpoint[0] = 0;
-	}
-
-	// skip the end-of-unit flag if necessary
-	if (level[0] == '*') {
-		strcpy (level, level+1);
-	}
-
-	l = strlen(level);
-	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
-	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
-
-	SCR_BeginLoadingPlaque();			// for local system
-	SV_BroadcastCommand("changing\n");
-	SV_SendClientMessages();
-
-	void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame);
-	SV_SpawnServer(level, spawnpoint, loadgame);
-
-	// NOTE: Copy to defer
-	memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
-	defer_text_buf[cmd_text.cursize] = 0;
-	cmd_text.cursize = 0;
-
-	SV_BroadcastCommand("reconnect\n");
-}
-
 procedure void SV_GameMap_f(void* data) {
 	UNUSED(data);
 	if (cmd_argc == 2) {
-		SV_Map(Cmd_Argv(1), false);
-		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
+		if (sv.state == ss_dead) {
+			// NOTE: Init game
+
+			assert(cls.state == ca_disconnected);
+
+			SCR_BeginLoadingPlaque();
+
+			svs.spawncount = rand();
+			svs.num_client_entities = UPDATE_BACKUP * 64;
+			svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
+
+			tml_free_all(TAG_LEVEL);
+			tml_free_all(TAG_GAME);
+
+			game.num_items = carray_count(itemlist) - 1;
+			Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
+			Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
+
+			// initialize all entities for this game
+			game.maxentities = 1024;
+			g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+
+			// initialize all clients for this game
+			global_num_edicts = 2;
+
+			edict_t* ent = EDICT_NUM(1);
+			ent->s.number = 1;
+			svs.client.edict = ent;
+		}
+
+		// if there is a $, use the remainder as a spawnpoint
+		char level[MAX_QPATH] = {};
+		strcpy(level, Cmd_Argv(1));
+
+		char* ch = strstr(level, "$");
+		char spawnpoint[MAX_QPATH] = {};
+		if (ch) {
+			*ch = 0;
+			strcpy(spawnpoint, ch+1);
+		}
+
+		// skip the end-of-unit flag if necessary
+		if (level[0] == '*') {
+			strcpy(level, level+1);
+		}
+
+		i32 l = strlen(level);
+		assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
+		assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
+
+		SCR_BeginLoadingPlaque();			// for local system
+		SV_BroadcastCommand("changing\n");
+		SV_SendClientMessages();
+		SV_SpawnServer(level, spawnpoint);
+
+		// NOTE: Copy to defer
+		memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
+		defer_text_buf[cmd_text.cursize] = 0;
+		cmd_text.cursize = 0;
+
+		SV_BroadcastCommand("reconnect\n");
+
+		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd) - 1);
 	} else {
 		add_line_to_console_log(STR("USAGE: gamemap <map>"));
 	}
@@ -47707,8 +47690,6 @@ void ClientBegin (edict_t *ent)
 {
 	ent->client = &game.client;
 
-	// if there is already a body waiting for us (a loadgame), just
-	// take it, otherwise spawn one from scratch
 	if (ent->inuse == true)
 	{
 		// the client has cleared the client side viewangles upon
