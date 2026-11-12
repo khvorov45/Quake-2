@@ -25736,8 +25736,11 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
-procedure void SV_GameMap_f(void* data) {
+procedure void SV_Map_f(void* data) {
 	UNUSED(data);
+
+	sv.state = ss_dead;
+
 	if (cmd_argc == 2) {
 		if (sv.state == ss_dead) {
 			// NOTE: Init game
@@ -25789,7 +25792,7 @@ procedure void SV_GameMap_f(void* data) {
 		assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
 		assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
 
-		SCR_BeginLoadingPlaque();			// for local system
+		SCR_BeginLoadingPlaque();
 		SV_BroadcastCommand("changing\n");
 		SV_SendClientMessages();
 		SV_SpawnServer(level, spawnpoint);
@@ -25803,26 +25806,8 @@ procedure void SV_GameMap_f(void* data) {
 
 		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd) - 1);
 	} else {
-		add_line_to_console_log(STR("USAGE: gamemap <map>"));
+		add_line_to_console_log(STR("USAGE: map <map_name>"));
 	}
-}
-
-procedure void SV_Map_f(void* data) {
-	UNUSED(data);
-
-	// make sure the level exists
-	char* map = Cmd_Argv(1);
-	if (!strstr(map, ".")) {
-		char expanded[MAX_QPATH] = {};
-		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
-		if (FS_LoadFile (expanded, NULL) == -1) {
-			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
-			return;
-		}
-	}
-
-	sv.state = ss_dead; // don't save current level when changing
-	SV_GameMap_f(data);
 }
 
 void SelectNextItem (edict_t *ent, int itflags)
@@ -56867,7 +56852,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("gamemap"), SV_GameMap_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
