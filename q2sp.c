@@ -5154,7 +5154,7 @@ void Cmd_Help_f (edict_t *ent);
 // g_items.c
 //
 void PrecacheItem (gitem_t *it);
-void InitItems (void);
+
 gitem_t	*FindItem (char *pickup_name);
 gitem_t	*FindItemByClassname (char *classname);
 
@@ -8236,99 +8236,6 @@ global_variable server_static_t	svs;
 global_variable server_t sv;
 
 void SCR_BeginLoadingPlaque();
-void InitGame(void);
-
-procedure void SV_Map(char* levelstring, bool loadgame) {
-	char	level[MAX_QPATH];
-	char	*ch;
-	int		l;
-	char	spawnpoint[MAX_QPATH];
-
-	sv.loadgame = loadgame;
-
-	if (sv.state == ss_dead && !sv.loadgame) {
-		// NOTE: Init game
-
-		assert(cls.state == ca_disconnected);
-
-		SCR_BeginLoadingPlaque();
-
-		svs.spawncount = rand();
-		svs.num_client_entities = UPDATE_BACKUP * 64;
-		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
-
-		tml_free_all(TAG_LEVEL);
-		tml_free_all(TAG_GAME);
-
-		InitGame();
-
-		edict_t* ent = EDICT_NUM(1);
-		ent->s.number = 1;
-		svs.client.edict = ent;
-	}
-
-	strcpy(level, levelstring);
-
-	// if there is a $, use the remainder as a spawnpoint
-	ch = strstr(level, "$");
-	if (ch) {
-		*ch = 0;
-		strcpy (spawnpoint, ch+1);
-	} else {
-		spawnpoint[0] = 0;
-	}
-
-	// skip the end-of-unit flag if necessary
-	if (level[0] == '*') {
-		strcpy (level, level+1);
-	}
-
-	l = strlen(level);
-	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
-	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
-
-	SCR_BeginLoadingPlaque();			// for local system
-	SV_BroadcastCommand("changing\n");
-	SV_SendClientMessages();
-
-	void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame);
-	SV_SpawnServer(level, spawnpoint, loadgame);
-
-	// NOTE: Copy to defer
-	memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
-	defer_text_buf[cmd_text.cursize] = 0;
-	cmd_text.cursize = 0;
-
-	SV_BroadcastCommand("reconnect\n");
-}
-
-procedure void SV_GameMap_f(void* data) {
-	UNUSED(data);
-	if (cmd_argc == 2) {
-		SV_Map(Cmd_Argv(1), false);
-		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
-	} else {
-		add_line_to_console_log(STR("USAGE: gamemap <map>"));
-	}
-}
-
-procedure void SV_Map_f(void* data) {
-	UNUSED(data);
-
-	// make sure the level exists
-	char* map = Cmd_Argv(1);
-	if (!strstr(map, ".")) {
-		char expanded[MAX_QPATH] = {};
-		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
-		if (FS_LoadFile (expanded, NULL) == -1) {
-			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
-			return;
-		}
-	}
-
-	sv.state = ss_dead; // don't save current level when changing
-	SV_GameMap_f(data);
-}
 
 // Writes a delta update of an entity_state_t list to the message.
 void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t *msg)
@@ -25834,6 +25741,107 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
+procedure void SV_Map(char* levelstring, bool loadgame) {
+	char	level[MAX_QPATH];
+	char	*ch;
+	int		l;
+	char	spawnpoint[MAX_QPATH];
+
+	sv.loadgame = loadgame;
+
+	if (sv.state == ss_dead && !sv.loadgame) {
+		// NOTE: Init game
+
+		assert(cls.state == ca_disconnected);
+
+		SCR_BeginLoadingPlaque();
+
+		svs.spawncount = rand();
+		svs.num_client_entities = UPDATE_BACKUP * 64;
+		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
+
+		tml_free_all(TAG_LEVEL);
+		tml_free_all(TAG_GAME);
+
+		game.num_items = carray_count(itemlist) - 1;
+		Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
+		Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
+
+		// initialize all entities for this game
+		game.maxentities = 1024;
+		g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+
+		// initialize all clients for this game
+		global_num_edicts = 2;
+
+		edict_t* ent = EDICT_NUM(1);
+		ent->s.number = 1;
+		svs.client.edict = ent;
+	}
+
+	strcpy(level, levelstring);
+
+	// if there is a $, use the remainder as a spawnpoint
+	ch = strstr(level, "$");
+	if (ch) {
+		*ch = 0;
+		strcpy (spawnpoint, ch+1);
+	} else {
+		spawnpoint[0] = 0;
+	}
+
+	// skip the end-of-unit flag if necessary
+	if (level[0] == '*') {
+		strcpy (level, level+1);
+	}
+
+	l = strlen(level);
+	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
+	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
+
+	SCR_BeginLoadingPlaque();			// for local system
+	SV_BroadcastCommand("changing\n");
+	SV_SendClientMessages();
+
+	void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame);
+	SV_SpawnServer(level, spawnpoint, loadgame);
+
+	// NOTE: Copy to defer
+	memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
+	defer_text_buf[cmd_text.cursize] = 0;
+	cmd_text.cursize = 0;
+
+	SV_BroadcastCommand("reconnect\n");
+}
+
+procedure void SV_GameMap_f(void* data) {
+	UNUSED(data);
+	if (cmd_argc == 2) {
+		SV_Map(Cmd_Argv(1), false);
+		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd)-1);
+	} else {
+		add_line_to_console_log(STR("USAGE: gamemap <map>"));
+	}
+}
+
+procedure void SV_Map_f(void* data) {
+	UNUSED(data);
+
+	// make sure the level exists
+	char* map = Cmd_Argv(1);
+	if (!strstr(map, ".")) {
+		char expanded[MAX_QPATH] = {};
+		Com_sprintf (expanded, sizeof(expanded), "maps/%s.bsp", map);
+		if (FS_LoadFile (expanded, NULL) == -1) {
+			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Failed to open "), string_from_cstring(expanded))));
+			return;
+		}
+	}
+
+	sv.state = ss_dead; // don't save current level when changing
+	SV_GameMap_f(data);
+}
+
 void SelectNextItem (edict_t *ent, int itflags)
 {
 	gclient_t	*cl;
@@ -27021,11 +27029,6 @@ void SP_item_health_mega (edict_t* self)
 	SpawnItem (self, FindItem ("Health"));
 	SV_SoundIndex ("items/m_health.wav");
 	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;
-}
-
-void InitItems (void)
-{
-	game.num_items = sizeof(itemlist)/sizeof(itemlist[0]) - 1;
 }
 
 // Called by worldspawn
@@ -30458,19 +30461,6 @@ void G_RunEntity (edict_t *ent)
 
 	default: assert(!"unreachable");
 	}
-}
-
-procedure void InitGame() {
-	InitItems();
-	Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
-	Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
-
-	// initialize all entities for this game
-	game.maxentities = 1024;
-	g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
-
-	// initialize all clients for this game
-	global_num_edicts = 2;
 }
 
 global_variable field_t fields[] = {
