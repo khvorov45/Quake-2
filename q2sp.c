@@ -8216,8 +8216,6 @@ void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
 void SV_SendServerinfo (client_t *client);
 void Master_Packet (void);
 
-void SV_Map (char *levelstring, bool loadgame);
-
 void SV_PrepWorldFrame (void);
 
 void SV_SendClientMessages (void);
@@ -8228,52 +8226,81 @@ void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
 					float attenuation, float timeofs);
 void SV_BroadcastCommand (char *fmt, ...);
 
-//
-// sv_ents.c
-//
 void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg);
 void SV_BuildClientFrame (client_t *client);
 
-void SV_Error (char *error, ...);
-
-//
-// sv_game.c
-//
-void SV_InitEdict (edict_t *e);
-
-//============================================================
-
-//
-// high level object sorting to reduce interaction tests
-//
-
-void SV_ClearWorld (void);
-// called after the world model has been loaded, before linking any entities
-
-void SV_UnlinkEdict (edict_t *ent);
-// call before removing an entity, and before trying to move one,
-// so it doesn't clip against itself
-
-void SV_LinkEdict (edict_t *ent);
-// Needs to be called any time an entity changes origin, mins, maxs,
-// or solid.  Automatically unlinks if needed.
-// sets ent->v.absmin and ent->v.absmax
-// sets ent->leafnums[] for pvs determination even if the entity
-// is not solid
-
-int SV_AreaEdicts (vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int areatype);
-// fills in a table of edict pointers with edicts that have bounding boxes
-// that intersect the given area.  It is possible for a non-axial bmodel
-// to be returned that doesn't actually intersect the area on an exact
-// test.
-// returns the number of pointers filled in
-// ??? does this always return the world?
-
-int SV_PointContents (vec3_t p);
-
-trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
+void SV_ClearWorld(void);
+void SV_LinkEdict(edict_t *ent);
 
 global_variable server_static_t	svs;
+global_variable server_t sv;
+
+void SCR_BeginLoadingPlaque();
+void InitGame(void);
+
+procedure void SV_Map(char* levelstring, bool loadgame) {
+	char	level[MAX_QPATH];
+	char	*ch;
+	int		l;
+	char	spawnpoint[MAX_QPATH];
+
+	sv.loadgame = loadgame;
+
+	if (sv.state == ss_dead && !sv.loadgame) {
+		// NOTE: Init game
+
+		assert(cls.state == ca_disconnected);
+
+		SCR_BeginLoadingPlaque();
+
+		svs.spawncount = rand();
+		svs.num_client_entities = UPDATE_BACKUP * 64;
+		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
+
+		tml_free_all(TAG_LEVEL);
+		tml_free_all(TAG_GAME);
+
+		InitGame();
+
+		edict_t* ent = EDICT_NUM(1);
+		ent->s.number = 1;
+		svs.client.edict = ent;
+	}
+
+	strcpy(level, levelstring);
+
+	// if there is a $, use the remainder as a spawnpoint
+	ch = strstr(level, "$");
+	if (ch) {
+		*ch = 0;
+		strcpy (spawnpoint, ch+1);
+	} else {
+		spawnpoint[0] = 0;
+	}
+
+	// skip the end-of-unit flag if necessary
+	if (level[0] == '*') {
+		strcpy (level, level+1);
+	}
+
+	l = strlen(level);
+	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
+	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
+
+	SCR_BeginLoadingPlaque();			// for local system
+	SV_BroadcastCommand("changing\n");
+	SV_SendClientMessages();
+
+	void SV_SpawnServer(char *server, char *spawnpoint, bool loadgame);
+	SV_SpawnServer(level, spawnpoint, loadgame);
+
+	// NOTE: Copy to defer
+	memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
+	defer_text_buf[cmd_text.cursize] = 0;
+	cmd_text.cursize = 0;
+
+	SV_BroadcastCommand("reconnect\n");
+}
 
 procedure void SV_GameMap_f(void* data) {
 	UNUSED(data);
@@ -8284,8 +8311,6 @@ procedure void SV_GameMap_f(void* data) {
 		add_line_to_console_log(STR("USAGE: gamemap <map>"));
 	}
 }
-
-global_variable server_t sv;
 
 procedure void SV_Map_f(void* data) {
 	UNUSED(data);
@@ -8988,19 +9013,6 @@ void PF_StartSound (edict_t *entity, int channel, int sound_num, float volume,
 	SV_StartSound (NULL, entity, channel, sound_num, volume, attenuation, timeofs);
 }
 
-// Called when either the entire server is being killed, or it is changing to a different game directory.
-procedure void SV_ShutdownGameProgs() {
-	tml_free_all(TAG_LEVEL);
-	tml_free_all(TAG_GAME);
-}
-
-void InitGame(void);
-
-void SV_InitGameProgs() {
-	SV_ShutdownGameProgs();
-	InitGame();
-}
-
 int SV_FindIndex (char *name, int start, int max, bool create)
 {
 	int		i;
@@ -9144,67 +9156,6 @@ void CL_Disconnect(void);
 
 procedure void SCR_EndLoadingPlaque() {
 	cls.disable_screen = 0;
-}
-
-void SCR_BeginLoadingPlaque();
-
-void SV_Map(char* levelstring, bool loadgame) {
-	char	level[MAX_QPATH];
-	char	*ch;
-	int		l;
-	char	spawnpoint[MAX_QPATH];
-
-	sv.loadgame = loadgame;
-
-	if (sv.state == ss_dead && !sv.loadgame) {
-		// NOTE: Init game
-
-		assert(cls.state == ca_disconnected);
-
-		SCR_BeginLoadingPlaque();
-
-		svs.spawncount = rand();
-		svs.num_client_entities = UPDATE_BACKUP * 64;
-		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
-
-		SV_InitGameProgs ();
-		edict_t* ent = EDICT_NUM(1);
-		ent->s.number = 1;
-		svs.client.edict = ent;
-	}
-
-	strcpy(level, levelstring);
-
-	// if there is a $, use the remainder as a spawnpoint
-	ch = strstr(level, "$");
-	if (ch) {
-		*ch = 0;
-		strcpy (spawnpoint, ch+1);
-	} else {
-		spawnpoint[0] = 0;
-	}
-
-	// skip the end-of-unit flag if necessary
-	if (level[0] == '*')
-		strcpy (level, level+1);
-
-	l = strlen(level);
-	assert(!(l > 4 && !strcmp(level+l-4, ".cin")));
-	assert(!(l > 4 && !strcmp(level+l-4, ".pcx")));
-
-	SCR_BeginLoadingPlaque();			// for local system
-	SV_BroadcastCommand("changing\n");
-	SV_SendClientMessages();
-	SV_SpawnServer(level, spawnpoint, loadgame);
-
-	// NOTE: Copy to defer
-	{
-		memcpy(defer_text_buf, cmd_text_buf, cmd_text.cursize);
-		defer_text_buf[cmd_text.cursize] = 0;
-		cmd_text.cursize = 0;
-	}
-
-	SV_BroadcastCommand ("reconnect\n");
 }
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
@@ -30509,27 +30460,6 @@ void G_RunEntity (edict_t *ent)
 	}
 }
 
-global_variable mmove_t mmove_reloc;
-
-global_variable field_t levelfields[] = {
-	{"changemap", LLOFS(changemap), F_LSTRING, 0},
-
-	{"sight_client", LLOFS(sight_client), F_EDICT, 0},
-	{"sight_entity", LLOFS(sight_entity), F_EDICT, 0},
-	{"sound_entity", LLOFS(sound_entity), F_EDICT, 0},
-	{"sound2_entity", LLOFS(sound2_entity), F_EDICT, 0},
-
-	{NULL, 0, F_INT, 0}
-};
-
-global_variable field_t clientfields[] = {
-	{"pers.weapon", CLOFS(pers.weapon), F_ITEM, 0},
-	{"pers.lastweapon", CLOFS(pers.lastweapon), F_ITEM, 0},
-	{"newweapon", CLOFS(newweapon), F_ITEM, 0},
-
-	{NULL, 0, F_INT, 0}
-};
-
 procedure void InitGame() {
 	InitItems();
 	Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
@@ -30541,247 +30471,6 @@ procedure void InitGame() {
 
 	// initialize all clients for this game
 	global_num_edicts = 2;
-}
-
-//=========================================================
-
-procedure void WriteField1(field_t *field, u8 *base) {
-	void		*p;
-	int			len;
-	int			index;
-
-	if (field->flags & FFL_SPAWNTEMP)
-		return;
-
-	p = (void *)(base + field->ofs);
-	switch (field->type)
-	{
-	case F_INT:
-	case F_FLOAT:
-	case F_ANGLEHACK:
-	case F_VECTOR:
-	case F_IGNORE:
-		break;
-
-	case F_LSTRING:
-	case F_GSTRING:
-		if ( *(char **)p )
-			len = strlen(*(char **)p) + 1;
-		else
-			len = 0;
-		*(int *)p = len;
-		break;
-	case F_EDICT:
-		if ( *(edict_t **)p == NULL)
-			index = -1;
-		else
-			index = *(edict_t **)p - g_edicts;
-		*(int *)p = index;
-		break;
-	case F_CLIENT:
-		if ( *(gclient_t **)p == NULL)
-			index = -1;
-		else
-			index = *(gclient_t **)p - &game.client;
-		*(int *)p = index;
-		break;
-	case F_ITEM:
-		if ( *(edict_t **)p == NULL)
-			index = -1;
-		else
-			index = *(gitem_t **)p - itemlist;
-		*(int *)p = index;
-		break;
-
-	//relative to code segment
-	case F_FUNCTION:
-		if (*(u8 **)p == NULL)
-			index = 0;
-		else
-			index = *(u8 **)p - ((u8 *)InitGame);
-		*(int *)p = index;
-		break;
-
-	//relative to data segment
-	case F_MMOVE:
-		if (*(u8 **)p == NULL)
-			index = 0;
-		else
-			index = *(u8 **)p - (u8 *)&mmove_reloc;
-		*(int *)p = index;
-		break;
-
-	default: assert(!"unreachable");
-	}
-}
-
-void WriteField2 (FILE *f, field_t *field, u8 *base)
-{
-	int			len;
-	void		*p;
-
-	if (field->flags & FFL_SPAWNTEMP)
-		return;
-
-	p = (void *)(base + field->ofs);
-	switch (field->type)
-	{
-	case F_LSTRING:
-		if ( *(char **)p )
-		{
-			len = strlen(*(char **)p) + 1;
-			fwrite (*(char **)p, len, 1, f);
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-void ReadField (FILE *f, field_t *field, u8 *base)
-{
-	void		*p;
-	int			len;
-	int			index;
-
-	if (field->flags & FFL_SPAWNTEMP)
-		return;
-
-	p = (void *)(base + field->ofs);
-	switch (field->type)
-	{
-	case F_INT:
-	case F_FLOAT:
-	case F_ANGLEHACK:
-	case F_VECTOR:
-	case F_IGNORE:
-		break;
-
-	case F_LSTRING:
-		len = *(int *)p;
-		if (!len)
-			*(char **)p = NULL;
-		else
-		{
-			*(char **)p = tml_alloc_with_tag (len, TAG_LEVEL);
-			fread (*(char **)p, len, 1, f);
-		}
-		break;
-	case F_EDICT:
-		index = *(int *)p;
-		if ( index == -1 )
-			*(edict_t **)p = NULL;
-		else
-			*(edict_t **)p = &g_edicts[index];
-		break;
-	case F_CLIENT:
-		index = *(int *)p;
-		if ( index == -1 )
-			*(gclient_t **)p = NULL;
-		else
-			*(gclient_t **)p = &game.client;
-		break;
-	case F_ITEM:
-		index = *(int *)p;
-		if ( index == -1 )
-			*(gitem_t **)p = NULL;
-		else
-			*(gitem_t **)p = &itemlist[index];
-		break;
-
-	//relative to code segment
-	case F_FUNCTION:
-		index = *(int *)p;
-		if ( index == 0 )
-			*(u8 **)p = NULL;
-		else
-			*(u8 **)p = ((u8 *)InitGame) + index;
-		break;
-
-	//relative to data segment
-	case F_MMOVE:
-		index = *(int *)p;
-		if (index == 0)
-			*(u8 **)p = NULL;
-		else
-			*(u8 **)p = (u8 *)&mmove_reloc + index;
-		break;
-
-	default: assert(!"unreachable");
-	}
-}
-
-//=========================================================
-
-/*
-==============
-WriteClient
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
-void WriteClient (FILE *f, gclient_t *client)
-{
-	field_t		*field;
-	gclient_t	temp;
-
-	// all of the ints, floats, and vectors stay as they are
-	temp = *client;
-
-	// change the pointers to lengths or indexes
-	for (field=clientfields ; field->name ; field++)
-	{
-		WriteField1(field, (u8 *)&temp);
-	}
-
-	// write the block
-	fwrite (&temp, sizeof(temp), 1, f);
-
-	// now write any allocated data following the edict
-	for (field=clientfields ; field->name ; field++)
-	{
-		WriteField2 (f, field, (u8 *)client);
-	}
-}
-
-/*
-==============
-ReadClient
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
-void ReadClient (FILE *f, gclient_t *client)
-{
-	field_t		*field;
-
-	fread (client, sizeof(*client), 1, f);
-
-	for (field=clientfields ; field->name ; field++)
-	{
-		ReadField (f, field, (u8 *)client);
-	}
-}
-
-void ReadGame (char *filename)
-{
-	FILE	*f;
-	char	str[16];
-
-	tml_free_all (TAG_GAME);
-
-	f = fopen (filename, "rb");
-	assert(f);
-
-	fread (str, sizeof(str), 1, f);
-	assert(!strcmp(str, __DATE__));
-
-	g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
-
-	fread (&game, sizeof(game), 1, f);
-	ReadClient(f, &game.client);
-
-	fclose (f);
 }
 
 global_variable field_t fields[] = {
@@ -30878,214 +30567,6 @@ global_variable field_t fields[] = {
 	{0, 0, 0, 0}
 
 };
-
-// All pointer variables (except function pointers) must be handled specially.
-void WriteEdict (FILE *f, edict_t *ent)
-{
-	field_t		*field;
-	edict_t		temp;
-
-	// all of the ints, floats, and vectors stay as they are
-	temp = *ent;
-
-	// change the pointers to lengths or indexes
-	for (field=fields ; field->name ; field++)
-	{
-		WriteField1(field, (u8 *)&temp);
-	}
-
-	// write the block
-	fwrite (&temp, sizeof(temp), 1, f);
-
-	// now write any allocated data following the edict
-	for (field=fields ; field->name ; field++)
-	{
-		WriteField2 (f, field, (u8 *)ent);
-	}
-
-}
-
-/*
-==============
-WriteLevelLocals
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
-void WriteLevelLocals (FILE *f)
-{
-	field_t		*field;
-	level_locals_t		temp;
-
-	// all of the ints, floats, and vectors stay as they are
-	temp = level;
-
-	// change the pointers to lengths or indexes
-	for (field=levelfields ; field->name ; field++)
-	{
-		WriteField1(field, (u8 *)&temp);
-	}
-
-	// write the block
-	fwrite (&temp, sizeof(temp), 1, f);
-
-	// now write any allocated data following the edict
-	for (field=levelfields ; field->name ; field++)
-	{
-		WriteField2 (f, field, (u8 *)&level);
-	}
-}
-
-/*
-==============
-ReadEdict
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
-void ReadEdict (FILE *f, edict_t *ent)
-{
-	field_t		*field;
-
-	fread (ent, sizeof(*ent), 1, f);
-
-	for (field=fields ; field->name ; field++)
-	{
-		ReadField (f, field, (u8 *)ent);
-	}
-}
-
-/*
-==============
-ReadLevelLocals
-
-All pointer variables (except function pointers) must be handled specially.
-==============
-*/
-void ReadLevelLocals (FILE *f)
-{
-	field_t		*field;
-
-	fread (&level, sizeof(level), 1, f);
-
-	for (field=levelfields ; field->name ; field++)
-	{
-		ReadField (f, field, (u8 *)&level);
-	}
-}
-
-void WriteLevel (char *filename)
-{
-	int		i;
-	edict_t	*ent;
-	FILE	*f;
-	void	*base;
-
-	f = fopen (filename, "wb");
-	assert(f);
-
-	// write out edict size for checking
-	i = sizeof(edict_t);
-	fwrite (&i, sizeof(i), 1, f);
-
-	// write out a function pointer for checking
-	base = (void *)InitGame;
-	fwrite (&base, sizeof(base), 1, f);
-
-	// write out level_locals_t
-	WriteLevelLocals (f);
-
-	// write out all the entities
-	for (i=0 ; i<global_num_edicts ; i++)
-	{
-		ent = &g_edicts[i];
-		if (!ent->inuse)
-			continue;
-		fwrite (&i, sizeof(i), 1, f);
-		WriteEdict (f, ent);
-	}
-	i = -1;
-	fwrite (&i, sizeof(i), 1, f);
-
-	fclose (f);
-}
-
-// SpawnEntities will allready have been called on the level the same way it was when the level was saved.
-// That is necessary to get the baselines set up identically.
-// The server will have cleared all of the world links before calling this.
-// No clients are connected yet.
-void ReadLevel (char *filename)
-{
-	int		entnum;
-	FILE	*f;
-	int		i;
-	void	*base;
-	edict_t	*ent;
-
-	f = fopen (filename, "rb");
-	assert(f);
-
-	// free any dynamic memory allocated by loading the level
-	// base state
-	tml_free_all (TAG_LEVEL);
-
-	// wipe all the entities
-	memset (g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
-	global_num_edicts = 2;
-
-	// check edict size
-	fread (&i, sizeof(i), 1, f);
-	assert(i == sizeof(edict_t));
-
-	// check function pointer base address
-	fread (&base, sizeof(base), 1, f);
-	assert(base == (void*)InitGame);
-
-	// load the level locals
-	ReadLevelLocals (f);
-
-	// load all the entities
-	while (1)
-	{
-		int fread_result = fread(&entnum, sizeof(entnum), 1, f);
-		assert(fread_result == 1);
-
-		if (entnum == -1)
-			break;
-		if (entnum >= global_num_edicts)
-			global_num_edicts = entnum+1;
-
-		ent = &g_edicts[entnum];
-		ReadEdict (f, ent);
-
-		// let the server rebuild world links for this ent
-		memset (&ent->area, 0, sizeof(ent->area));
-		SV_LinkEdict (ent);
-	}
-
-	fclose (f);
-
-	// mark all clients as unconnected
-	{
-		ent = &g_edicts[1];
-		ent->client = &game.client;
-		ent->client->pers.connected = false;
-	}
-
-	// do any load time things at this point
-	for (i=0 ; i<global_num_edicts ; i++)
-	{
-		ent = &g_edicts[i];
-
-		if (!ent->inuse)
-			continue;
-
-		// fire any cross-level triggers
-		if (ent->classname)
-			if (strcmp(ent->classname, "target_crosslevel_target") == 0)
-				ent->nextthink = level.time + ent->delay;
-	}
-}
 
 typedef struct
 {
