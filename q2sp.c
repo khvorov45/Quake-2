@@ -4653,11 +4653,7 @@ enum svc_ops_e {
 	svc_frame
 };
 
-void Sys_AppActivate (void);
-
 char* Sys_GetClipboardData( void );
-
-void SCR_BeginLoadingPlaque (void);
 
 // client data that stays across multiple level loads
 typedef struct {
@@ -8220,7 +8216,6 @@ void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
 void SV_SendServerinfo (client_t *client);
 void Master_Packet (void);
 
-void SV_InitGame (void);
 void SV_Map (char *levelstring, bool loadgame);
 
 void SV_PrepWorldFrame (void);
@@ -9151,26 +9146,7 @@ procedure void SCR_EndLoadingPlaque() {
 	cls.disable_screen = 0;
 }
 
-// A brand new game has been started
-void SV_InitGame(void) {
-	edict_t	*ent;
-
-	assert(cls.state == ca_disconnected);
-
-	SCR_BeginLoadingPlaque ();
-
-	svs.spawncount = rand();
-	svs.num_client_entities = UPDATE_BACKUP * 64;
-	svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
-
-	// init game
-	SV_InitGameProgs ();
-	{
-		ent = EDICT_NUM(1);
-		ent->s.number = 1;
-		svs.client.edict = ent;
-	}
-}
+void SCR_BeginLoadingPlaque();
 
 void SV_Map(char* levelstring, bool loadgame) {
 	char	level[MAX_QPATH];
@@ -9181,7 +9157,20 @@ void SV_Map(char* levelstring, bool loadgame) {
 	sv.loadgame = loadgame;
 
 	if (sv.state == ss_dead && !sv.loadgame) {
-		SV_InitGame();	// the game is just starting
+		// NOTE: Init game
+
+		assert(cls.state == ca_disconnected);
+
+		SCR_BeginLoadingPlaque();
+
+		svs.spawncount = rand();
+		svs.num_client_entities = UPDATE_BACKUP * 64;
+		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
+
+		SV_InitGameProgs ();
+		edict_t* ent = EDICT_NUM(1);
+		ent->s.number = 1;
+		svs.client.edict = ent;
 	}
 
 	strcpy(level, levelstring);
@@ -10432,7 +10421,7 @@ void	VID_MenuDraw( void );
 void	SCR_UpdateScreen (void);
 
 void	SCR_CenterPrint (char *str);
-void	SCR_BeginLoadingPlaque (void);
+
 
 void	SCR_TouchPics (void);
 
@@ -56930,54 +56919,25 @@ char *Sys_GetClipboardData( void )
 	return data;
 }
 
-/*
-==============================================================================
-
- WINDOWS CRAP
-
-==============================================================================
-*/
-
-/*
-=================
-Sys_AppActivate
-=================
-*/
-void Sys_AppActivate (void)
-{
-	ShowWindow ( cl_hwnd, SW_RESTORE);
-	SetForegroundWindow ( cl_hwnd );
-}
-
-global_variable u8        scantokey[128] =
-					{
-//  0           1       2       3       4       5       6       7
-//  8           9       A       B       C       D       E       F
+global_variable u8 scantokey[128] = {
 	0  ,    27,     '1',    '2',    '3',    '4',    '5',    '6',
-	'7',    '8',    '9',    '0',    '-',    '=',    Key_Code_Backspace, 9, // 0
+	'7',    '8',    '9',    '0',    '-',    '=',    Key_Code_Backspace, 9,
 	'q',    'w',    'e',    'r',    't',    'y',    'u',    'i',
-	'o',    'p',    '[',    ']',    13 ,    Key_Code_Ctrl,'a',  's',      // 1
+	'o',    'p',    '[',    ']',    13 ,    Key_Code_Ctrl,'a',  's',
 	'd',    'f',    'g',    'h',    'j',    'k',    'l',    ';',
-	'\'' ,    '`',    Key_Code_Shift,'\\',  'z',    'x',    'c',    'v',      // 2
+	'\'' ,    '`',    Key_Code_Shift,'\\',  'z',    'x',    'c',    'v',
 	'b',    'n',    'm',    ',',    '.',    '/',    Key_Code_Shift,'*',
-	Key_Code_Alt,' ',   0  ,    Key_Code_F1, Key_Code_F2, Key_Code_F3, Key_Code_F4, Key_Code_F5,   // 3
-	Key_Code_F6, Key_Code_F7, Key_Code_F8, Key_Code_F9, Key_Code_F10,  Key_Code_Pause,    0  , Key_Code_Home,
-	Key_Code_Up,Key_Code_Pageup,Key_Code_Keypad_Minus,Key_Code_Left,Key_Code_Keypad_5,Key_Code_Right, Key_Code_Keypad_Plus,Key_Code_End, //4
+	Key_Code_Alt,' ',   0  ,    Key_Code_F1, Key_Code_F2, Key_Code_F3, Key_Code_F4, Key_Code_F5,
+	Key_Code_F6, Key_Code_F7, Key_Code_F8, Key_Code_F9, Key_Code_F10,  Key_Code_Pause, 0, Key_Code_Home,
+	Key_Code_Up,Key_Code_Pageup,Key_Code_Keypad_Minus,Key_Code_Left,Key_Code_Keypad_5,Key_Code_Right, Key_Code_Keypad_Plus,Key_Code_End,
 	Key_Code_Down,Key_Code_Pagedown,Key_Code_Insert,Key_Code_Delete,0,0,             0,              Key_Code_F11,
-	Key_Code_F12,0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 5
+	Key_Code_F12,0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
 	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,        // 6
 	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
-	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0         // 7
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0,
+	0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0  ,    0
 };
 
-/*
-=======
-MapKey
-
-Map from windows to quake keynums
-=======
-*/
 int MapKey (int key)
 {
 	int result;
