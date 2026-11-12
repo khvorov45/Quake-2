@@ -726,7 +726,7 @@ procedure void builtin_string_command_unbind(void* ctx) {
 			add_line_to_console_log(STR("invalid key"));
 		}
 	} else {
-		add_line_to_console_log(STR("unbind key: remove commands from a key"));
+		add_line_to_console_log(STR("unbind <key_name>: remove commands from a key"));
 	}
 }
 
@@ -2147,9 +2147,16 @@ procedure void Cmd_TokenizeString(char* text) {
 }
 
 procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
-	context.debug_log(STR("STR EXECUTE"), string_from_cstring(text));
+	context.debug_log(STR("STR_EXECUTE"), string_from_cstring(text));
 
 	Cmd_TokenizeString(text);
+
+	// NOTE: Get args (first one is command name)
+	{
+		User_Args* args = &ctx->data.user_args;
+		args->len = 0;
+		assert(!"unimplemented");
+	}
 
 	// execute the command line
 	if (!cmd_argc) {
@@ -15671,7 +15678,7 @@ void CL_ParseStartSoundPacket(void)
 	S_StartSound (pos, ent, channel, cl.sound_precache[sound_num], volume, attenuation, ofs);
 }
 
-global_variable String_Command_Context temp_global_string_command_context;
+global_variable String_Command_Context* temp_global_string_command_context;
 
 void CL_ParseServerMessage ()
 {
@@ -15719,7 +15726,7 @@ void CL_ParseServerMessage ()
 			break;
 
 		case svc_serverdata:
-			Cmd_ExecuteCbuf(&temp_global_string_command_context);		// make sure any stuffed commands are done
+			Cmd_ExecuteCbuf(temp_global_string_command_context);
 			CL_ParseServerData ();
 			break;
 
@@ -20310,7 +20317,7 @@ procedure void CustomizeControlsFunc(void* unused) {
 procedure void ControlsResetDefaultsFunc(void* unused) {
 	UNUSED(unused);
 	Cbuf_AddText("exec default.cfg\n");
-	Cmd_ExecuteCbuf(&temp_global_string_command_context);
+	Cmd_ExecuteCbuf(temp_global_string_command_context);
 }
 
 procedure void ConsoleFunc(void* unused) {
@@ -56831,12 +56838,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// NOTE: String commands
-	temp_memory_block(&context.memory.temp) {
-		temp_global_string_command_context.data = (String_Command_Data){
+	String_Command_Context string_command_context = {
+		.data = (String_Command_Data){
 			.client_state = &cls.state,
 			.key_bindings = key_bindings,
-		};
+			.user_args = arena_alloc_fixed_cap(&context.memory.perm, String, 64),
+		},
+	};
+	temp_global_string_command_context = &string_command_context;
 
+	temp_memory_block(&context.memory.temp) {
 		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), builtin_string_command_quit}));
@@ -56914,7 +56925,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
-		copy_slice(&context.memory.perm, &temp_global_string_command_context.builtin, &temp_cmds);
+		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds);
 	}
 
 	// NOTE: Command buffer
@@ -57309,7 +57320,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cbuf_AddText("exec default.cfg\n");
 		Cbuf_AddText("exec config.cfg\n");
 
-		Cmd_ExecuteCbuf(&temp_global_string_command_context);
+		Cmd_ExecuteCbuf(&string_command_context);
 	}
 
 	// NOTE: Game window resolution
@@ -57604,7 +57615,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	Cbuf_AddText("exec autoexec.cfg\n");
-	Cmd_ExecuteCbuf(&temp_global_string_command_context);
+	Cmd_ExecuteCbuf(&string_command_context);
 
 	// NOTE: Mainloop
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
@@ -57633,7 +57644,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		assert(delta_time_ms >= 1);
-		Cmd_ExecuteCbuf(&temp_global_string_command_context);
+		Cmd_ExecuteCbuf(&string_command_context);
 
 		// NOTE: Server update
 		{
@@ -57757,7 +57768,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				}
 			}
 
-			Cmd_ExecuteCbuf(&temp_global_string_command_context);
+			Cmd_ExecuteCbuf(&string_command_context);
 
 			// build a command even if not connected
 			{
