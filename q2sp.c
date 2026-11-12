@@ -14329,87 +14329,6 @@ void Draw_Pic(int x, int y, char *pic);
 global_variable Key_Bindings* temp_global_key_bindings;
 global_variable v2i temp_global_char_dim_px = {8, 8};
 
-enum {
-	Inventory_Row_Layout_Hotkey,
-	Inventory_Row_Layout_Item_Count,
-	Inventory_Row_Layout_Item_Name,
-	Inventory_Row_Layout_Count,
-};
-
-procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
-	v2i current_topleft = topleft;
-	for (i64 ind = 0; ind < Inventory_Row_Layout_Count; ind++) {
-		String string = strings[ind];
-		if (string.len > 0) {
-			DrawString(current_topleft.x, current_topleft.y, string.ptr);
-		}
-		i64 pad_right_ch = widths[ind] - string.len;
-		assert(pad_right_ch >= 0);
-		i64 gap_ch = 1;
-		current_topleft.x += temp_global_char_dim_px.x * (string.len + pad_right_ch + gap_ch);
-	}
-}
-
-procedure void draw_inventory_table() {
-	// NOTE: Header
-	v2i header_topleft_px = temp_global_char_dim_px;
-
-	String header_strings[Inventory_Row_Layout_Count] = {
-		[Inventory_Row_Layout_Hotkey] = STR("hotkey"),
-		[Inventory_Row_Layout_Item_Count] = STR("###"),
-		[Inventory_Row_Layout_Item_Name] = STR("item"),
-	};
-
-	String longest_item_name = STR("Grenade Launcher");
-	i64 widths[Inventory_Row_Layout_Count] = {
-		[Inventory_Row_Layout_Hotkey] = header_strings[Inventory_Row_Layout_Hotkey].len,
-		[Inventory_Row_Layout_Item_Count] = header_strings[Inventory_Row_Layout_Item_Count].len,
-		[Inventory_Row_Layout_Item_Name] = longest_item_name.len,
-	};
-	draw_inventory_row(header_topleft_px, header_strings, widths);
-
-	// NOTE: Inventory state
-	i64 inventory_item_ids[MAX_ITEMS] = {};
-	i64 number_of_items_in_inventory = 0;
-	for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
-		i64 item_count_in_inventory = cl.inventory[item_id];
-		if (item_count_in_inventory > 0) {
-			inventory_item_ids[number_of_items_in_inventory++] = item_id;
-		}
-	}
-
-	// NOTE: Inventory content
-	v2i current_item_topleft_px = {header_topleft_px.x, header_topleft_px.y + temp_global_char_dim_px.y * 2};
-	for (i64 inventory_item_ind = 0; inventory_item_ind < number_of_items_in_inventory; inventory_item_ind++) {
-		i64 item_id = inventory_item_ids[inventory_item_ind];
-
-		String item_name = string_from_cstring(cl.configstrings[CS_ITEMS + item_id]);
-		String item_hotkey = {};
-		{
-			String use_this_item_cmd = concat(&context.memory.temp, STRS(STR("use "), item_name));
-			for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
-				Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
-				if (streq(use_this_item_cmd, string_from_fixed_string(this_binding))) {
-					item_hotkey = Key_Code_Strings[key_code];
-					break;
-				}
-			}
-		}
-
-		i64 item_count = cl.inventory[item_id];
-		String item_count_str = int_to_string(&context.memory.temp, item_count);
-
-		String row_strings[Inventory_Row_Layout_Count] = {
-			[Inventory_Row_Layout_Hotkey] = item_hotkey,
-			[Inventory_Row_Layout_Item_Count] = item_count_str,
-			[Inventory_Row_Layout_Item_Name] = item_name,
-		};
-
-		draw_inventory_row(current_item_topleft_px, row_strings, widths);
-		current_item_topleft_px.y += temp_global_char_dim_px.y;
-	}
-}
-
 void CL_ForwardToServer_f (void* data)
 {
 	UNUSED(data);
@@ -17099,6 +17018,27 @@ void SCR_ExecuteLayoutString (char *s)
 
 #define	STAT_LAYOUTS 13
 
+enum {
+	Inventory_Row_Layout_Hotkey,
+	Inventory_Row_Layout_Item_Count,
+	Inventory_Row_Layout_Item_Name,
+	Inventory_Row_Layout_Count,
+};
+
+procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
+	v2i current_topleft = topleft;
+	for (i64 ind = 0; ind < Inventory_Row_Layout_Count; ind++) {
+		String string = strings[ind];
+		if (string.len > 0) {
+			DrawString(current_topleft.x, current_topleft.y, string.ptr);
+		}
+		i64 pad_right_ch = widths[ind] - string.len;
+		assert(pad_right_ch >= 0);
+		i64 gap_ch = 1;
+		current_topleft.x += temp_global_char_dim_px.x * (string.len + pad_right_ch + gap_ch);
+	}
+}
+
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 procedure void SCR_UpdateScreen() {
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
@@ -17124,7 +17064,65 @@ procedure void SCR_UpdateScreen() {
 	}
 
 	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
-		draw_inventory_table();
+		// NOTE: Draw inventory
+
+		// NOTE: Header
+		v2i header_topleft_px = temp_global_char_dim_px;
+
+		String header_strings[Inventory_Row_Layout_Count] = {
+			[Inventory_Row_Layout_Hotkey] = STR("hotkey"),
+			[Inventory_Row_Layout_Item_Count] = STR("###"),
+			[Inventory_Row_Layout_Item_Name] = STR("item"),
+		};
+
+		String longest_item_name = STR("Grenade Launcher");
+		i64 widths[Inventory_Row_Layout_Count] = {
+			[Inventory_Row_Layout_Hotkey] = header_strings[Inventory_Row_Layout_Hotkey].len,
+			[Inventory_Row_Layout_Item_Count] = header_strings[Inventory_Row_Layout_Item_Count].len,
+			[Inventory_Row_Layout_Item_Name] = longest_item_name.len,
+		};
+		draw_inventory_row(header_topleft_px, header_strings, widths);
+
+		// NOTE: Inventory state
+		i64 inventory_item_ids[MAX_ITEMS] = {};
+		i64 number_of_items_in_inventory = 0;
+		for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
+			i64 item_count_in_inventory = cl.inventory[item_id];
+			if (item_count_in_inventory > 0) {
+				inventory_item_ids[number_of_items_in_inventory++] = item_id;
+			}
+		}
+
+		// NOTE: Inventory content
+		v2i current_item_topleft_px = {header_topleft_px.x, header_topleft_px.y + temp_global_char_dim_px.y * 2};
+		for (i64 inventory_item_ind = 0; inventory_item_ind < number_of_items_in_inventory; inventory_item_ind++) {
+			i64 item_id = inventory_item_ids[inventory_item_ind];
+
+			String item_name = string_from_cstring(cl.configstrings[CS_ITEMS + item_id]);
+			String item_hotkey = {};
+			{
+				String use_this_item_cmd = concat(&context.memory.temp, STRS(STR("use "), item_name));
+				for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+					Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
+					if (streq(use_this_item_cmd, string_from_fixed_string(this_binding))) {
+						item_hotkey = Key_Code_Strings[key_code];
+						break;
+					}
+				}
+			}
+
+			i64 item_count = cl.inventory[item_id];
+			String item_count_str = int_to_string(&context.memory.temp, item_count);
+
+			String row_strings[Inventory_Row_Layout_Count] = {
+				[Inventory_Row_Layout_Hotkey] = item_hotkey,
+				[Inventory_Row_Layout_Item_Count] = item_count_str,
+				[Inventory_Row_Layout_Item_Name] = item_name,
+			};
+
+			draw_inventory_row(current_item_topleft_px, row_strings, widths);
+			current_item_topleft_px.y += temp_global_char_dim_px.y;
+		}
 	}
 
 	SCR_DrawNet();
