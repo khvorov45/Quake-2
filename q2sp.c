@@ -175,6 +175,32 @@ typedef struct {String* ptr; i64 len;} String_Slice;
 typedef struct {char** ptr; i64 len;} Cstring_Slice;
 #define CSTRS(...) (Cstring_Slice){(char*[]){__VA_ARGS__}, carray_count(((char*[]){__VA_ARGS__}))}
 
+procedure String string_advance_by(String str, i64 by) {
+	assert(by >= 0 && by <= str.len);
+	String result = {str.ptr + by, str.len - by};
+	return result;
+}
+
+typedef enum {
+	String_Count_Consecutive_Mode_Non_Whitespace = 0,
+	String_Count_Consecutive_Mode_Whitespace = 1,
+} String_Count_Consecutive_Mode;
+
+procedure i64 string_count_consecutive(String str, String_Count_Consecutive_Mode mode) {
+	i64 result = 0;
+	for (i64 ind = 0; ind < str.len; ind++) {
+		char ch = str.ptr[ind];
+		i32 is_whitespace = ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+		bool this_one_counts = !(is_whitespace ^ mode);
+		if (this_one_counts) {
+			result += 1;
+		} else {
+			break;
+		}
+	}
+	return result;
+}
+
 procedure String string_from_cstring(char* cstring) {
 	String result = {};
 	if (cstring) {
@@ -717,11 +743,15 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 procedure void builtin_string_command_unbind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
 	User_Args user_args = ((String_Command_Context*)ctx)->data.user_args;
+	assert(user_args.len >= 1);
+	assert(streq(user_args.ptr[0], STR("unbind")));
 
-	if (user_args.len == 1) {
-		u8 key_code = get_key_code_number(user_args.ptr[0]);
+	if (user_args.len == 2) {
+		String key_name = user_args.ptr[1];
+		u8 key_code = get_key_code_number(key_name);
 		if (key_code) {
 			set_key_binding(key_bindings, key_code, STR(""));
+			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Key "), key_name, STR(" unbound"))));
 		} else {
 			add_line_to_console_log(STR("invalid key"));
 		}
@@ -2152,10 +2182,16 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	Cmd_TokenizeString(text);
 
 	// NOTE: Get args (first one is command name)
-	{
-		User_Args* args = &ctx->data.user_args;
-		args->len = 0;
-		assert(!"unimplemented");
+	ctx->data.user_args.len = 0;
+	for (String left_to_process = string_from_cstring(text); left_to_process.len;) {
+		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Whitespace);
+		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
+		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Non_Whitespace);
+		left_to_process = string_advance_by(left_to_process, consecutive_non_whitespaces);
+		String word = {.ptr = left_to_process.ptr - consecutive_non_whitespaces, .len = consecutive_non_whitespaces};
+		if (word.len) {
+			append_fixed_cap(&ctx->data.user_args, word);
+		}
 	}
 
 	// execute the command line
