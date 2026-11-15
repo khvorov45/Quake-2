@@ -155,13 +155,6 @@ procedure void arena_temp_memory_keep(Arena_Temp_Memory* temp, i64 bytes_to_keep
 // SECTION Strings
 //
 
-typedef struct {char buf[1024]; i64 len;} Fixed_String;
-
-procedure String string_from_fixed_string(Fixed_String* fstr) {
-	String result = {fstr->buf, fstr->len};
-	return result;
-}
-
 // NOTE: STR("text") is the string literal for our String type
 #define STR(text) ((String){.ptr = (char*)(text), .len = sizeof(text) - 1})
 
@@ -211,15 +204,6 @@ procedure String string_from_cstring(char* cstring) {
 	return result;
 }
 
-procedure String copy_string(Arena* arena, String text) {
-	i64 len_with_null = text.len + 1;
-	char* dest = arena_alloc_bytes(arena, len_with_null);
-	copy_bytes(dest, text.ptr, text.len);
-	dest[text.len] = 0;
-	String result = {dest, text.len};
-	return result;
-}
-
 procedure bool streq(String str1, String str2) {
 	bool result = false;
 	if (str1.len == str2.len) {
@@ -245,9 +229,14 @@ procedure bool string_ends_with(String text, String ending) {
 
 typedef struct {String str; i64 max_len;} String_Builder;
 
-procedure String_Builder string_builder_begin(Arena* arena, i64 max_len) {
+procedure String_Builder string_builder_from_slice(u8_Slice buf) {
+	String_Builder builder = {.str = (String){.ptr = (char*)buf.ptr, .len = 0}, .max_len = buf.len};
+	return builder;
+}
+
+procedure String_Builder string_builder_from_arena(Arena* arena, i64 max_len) {
 	void* base = arena_alloc_bytes(arena, max_len);
-	String_Builder builder = {.str = (String){.ptr = base, .len = 0}, .max_len = max_len};
+	String_Builder builder = string_builder_from_slice((u8_Slice){base, max_len});
 	return builder;
 }
 
@@ -269,10 +258,18 @@ procedure String string_builder_end(String_Builder* builder) {
 	return result;
 }
 
+procedure String copy_string(Arena* arena, String text) {
+	i64 len_with_null = text.len + 1;
+	String_Builder builder = string_builder_from_arena(arena, len_with_null);
+	string_builder_write_string(&builder, text);
+	String result = string_builder_end(&builder);
+	return result;
+}
+
 procedure String concat(Arena* arena, String_Slice strings) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
-	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
+	String_Builder builder = string_builder_from_arena(arena, 1 * Megabyte);
 	for (i64 ind = 0; ind < strings.len; ind++) {
 		String str = strings.ptr[ind];
 		string_builder_write_string(&builder, str);
@@ -286,7 +283,7 @@ procedure String concat(Arena* arena, String_Slice strings) {
 procedure String int_to_string(Arena* arena, i64 val) {
 	Arena_Temp_Memory temp_memory = arena_temp_memory_begin(arena);
 
-	String_Builder builder = string_builder_begin(arena, 1 * Megabyte);
+	String_Builder builder = string_builder_from_arena(arena, 1 * Megabyte);
 
 	i64 current_val = val;
 	if (current_val < 0) {
@@ -315,6 +312,20 @@ procedure String int_to_string(Arena* arena, i64 val) {
 
 	arena_temp_memory_keep(&temp_memory, result.len + 1); // NOTE: Guard the null terminator
 	return result;
+}
+
+typedef struct {char buf[1024]; i64 len;} Fixed_String;
+
+procedure String string_from_fixed_string(Fixed_String* fstr) {
+	String result = {fstr->buf, fstr->len};
+	return result;
+}
+
+procedure void fixed_string_write_string(Fixed_String* fstr, String text) {
+	String_Builder builder = string_builder_from_slice((u8_Slice){(u8*)fstr->buf, carray_count(fstr->buf)});
+	string_builder_write_string(&builder, text);
+	String result = string_builder_end(&builder);
+	fstr->len = result.len;
 }
 
 //
@@ -560,11 +571,7 @@ procedure u8 get_key_code_number(String string) {
 }
 
 procedure void set_key_binding(Key_Bindings* key_bindings, u8 key_code, String binding) {
-	Fixed_String* fstr = key_bindings->values + key_code;
-	assert(carray_count(fstr->buf) > binding.len);
-	fstr->len = binding.len;
-	copy_bytes(fstr->buf, binding.ptr, binding.len);
-	fstr->buf[fstr->len] = 0;
+	fixed_string_write_string(key_bindings->values + key_code, binding);
 }
 
 //
@@ -670,12 +677,14 @@ procedure void add_line_to_console_log(String line) {
 	Console_Line* console_line = temp_global_console_log.ptr + temp_global_console_log.head;
 	temp_global_console_log.head = (temp_global_console_log.head + 1) % temp_global_console_log.cap;
 
-	assert(carray_count(console_line->fstr.buf) > line.len);
-	copy_bytes(console_line->fstr.buf, line.ptr, line.len);
-	console_line->fstr.len = line.len;
-	console_line->fstr.buf[console_line->fstr.len] = 0;
+	fixed_string_write_string(&console_line->fstr, line);
 	console_line->timestamp = cls.realtime;
 }
+
+procedure void cadd_line_to_console_log(String_Slice line_chunks) {temp_memory_block(&context.memory.temp) {
+	String line = concat(&context.memory.temp, line_chunks);
+	add_line_to_console_log(line);
+}}
 
 //
 // SECTION String commands
@@ -705,7 +714,7 @@ procedure void builtin_string_command_write_config(void* ctx) {
 
 	// TODO kinda wanna get rid of this condition
 	if (*client_state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
-		String_Builder builder = string_builder_begin(&context.memory.temp, 1 * Megabyte);
+		String_Builder builder = string_builder_from_arena(&context.memory.temp, 1 * Megabyte);
 		string_builder_write_string(&builder, STR("// generated by quake, do not modify\n"));
 
 		// NOTE: Keybindings
@@ -751,7 +760,7 @@ procedure void builtin_string_command_unbind(void* ctx) {
 		u8 key_code = get_key_code_number(key_name);
 		if (key_code) {
 			set_key_binding(key_bindings, key_code, STR(""));
-			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Key "), key_name, STR(" unbound"))));
+			cadd_line_to_console_log(STRS(STR("Key "), key_name, STR(" unbound")));
 		} else {
 			add_line_to_console_log(STR("invalid key"));
 		}
@@ -2328,7 +2337,7 @@ procedure void Cmd_Alias_f(void* data) {
 
 	if (cmd_argc == 1) {
 		for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-			add_line_to_console_log(concat(&context.memory.temp, STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value))));
+			cadd_line_to_console_log(STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value)));
 		}
 		return;
 	}
@@ -18748,7 +18757,7 @@ procedure void CL_PrepRefresh() {
 	mapname[strlen(mapname)-4] = 0;		// cut off ".bsp"
 
 	// register models, pics, and skins
-	add_line_to_console_log(concat(&context.memory.temp, STRS(STR("Map: "), string_from_cstring(mapname))));
+	cadd_line_to_console_log(STRS(STR("Map: "), string_from_cstring(mapname)));
 	SCR_UpdateScreen ();
 
 	void R_BeginRegistration (char *model);
@@ -19041,14 +19050,14 @@ procedure void builtin_string_command_bind(void* ctx) {
 	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
 	if (!key_code) {
 		String_Slice line = STRS(STR("invalid key: "), string_from_cstring(cmd_argv[1]));
-		add_line_to_console_log(concat(&context.memory.temp, line));
+		cadd_line_to_console_log(line);
 		return;
 	}
 
 	if (cmd_argc == 2)
 	{
 		if (key_bindings->values[key_code].len) {
-			add_line_to_console_log(concat(&context.memory.temp, STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code))));
+			cadd_line_to_console_log(STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code)));
 		} else {
 			add_line_to_console_log(STR("key not bound"));
 		}
@@ -19072,7 +19081,7 @@ procedure void Key_Bindlist_f(void* ctx) {
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
 			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
-			add_line_to_console_log(concat(&context.memory.temp, line));
+			cadd_line_to_console_log(line);
 		}
 	}
 }
@@ -56705,7 +56714,6 @@ procedure void windows_write_config_string(String text) {
 }
 
 procedure void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
-	// NOTE: must ensure null termination
 	String text_null_terminated = concat(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
