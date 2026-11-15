@@ -52,6 +52,7 @@ typedef struct {i64 x; i64 y;} v2i;
 //
 
 typedef struct {char* ptr; i64 len;} String;
+typedef struct {bool found; String string;} Maybe_String;
 
 typedef struct {
 	void* base;
@@ -70,6 +71,7 @@ typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
+typedef Maybe_String (*Maybe_Load_Config_String_Proc)(String name);
 
 // Platform is responsible for initialising this
 global_variable struct {
@@ -80,6 +82,7 @@ global_variable struct {
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
 	Load_Texture_Proc load_texture;
+	Maybe_Load_Config_String_Proc maybe_load_config_string;
 } context = {};
 
 //
@@ -2305,28 +2308,19 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 
 procedure void Cmd_Exec_f(void* data) {
 	UNUSED(data);
-
-	if (cmd_argc != 2) {
-		add_line_to_console_log(STR("exec <filename> : execute a script file"));
-		return;
+	if (cmd_argc == 2) {
+		String file_name = string_from_cstring(Cmd_Argv(1));
+		Maybe_String find_result = context.maybe_load_config_string(file_name);
+		if (find_result.found) {
+			String config_string = find_result.string;
+			UNUSED(config_string);
+			Cbuf_InsertText(config_string.ptr);
+		} else {
+			cadd_line_to_console_log(STRS(STR("did not find config string named "), file_name));
+		}
+	} else {
+		add_line_to_console_log(STR("USAGE: exec <filename>"));
 	}
-
-	char* f = 0;
-	int len = FS_LoadFile(Cmd_Argv(1), (void **)&f);
-	if (!f) {
-		add_line_to_console_log(STR("file not found"));
-		return;
-	}
-
-	// the file doesn't have a trailing 0, so we need to copy it off
-	char* f2 = tml_alloc(len + 1);
-	memcpy(f2, f, len);
-	f2[len] = 0;
-
-	Cbuf_InsertText(f2);
-
-	tml_free(f2);
-	FS_FreeFile(f);
 }
 
 // Creates a new command that executes a command string (possibly ; seperated)
@@ -56686,12 +56680,16 @@ procedure void GLimp_EndFrame() {
 
 typedef struct {
 	String name;
-	Texture texture;
-} Named_Texture;
-typedef struct {Named_Texture* ptr; i64 len;} Named_Textures;
+	union {
+		Texture texture;
+		String string;
+	};
+} Named_Struct;
+typedef struct {Named_Struct* ptr; i64 len;} Named_Structs;
 
 typedef struct {
-	Named_Textures named_textures;
+	Named_Structs named_textures;
+	Named_Structs named_config_strings;
 } Windows_Platform_Data;
 
 procedure void windows_exit_process() {
@@ -56749,20 +56747,36 @@ procedure u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 	return result;
 }
 
-procedure Texture windows_load_texture(String name) {
-	Named_Textures named_textures = ((Windows_Platform_Data*)context.platform_data)->named_textures;
+typedef struct {
+	bool found;
+	Named_Struct result;
+} Maybe_Named_Struct;
 
-	Texture result = {};
-	for (i64 ind = 0; ind < named_textures.len; ind++) {
-		Named_Texture named_texture = named_textures.ptr[ind];
-
-		if (streq(named_texture.name, name)) {
-			result = named_texture.texture;
-			break;
+procedure Maybe_Named_Struct windows_maybe_find_named_struct(Named_Structs named_structs, String name) {
+	bool found = false;
+	Named_Struct result = {};
+	for (i64 ind = 0; !found && ind < named_structs.len; ind++) {
+		Named_Struct named_struct = named_structs.ptr[ind];
+		if (streq(named_struct.name, name)) {
+			result = named_struct;
+			found = true;
 		}
 	}
-	assert(result.pixels);
+	return (Maybe_Named_Struct){.found = found, .result = result};
+}
 
+procedure Texture windows_load_texture(String name) {
+	Named_Structs named_textures = ((Windows_Platform_Data*)context.platform_data)->named_textures;
+	Maybe_Named_Struct find_result = windows_maybe_find_named_struct(named_textures, name);
+	assert(find_result.found);
+	Texture result = find_result.result.texture;
+	return result;
+}
+
+procedure Maybe_String windows_maybe_load_config_string(String name) {
+	Named_Structs named_config_strings = ((Windows_Platform_Data*)context.platform_data)->named_config_strings;
+	Maybe_Named_Struct find_result = windows_maybe_find_named_struct(named_config_strings, name);
+	Maybe_String result = {.found = find_result.found, .string = find_result.result.string};
 	return result;
 }
 
@@ -56795,6 +56809,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.write_config_string = windows_write_config_string;
 		context.debug_log = windows_debug_log;
 		context.load_texture = windows_load_texture;
+		context.maybe_load_config_string = windows_maybe_load_config_string;
 	}
 
 	// NOTE: Z chain (tagged malloc)
@@ -57022,6 +57037,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// NOTE: Create a fake pak in-memory from the loose files
 		String_Slice loose_files_dir_paths = STRS(
+			STR("baseq2/*"),
 			STR("baseq2/maps/*"),
 			STR("baseq2/music/*"),
 			STR("baseq2/players/crakhor/*"),
@@ -57046,18 +57062,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			assert(find_handle != INVALID_HANDLE_VALUE);
 			for (;;) {
 				if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-					Pak_File_Info* file_info = loose_files_pak->infos.ptr + loose_files_pak->infos.len;
-					loose_files_pak->infos.len += 1;
-					loose_files_header->info_section_len_bytes += sizeof(Pak_File_Info);
 					String file_name = string_from_cstring(find_data.cFileName);
-					String file_path_no_baseq2 = concat(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
-					assert(file_path_no_baseq2.len < carray_count(file_info->name));
-					copy_bytes(file_info->name, file_path_no_baseq2.ptr, file_path_no_baseq2.len + 1); // NOTE: write the null terminator
+					bool this_is_a_pak_file = streq(dir_path, STR("baseq2/*")) && string_ends_with(file_name, STR(".pak"));
+					if (!this_is_a_pak_file) {
+						Pak_File_Info* file_info = loose_files_pak->infos.ptr + loose_files_pak->infos.len;
+						loose_files_pak->infos.len += 1;
+						loose_files_header->info_section_len_bytes += sizeof(Pak_File_Info);
+						String file_path_no_baseq2 = concat(&context.memory.temp, STRS(dir_path_no_baseq2, file_name));
+						assert(file_path_no_baseq2.len < carray_count(file_info->name));
+						copy_bytes(file_info->name, file_path_no_baseq2.ptr, file_path_no_baseq2.len + 1); // NOTE: write the null terminator
 
-					String file_path = concat(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
-					file_info->filepos = sizeof(Pak_File_Header) + file_contents_arena.used;
-					u8_Slice file_content = windows_read_entire_file(&file_contents_arena, file_path);
-					file_info->filelen = file_content.len;
+						String file_path = concat(&context.memory.temp, STRS({dir_path.ptr, dir_path.len - 1}, file_name));
+						file_info->filepos = sizeof(Pak_File_Header) + file_contents_arena.used;
+						u8_Slice file_content = windows_read_entire_file(&file_contents_arena, file_path);
+						file_info->filelen = file_content.len;
+					}
 				}
 
 				BOOL find_next_result = FindNextFileA(find_handle, &find_data);
@@ -57069,8 +57088,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// NOTE: Process the files to get the data we actually want
-		typedef struct {Named_Texture* ptr; i64 len; i64 cap;} Named_Textures_Fixed_Cap;
-		Named_Textures_Fixed_Cap temp_named_textures = arena_alloc_fixed_cap(&context.memory.temp, Named_Texture, 4096);
+		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Textures_Fixed_Cap;
+		Named_Textures_Fixed_Cap temp_named_textures = arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
+
+		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Config_Strings_Fixed_Cap;
+		Named_Config_Strings_Fixed_Cap temp_named_config_strings = arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
+
 		for (i64 pak_index = paks.len - 1; pak_index >= 0; pak_index--) {
 			Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
 
@@ -57133,7 +57156,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					PCX_Header* pcx = (PCX_Header*)file_content.ptr;
 					assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
 
-					Named_Texture decomp = {
+					Named_Struct decomp = {
 						.name = copy_string(&context.memory.perm, info_name),
 						.texture = {
 							.width = pcx->xmax + 1,
@@ -57181,7 +57204,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 					i64 px_count = wal->width * wal->height;
 
-					Named_Texture decomp = {
+					Named_Struct decomp = {
 						.name = copy_string(&context.memory.perm, info_name),
 						.texture = {
 							.width = wal->width,
@@ -57216,7 +57239,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 					i64 px_count = tga->width * tga->height;
 
-					Named_Texture decomp = {
+					Named_Struct decomp = {
 						.name = copy_string(&context.memory.perm, info_name),
 						.texture = {
 							.width = tga->width,
@@ -57297,11 +57320,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 					assert(buf_p <= file_content.ptr + file_content.len);
 					append_fixed_cap(&temp_named_textures, decomp);
+				} else if (string_ends_with(info_name, STR(".cfg"))) {
+					// NOTE: Copy config string
+
+					Named_Struct named_config_string = {
+						.name = copy_string(&context.memory.perm, info_name),
+						.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len}),
+					};
+					append_fixed_cap(&temp_named_config_strings, named_config_string);
 				} // if-else chain file processing
 			} // for file
 		} // for pak
 
 		copy_slice(&context.memory.perm, &windows_platform_data.named_textures, &temp_named_textures);
+		copy_slice(&context.memory.perm, &windows_platform_data.named_config_strings, &temp_named_config_strings);
 	} // load assets
 
 	// TODO: Remove
