@@ -1977,9 +1977,6 @@ global_variable int curtime;		// time returned by last Sys_Milliseconds
 
 procedure int Sys_Milliseconds(void);
 
-// note: this can't be called from another DLL, due to MS libc issues
-procedure int FS_FOpenFile(char* filename, FILE** file);
-
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
 bool Netchan_NeedReliable (netchan_t *chan);
@@ -6438,9 +6435,6 @@ procedure int FS_filelength (FILE *f) {
 
 global_variable int file_from_pak = 0;
 
-// Finds the file in the search path.
-// returns filesize and an open FILE *
-// Used for streaming data out of either a pak file or a seperate file.
 int FS_FOpenFile (char *filename, FILE **file)
 {
 	searchpath_t	*search;
@@ -21186,12 +21180,10 @@ void S_IssuePlaysound (playsound_t *ps)
 	S_FreePlaysound (ps);
 }
 
-struct sfx_s *S_RegisterSexedSound (entity_state_t *ent, char *base)
-{
+procedure struct sfx_s* S_RegisterSexedSound(entity_state_t* ent, char* base) {
 	int				n;
 	char			*p;
 	struct sfx_s	*sfx;
-	FILE			*f;
 	char			model[MAX_QPATH];
 	char			sexedFilename[MAX_QPATH];
 	char			maleFilename[MAX_QPATH];
@@ -21212,29 +21204,17 @@ struct sfx_s *S_RegisterSexedSound (entity_state_t *ent, char *base)
 		}
 	}
 	// if we can't figure it out, they're male
-	if (!model[0])
+	if (!model[0]) {
 		strcpy(model, "male");
+	}
 
 	// see if we already know of the model specific sound
 	Com_sprintf (sexedFilename, sizeof(sexedFilename), "#players/%s/%s", model, base+1);
-	sfx = S_FindName (sexedFilename, false);
+	sfx = S_FindName(sexedFilename, false);
 
-	if (!sfx)
-	{
-		// no, so see if it exists
-		FS_FOpenFile (&sexedFilename[1], &f);
-		if (f)
-		{
-			// yes, close the file and register it
-			fclose(f);
-			sfx = S_RegisterSound (sexedFilename);
-		}
-		else
-		{
-			// no, revert to the male sound in the pak0.pak
-			Com_sprintf (maleFilename, sizeof(maleFilename), "player/%s/%s", "male", base+1);
-			sfx = S_AliasName (sexedFilename, maleFilename);
-		}
+	if (!sfx) {
+		Com_sprintf(maleFilename, sizeof(maleFilename), "player/male/%s", base+1);
+		sfx = S_AliasName(sexedFilename, maleFilename);
 	}
 
 	return sfx;
@@ -21263,8 +21243,9 @@ void S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx, float f
 	if (!sfx)
 		return;
 
-	if (sfx->name[0] == '*')
+	if (sfx->name[0] == '*') {
 		sfx = S_RegisterSexedSound(&cl_entities[entnum].current, sfx->name);
+	}
 
 	// make sure the sound is loaded
 	sc = S_LoadSound (sfx);
