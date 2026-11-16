@@ -794,26 +794,6 @@ procedure void builtin_string_command_unbind(void* ctx) {
 	}
 }
 
-procedure void Cbuf_InsertText(char* text);
-procedure void builtin_string_command_execute_config_file(void* ctx) {
-	User_Args user_args = ((String_Command_Context*)ctx)->data.user_args;
-	assert(user_args.len >= 1);
-	assert(streq(user_args.ptr[0], STR("exec")));
-
-	if (user_args.len == 2) {
-		String file_name = user_args.ptr[1];
-		Maybe_String find_result = context.maybe_load_config_string(file_name);
-		if (find_result.found) {
-			String config_string = find_result.string;
-			Cbuf_InsertText(config_string.ptr);
-		} else {
-			cadd_line_to_console_log(STRS(STR("did not find config string named "), file_name));
-		}
-	} else {
-		add_line_to_console_log(STR("USAGE: exec <filename>"));
-	}
-}
-
 // TODO remove
 #define	MAX_STRING_CHARS 1024
 #define	MAX_STRING_TOKENS 80
@@ -2329,6 +2309,17 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 			cmd_wait = false;
 			break;
 		}
+	}
+}
+
+procedure void execute_config_string(String_Command_Context* ctx, String name) {
+	Maybe_String find_result = context.maybe_load_config_string(name);
+	if (find_result.found) {
+		String config_string = find_result.string;
+		Cbuf_AddText(config_string.ptr);
+		Cmd_ExecuteCbuf(ctx);
+	} else {
+		cadd_line_to_console_log(STRS(STR("did not find config string named "), name));
 	}
 }
 
@@ -56764,7 +56755,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), builtin_string_command_bind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("exec"), builtin_string_command_execute_config_file}));
 
 		// TODO: Remove non-essentials
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("alias"), Cmd_Alias_f}));
@@ -57274,15 +57264,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	} // load assets
 
-	// NOTE Startup command execution
-	// TODO: Simplify
-	temp_memory_block(&context.memory.temp) {
-		Cbuf_AddText("exec default.cfg\n");
-		Cbuf_AddText("exec config.cfg\n");
-
-		Cmd_ExecuteCbuf(&string_command_context);
-	}
-
 	// NOTE Game window resolution
 	// TODO: unglobal
 	{
@@ -57574,8 +57555,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		mouse_buttons = 3;
 	}
 
-	Cbuf_AddText("exec autoexec.cfg\n");
-	Cmd_ExecuteCbuf(&string_command_context);
+	// NOTE Startup command execution
+	execute_config_string(&string_command_context, STR("default.cfg"));
+	execute_config_string(&string_command_context, STR("config.cfg"));
+	execute_config_string(&string_command_context, STR("autoexec.cfg"));
 
 	// NOTE Mainloop
 	assert(context.memory.temp.used == 0); // NOTE make sure temp wasn't used for something permanent
