@@ -720,13 +720,13 @@ typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
 typedef struct {String* ptr; i64 len; i64 cap;} User_Args;
 
-typedef struct String_Command_Data {
+typedef struct {
+	String_Commands builtin;
+	User_Args user_args;
 	Client_State* client_state;
 	Key_Bindings* key_bindings;
-	User_Args user_args;
-} String_Command_Data;
-
-typedef struct {String_Command_Data data; String_Commands builtin;} String_Command_Context;
+	bool command_buffer_should_wait_until_next_execute_call;
+} String_Command_Context;
 
 procedure void builtin_string_command_quit(void* ctx) {
 	UNUSED(ctx);
@@ -734,8 +734,8 @@ procedure void builtin_string_command_quit(void* ctx) {
 }
 
 procedure void builtin_string_command_write_config(void* ctx) {
-	Client_State* client_state = ((String_Command_Context*)ctx)->data.client_state;
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	Client_State* client_state = ((String_Command_Context*)ctx)->client_state;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 
 	// TODO kinda wanna get rid of this condition
 	if (*client_state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
@@ -767,7 +767,7 @@ procedure void builtin_string_command_cmdlist(void* ctx) {
 }
 
 procedure void builtin_string_command_unbindall(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	for (Fixed_String* fstr = key_bindings->values; fstr - key_bindings->values < Key_Code_Count; fstr++) {
 		fstr->len = 0;
 		fstr->buf[fstr->len] = 0;
@@ -775,8 +775,8 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 }
 
 procedure void builtin_string_command_unbind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
-	User_Args user_args = ((String_Command_Context*)ctx)->data.user_args;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 	assert(user_args.len >= 1);
 	assert(streq(user_args.ptr[0], STR("unbind")));
 
@@ -792,6 +792,11 @@ procedure void builtin_string_command_unbind(void* ctx) {
 	} else {
 		add_line_to_console_log(STR("unbind <key_name>: remove commands from a key"));
 	}
+}
+
+procedure void builtin_string_command_wait(void* ctx) {
+	bool* wait = &((String_Command_Context*)ctx)->command_buffer_should_wait_until_next_execute_call;
+	*wait = true;
 }
 
 // TODO remove
@@ -2108,11 +2113,6 @@ procedure void Cbuf_InsertText(char* text) {
 	}
 }
 
-// Causes execution of the remainder of the command buffer to be delayed until next frame.
-// This allows commands like:
-// bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
-global_variable bool cmd_wait;
-
 procedure char * Cmd_Argv(int arg) {
 	if (arg >= cmd_argc) {
 		return "";
@@ -2183,7 +2183,7 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	Cmd_TokenizeString(text);
 
 	// NOTE Get args (first one is command name)
-	ctx->data.user_args.len = 0;
+	ctx->user_args.len = 0;
 	for (String left_to_process = text_str; left_to_process.len;) {
 		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Whitespace);
 		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
@@ -2191,7 +2191,7 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 		left_to_process = string_advance_by(left_to_process, consecutive_non_whitespaces);
 		String word = {.ptr = left_to_process.ptr - consecutive_non_whitespaces, .len = consecutive_non_whitespaces};
 		if (word.len) {
-			append_fixed_cap(&ctx->data.user_args, word);
+			append_fixed_cap(&ctx->user_args, word);
 		}
 	}
 
@@ -2236,8 +2236,9 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
-	char line[1024] = {};
+	assert(!ctx->command_buffer_should_wait_until_next_execute_call);
 
+	char line[1024] = {};
 	while (cmd_text.cursize) {
 		// find a \n or ; line break
 		char* text = (char*)cmd_text.data;
@@ -2272,10 +2273,8 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 		}
 
 		Cmd_ExecuteString(ctx, line);
-
-		if (cmd_wait) {
-			// skip out while text still remains in buffer, leaving it for next frame
-			cmd_wait = false;
+		if (ctx->command_buffer_should_wait_until_next_execute_call) {
+			ctx->command_buffer_should_wait_until_next_execute_call = false;
 			break;
 		}
 	}
@@ -2290,11 +2289,6 @@ procedure void execute_config_string(String_Command_Context* ctx, String name) {
 	} else {
 		cadd_line_to_console_log(STRS(STR("did not find config string named "), name));
 	}
-}
-
-procedure void Cmd_Wait_f(void* data) {
-	UNUSED(data);
-	cmd_wait = true;
 }
 
 #define	MAX_INFO_KEY	64
@@ -18755,7 +18749,7 @@ void Key_Console(int key) {
 }
 
 procedure void builtin_string_command_bind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 
 	int			i;
 	char		cmd[1024];
@@ -18794,7 +18788,7 @@ procedure void builtin_string_command_bind(void* ctx) {
 }
 
 procedure void Key_Bindlist_f(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->data.key_bindings;
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
 			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
@@ -56659,11 +56653,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE String commands
 	String_Command_Context string_command_context = {
-		.data = (String_Command_Data){
-			.client_state = &cls.state,
-			.key_bindings = key_bindings,
-			.user_args = arena_alloc_fixed_cap(&context.memory.perm, String, 64),
-		},
+		.client_state = &cls.state,
+		.key_bindings = key_bindings,
+		.user_args = arena_alloc_fixed_cap(&context.memory.perm, String, 64),
 	};
 	temp_global_string_command_context = &string_command_context;
 
@@ -56676,9 +56668,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), builtin_string_command_bind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  builtin_string_command_wait}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
