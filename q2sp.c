@@ -1157,8 +1157,8 @@ procedure char * CopyString(char *in) {
 	return out;
 }
 
-procedure int Q_strcasecmp(char *s1, char *s2) {
-	int n = 99999;
+procedure int Q_stricmp(char *s1, char *s2) {
+		int n = 99999;
 	int	c1 = 0;
 	int c2 = 0;
 	do {
@@ -1184,21 +1184,13 @@ procedure int Q_strcasecmp(char *s1, char *s2) {
 	return 0;		// strings are equal
 }
 
-procedure int Q_stricmp(char *s1, char *s2) {return Q_strcasecmp(s1, s2);}
-
-// vsprintf into a sized buffer; the destination is always null-terminated on overflow, which even MSVC's _vsnprintf doesn't guarantee
-procedure int Q_vsnprintf(char *str, size_t size, char *format, va_list ap) {
-	int len = vsnprintf(str, size, format, ap);
-	str[size-1] = 0;
-	return len;
-}
-
 // does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
 procedure char * va(char *format, ...) {
 	local_persist char  string[1024];
 	va_list argptr;
 	va_start(argptr, format);
-	Q_vsnprintf(string, sizeof(string), format, argptr);
+	vsnprintf(string, sizeof(string), format, argptr);
+	string[sizeof(string) - 1] = 0;
 	va_end (argptr);
 	return string;
 }
@@ -2240,7 +2232,7 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 
 	// check alias
 	for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-		if (!Q_strcasecmp (cmd_argv[0], a->name)) {
+		if (!Q_stricmp(cmd_argv[0], a->name)) {
 			if (++alias_count == ALIAS_LOOP_COUNT) {
 				add_line_to_console_log(STR("ALIAS_LOOP_COUNT"));
 				return;
