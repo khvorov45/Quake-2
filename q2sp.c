@@ -56693,8 +56693,8 @@ typedef struct {
 		String string;
 		BSP bsp;
 	};
-} Named_Struct;
-typedef struct {Named_Struct* ptr; i64 len;} Named_Structs;
+} Asset;
+typedef struct {Asset* ptr; i64 len;} Assets;
 
 typedef enum {
 	Asset_Category_None,
@@ -56705,7 +56705,7 @@ typedef enum {
 } Asset_Category;
 
 typedef struct {
-	Named_Structs named_structs[Asset_Category_Count];
+	Assets assets[Asset_Category_Count];
 } Windows_Platform_Data;
 
 procedure void windows_exit_process() {
@@ -56765,55 +56765,50 @@ procedure u8_Slice windows_read_entire_file(Arena* arena, String file_path) {
 
 typedef struct {
 	bool found;
-	Named_Struct result;
-} Maybe_Named_Struct;
+	Asset* asset;
+} Maybe_Asset;
 
-procedure Maybe_Named_Struct windows_maybe_find_named_struct(Named_Structs named_structs, String name) {
+procedure Maybe_Asset windows_maybe_find_asset(String target_name, Asset_Category category) {
+	assert(category && category < Asset_Category_Count);
+	Assets assets = ((Windows_Platform_Data*)context.platform_data)->assets[category];
+
 	bool found = false;
-	Named_Struct result = {};
-	for (i64 ind = 0; !found && ind < named_structs.len; ind++) {
-		Named_Struct named_struct = named_structs.ptr[ind];
-		if (streq(named_struct.name, name)) {
-			result = named_struct;
+	Asset* target_asset = 0;
+	for (i64 ind = 0; !found && ind < assets.len; ind++) {
+		Asset* this_asset = assets.ptr + ind;
+		if (streq(this_asset->name, target_name)) {
+			target_asset = this_asset;
 			found = true;
 		}
 	}
-	assert(!found || (result.og_size > 0 && result.processed_size > 0)); // NOTE: In case loader forgets to set sizes
 
-	temp_memory_block(&context.memory.temp) {
-		String found_str = found ? STR("found") : STR("not_found");
-		String og_size_str = int_to_string(&context.memory.temp, result.og_size);
-		String processed_size_str = int_to_string(&context.memory.temp, result.processed_size);
-		cdebug_log(STR("FIND_ASSET"), STRS(name, STR(","), found_str, STR(","), result.source, STR(","), og_size_str, STR(","), processed_size_str));
+	if (target_asset) temp_memory_block(&context.memory.temp) {
+		String og_size_str = int_to_string(&context.memory.temp, target_asset->og_size);
+		String processed_size_str = int_to_string(&context.memory.temp, target_asset->processed_size);
+		cdebug_log(STR("FIND_ASSET"), STRS(target_name, STR(","), target_asset->source, STR(","), og_size_str, STR(","), processed_size_str));
 	}
 
-	return (Maybe_Named_Struct){.found = found, .result = result};
-}
-
-procedure Maybe_Named_Struct windows_maybe_load_asset_category(String name, Asset_Category category) {
-	assert(category && category < Asset_Category_Count);
-	Named_Structs named_structs = ((Windows_Platform_Data*)context.platform_data)->named_structs[category];
-	Maybe_Named_Struct result = windows_maybe_find_named_struct(named_structs, name);
+	Maybe_Asset result = {.found = found, .asset = target_asset};
 	return result;
 }
 
 procedure Texture windows_load_texture(String name) {
-	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_Texture);
+	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_Texture);
 	assert(find_result.found);
-	Texture result = find_result.result.texture;
+	Texture result = find_result.asset->texture;
 	return result;
 }
 
 procedure BSP windows_load_bsp(String name) {
-	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_BSP);
+	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_BSP);
 	assert(find_result.found);
-	BSP result = find_result.result.bsp;
+	BSP result = find_result.asset->bsp;
 	return result;
 }
 
 procedure Maybe_String windows_maybe_load_config_string(String name) {
-	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_Config_String);
-	Maybe_String result = {.found = find_result.found, .string = find_result.result.string};
+	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_Config_String);
+	Maybe_String result = {.found = find_result.found, .string = find_result.asset->string};
 	return result;
 }
 
@@ -57126,10 +57121,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// NOTE: Process the files to get the data we actually want
-		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Structs_Fixed_Cap;
-		Named_Structs_Fixed_Cap temp_named_structs[Asset_Category_Count] = {};
+		typedef struct {Asset* ptr; i64 len; i64 cap;} Assets_Fixed_Cap;
+		Assets_Fixed_Cap temp_assets[Asset_Category_Count] = {};
 		for (i64 asset_cat = 1; asset_cat < Asset_Category_Count; asset_cat++) {
-			temp_named_structs[asset_cat] = (Named_Structs_Fixed_Cap)arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
+			temp_assets[asset_cat] = (Assets_Fixed_Cap)arena_alloc_fixed_cap(&context.memory.temp, Asset, 4096);
 		}
 
 		for (i64 pak_index = paks.len - 1; pak_index >= 0; pak_index--) {
@@ -57169,14 +57164,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				else if (string_ends_with(info_name, STR(".bsp"))) {asset_type = Asset_Type_BSP;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
 
-				Named_Struct named_struct = {};
+				Asset asset = {};
 				switch (asset_type) {
 					case Asset_Type_PCX:
 					case Asset_Type_WAL:
 					case Asset_Type_TGA:
 					case Asset_Type_BSP:
 					case Asset_Type_CFG: {
-						named_struct = (Named_Struct){
+						asset = (Asset){
 							.source = preexisting_pak_paths.ptr[pak_index],
 							.name = copy_string(&context.memory.perm, info_name),
 							.og_size = file_content.len,
@@ -57240,18 +57235,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						PCX_Header* pcx = (PCX_Header*)file_content.ptr;
 						assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
 
-						named_struct.processed_size = (pcx->xmax + 1) * (pcx->ymax + 1);
-						named_struct.texture = (Texture){
+						asset.processed_size = (pcx->xmax + 1) * (pcx->ymax + 1);
+						asset.texture = (Texture){
 							.width = pcx->xmax + 1,
 							.height = pcx->ymax + 1,
-							.pixels = arena_alloc_bytes(&context.memory.perm, named_struct.processed_size),
+							.pixels = arena_alloc_bytes(&context.memory.perm, asset.processed_size),
 						};
 
 						{
-							u8* pix = named_struct.texture.pixels;
+							u8* pix = asset.texture.pixels;
 							u8* raw = &pcx->data;
-							for (i64 y = 0; y < named_struct.texture.height; y++, pix += named_struct.texture.width) {
-								for (i64 x = 0; x < named_struct.texture.width;) {
+							for (i64 y = 0; y < asset.texture.height; y++, pix += asset.texture.width) {
+								for (i64 x = 0; x < asset.texture.width;) {
 									i64 dataByte = *raw++;
 
 									i64 runLength = 1;
@@ -57284,8 +57279,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						assert(wal->width > 0 && wal->height > 0);
 
 						i64 px_count = wal->width * wal->height;
-						named_struct.processed_size = px_count;
-						named_struct.texture = (Texture){
+						asset.processed_size = px_count;
+						asset.texture = (Texture){
 							.width = wal->width,
 							.height = wal->height,
 							.pixels = arena_alloc_bytes(&context.memory.perm, px_count),
@@ -57294,7 +57289,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						i64 px_offset = wal->offsets_for_mips[0];
 						assert(px_offset >= (i64)sizeof(WAL_Header) && px_offset + px_count < file_content.len);
 						u8* pixels_in_file = (u8*)wal + px_offset;
-						copy_bytes(named_struct.texture.pixels, pixels_in_file, px_count);
+						copy_bytes(asset.texture.pixels, pixels_in_file, px_count);
 					} break; // WAL
 
 					case Asset_Type_TGA: {
@@ -57316,11 +57311,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 						i64 px_count = tga->width * tga->height;
 
-						named_struct.processed_size = px_count * 4;
-						named_struct.texture = (Texture){
+						asset.processed_size = px_count * 4;
+						asset.texture = (Texture){
 							.width = tga->width,
 							.height = tga->height,
-							.pixels = arena_alloc_bytes(&context.memory.perm, named_struct.processed_size),
+							.pixels = arena_alloc_bytes(&context.memory.perm, asset.processed_size),
 						};
 
 						u8* buf_p = file_content.ptr + sizeof(TGA_Header) + tga->id_length;
@@ -57331,7 +57326,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							// Uncompressed, RGB images
 							case 2 : {
 								for(i64 row = tga->height - 1; row >= 0; row--) {
-									u8* pixbuf = named_struct.texture.pixels + row * tga->width * 4;
+									u8* pixbuf = asset.texture.pixels + row * tga->width * 4;
 
 									for(i64 column = 0; column < tga->width; column++) {
 										u8 blue = *buf_p++;
@@ -57351,7 +57346,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							// Runlength encoded RGB images
 							case 10: {
 								for(i64 row = tga->height - 1; row >= 0; row--) {
-									u8* pixbuf = named_struct.texture.pixels + row * tga->width * 4;
+									u8* pixbuf = asset.texture.pixels + row * tga->width * 4;
 
 									for (i64 column = 0; column < tga->width;) {
 										u8 packet_header = *buf_p++;
@@ -57375,7 +57370,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 											if (column == tga->width && row > 0) {
 												column = 0;
 												row -= 1;
-												pixbuf = named_struct.texture.pixels + row * tga->width * 4;
+												pixbuf = asset.texture.pixels + row * tga->width * 4;
 											}
 
 											// NOTE: Pixels shouldn't keep going if we've run out of image
@@ -57397,15 +57392,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					} break; // TGA
 
 					case Asset_Type_BSP: {
-						named_struct.processed_size = named_struct.og_size;
-						named_struct.bsp.raw.len = file_content.len;
-						named_struct.bsp.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
-						copy_bytes(named_struct.bsp.raw.ptr, file_content.ptr, file_content.len);
+						asset.processed_size = asset.og_size;
+						asset.bsp.raw.len = file_content.len;
+						asset.bsp.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
+						copy_bytes(asset.bsp.raw.ptr, file_content.ptr, file_content.len);
 					} break; // BSP
 
 					case Asset_Type_CFG: {
-						named_struct.processed_size = named_struct.og_size;
-						named_struct.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len});
+						asset.processed_size = asset.og_size;
+						asset.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len});
 					} break; // CFG
 
 					case Asset_Type_Skip: {
@@ -57414,18 +57409,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				} // switch asset type
 
 				if (category) {
-					assert(named_struct.processed_size);
-					String og_size_str = int_to_string(&context.memory.temp, named_struct.og_size);
-					String processed_size_str = int_to_string(&context.memory.temp, named_struct.processed_size);
-					context.debug_log(STR("ASSET_INFO"), concat(&context.memory.temp, STRS(named_struct.name, STR(","), named_struct.source, STR(","), og_size_str, STR(","), processed_size_str)));
+					assert(asset.processed_size);
+					String og_size_str = int_to_string(&context.memory.temp, asset.og_size);
+					String processed_size_str = int_to_string(&context.memory.temp, asset.processed_size);
+					context.debug_log(STR("ASSET_INFO"), concat(&context.memory.temp, STRS(asset.name, STR(","), asset.source, STR(","), og_size_str, STR(","), processed_size_str)));
 
-					append_fixed_cap(temp_named_structs + category, named_struct);
+					append_fixed_cap(temp_assets + category, asset);
 				}
 			} // for file
 		} // for pak
 
 		for (i64 asset_cat = 1; asset_cat < Asset_Category_Count; asset_cat++) {
-			copy_slice(&context.memory.perm, &windows_platform_data.named_structs[asset_cat], &temp_named_structs[asset_cat]);
+			copy_slice(&context.memory.perm, &windows_platform_data.assets[asset_cat], &temp_assets[asset_cat]);
 		}
 	} // load assets
 
