@@ -69,7 +69,8 @@ typedef struct {
 
 typedef struct {
 	u8_Slice raw;
-} BSP;
+} Model;
+typedef struct {bool found; Model model;} Maybe_Model;
 
 typedef struct {
 	u8_Slice raw;
@@ -80,7 +81,7 @@ typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
-typedef BSP (*Load_BSP_Proc)(String name);
+typedef Maybe_Model (*Maybe_Load_Model_Proc)(String name);
 typedef Maybe_Sound (*Maybe_Load_Sound_Proc)(String name);
 typedef Maybe_String (*Maybe_Load_Config_String_Proc)(String name);
 
@@ -93,7 +94,7 @@ global_variable struct {
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
 	Load_Texture_Proc load_texture;
-	Load_BSP_Proc load_bsp;
+	Maybe_Load_Model_Proc maybe_load_model;
 	Maybe_Load_Sound_Proc maybe_load_sound;
 	Maybe_Load_Config_String_Proc maybe_load_config_string;
 } context = {};
@@ -1978,8 +1979,6 @@ procedure int Sys_Milliseconds(void);
 
 // note: this can't be called from another DLL, due to MS libc issues
 procedure int FS_FOpenFile(char* filename, FILE** file);
-
-procedure void FS_FreeFile(void* buffer);
 
 void NET_SendLoopPacket(netsrc_t sock, int length, void *data);
 
@@ -4177,7 +4176,9 @@ procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) 
 	}
 
 	String name_str = string_from_cstring(name);
-	BSP bsp = context.load_bsp(name_str);
+	Maybe_Model maybe_bsp = context.maybe_load_model(name_str);
+	assert(maybe_bsp.found);
+	Model bsp = maybe_bsp.model;
 
 	last_checksum = LittleLong(Com_BlockChecksum (bsp.raw.ptr, bsp.raw.len));
 	*checksum = last_checksum;
@@ -6358,31 +6359,13 @@ int CM_WriteAreaBits (u8 *buffer, int area)
 	return bytes;
 }
 
-/*
-===================
-CM_WritePortalState
-
-Writes the portal state to a savegame file
-===================
-*/
+// Writes the portal state to a savegame file
 void	CM_WritePortalState (FILE *f)
 {
 	fwrite (portalopen, sizeof(portalopen), 1, f);
 }
 
-procedure void FS_Read(void* buffer, int len, FILE *f) {
-	int read = fread(buffer, 1, len, f);
-	assert(read == len);
-}
-
-/*
-=============
-CM_HeadnodeVisible
-
-Returns true if any leaf under headnode has a cluster that
-is potentially visible
-=============
-*/
+// Returns true if any leaf under headnode has a cluster that is potentially visible
 bool CM_HeadnodeVisible (int nodenum, u8 *visbits)
 {
 	int		leafnum;
@@ -6503,33 +6486,6 @@ int FS_FOpenFile (char *filename, FILE **file)
 
 	*file = NULL;
 	return -1;
-}
-
-// Filename are reletive to the quake search path a null buffer will just return the file length without loading
-procedure int FS_LoadFile(char *path, void **buffer) {
-	// look for it in the filesystem or pack files
-	FILE* h = 0;
-	int len = FS_FOpenFile(path, &h);
-	int result = len;
-	if (h) {
-		if (buffer) {
-			u8* buf = tml_alloc(len);
-			*buffer = buf;
-			FS_Read(buf, len, h);
-		}
-		fclose(h);
-	} else {
-		if (buffer) {
-			*buffer = NULL;
-		}
-		result = -1;
-	}
-
-	return result;
-}
-
-void FS_FreeFile(void* buffer) {
-	tml_free(buffer);
 }
 
 /* POINTER defines a generic pointer type */
@@ -50672,7 +50628,6 @@ void Weapon_BFG (edict_t *ent)
 //
 
 void	Mod_ClearAll (void);
-model_t *Mod_ForName (char *name, bool crash);
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
 u8	*Mod_ClusterPVS (int cluster, model_t *model);
 
@@ -52984,10 +52939,8 @@ procedure void* Hunk_Begin(int maxsize) {
 }
 
 // Loads in a model for the given name
-model_t *Mod_ForName (char *name, bool crash)
-{
+procedure model_t* Mod_ForName(char* name, bool crash_if_not_found) {
 	model_t	*mod;
-	unsigned *buf;
 	int		i;
 
 	assert(name[0]);
@@ -53031,11 +52984,11 @@ model_t *Mod_ForName (char *name, bool crash)
 	//
 	// load the file
 	//
-	modfilelen = FS_LoadFile (mod->name, (void**)&buf);
-	if (!buf)
-	{
-		assert(!crash);
-		memset (mod->name, 0, sizeof(mod->name));
+	String model_name = string_from_cstring(mod->name);
+	Maybe_Model maybe_model = context.maybe_load_model(model_name);
+	if (!maybe_model.found) {
+		assert(!crash_if_not_found);
+		memset(mod->name, 0, sizeof(mod->name));
 		return NULL;
 	}
 
@@ -53047,29 +53000,28 @@ model_t *Mod_ForName (char *name, bool crash)
 
 	// call the apropriate loader
 
-	switch (LittleLong(*(unsigned *)buf))
-	{
+	Model model = maybe_model.model;
+	modfilelen = model.raw.len;
+	switch (LittleLong(*(u32*)model.raw.ptr)) {
 	case IDALIASHEADER:
 		loadmodel->extradata = Hunk_Begin (0x200000);
-		Mod_LoadAliasModel (mod, buf);
+		Mod_LoadAliasModel (mod, model.raw.ptr);
 		break;
 
 	case IDSPRITEHEADER:
 		loadmodel->extradata = Hunk_Begin (0x10000);
-		Mod_LoadSpriteModel (mod, buf);
+		Mod_LoadSpriteModel (mod, model.raw.ptr);
 		break;
 
 	case IDBSPHEADER:
 		loadmodel->extradata = Hunk_Begin (0x1000000);
-		Mod_LoadBrushModel (mod, buf);
+		Mod_LoadBrushModel (mod, model.raw.ptr);
 		break;
 
 	default: assert(!"unreachable");
 	}
 
 	loadmodel->extradatasize = hunk_cursize;
-
-	FS_FreeFile (buf);
 
 	return mod;
 }
@@ -53834,7 +53786,7 @@ struct model_s *R_RegisterModel (char *name)
 	dsprite_t	*sprout;
 	dmdl_t		*pheader;
 
-	mod = Mod_ForName (name, false);
+	mod = Mod_ForName(name, false);
 	if (mod)
 	{
 		mod->registration_sequence = registration_sequence;
@@ -56696,7 +56648,7 @@ typedef struct {
 	union {
 		Texture texture;
 		String string;
-		BSP bsp;
+		Model model;
 		Sound sound;
 	};
 } Asset;
@@ -56705,7 +56657,7 @@ typedef struct {Asset* ptr; i64 len;} Assets;
 typedef enum {
 	Asset_Category_None,
 	Asset_Category_Texture,
-	Asset_Category_BSP,
+	Asset_Category_Model,
 	Asset_Category_Sound,
 	Asset_Category_Config_String,
 	Asset_Category_Count,
@@ -56812,10 +56764,11 @@ procedure Maybe_Asset windows_maybe_find_asset(String target_name, Asset_Categor
 		}
 	}
 
-	if (target_asset) temp_memory_block(&context.memory.temp) {
+	temp_memory_block(&context.memory.temp) {
+		String found_str = found ? STR("found") : STR("not_found");
 		String og_size_str = int_to_string(&context.memory.temp, target_asset->og_size);
 		String processed_size_str = int_to_string(&context.memory.temp, target_asset->processed_size);
-		cdebug_log(STR("FIND_ASSET"), STRS(target_name, STR(","), target_asset->source, STR(","), og_size_str, STR(","), processed_size_str));
+		cdebug_log(STR("FIND_ASSET"), STRS(target_name, STR(","), found_str, STR(","), target_asset->source, STR(","), og_size_str, STR(","), processed_size_str));
 	}
 
 	Maybe_Asset result = {.found = found, .asset = target_asset};
@@ -56829,10 +56782,9 @@ procedure Texture windows_load_texture(String name) {
 	return result;
 }
 
-procedure BSP windows_load_bsp(String name) {
-	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_BSP);
-	assert(find_result.found);
-	BSP result = find_result.asset->bsp;
+procedure Maybe_Model windows_maybe_load_model(String name) {
+	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_Model);
+	Maybe_Model result = {.found = find_result.found, .model = find_result.asset->model};
 	return result;
 }
 
@@ -56877,7 +56829,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.write_config_string = windows_write_config_string;
 		context.debug_log = windows_debug_log;
 		context.load_texture = windows_load_texture;
-		context.load_bsp = windows_load_bsp;
+		context.maybe_load_model = windows_maybe_load_model;
 		context.maybe_load_sound = windows_maybe_load_sound;
 		context.maybe_load_config_string = windows_maybe_load_config_string;
 	}
@@ -57202,6 +57154,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					Asset_Type_WAL,
 					Asset_Type_TGA,
 					Asset_Type_CFG,
+					Asset_Type_MD2,
+					Asset_Type_SP2,
 					Asset_Type_BSP,
 					Asset_Type_WAV,
 				} Asset_Type;
@@ -57212,6 +57166,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				else if (string_ends_with(info_name, STR(".wal"))) {asset_type = Asset_Type_WAL;}
 				else if (string_ends_with(info_name, STR(".tga"))) {asset_type = Asset_Type_TGA;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
+				else if (string_ends_with(info_name, STR(".md2"))) {asset_type = Asset_Type_MD2;}
+				else if (string_ends_with(info_name, STR(".sp2"))) {asset_type = Asset_Type_SP2;}
 				else if (string_ends_with(info_name, STR(".bsp"))) {asset_type = Asset_Type_BSP;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
 				else if (string_ends_with(info_name, STR(".wav"))) {asset_type = Asset_Type_WAV;}
@@ -57221,6 +57177,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case Asset_Type_PCX:
 					case Asset_Type_WAL:
 					case Asset_Type_TGA:
+					case Asset_Type_MD2:
+					case Asset_Type_SP2:
 					case Asset_Type_BSP:
 					case Asset_Type_WAV:
 					case Asset_Type_CFG: {
@@ -57238,7 +57196,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case Asset_Type_PCX:
 					case Asset_Type_WAL:
 					case Asset_Type_TGA: {category = Asset_Category_Texture;} break;
-					case Asset_Type_BSP: {category = Asset_Category_BSP;} break;
+					case Asset_Type_MD2:
+					case Asset_Type_SP2:
+					case Asset_Type_BSP: {category = Asset_Category_Model;} break;
 					case Asset_Type_WAV: {category = Asset_Category_Sound;} break;
 					case Asset_Type_CFG: {category = Asset_Category_Config_String;} break;
 					default: break;
@@ -57445,12 +57405,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						assert(buf_p <= file_content.ptr + file_content.len);
 					} break; // TGA
 
+					case Asset_Type_MD2:
+					case Asset_Type_SP2:
 					case Asset_Type_BSP: {
 						asset.processed_size = asset.og_size;
-						asset.bsp.raw.len = file_content.len;
-						asset.bsp.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
-						copy_bytes(asset.bsp.raw.ptr, file_content.ptr, file_content.len);
-					} break; // BSP
+						asset.model.raw.len = file_content.len;
+						asset.model.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
+						copy_bytes(asset.model.raw.ptr, file_content.ptr, file_content.len);
+					} break; // Model
 
 					case Asset_Type_WAV: {
 						asset.processed_size = asset.og_size;
