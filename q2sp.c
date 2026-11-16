@@ -57447,60 +57447,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	} // load assets
 
-	// TODO: Remove
-	#if 1
-	{
-		// add the directory to the search path
-		searchpath_t* search = tml_alloc(sizeof(searchpath_t));
-		strcpy(search->filename, "baseq2");
-		search->next = fs_searchpaths;
-		fs_searchpaths = search;
-
-		// add any pak files in the format pak0.pak pak1.pak, ...
-		for (int i = 0; i < 3; i++) {
-			char pakfile[MAX_OSPATH] = {};
-			Com_sprintf(pakfile, sizeof(pakfile), "baseq2/pak%i.pak", i);
-			FILE* packhandle = fopen(pakfile, "rb");
-			assert(packhandle);
-
-			Pak_File_Header header = {};
-			fread(&header, 1, sizeof(header), packhandle);
-
-			assert(header.magic == id_pack_header_magic);
-
-			i64 max_files_in_pack = 4096;
-			i64 numpackfiles = header.info_section_len_bytes / sizeof(Pak_File_Info);
-			assert(numpackfiles <= max_files_in_pack);
-
-			packfile_t* newfiles = tml_alloc(numpackfiles * sizeof(packfile_t));
-			fseek(packhandle, header.info_section_offset, SEEK_SET);
-
-			Pak_File_Info info[max_files_in_pack] = {};
-			fread(info, 1, header.info_section_len_bytes, packhandle);
-
-			for (i64 ind = 0; ind < numpackfiles; ind++) {
-				packfile_t* new_file = newfiles + ind;
-				Pak_File_Info* file_info = info + ind;
-
-				strcpy(new_file->name, file_info->name);
-				new_file->filepos = file_info->filepos;
-				new_file->filelen = file_info->filelen;
-			}
-
-			pack_t* pak = tml_alloc(sizeof(pack_t));
-			strcpy(pak->filename, pakfile);
-			pak->handle = packhandle;
-			pak->numfiles = numpackfiles;
-			pak->files = newfiles;
-
-			search = tml_alloc(sizeof(searchpath_t));
-			search->pack = pak;
-			search->next = fs_searchpaths;
-			fs_searchpaths = search;
-		}
-	}
-	#endif
-
 	// NOTE: Startup command execution
 	// TODO: Simplify
 	temp_memory_block(&context.memory.temp) {
