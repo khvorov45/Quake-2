@@ -67,10 +67,15 @@ typedef struct {
 	i64 height;
 } Texture;
 
+typedef struct {
+	u8_Slice raw;
+} BSP;
+
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
+typedef BSP (*Load_BSP_Proc)(String name);
 typedef Maybe_String (*Maybe_Load_Config_String_Proc)(String name);
 
 // Platform is responsible for initialising this
@@ -82,6 +87,7 @@ global_variable struct {
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
 	Load_Texture_Proc load_texture;
+	Load_BSP_Proc load_bsp;
 	Maybe_Load_Config_String_Proc maybe_load_config_string;
 } context = {};
 
@@ -4132,7 +4138,6 @@ void CMod_LoadEntityString (lump_t *l)
 }
 
 procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) {
-	int				length;
 	local_persist unsigned	last_checksum;
 
 	if (!strcmp(map_name, name)) {
@@ -4162,21 +4167,20 @@ procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) 
 		return &map_cmodels[0];
 	}
 
-	unsigned* buf = 0;
-	length = FS_LoadFile(name, (void **)&buf);
-	assert(buf);
+	String name_str = string_from_cstring(name);
+	BSP bsp = context.load_bsp(name_str);
 
-	last_checksum = LittleLong(Com_BlockChecksum (buf, length));
+	last_checksum = LittleLong(Com_BlockChecksum (bsp.raw.ptr, bsp.raw.len));
 	*checksum = last_checksum;
 
-	dheader_t header = *(dheader_t*)buf;
+	dheader_t header = *(dheader_t*)bsp.raw.ptr;
 	for (int i = 0; i < (int)sizeof(dheader_t) / 4; i++) {
 		((int *)&header)[i] = LittleLong ( ((int *)&header)[i]);
 	}
 
 	assert(header.version == BSPVERSION);
 
-	cmod_base = (u8*)buf;
+	cmod_base = (u8*)bsp.raw.ptr;
 
 	// load into heap
 	CMod_LoadSurfaces (&header.lumps[LUMP_TEXINFO]);
@@ -4191,8 +4195,6 @@ procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) 
 	CMod_LoadAreaPortals (&header.lumps[LUMP_AREAPORTALS]);
 	CMod_LoadVisibility (&header.lumps[LUMP_VISIBILITY]);
 	CMod_LoadEntityString (&header.lumps[LUMP_ENTITIES]);
-
-	FS_FreeFile (buf);
 
 	CM_InitBoxHull ();
 
@@ -53588,13 +53590,12 @@ void Mod_LoadPlanes (lump_t *l)
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
 	int			i;
-	dheader_t	*header;
 	mmodel_t 	*bm;
 
 	loadmodel->type = mod_brush;
 	assert(loadmodel == mod_known);
 
-	header = (dheader_t *)buffer;
+	dheader_t* header = (dheader_t*)buffer;
 
 	i = LittleLong (header->version);
 	assert(i == BSPVERSION);
@@ -56690,13 +56691,21 @@ typedef struct {
 	union {
 		Texture texture;
 		String string;
+		BSP bsp;
 	};
 } Named_Struct;
 typedef struct {Named_Struct* ptr; i64 len;} Named_Structs;
 
+typedef enum {
+	Asset_Category_None,
+	Asset_Category_Texture,
+	Asset_Category_BSP,
+	Asset_Category_Config_String,
+	Asset_Category_Count,
+} Asset_Category;
+
 typedef struct {
-	Named_Structs named_textures;
-	Named_Structs named_config_strings;
+	Named_Structs named_structs[Asset_Category_Count];
 } Windows_Platform_Data;
 
 procedure void windows_exit_process() {
@@ -56781,17 +56790,29 @@ procedure Maybe_Named_Struct windows_maybe_find_named_struct(Named_Structs named
 	return (Maybe_Named_Struct){.found = found, .result = result};
 }
 
+procedure Maybe_Named_Struct windows_maybe_load_asset_category(String name, Asset_Category category) {
+	assert(category && category < Asset_Category_Count);
+	Named_Structs named_structs = ((Windows_Platform_Data*)context.platform_data)->named_structs[category];
+	Maybe_Named_Struct result = windows_maybe_find_named_struct(named_structs, name);
+	return result;
+}
+
 procedure Texture windows_load_texture(String name) {
-	Named_Structs named_textures = ((Windows_Platform_Data*)context.platform_data)->named_textures;
-	Maybe_Named_Struct find_result = windows_maybe_find_named_struct(named_textures, name);
+	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_Texture);
 	assert(find_result.found);
 	Texture result = find_result.result.texture;
 	return result;
 }
 
+procedure BSP windows_load_bsp(String name) {
+	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_BSP);
+	assert(find_result.found);
+	BSP result = find_result.result.bsp;
+	return result;
+}
+
 procedure Maybe_String windows_maybe_load_config_string(String name) {
-	Named_Structs named_config_strings = ((Windows_Platform_Data*)context.platform_data)->named_config_strings;
-	Maybe_Named_Struct find_result = windows_maybe_find_named_struct(named_config_strings, name);
+	Maybe_Named_Struct find_result = windows_maybe_load_asset_category(name, Asset_Category_Config_String);
 	Maybe_String result = {.found = find_result.found, .string = find_result.result.string};
 	return result;
 }
@@ -56825,6 +56846,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.write_config_string = windows_write_config_string;
 		context.debug_log = windows_debug_log;
 		context.load_texture = windows_load_texture;
+		context.load_bsp = windows_load_bsp;
 		context.maybe_load_config_string = windows_maybe_load_config_string;
 	}
 
@@ -57104,11 +57126,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// NOTE: Process the files to get the data we actually want
-		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Textures_Fixed_Cap;
-		Named_Textures_Fixed_Cap temp_named_textures = arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
-
-		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Config_Strings_Fixed_Cap;
-		Named_Config_Strings_Fixed_Cap temp_named_config_strings = arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
+		typedef struct {Named_Struct* ptr; i64 len; i64 cap;} Named_Structs_Fixed_Cap;
+		Named_Structs_Fixed_Cap temp_named_structs[Asset_Category_Count] = {};
+		for (i64 asset_cat = 1; asset_cat < Asset_Category_Count; asset_cat++) {
+			temp_named_structs[asset_cat] = (Named_Structs_Fixed_Cap)arena_alloc_fixed_cap(&context.memory.temp, Named_Struct, 4096);
+		}
 
 		for (i64 pak_index = paks.len - 1; pak_index >= 0; pak_index--) {
 			Windows_Pak_File_Entry* pak = paks.ptr + pak_index;
@@ -57135,6 +57157,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					Asset_Type_WAL,
 					Asset_Type_TGA,
 					Asset_Type_CFG,
+					Asset_Type_BSP,
 				} Asset_Type;
 
 				Asset_Type asset_type = Asset_Type_Skip;
@@ -57143,6 +57166,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				else if (string_ends_with(info_name, STR(".wal"))) {asset_type = Asset_Type_WAL;}
 				else if (string_ends_with(info_name, STR(".tga"))) {asset_type = Asset_Type_TGA;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
+				else if (string_ends_with(info_name, STR(".bsp"))) {asset_type = Asset_Type_BSP;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
 
 				Named_Struct named_struct = {};
@@ -57150,6 +57174,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case Asset_Type_PCX:
 					case Asset_Type_WAL:
 					case Asset_Type_TGA:
+					case Asset_Type_BSP:
 					case Asset_Type_CFG: {
 						named_struct = (Named_Struct){
 							.source = preexisting_pak_paths.ptr[pak_index],
@@ -57157,6 +57182,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							.og_size = file_content.len,
 						};
 					} break;
+					default: break;
+				}
+
+				Asset_Category category = Asset_Category_None;
+				switch (asset_type) {
+					case Asset_Type_PCX:
+					case Asset_Type_WAL:
+					case Asset_Type_TGA: {category = Asset_Category_Texture;} break;
+					case Asset_Type_BSP: {category = Asset_Category_BSP;} break;
+					case Asset_Type_CFG: {category = Asset_Category_Config_String;} break;
 					default: break;
 				}
 
@@ -57232,8 +57267,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							}
 							assert(raw - (u8*)pcx <= file_content.len);
 						}
-
-						append_fixed_cap(&temp_named_textures, named_struct);
 					} break; // PCX
 
 					case Asset_Type_WAL: {
@@ -57262,8 +57295,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						assert(px_offset >= (i64)sizeof(WAL_Header) && px_offset + px_count < file_content.len);
 						u8* pixels_in_file = (u8*)wal + px_offset;
 						copy_bytes(named_struct.texture.pixels, pixels_in_file, px_count);
-
-						append_fixed_cap(&temp_named_textures, named_struct);
 					} break; // WAL
 
 					case Asset_Type_TGA: {
@@ -57363,13 +57394,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						} // tga switch image type
 
 						assert(buf_p <= file_content.ptr + file_content.len);
-						append_fixed_cap(&temp_named_textures, named_struct);
 					} break; // TGA
+
+					case Asset_Type_BSP: {
+						named_struct.processed_size = named_struct.og_size;
+						named_struct.bsp.raw.len = file_content.len;
+						named_struct.bsp.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
+						copy_bytes(named_struct.bsp.raw.ptr, file_content.ptr, file_content.len);
+					} break; // BSP
 
 					case Asset_Type_CFG: {
 						named_struct.processed_size = named_struct.og_size;
 						named_struct.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len});
-						append_fixed_cap(&temp_named_config_strings, named_struct);
 					} break; // CFG
 
 					case Asset_Type_Skip: {
@@ -57377,17 +57413,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					} break;
 				} // switch asset type
 
-				if (named_struct.og_size) {
+				if (category) {
 					assert(named_struct.processed_size);
 					String og_size_str = int_to_string(&context.memory.temp, named_struct.og_size);
 					String processed_size_str = int_to_string(&context.memory.temp, named_struct.processed_size);
 					context.debug_log(STR("ASSET_INFO"), concat(&context.memory.temp, STRS(named_struct.name, STR(","), named_struct.source, STR(","), og_size_str, STR(","), processed_size_str)));
+
+					append_fixed_cap(temp_named_structs + category, named_struct);
 				}
 			} // for file
 		} // for pak
 
-		copy_slice(&context.memory.perm, &windows_platform_data.named_textures, &temp_named_textures);
-		copy_slice(&context.memory.perm, &windows_platform_data.named_config_strings, &temp_named_config_strings);
+		for (i64 asset_cat = 1; asset_cat < Asset_Category_Count; asset_cat++) {
+			copy_slice(&context.memory.perm, &windows_platform_data.named_structs[asset_cat], &temp_named_structs[asset_cat]);
+		}
 	} // load assets
 
 	// TODO: Remove
