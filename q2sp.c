@@ -689,6 +689,10 @@ procedure void cadd_line_to_console_log(String_Slice line_chunks) {temp_memory_b
 	add_line_to_console_log(line);
 }}
 
+procedure void cdebug_log(String prefix, String_Slice line_chunks) {temp_memory_block(&context.memory.temp) {
+	context.debug_log(prefix, concat(&context.memory.temp, line_chunks));
+}}
+
 //
 // SECTION String commands
 //
@@ -9614,7 +9618,7 @@ void SV_Begin_f (void)
 }
 
 procedure void SV_ExecuteUserCommand(char* s) {
-	context.debug_log(STR("SV EXECUTE"), string_from_cstring(s));
+	context.debug_log(STR("SV_EXECUTE"), string_from_cstring(s));
 
 	Cmd_TokenizeString(s);
 
@@ -56679,7 +56683,10 @@ procedure void GLimp_EndFrame() {
 //
 
 typedef struct {
+	String source;
 	String name;
+	i64 og_size;
+	i64 processed_size;
 	union {
 		Texture texture;
 		String string;
@@ -56711,12 +56718,12 @@ procedure void windows_write_config_string(String text) {
 	CloseHandle(file_handle);
 }
 
-procedure void windows_debug_log(String prefix, String text) { temp_memory_block(&context.memory.temp) {
-	String text_null_terminated = concat(&context.memory.temp, STRS(prefix, STR(": "), text, STR("\n")));
+procedure void windows_debug_log(String prefix, String text) {temp_memory_block(&context.memory.temp) {
+	String text_null_terminated = concat(&context.memory.temp, STRS(STR("\""), prefix, STR("\",\""), text, STR("\"\n")));
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
-	char* debug_log_filepath = "debug_log.txt";
+	char* debug_log_filepath = "debug_log.csv";
 	local_persist HANDLE file_handle = 0;
 	if (file_handle == 0) {
 		file_handle = CreateFileA(debug_log_filepath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -56762,6 +56769,15 @@ procedure Maybe_Named_Struct windows_maybe_find_named_struct(Named_Structs named
 			found = true;
 		}
 	}
+	assert(!found || (result.og_size > 0 && result.processed_size > 0)); // NOTE: In case loader forgets to set sizes
+
+	temp_memory_block(&context.memory.temp) {
+		String found_str = found ? STR("found") : STR("not_found");
+		String og_size_str = int_to_string(&context.memory.temp, result.og_size);
+		String processed_size_str = int_to_string(&context.memory.temp, result.processed_size);
+		cdebug_log(STR("FIND_ASSET"), STRS(name, STR(","), found_str, STR(","), result.source, STR(","), og_size_str, STR(","), processed_size_str));
+	}
+
 	return (Maybe_Named_Struct){.found = found, .result = result};
 }
 
@@ -57017,9 +57033,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		typedef struct {Windows_Pak_File_Entry* ptr; i64 len;} Windows_Pak_File_Entries;
 
 		// NOTE: Load pre-existing pak files
-		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"));
-		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.temp, Windows_Pak_File_Entry, preexisting_pak_paths.len + 1); // NOTE: +1 for the loose files
-		for (i64 ind = 0; ind < preexisting_pak_paths.len; ind++) {
+		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"), STR("loose_files")); // NOTE: All names need to live forever
+		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.temp, Windows_Pak_File_Entry, preexisting_pak_paths.len);
+		for (i64 ind = 0; ind < preexisting_pak_paths.len - 1; ind++) {
 			String file_path = preexisting_pak_paths.ptr[ind];
 			Windows_Pak_File_Entry* dest_entry = paks.ptr + ind;
 
@@ -57112,223 +57128,261 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					assert((file_content.ptr + file_content.len) <= (u8*)pak->infos.ptr);
 				}
 
-				if (streq(info_name, STR("pics/colormap.pcx"))) {
-					// NOTE: Colormap init
-					// TODO: unglobal
+				typedef enum {
+					Asset_Type_Skip,
+					Asset_Type_Colormap,
+					Asset_Type_PCX,
+					Asset_Type_WAL,
+					Asset_Type_TGA,
+					Asset_Type_CFG,
+				} Asset_Type;
 
-					// NOTE: Palette is just at the end of the file
-					u8_Slice palette = {};
-					i64 palette_value_count = 256;
-					{
-						palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
-						assert(file_content.len >= palette.len);
-						palette.ptr = file_content.ptr + file_content.len - palette.len;
-					}
+				Asset_Type asset_type = Asset_Type_Skip;
+				if (streq(info_name, STR("pics/colormap.pcx"))) {asset_type = Asset_Type_Colormap;}
+				else if (string_ends_with(info_name, STR(".pcx"))) {asset_type = Asset_Type_PCX;}
+				else if (string_ends_with(info_name, STR(".wal"))) {asset_type = Asset_Type_WAL;}
+				else if (string_ends_with(info_name, STR(".tga"))) {asset_type = Asset_Type_TGA;}
+				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
+				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
 
-					for (i64 ind = 0; ind < palette_value_count; ind++) {
-						u32 red = palette.ptr[ind * 3 + 0];
-						u32 grn = palette.ptr[ind * 3 + 1];
-						u32 blu = palette.ptr[ind * 3 + 2];
+				Named_Struct named_struct = {};
+				switch (asset_type) {
+					case Asset_Type_PCX:
+					case Asset_Type_WAL:
+					case Asset_Type_TGA:
+					case Asset_Type_CFG: {
+						named_struct = (Named_Struct){
+							.source = preexisting_pak_paths.ptr[pak_index],
+							.name = copy_string(&context.memory.perm, info_name),
+							.og_size = file_content.len,
+						};
+					} break;
+					default: break;
+				}
 
-						u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
-						d_8to24table[ind] = val;
-					}
-					d_8to24table[255] &= 0xffffff;
+				switch (asset_type) {
+					case Asset_Type_Colormap: {
+						// TODO: unglobal
 
-				} else if (string_ends_with(info_name, STR(".pcx"))) {
-					// NOTE: Unpack PCX
-					typedef struct {
-						u8 manufacturer;
-						u8 version;
-						u8 encoding;
-						u8 bits_per_pixel;
-						u16 xmin,ymin,xmax,ymax;
-						u16 hres,vres;
-						u8 palette[48];
-						i8 reserved;
-						i8 color_planes;
-						u16 bytes_per_line;
-						u16 palette_type;
-						u8 filler[58];
-						u8 data; // unbounded
-					} PCX_Header;
+						// NOTE: Palette is just at the end of the file
+						u8_Slice palette = {};
+						i64 palette_value_count = 256;
+						{
+							palette.len = palette_value_count * 3; // NOTE: Each entry is RBG
+							assert(file_content.len >= palette.len);
+							palette.ptr = file_content.ptr + file_content.len - palette.len;
+						}
 
-					PCX_Header* pcx = (PCX_Header*)file_content.ptr;
-					assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
+						for (i64 ind = 0; ind < palette_value_count; ind++) {
+							u32 red = palette.ptr[ind * 3 + 0];
+							u32 grn = palette.ptr[ind * 3 + 1];
+							u32 blu = palette.ptr[ind * 3 + 2];
 
-					Named_Struct decomp = {
-						.name = copy_string(&context.memory.perm, info_name),
-						.texture = {
+							u32 val = (255<<24) + (red<<0) + (grn<<8) + (blu<<16);
+							d_8to24table[ind] = val;
+						}
+						d_8to24table[255] &= 0xffffff;
+					} break; // colormap
+
+					case Asset_Type_PCX: {
+
+						typedef struct {
+							u8 manufacturer;
+							u8 version;
+							u8 encoding;
+							u8 bits_per_pixel;
+							u16 xmin,ymin,xmax,ymax;
+							u16 hres,vres;
+							u8 palette[48];
+							i8 reserved;
+							i8 color_planes;
+							u16 bytes_per_line;
+							u16 palette_type;
+							u8 filler[58];
+							u8 data; // unbounded
+						} PCX_Header;
+
+						PCX_Header* pcx = (PCX_Header*)file_content.ptr;
+						assert(pcx->manufacturer == 0x0a && pcx->version == 5 && pcx->encoding == 1 && pcx->bits_per_pixel == 8 && pcx->xmax < 640 && pcx->ymax < 480);
+
+						named_struct.processed_size = (pcx->xmax + 1) * (pcx->ymax + 1);
+						named_struct.texture = (Texture){
 							.width = pcx->xmax + 1,
 							.height = pcx->ymax + 1,
-							.pixels = arena_alloc_bytes(&context.memory.perm, (pcx->xmax + 1) * (pcx->ymax + 1)),
-						},
-					};
+							.pixels = arena_alloc_bytes(&context.memory.perm, named_struct.processed_size),
+						};
 
-					{
-						u8* pix = decomp.texture.pixels;
-						u8* raw = &pcx->data;
-						for (i64 y = 0; y < decomp.texture.height; y++, pix += decomp.texture.width) {
-							for (i64 x = 0; x < decomp.texture.width;) {
-								i64 dataByte = *raw++;
+						{
+							u8* pix = named_struct.texture.pixels;
+							u8* raw = &pcx->data;
+							for (i64 y = 0; y < named_struct.texture.height; y++, pix += named_struct.texture.width) {
+								for (i64 x = 0; x < named_struct.texture.width;) {
+									i64 dataByte = *raw++;
 
-								i64 runLength = 1;
-								if ((dataByte & 0xC0) == 0xC0) {
-									runLength = dataByte & 0x3F;
-									dataByte = *raw++;
-								}
+									i64 runLength = 1;
+									if ((dataByte & 0xC0) == 0xC0) {
+										runLength = dataByte & 0x3F;
+										dataByte = *raw++;
+									}
 
-								while(runLength-- > 0) {
-									pix[x++] = dataByte;
+									while(runLength-- > 0) {
+										pix[x++] = dataByte;
+									}
 								}
 							}
+							assert(raw - (u8*)pcx <= file_content.len);
 						}
-						assert(raw - (u8*)pcx <= file_content.len);
-					}
 
-					append_fixed_cap(&temp_named_textures, (decomp));
-				} else if (string_ends_with(info_name, STR(".wal"))) {
-					// NOTE: Unpack WAL
+						append_fixed_cap(&temp_named_textures, named_struct);
+					} break; // PCX
 
-					typedef struct {
-						char name[32];
-						u32	width, height;
-						u32	offsets_for_mips[4];
-						char animname[32]; // next frame in animation chain
-						i32 flags, contents, value;
-					} WAL_Header;
+					case Asset_Type_WAL: {
 
-					WAL_Header* wal = (WAL_Header*)file_content.ptr;
-					assert(file_content.len > (i64)sizeof(WAL_Header));
-					assert(wal->width > 0 && wal->height > 0);
+						typedef struct {
+							char name[32];
+							u32	width, height;
+							u32	offsets_for_mips[4];
+							char animname[32]; // next frame in animation chain
+							i32 flags, contents, value;
+						} WAL_Header;
 
-					i64 px_count = wal->width * wal->height;
+						WAL_Header* wal = (WAL_Header*)file_content.ptr;
+						assert(file_content.len > (i64)sizeof(WAL_Header));
+						assert(wal->width > 0 && wal->height > 0);
 
-					Named_Struct decomp = {
-						.name = copy_string(&context.memory.perm, info_name),
-						.texture = {
+						i64 px_count = wal->width * wal->height;
+						named_struct.processed_size = px_count;
+						named_struct.texture = (Texture){
 							.width = wal->width,
 							.height = wal->height,
 							.pixels = arena_alloc_bytes(&context.memory.perm, px_count),
-						},
-					};
+						};
 
-					i64 px_offset = wal->offsets_for_mips[0];
-					assert(px_offset >= (i64)sizeof(WAL_Header) && px_offset + px_count < file_content.len);
-					u8* pixels_in_file = (u8*)wal + px_offset;
-					copy_bytes(decomp.texture.pixels, pixels_in_file, px_count);
+						i64 px_offset = wal->offsets_for_mips[0];
+						assert(px_offset >= (i64)sizeof(WAL_Header) && px_offset + px_count < file_content.len);
+						u8* pixels_in_file = (u8*)wal + px_offset;
+						copy_bytes(named_struct.texture.pixels, pixels_in_file, px_count);
 
-					append_fixed_cap(&temp_named_textures, decomp);
-				} else if (string_ends_with(info_name, STR(".tga"))) {
-					// NOTE: Unpack TGA
+						append_fixed_cap(&temp_named_textures, named_struct);
+					} break; // WAL
 
-					typedef struct __attribute__((packed)) {
-						u8 id_length, colormap_type, image_type;
-						u16 colormap_index, colormap_length;
-						u8	colormap_size;
-						u16	x_origin, y_origin, width, height;
-						u8	pixel_size, attributes;
-					} TGA_Header;
-					static_assert(sizeof(TGA_Header) == 18);
+					case Asset_Type_TGA: {
 
-					assert(file_content.len > (i64)sizeof(TGA_Header));
-					TGA_Header* tga = (TGA_Header*)file_content.ptr;
+						typedef struct __attribute__((packed)) {
+							u8 id_length, colormap_type, image_type;
+							u16 colormap_index, colormap_length;
+							u8	colormap_size;
+							u16	x_origin, y_origin, width, height;
+							u8	pixel_size, attributes;
+						} TGA_Header;
+						static_assert(sizeof(TGA_Header) == 18);
 
-					assert(tga->image_type == 2 || tga->image_type == 10);
-					assert(tga->colormap_type == 0 || (tga->pixel_size == 32 || tga->pixel_size == 24));
+						assert(file_content.len > (i64)sizeof(TGA_Header));
+						TGA_Header* tga = (TGA_Header*)file_content.ptr;
 
-					i64 px_count = tga->width * tga->height;
+						assert(tga->image_type == 2 || tga->image_type == 10);
+						assert(tga->colormap_type == 0 || (tga->pixel_size == 32 || tga->pixel_size == 24));
 
-					Named_Struct decomp = {
-						.name = copy_string(&context.memory.perm, info_name),
-						.texture = {
+						i64 px_count = tga->width * tga->height;
+
+						named_struct.processed_size = px_count * 4;
+						named_struct.texture = (Texture){
 							.width = tga->width,
 							.height = tga->height,
-							.pixels = arena_alloc_bytes(&context.memory.perm, px_count * 4),
-						},
-					};
+							.pixels = arena_alloc_bytes(&context.memory.perm, named_struct.processed_size),
+						};
 
-					u8* buf_p = file_content.ptr + sizeof(TGA_Header) + tga->id_length;
-					assert(buf_p <= file_content.ptr + file_content.len);
+						u8* buf_p = file_content.ptr + sizeof(TGA_Header) + tga->id_length;
+						assert(buf_p <= file_content.ptr + file_content.len);
 
-					switch(tga->image_type) {
+						switch(tga->image_type) {
 
-						// Uncompressed, RGB images
-						case 2 : {
-							for(i64 row = tga->height - 1; row >= 0; row--) {
-								u8* pixbuf = decomp.texture.pixels + row * tga->width * 4;
+							// Uncompressed, RGB images
+							case 2 : {
+								for(i64 row = tga->height - 1; row >= 0; row--) {
+									u8* pixbuf = named_struct.texture.pixels + row * tga->width * 4;
 
-								for(i64 column = 0; column < tga->width; column++) {
-									u8 blue = *buf_p++;
-									u8 green = *buf_p++;
-									u8 red = *buf_p++;
-									u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
+									for(i64 column = 0; column < tga->width; column++) {
+										u8 blue = *buf_p++;
+										u8 green = *buf_p++;
+										u8 red = *buf_p++;
+										u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
 
-									*pixbuf++ = red;
-									*pixbuf++ = green;
-									*pixbuf++ = blue;
-									*pixbuf++ = alpha;
-
-								} // for column
-							} // for row
-						} break; // case uncompressed
-
-						// Runlength encoded RGB images
-						case 10: {
-							for(i64 row = tga->height - 1; row >= 0; row--) {
-								u8* pixbuf = decomp.texture.pixels + row * tga->width * 4;
-
-								for (i64 column = 0; column < tga->width;) {
-									u8 packet_header = *buf_p++;
-									u8 packet_size = 1 + (packet_header & 0x7f);
-									bool is_rle_packet = packet_header & 0x80;
-
-									u8 blue = *buf_p++;
-									u8 green = *buf_p++;
-									u8 red = *buf_p++;
-									u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
-
-									for(i64 j = 0; j < packet_size; j++) {
 										*pixbuf++ = red;
 										*pixbuf++ = green;
 										*pixbuf++ = blue;
 										*pixbuf++ = alpha;
 
-										column++;
+									} // for column
+								} // for row
+							} break; // case uncompressed
 
-										// run spans across rows
-										if (column == tga->width && row > 0) {
-											column = 0;
-											row -= 1;
-											pixbuf = decomp.texture.pixels + row * tga->width * 4;
-										}
+							// Runlength encoded RGB images
+							case 10: {
+								for(i64 row = tga->height - 1; row >= 0; row--) {
+									u8* pixbuf = named_struct.texture.pixels + row * tga->width * 4;
 
-										// NOTE: Pixels shouldn't keep going if we've run out of image
-										assert(column < tga->width || j == packet_size - 1);
+									for (i64 column = 0; column < tga->width;) {
+										u8 packet_header = *buf_p++;
+										u8 packet_size = 1 + (packet_header & 0x7f);
+										bool is_rle_packet = packet_header & 0x80;
 
-										if (!is_rle_packet && j < packet_size - 1) {
-											blue = *buf_p++;
-											green = *buf_p++;
-											red = *buf_p++;
-											alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
-										}
-									} // for packet size
-								} // for column
-							} // for row
-						} break; // case rle
-					} // tga switch image type
+										u8 blue = *buf_p++;
+										u8 green = *buf_p++;
+										u8 red = *buf_p++;
+										u8 alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
 
-					assert(buf_p <= file_content.ptr + file_content.len);
-					append_fixed_cap(&temp_named_textures, decomp);
-				} else if (string_ends_with(info_name, STR(".cfg"))) {
-					// NOTE: Copy config string
+										for(i64 j = 0; j < packet_size; j++) {
+											*pixbuf++ = red;
+											*pixbuf++ = green;
+											*pixbuf++ = blue;
+											*pixbuf++ = alpha;
 
-					Named_Struct named_config_string = {
-						.name = copy_string(&context.memory.perm, info_name),
-						.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len}),
-					};
-					append_fixed_cap(&temp_named_config_strings, named_config_string);
-				} // if-else chain file processing
+											column++;
+
+											// run spans across rows
+											if (column == tga->width && row > 0) {
+												column = 0;
+												row -= 1;
+												pixbuf = named_struct.texture.pixels + row * tga->width * 4;
+											}
+
+											// NOTE: Pixels shouldn't keep going if we've run out of image
+											assert(column < tga->width || j == packet_size - 1);
+
+											if (!is_rle_packet && j < packet_size - 1) {
+												blue = *buf_p++;
+												green = *buf_p++;
+												red = *buf_p++;
+												alpha = tga->pixel_size == 32 ? *buf_p++ : 255;
+											}
+										} // for packet size
+									} // for column
+								} // for row
+							} break; // case rle
+						} // tga switch image type
+
+						assert(buf_p <= file_content.ptr + file_content.len);
+						append_fixed_cap(&temp_named_textures, named_struct);
+					} break; // TGA
+
+					case Asset_Type_CFG: {
+						named_struct.processed_size = named_struct.og_size;
+						named_struct.string = copy_string(&context.memory.perm, (String){.ptr = (char*)file_content.ptr, .len = file_content.len});
+						append_fixed_cap(&temp_named_config_strings, named_struct);
+					} break; // CFG
+
+					case Asset_Type_Skip: {
+						context.debug_log(STR("ASSET_SKIP"), info_name);
+					} break;
+				} // switch asset type
+
+				if (named_struct.og_size) {
+					assert(named_struct.processed_size);
+					String og_size_str = int_to_string(&context.memory.temp, named_struct.og_size);
+					String processed_size_str = int_to_string(&context.memory.temp, named_struct.processed_size);
+					context.debug_log(STR("ASSET_INFO"), concat(&context.memory.temp, STRS(named_struct.name, STR(","), named_struct.source, STR(","), og_size_str, STR(","), processed_size_str)));
+				}
 			} // for file
 		} // for pak
 
