@@ -4213,45 +4213,6 @@ procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) 
 	return &map_cmodels[0];
 }
 
-cmodel_t	*CM_InlineModel (char *name);	// *1, *2, etc
-
-// creates a clipping hull for an arbitrary box
-int			CM_HeadnodeForBox (vec3_t mins, vec3_t maxs);
-
-// returns an ORed contents mask
-int			CM_PointContents (vec3_t p, int headnode);
-int			CM_TransformedPointContents (vec3_t p, int headnode, vec3_t origin, vec3_t angles);
-
-trace_t		CM_BoxTrace (vec3_t start, vec3_t end,
-						  vec3_t mins, vec3_t maxs,
-						  int headnode, int brushmask);
-trace_t		CM_TransformedBoxTrace (vec3_t start, vec3_t end,
-						  vec3_t mins, vec3_t maxs,
-						  int headnode, int brushmask,
-						  vec3_t origin, vec3_t angles);
-
-u8		*CM_ClusterPVS (int cluster);
-u8		*CM_ClusterPHS (int cluster);
-
-int			CM_PointLeafnum (vec3_t p);
-
-// call with topnode set to the headnode, returns with topnode
-// set to the first node that splits the box
-int			CM_BoxLeafnums (vec3_t mins, vec3_t maxs, int *list,
-							int listsize, int *topnode);
-
-int			CM_LeafContents (int leafnum);
-int			CM_LeafCluster (int leafnum);
-int			CM_LeafArea (int leafnum);
-
-void		CM_SetAreaPortalState (int portalnum, bool open);
-bool	CM_AreasConnected (int area1, int area2);
-
-int			CM_WriteAreaBits (u8 *buffer, int area);
-bool	CM_HeadnodeVisible (int headnode, u8 *visbits);
-
-void		CM_WritePortalState (FILE *f);
-
 #define	MAXTOUCH	32
 
 // pmove_state_t is the information necessary for client side movement
@@ -5409,11 +5370,6 @@ procedure cmodel_t* CM_InlineModel(char *name) {
 	return &map_cmodels[num];
 }
 
-procedure int CM_LeafContents(int leafnum) {
-	assert(leafnum >= 0 && leafnum < numleafs);
-	return map_leafs[leafnum].contents;
-}
-
 procedure int CM_LeafCluster(int leafnum) {
 	assert(leafnum >= 0 && leafnum < numleafs);
 	return map_leafs[leafnum].cluster;
@@ -6328,8 +6284,6 @@ procedure bool CM_AreasConnected(int area1, int area2) {
 
 /*
 =================
-CM_WriteAreaBits
-
 Writes a length u8 followed by a bit vector of all the areas
 that area in the same flood as the area parameter
 
@@ -6354,12 +6308,6 @@ int CM_WriteAreaBits (u8 *buffer, int area)
 	}
 
 	return bytes;
-}
-
-// Writes the portal state to a savegame file
-void	CM_WritePortalState (FILE *f)
-{
-	fwrite (portalopen, sizeof(portalopen), 1, f);
 }
 
 // Returns true if any leaf under headnode has a cluster that is potentially visible
