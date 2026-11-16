@@ -797,8 +797,6 @@ procedure void builtin_string_command_unbind(void* ctx) {
 // TODO remove
 #define	MAX_STRING_CHARS 1024
 #define	MAX_STRING_TOKENS 80
-#define	MAX_ALIAS_NAME 32
-#define	ALIAS_LOOP_COUNT 16
 
 global_variable int cmd_argc;
 global_variable char* cmd_argv[MAX_STRING_TOKENS];
@@ -1148,13 +1146,6 @@ procedure void SZ_Print(sizebuf_t* buf, char* data) {
 	} else {
 		memcpy((u8*)SZ_GetSpace(buf, len), data, len);
 	}
-}
-
-procedure char * CopyString(char *in) {
-	int in_len = strlen(in);
-	char* out = tml_alloc(in_len + 1);
-	strcpy(out, in);
-	return out;
 }
 
 procedure int Q_stricmp(char *s1, char *s2) {
@@ -2117,19 +2108,10 @@ procedure void Cbuf_InsertText(char* text) {
 	}
 }
 
-typedef struct cmdalias_s {
-	struct cmdalias_s*	next;
-	char	name[MAX_ALIAS_NAME];
-	char*	value;
-} cmdalias_t;
-
 // Causes execution of the remainder of the command buffer to be delayed until next frame.
 // This allows commands like:
 // bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 global_variable bool cmd_wait;
-
-global_variable cmdalias_t*		cmd_alias;
-global_variable int 				alias_count;	// for detecting runaway loops
 
 procedure char * Cmd_Argv(int arg) {
 	if (arg >= cmd_argc) {
@@ -2195,13 +2177,14 @@ procedure void Cmd_TokenizeString(char* text) {
 }
 
 procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
-	context.debug_log(STR("STR_EXECUTE"), string_from_cstring(text));
+	String text_str = string_from_cstring(text);
+	context.debug_log(STR("STR_EXECUTE"), text_str);
 
 	Cmd_TokenizeString(text);
 
 	// NOTE Get args (first one is command name)
 	ctx->data.user_args.len = 0;
-	for (String left_to_process = string_from_cstring(text); left_to_process.len;) {
+	for (String left_to_process = text_str; left_to_process.len;) {
 		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Whitespace);
 		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
 		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Non_Whitespace);
@@ -2230,24 +2213,12 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 		}
 	}
 
-	// check alias
-	for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-		if (!Q_stricmp(cmd_argv[0], a->name)) {
-			if (++alias_count == ALIAS_LOOP_COUNT) {
-				add_line_to_console_log(STR("ALIAS_LOOP_COUNT"));
-				return;
-			}
-			Cbuf_InsertText(a->value);
-			return;
-		}
-	}
-
 	// send it as a server command if we are connected
 	{
 		char* cmd = Cmd_Argv(0);
 
 		if (cls.state <= ca_connected || *cmd == '-' || *cmd == '+') {
-			add_line_to_console_log(STR("Unknown command"));
+			cadd_line_to_console_log(STRS(STR("Unknown command: "), text_str));
 			return;
 		}
 
@@ -2266,8 +2237,6 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 // Do not call inside a command function!
 procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 	char line[1024] = {};
-
-	alias_count = 0; // don't allow infinite alias loops
 
 	while (cmd_text.cursize) {
 		// find a \n or ; line break
@@ -2321,54 +2290,6 @@ procedure void execute_config_string(String_Command_Context* ctx, String name) {
 	} else {
 		cadd_line_to_console_log(STRS(STR("did not find config string named "), name));
 	}
-}
-
-// Creates a new command that executes a command string (possibly ; seperated)
-procedure void Cmd_Alias_f(void* data) {
-	UNUSED(data);
-
-	char cmd[1024] = {};
-
-	if (cmd_argc == 1) {
-		for (cmdalias_t* a = cmd_alias; a; a = a->next) {
-			cadd_line_to_console_log(STRS(string_from_cstring(a->name), STR(" : "), string_from_cstring(a->value)));
-		}
-		return;
-	}
-
-	char* s = Cmd_Argv(1);
-	if (strlen(s) >= MAX_ALIAS_NAME) {
-		add_line_to_console_log(STR("Alias name is too long"));
-		return;
-	}
-
-	// if the alias already exists, reuse it
-	cmdalias_t* a = cmd_alias;
-	for (; a; a = a->next) {
-		if (!strcmp(s, a->name)) {
-			tml_free(a->value);
-			break;
-		}
-	}
-
-	if (!a) {
-		a = tml_alloc (sizeof(cmdalias_t));
-		a->next = cmd_alias;
-		cmd_alias = a;
-	}
-	strcpy(a->name, s);
-
-	// copy the rest of the command line
-	int c = cmd_argc;
-	for (int i = 2; i < c; i++) {
-		strcat (cmd, Cmd_Argv(i));
-		if (i != (c - 1)) {
-			strcat (cmd, " ");
-		}
-	}
-	strcat(cmd, "\n");
-
-	a->value = CopyString(cmd);
 }
 
 procedure void Cmd_Wait_f(void* data) {
@@ -56757,7 +56678,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("alias"), Cmd_Alias_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  Cmd_Wait_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
