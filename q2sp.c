@@ -56735,7 +56735,30 @@ procedure void windows_write_config_string(String text) {
 }
 
 procedure void windows_debug_log(String prefix, String text) {temp_memory_block(&context.memory.temp) {
-	String text_null_terminated = concat(&context.memory.temp, STRS(STR("\""), prefix, STR("\",\""), text, STR("\"\n")));
+	// NOTE: Produces a csv row with 2 columns: prefix,text
+	String_Builder builder = string_builder_from_arena(&context.memory.temp, 1 * Megabyte);
+
+	string_builder_write_char(&builder, '"');
+	string_builder_write_string(&builder, prefix);
+	string_builder_write_char(&builder, '"');
+
+	string_builder_write_char(&builder, ',');
+
+	// NOTE: Remove special characters
+	string_builder_write_char(&builder, '"');
+	for (i64 ind = 0; ind < text.len; ind++) {
+		char ch = text.ptr[ind];
+		switch (ch) {
+			default: string_builder_write_char(&builder, ch); break;
+			case '\n': string_builder_write_string(&builder, STR("\\n")); break;
+			case '\r': string_builder_write_string(&builder, STR("\\r")); break;
+			case '\t': string_builder_write_string(&builder, STR("\\t")); break;
+		}
+	}
+	string_builder_write_char(&builder, '"');
+	string_builder_write_char(&builder, '\n');
+
+	String text_null_terminated = string_builder_end(&builder);
 
 	OutputDebugStringA(text_null_terminated.ptr);
 
@@ -57152,6 +57175,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				Pak_File_Info* info = pak->infos.ptr + file_index;
 				String info_name = string_from_cstring(info->name);
 				assert(info_name.len > 0 && info_name.len < carray_count(info->name));
+
+				// NOTE Lowercase the names
+				for (i64 ind = 0; ind < info_name.len; ind++) {
+					char ch = info_name.ptr[ind];
+					if (ch >= 'A' && ch <= 'Z') {
+						ch += 'a' - 'A';
+						info_name.ptr[ind] = ch;
+					}
+				}
 
 				u8_Slice file_content = {};
 				{
