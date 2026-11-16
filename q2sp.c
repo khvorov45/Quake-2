@@ -6386,102 +6386,6 @@ bool CM_HeadnodeVisible (int nodenum, u8 *visbits)
 	return CM_HeadnodeVisible(node->children[1], visbits);
 }
 
-typedef struct
-{
-	char	name[MAX_QPATH];
-	int		filepos, filelen;
-} packfile_t;
-
-#define	MAX_OSPATH 128 // max length of a filesystem pathname
-
-typedef struct pack_s
-{
-	char	filename[MAX_OSPATH];
-	FILE	*handle;
-	int		numfiles;
-	packfile_t	*files;
-} pack_t;
-
-typedef struct searchpath_s
-{
-	char	filename[MAX_OSPATH];
-	pack_t	*pack;		// only one of filename / pack will be used
-	struct searchpath_s *next;
-} searchpath_t;
-
-global_variable searchpath_t	*fs_searchpaths;
-
-// All of Quake's data access is through a hierchal file system, but the contents of the file system can be transparently merged from several sources.
-// The "base directory" is the path to the directory holding the quake.exe and all game directories.
-// The sys_* files pass this to host_init in quakeparms_t->basedir.
-// This can be overridden with the "-basedir" command line parm to allow code debugging in a different directory.
-// The base directory is only used during filesystem initialization.
-// The "game directory" is the first tree on the search path and directory that all generated files (savegames, screenshots, demos, config files) will be saved to.
-// This can be overridden with the "-game" command line parameter.
-// The game directory can never be changed while quake is executing.
-// This is a precacution against having a malicious server instruct clients to write files over areas they shouldn't.
-
-procedure int FS_filelength (FILE *f) {
-	int		pos;
-	int		end;
-
-	pos = ftell (f);
-	fseek (f, 0, SEEK_END);
-	end = ftell (f);
-	fseek (f, pos, SEEK_SET);
-
-	return end;
-}
-
-global_variable int file_from_pak = 0;
-
-int FS_FOpenFile (char *filename, FILE **file)
-{
-	searchpath_t	*search;
-	char			netpath[MAX_OSPATH];
-	pack_t			*pak;
-	int				i;
-
-	file_from_pak = 0;
-
-	// search through the path, one element at a time
-	for (search = fs_searchpaths ; search ; search = search->next)
-	{
-	// is the element a pak file?
-		if (search->pack)
-		{
-			// look through all the pak file elements
-			pak = search->pack;
-			for (i=0 ; i<pak->numfiles ; i++)
-				if (!Q_strcasecmp (pak->files[i].name, filename))
-				{	// found it!
-					file_from_pak = 1;
-					// open a new file on the pakfile
-					*file = fopen (pak->filename, "rb");
-					assert(*file);
-					fseek (*file, pak->files[i].filepos, SEEK_SET);
-					return pak->files[i].filelen;
-				}
-		}
-		else
-		{
-		// check a file in the directory tree
-
-			Com_sprintf (netpath, sizeof(netpath), "%s/%s",search->filename, filename);
-
-			*file = fopen (netpath, "rb");
-			if (!*file)
-				continue;
-
-			return FS_filelength (*file);
-		}
-
-	}
-
-	*file = NULL;
-	return -1;
-}
-
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;
 
@@ -14339,7 +14243,7 @@ procedure void CL_Precache_f(void* data) {
 				precache_check++; // zero is blank
 			}
 			while (precache_check < CS_IMAGES + MAX_IMAGES && cl.configstrings[precache_check][0]) {
-				char fn[MAX_OSPATH] = {};
+				char fn[128] = {};
 				Com_sprintf(fn, sizeof(fn), "pics/%s.pcx", cl.configstrings[precache_check++]);
 			}
 			precache_check = CS_PLAYERSKINS;
