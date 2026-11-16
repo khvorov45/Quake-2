@@ -71,11 +71,17 @@ typedef struct {
 	u8_Slice raw;
 } BSP;
 
+typedef struct {
+	u8_Slice raw;
+} Sound;
+typedef struct {bool found; Sound sound;} Maybe_Sound;
+
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String prefix, String text);
 typedef Texture (*Load_Texture_Proc)(String name);
 typedef BSP (*Load_BSP_Proc)(String name);
+typedef Maybe_Sound (*Maybe_Load_Sound_Proc)(String name);
 typedef Maybe_String (*Maybe_Load_Config_String_Proc)(String name);
 
 // Platform is responsible for initialising this
@@ -88,6 +94,7 @@ global_variable struct {
 	Debug_Log_Proc debug_log;
 	Load_Texture_Proc load_texture;
 	Load_BSP_Proc load_bsp;
+	Maybe_Load_Sound_Proc maybe_load_sound;
 	Maybe_Load_Config_String_Proc maybe_load_config_string;
 } context = {};
 
@@ -103,6 +110,17 @@ procedure void copy_bytes(void* dest, void* src, i64 len) {
 procedure void zero_memory(void* dest, i64 len) {
 	assert(len == 0 || (len > 0 && dest));
 	while (len--) {*(u8*)dest++ = 0;}
+}
+
+procedure bool memeq(void* ptr1, void* ptr2, i64 len) {
+	bool result = true;
+	for (i64 ind = 0; ind < len; ind++) {
+		if (((u8*)ptr1)[ind] != ((u8*)ptr2)[ind]) {
+			result = false;
+			break;
+		}
+	}
+	return result;
 }
 
 procedure void* arena_alloc_bytes(Arena* arena, i64 size) {
@@ -216,13 +234,7 @@ procedure String string_from_cstring(char* cstring) {
 procedure bool streq(String str1, String str2) {
 	bool result = false;
 	if (str1.len == str2.len) {
-		result = true;
-		for (i64 ind = 0; ind < str1.len; ind++) {
-			if (str1.ptr[ind] != str2.ptr[ind]) {
-				result = false;
-				break;
-			}
-		}
+		result = memeq(str1.ptr, str2.ptr, str1.len);
 	}
 	return result;
 }
@@ -1966,9 +1978,6 @@ procedure int Sys_Milliseconds(void);
 
 // note: this can't be called from another DLL, due to MS libc issues
 procedure int FS_FOpenFile(char* filename, FILE** file);
-
-// a null buffer will just return the file length without loading a -1 length is not present
-procedure int FS_LoadFile(char* path, void** buffer);
 
 procedure void FS_FreeFile(void* buffer);
 
@@ -6497,7 +6506,7 @@ int FS_FOpenFile (char *filename, FILE **file)
 }
 
 // Filename are reletive to the quake search path a null buffer will just return the file length without loading
-int FS_LoadFile(char *path, void **buffer) {
+procedure int FS_LoadFile(char *path, void **buffer) {
 	// look for it in the filesystem or pack files
 	FILE* h = 0;
 	int len = FS_FOpenFile(path, &h);
@@ -21564,12 +21573,10 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
 sfxcache_t *S_LoadSound (sfx_t *s)
 {
 	char	namebuffer[MAX_QPATH];
-	u8	*data;
 	wavinfo_t	info;
 	int		len;
 	float	stepscale;
 	sfxcache_t	*sc;
-	int		size;
 	char	*name;
 
 	if (s->name[0] == '*')
@@ -21591,17 +21598,18 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	else
 		Com_sprintf (namebuffer, sizeof(namebuffer), "sound/%s", name);
 
-	size = FS_LoadFile (namebuffer, (void **)&data);
+	String name_str = string_from_cstring(namebuffer);
+	Maybe_Sound maybe_sound = context.maybe_load_sound(name_str);
 
-	if (!data)
+	if (!maybe_sound.found)
 	{
 		return NULL;
 	}
 
-	info = GetWavinfo (data, size);
+	Sound sound = maybe_sound.sound;
+	info = GetWavinfo(sound.raw.ptr, sound.raw.len);
 	if (info.channels != 1)
 	{
-		FS_FreeFile (data);
 		return NULL;
 	}
 
@@ -21613,7 +21621,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sc = s->cache = tml_alloc (len + sizeof(sfxcache_t));
 	if (!sc)
 	{
-		FS_FreeFile (data);
 		return NULL;
 	}
 
@@ -21623,9 +21630,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sc->width = info.width;
 	sc->stereo = info.channels;
 
-	ResampleSfx (s, sc->speed, sc->width, data + info.dataofs);
-
-	FS_FreeFile (data);
+	ResampleSfx (s, sc->speed, sc->width, sound.raw.ptr + info.dataofs);
 
 	return sc;
 }
@@ -56692,6 +56697,7 @@ typedef struct {
 		Texture texture;
 		String string;
 		BSP bsp;
+		Sound sound;
 	};
 } Asset;
 typedef struct {Asset* ptr; i64 len;} Assets;
@@ -56700,6 +56706,7 @@ typedef enum {
 	Asset_Category_None,
 	Asset_Category_Texture,
 	Asset_Category_BSP,
+	Asset_Category_Sound,
 	Asset_Category_Config_String,
 	Asset_Category_Count,
 } Asset_Category;
@@ -56773,7 +56780,7 @@ procedure Maybe_Asset windows_maybe_find_asset(String target_name, Asset_Categor
 	Assets assets = ((Windows_Platform_Data*)context.platform_data)->assets[category];
 
 	bool found = false;
-	Asset* target_asset = 0;
+	Asset* target_asset = &(((Windows_Platform_Data*)context.platform_data)->assets[Asset_Category_None].ptr[0]);
 	for (i64 ind = 0; !found && ind < assets.len; ind++) {
 		Asset* this_asset = assets.ptr + ind;
 		if (streq(this_asset->name, target_name)) {
@@ -56803,6 +56810,12 @@ procedure BSP windows_load_bsp(String name) {
 	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_BSP);
 	assert(find_result.found);
 	BSP result = find_result.asset->bsp;
+	return result;
+}
+
+procedure Maybe_Sound windows_maybe_load_sound(String name) {
+	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_Sound);
+	Maybe_Sound result = {.found = find_result.found, .sound = find_result.asset->sound};
 	return result;
 }
 
@@ -56842,6 +56855,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.debug_log = windows_debug_log;
 		context.load_texture = windows_load_texture;
 		context.load_bsp = windows_load_bsp;
+		context.maybe_load_sound = windows_maybe_load_sound;
 		context.maybe_load_config_string = windows_maybe_load_config_string;
 	}
 
@@ -57041,6 +57055,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE: Load assets - pre-process everything we can, e.g., decompress images etc.
 	// TODO: complete
+	Asset null_asset = {};
+	windows_platform_data.assets[Asset_Category_None] = (Assets){.ptr = &null_asset, .len = 1};
+	assert(&windows_platform_data.assets[0].ptr[0] == &null_asset);
+	assert(&windows_platform_data.assets->ptr[0] == &null_asset);
 	temp_memory_block(&context.memory.temp) {
 
 		typedef struct {
@@ -57153,6 +57171,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					Asset_Type_TGA,
 					Asset_Type_CFG,
 					Asset_Type_BSP,
+					Asset_Type_WAV,
 				} Asset_Type;
 
 				Asset_Type asset_type = Asset_Type_Skip;
@@ -57163,6 +57182,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
 				else if (string_ends_with(info_name, STR(".bsp"))) {asset_type = Asset_Type_BSP;}
 				else if (string_ends_with(info_name, STR(".cfg"))) {asset_type = Asset_Type_CFG;}
+				else if (string_ends_with(info_name, STR(".wav"))) {asset_type = Asset_Type_WAV;}
 
 				Asset asset = {};
 				switch (asset_type) {
@@ -57170,6 +57190,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case Asset_Type_WAL:
 					case Asset_Type_TGA:
 					case Asset_Type_BSP:
+					case Asset_Type_WAV:
 					case Asset_Type_CFG: {
 						asset = (Asset){
 							.source = preexisting_pak_paths.ptr[pak_index],
@@ -57186,6 +57207,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					case Asset_Type_WAL:
 					case Asset_Type_TGA: {category = Asset_Category_Texture;} break;
 					case Asset_Type_BSP: {category = Asset_Category_BSP;} break;
+					case Asset_Type_WAV: {category = Asset_Category_Sound;} break;
 					case Asset_Type_CFG: {category = Asset_Category_Config_String;} break;
 					default: break;
 				}
@@ -57396,6 +57418,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						asset.bsp.raw.len = file_content.len;
 						asset.bsp.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
 						copy_bytes(asset.bsp.raw.ptr, file_content.ptr, file_content.len);
+					} break; // BSP
+
+					case Asset_Type_WAV: {
+						asset.processed_size = asset.og_size;
+						asset.sound.raw.len = file_content.len;
+						asset.sound.raw.ptr = arena_alloc_bytes(&context.memory.perm, file_content.len);
+						copy_bytes(asset.sound.raw.ptr, file_content.ptr, file_content.len);
 					} break; // BSP
 
 					case Asset_Type_CFG: {
@@ -57784,6 +57813,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE: Mainloop
 	assert(context.memory.temp.used == 0); // NOTE: make sure temp wasn't used for something permanent
 	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
+
+		// NOTE: Make sure nothing's accidentally writing to null
+		{
+			Asset definetely_null_asset = {};
+			assert(memeq(&definetely_null_asset, &null_asset, sizeof(null_asset)));
+		}
 
 		// if at a full screen console, don't update unless needed
 		if (Minimized) {
