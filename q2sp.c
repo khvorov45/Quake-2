@@ -11,7 +11,6 @@
 
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <stdint.h>
-#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -19250,7 +19249,7 @@ procedure bool Field_Key(menufield_s *field, int key_passed) {
 	if (key_is_ascii && key != Key_Code_Keypad_Enter && key != Key_Code_Enter && key != Key_Code_Escape && key != Key_Code_Tab) {
 		handled = true;
 
-		if ((toupper(key) == 'V' && keydown[Key_Code_Ctrl]) || ((( key == Key_Code_Insert) || (key == Key_Code_Keypad_Insert)) && keydown[Key_Code_Shift])) {
+		if (((key == 'V' || key == 'v') && keydown[Key_Code_Ctrl]) || ((( key == Key_Code_Insert) || (key == Key_Code_Keypad_Insert)) && keydown[Key_Code_Shift])) {
 			// support pasting from the clipboard
 			char* clipboard_data = Sys_GetClipboardData();
 			if (clipboard_data) {
@@ -19284,7 +19283,7 @@ procedure bool Field_Key(menufield_s *field, int key_passed) {
 				} break;
 
 				default: {
-					if ( !isdigit( key ) && ( field->generic.flags & QMF_NUMBERSONLY ) )
+					if ( !(key >= '0' && key <= '9') && ( field->generic.flags & QMF_NUMBERSONLY ) )
 						return false;
 
 					if ( field->cursor < field->length )
