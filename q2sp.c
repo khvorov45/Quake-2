@@ -16000,31 +16000,6 @@ procedure void Con_DrawConsole(float frac) {
 	} // if any lines
 }
 
-procedure void SCR_DrawConsole() {
-	if (cls.state == ca_disconnected || cls.state == ca_connecting)
-	{	// forced full screen console
-		Con_DrawConsole (1.0);
-		return;
-	}
-
-	if (cls.state != ca_active || !cl.refresh_prepped)
-	{	// connected, but can't render
-		Con_DrawConsole (0.5);
-		Draw_Fill (0, viddef.height/2, viddef.width, viddef.height/2, 0);
-		return;
-	}
-
-	if (scr_con_current)
-	{
-		Con_DrawConsole (scr_con_current);
-	}
-	else
-	{
-		if (cls.key_dest == key_game)
-			Con_DrawNotify ();	// only draw notify in game
-	}
-}
-
 void SCR_BeginLoadingPlaque (void)
 {
 	S_StopAllSounds(0);
@@ -16686,6 +16661,26 @@ procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
 	}
 }
 
+typedef void (*M_Draw_Proc)();
+global_variable M_Draw_Proc m_drawfunc = 0;
+global_variable bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
+global_variable char* menu_in_sound = "misc/menu1.wav";
+
+procedure void M_Draw() {
+	if (cls.key_dest == key_menu) {
+		void Draw_FadeScreen();
+		Draw_FadeScreen();
+
+		m_drawfunc();
+
+		// delay playing the enter sound until after the menu has been drawn, to avoid delay while caching images
+		if (m_entersound) {
+			S_StartLocalSound(menu_in_sound);
+			m_entersound = false;
+		}
+	}
+}
+
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 procedure void SCR_UpdateScreen() {
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
@@ -16775,7 +16770,37 @@ procedure void SCR_UpdateScreen() {
 	SCR_DrawNet();
 	SCR_CheckDrawCenterString();
 
-	SCR_DrawConsole();
+	// NOTE Draw console
+	if (cls.state == ca_disconnected || cls.state == ca_connecting) {
+		// NOTE forced full screen console
+		Con_DrawConsole(1.0);
+
+	} else if (cls.state != ca_active || !cl.refresh_prepped) {
+		// NOTE connected, but can't render
+		Con_DrawConsole(0.5);
+		Draw_Fill(0, viddef.height/2, viddef.width, viddef.height/2, 0);
+
+	} else if (scr_con_current) {
+		// NOTE console drop animation
+		Con_DrawConsole(scr_con_current);
+
+	} else if (cls.key_dest == key_game) {
+		// NOTE last few lines of output transparently over the game top
+		i64 lines_to_draw = 4;
+		for (i64 row = 0; row < lines_to_draw; row++) {
+			Log_Line line = get_log_line(row);
+			float time_passed_since = cls.realtime - line.timestamp;
+			i64 ycoord = (lines_to_draw - row) * temp_global_char_dim_px.y;
+			float keep_for_ms = 3000.0f;
+			if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
+				for (i64 column = 0; column < line.text.len; column++) {
+					char ch = line.text.ptr[column];
+					i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
+					Draw_Char(xcoord, ycoord, ch);
+				}
+			}
+		}
+	}
 
 	void M_Draw();
 	M_Draw();
@@ -18721,24 +18746,6 @@ procedure void Con_ToggleConsole_f(void* data) {
 	}
 }
 
-// Draws the last few lines of output transparently over the game top
-void Con_DrawNotify() {
-	i64 lines_to_draw = 4;
-	for (i64 row = 0; row < lines_to_draw; row++) {
-		Log_Line line = get_log_line(row);
-		float time_passed_since = cls.realtime - line.timestamp;
-		i64 ycoord = (lines_to_draw - row) * temp_global_char_dim_px.y;
-		float keep_for_ms = 3000.0f;
-		if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
-			for (i64 column = 0; column < line.text.len; column++) {
-				char ch = line.text.ptr[column];
-				i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
-				Draw_Char(xcoord, ycoord, ch);
-			}
-		}
-	}
-}
-
 global_variable int shift_down;
 global_variable int		key_waiting;
 global_variable bool	consolekeys[256];	// if true, can't be rebound while in console
@@ -19051,17 +19058,12 @@ global_variable int	m_main_cursor;
 
 #define NUM_CURSOR_FRAMES 15
 
-global_variable char *menu_in_sound		= "misc/menu1.wav";
 global_variable char *menu_move_sound	= "misc/menu2.wav";
 global_variable char *menu_out_sound		= "misc/menu3.wav";
 
-global_variable bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
-
 typedef char* (*M_Key_Proc)(int k);
-typedef void (*M_Draw_Proc)();
 
 global_variable M_Key_Proc m_keyfunc = 0;
-global_variable M_Draw_Proc m_drawfunc = 0;
 
 global_variable struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
 global_variable int m_menudepth = 0;
@@ -20380,26 +20382,6 @@ procedure void M_Menu_Main_f (void* data)
 {
 	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
-}
-
-procedure void M_Draw() {
-	if (cls.key_dest != key_menu) {
-		return;
-	}
-
-	{
-		void Draw_FadeScreen();
-		Draw_FadeScreen();
-	}
-
-	m_drawfunc();
-
-	// delay playing the enter sound until after the menu has been drawn,
-	// to avoid delay while caching images
-	if (m_entersound) {
-		S_StartLocalSound(menu_in_sound);
-		m_entersound = false;
-	}
 }
 
 procedure void M_Keydown (int key)
