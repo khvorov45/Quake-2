@@ -747,7 +747,7 @@ procedure void builtin_string_command_write_config(void* ctx) {
 			String value = string_from_fixed_string(key_bindings->values + key_code);
 			if (value.len) {
 				String key = Key_Code_Strings[key_code];
-				String strs[] = {STR("bind "), key, STR(" \""), value, STR("\"\n")};
+				String strs[] = {STR("bind "), key, STR(" "), value, STR("\n")};
 				for (String* str = strs; str - strs < carray_count(strs); str++) {
 					string_builder_write_string(&builder, *str);
 				}
@@ -763,6 +763,38 @@ procedure void builtin_string_command_cmdlist(void* ctx) {
 	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
 	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
 		add_line_to_console_log(cmd->name);
+	}
+}
+
+procedure void builtin_string_command_bind(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+	assert(user_args.len >= 1);
+	assert(streq(user_args.ptr[0], STR("bind")));
+
+	if (user_args.len >= 2) {
+		String key_name = user_args.ptr[1];
+		u8 key_code = get_key_code_number(key_name);
+		if (!key_code) {
+			cadd_line_to_console_log(STRS(STR("invalid key: "), key_name));
+		} else {
+			if (user_args.len == 2) {
+				Fixed_String* binding = key_bindings->values + key_code;
+				if (binding->len) {
+					cadd_line_to_console_log(STRS(STR("key "), key_name, STR(" bound to "), string_from_fixed_string(binding)));
+				} else {
+					cadd_line_to_console_log(STRS(STR("key "), key_name, STR(" not bound")));
+				}
+			} else {
+				// NOTE: Actually do the binding
+				String first_arg = user_args.ptr[2];
+				String last_arg = user_args.ptr[user_args.len - 1];
+				String binding_value = {.ptr = first_arg.ptr, .len = last_arg.ptr + last_arg.len - first_arg.ptr};
+				set_key_binding(key_bindings, key_code, binding_value);
+			}
+		}
+	} else {
+		add_line_to_console_log(STR("USAGE: bind <key> [command] : attach a command to a key"));
 	}
 }
 
@@ -791,6 +823,16 @@ procedure void builtin_string_command_unbind(void* ctx) {
 		}
 	} else {
 		add_line_to_console_log(STR("unbind <key_name>: remove commands from a key"));
+	}
+}
+
+procedure void builtin_string_command_bindlist(void* ctx) {
+	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+		if (key_bindings->values[key_code].len) {
+			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
+			cadd_line_to_console_log(line);
+		}
 	}
 }
 
@@ -18746,55 +18788,6 @@ void Key_Console(int key) {
 		temp_global_console_input.ptr[temp_global_console_input.len++] = key;
 		temp_global_console_input.ptr[temp_global_console_input.len] = 0;
 	} // NOTE ignore anything else
-}
-
-procedure void builtin_string_command_bind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
-
-	int			i;
-	char		cmd[1024];
-
-	if (cmd_argc < 2) {
-		add_line_to_console_log(STR("bind <key> [command] : attach a command to a key"));
-		return;
-	}
-	u8 key_code = get_key_code_number(string_from_cstring(cmd_argv[1]));
-	if (!key_code) {
-		String_Slice line = STRS(STR("invalid key: "), string_from_cstring(cmd_argv[1]));
-		cadd_line_to_console_log(line);
-		return;
-	}
-
-	if (cmd_argc == 2)
-	{
-		if (key_bindings->values[key_code].len) {
-			cadd_line_to_console_log(STRS(STR("key bound to "), string_from_fixed_string(key_bindings->values + key_code)));
-		} else {
-			add_line_to_console_log(STR("key not bound"));
-		}
-		return;
-	}
-
-	// copy the rest of the command line
-	cmd[0] = 0;		// start out with a null string
-	for (i=2 ; i< cmd_argc ; i++)
-	{
-		strcat (cmd, Cmd_Argv(i));
-		if (i != (cmd_argc-1))
-			strcat (cmd, " ");
-	}
-
-	set_key_binding(key_bindings, key_code, string_from_cstring(cmd));
-}
-
-procedure void Key_Bindlist_f(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
-	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
-		if (key_bindings->values[key_code].len) {
-			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
-			cadd_line_to_console_log(line);
-		}
-	}
 }
 
 // Called by the system between frames for both key up and key down events
@@ -56668,10 +56661,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), builtin_string_command_bind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  builtin_string_command_wait}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), Key_Bindlist_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
