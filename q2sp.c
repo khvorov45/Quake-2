@@ -10309,7 +10309,6 @@ void CL_RunParticles (void);
 void CL_RunDLights (void);
 void CL_RunLightStyles (void);
 
-void CL_AddEntities (void);
 void CL_AddDLights (void);
 void CL_AddTEnts (void);
 void CL_AddLightStyles (void);
@@ -11468,13 +11467,6 @@ void CL_AddViewWeapon (player_state_t *ps, player_state_t *ops)
 	V_AddEntity (&gun);
 }
 
-/*
-===============
-CL_CalcViewValues
-
-Sets cl.refdef view values
-===============
-*/
 void CL_CalcViewValues (void)
 {
 	int			i;
@@ -11542,40 +11534,6 @@ void CL_CalcViewValues (void)
 
 	// add the weapon
 	CL_AddViewWeapon (ps, ops);
-}
-
-/*
-===============
-CL_AddEntities
-
-Emits all entities, particles, and lights to the refresh
-===============
-*/
-void CL_AddEntities (void)
-{
-	if (cls.state != ca_active)
-		return;
-
-	if (cl.time > cl.frame.servertime)
-	{
-		cl.time = cl.frame.servertime;
-		cl.lerpfrac = 1.0;
-	}
-	else if (cl.time < cl.frame.servertime - 100)
-	{
-		cl.time = cl.frame.servertime - 100;
-		cl.lerpfrac = 0;
-	}
-	else
-		cl.lerpfrac = 1.0 - (cl.frame.servertime - cl.time) * 0.01;
-
-	CL_CalcViewValues ();
-	// PMM - moved this here so the heat beam has the right values for the vieworg, and can lock the beam to the gun
-	CL_AddPacketEntities (&cl.frame);
-	CL_AddTEnts ();
-	CL_AddParticles ();
-	CL_AddDLights ();
-	CL_AddLightStyles ();
 }
 
 // Called to get the sound spatialization origin
@@ -16310,12 +16268,6 @@ void SCR_TouchPics (void)
 	assert(crosshair_width);
 }
 
-/*
-================
-SCR_ExecuteLayoutString
-
-================
-*/
 void SCR_ExecuteLayoutString (char *s)
 {
 	int		x, y;
@@ -18237,20 +18189,6 @@ global_variable particle_t	r_particles[MAX_PARTICLES];
 global_variable lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
 
 /*
-====================
-V_ClearScene
-
-Specifies the model that will be used as the world
-====================
-*/
-void V_ClearScene (void)
-{
-	r_numdlights = 0;
-	r_numentities = 0;
-	r_numparticles = 0;
-}
-
-/*
 =====================
 V_AddEntity
 
@@ -18440,11 +18378,6 @@ void V_Gun_Model_f (void* data) {
 	}
 	Com_sprintf (name, sizeof(name), "models/%s/tris.md2", Cmd_Argv(1));
 	gun_model = R_RegisterModel (name);
-}
-
-procedure void SCR_DrawCrosshair() {
-	assert(crosshair_pic[0]);
-	Draw_Pic(scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1), scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 }
 
 void DrawString (int x, int y, char *s)
@@ -57441,7 +57374,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				glDepthFunc(GL_LEQUAL);
 				glDepthRange(gldepthmin, gldepthmax);
 
-				// do 3D refresh drawing, and then update the screen
 				scr_vrect.width = viddef.width;
 				scr_vrect.width &= ~7;
 				scr_vrect.height = viddef.height;
@@ -57450,51 +57382,67 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				scr_vrect.y = (viddef.height - scr_vrect.height)/2;
 
 				if (cls.state == ca_active && cl.refresh_prepped) {
+					assert(cl.frame.valid);
 
-					if (cl.frame.valid) {
-						V_ClearScene ();
+					r_numdlights = 0;
+					r_numentities = 0;
+					r_numparticles = 0;
 
-						// build a refresh entity list and calc cl.sim*
-						// this also calls CL_CalcViewValues which loads
-						// v_forward, etc.
-						CL_AddEntities ();
-
-						// never let it sit exactly on a node line, because a water plane can
-						// dissapear when viewed with the eye exactly on it.
-						// the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
-						cl.refdef.vieworg[0] += 1.0/16;
-						cl.refdef.vieworg[1] += 1.0/16;
-						cl.refdef.vieworg[2] += 1.0/16;
-
-						cl.refdef.x = scr_vrect.x;
-						cl.refdef.y = scr_vrect.y;
-						cl.refdef.width = scr_vrect.width;
-						cl.refdef.height = scr_vrect.height;
-						cl.refdef.fov_y = CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
-						cl.refdef.time = cl.time*0.001;
-
-						cl.refdef.areabits = cl.frame.areabits;
-
-						cl.refdef.num_entities = r_numentities;
-						cl.refdef.entities = r_entities;
-						cl.refdef.num_particles = r_numparticles;
-						cl.refdef.particles = r_particles;
-						cl.refdef.num_dlights = r_numdlights;
-						cl.refdef.dlights = r_dlights;
-						cl.refdef.lightstyles = r_lightstyles;
-
-						cl.refdef.rdflags = cl.frame.playerstate.rdflags;
-
-						// sort entities for better cache locality
-						qsort(cl.refdef.entities, cl.refdef.num_entities, sizeof(cl.refdef.entities[0]), (void*)entitycmpfnc);
+					if (cl.time > cl.frame.servertime) {
+						cl.time = cl.frame.servertime;
+						cl.lerpfrac = 1.0;
+					} else if (cl.time < cl.frame.servertime - 100) {
+						cl.time = cl.frame.servertime - 100;
+						cl.lerpfrac = 0;
+					}
+					else {
+						cl.lerpfrac = 1.0 - (cl.frame.servertime - cl.time) * 0.01;
 					}
 
+					CL_CalcViewValues();
+					CL_AddPacketEntities(&cl.frame);
+					CL_AddTEnts();
+					CL_AddParticles();
+					CL_AddDLights();
+					CL_AddLightStyles();
+
+					// never let it sit exactly on a node line, because a water plane can
+					// dissapear when viewed with the eye exactly on it.
+					// the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
+					cl.refdef.vieworg[0] += 1.0/16;
+					cl.refdef.vieworg[1] += 1.0/16;
+					cl.refdef.vieworg[2] += 1.0/16;
+
+					cl.refdef.x = scr_vrect.x;
+					cl.refdef.y = scr_vrect.y;
+					cl.refdef.width = scr_vrect.width;
+					cl.refdef.height = scr_vrect.height;
+					cl.refdef.fov_y = CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
+					cl.refdef.time = cl.time*0.001;
+
+					cl.refdef.areabits = cl.frame.areabits;
+
+					cl.refdef.num_entities = r_numentities;
+					cl.refdef.entities = r_entities;
+					cl.refdef.num_particles = r_numparticles;
+					cl.refdef.particles = r_particles;
+					cl.refdef.num_dlights = r_numdlights;
+					cl.refdef.dlights = r_dlights;
+					cl.refdef.lightstyles = r_lightstyles;
+
+					cl.refdef.rdflags = cl.frame.playerstate.rdflags;
+
+					// sort entities for better cache locality
+					qsort(cl.refdef.entities, cl.refdef.num_entities, sizeof(cl.refdef.entities[0]), (void*)entitycmpfnc);
+
 					R_RenderFrame(&cl.refdef);
-					SCR_DrawCrosshair();
+
+					// NOTE Draw crosshair
+					assert(crosshair_pic[0]);
+					Draw_Pic(scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1), scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
 				}
 
 				SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
-
 				if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
 					SCR_ExecuteLayoutString(cl.layout);
 				}
