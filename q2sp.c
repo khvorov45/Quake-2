@@ -723,7 +723,6 @@ typedef struct {
 	User_Args user_args;
 	Client_State* client_state;
 	Key_Bindings* key_bindings;
-	bool command_buffer_should_wait_until_next_execute_call;
 } String_Command_Context;
 
 procedure void builtin_string_command_quit(void* ctx) {
@@ -832,11 +831,6 @@ procedure void builtin_string_command_bindlist(void* ctx) {
 			cadd_line_to_console_log(line);
 		}
 	}
-}
-
-procedure void builtin_string_command_wait(void* ctx) {
-	bool* wait = &((String_Command_Context*)ctx)->command_buffer_should_wait_until_next_execute_call;
-	*wait = true;
 }
 
 // TODO remove
@@ -2276,8 +2270,6 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
-	assert(!ctx->command_buffer_should_wait_until_next_execute_call);
-
 	char line[1024] = {};
 	while (cmd_text.cursize) {
 		// find a \n or ; line break
@@ -2313,10 +2305,6 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 		}
 
 		Cmd_ExecuteString(ctx, line);
-		if (ctx->command_buffer_should_wait_until_next_execute_call) {
-			ctx->command_buffer_should_wait_until_next_execute_call = false;
-			break;
-		}
 	}
 }
 
@@ -56229,7 +56217,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("wait"),  builtin_string_command_wait}));
 
 		// TODO: Remove non-essentials
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
