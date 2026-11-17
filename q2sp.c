@@ -10076,8 +10076,6 @@ typedef struct {
 void	VID_MenuInit( void );
 void	VID_MenuDraw( void );
 
-void	SCR_UpdateScreen (void);
-
 void	SCR_CenterPrint (char *str);
 
 
@@ -16011,7 +16009,6 @@ void SCR_BeginLoadingPlaque (void)
 	if (cls.key_dest == key_console)
 		return;
 	scr_draw_loading = 1;
-	SCR_UpdateScreen();
 	cls.disable_screen = Sys_Milliseconds ();
 	cls.disable_servercount = cl.servercount;
 }
@@ -18514,14 +18511,12 @@ procedure void CL_PrepRefresh() {
 
 	// register models, pics, and skins
 	cadd_line_to_console_log(STRS(STR("Map: "), string_from_cstring(mapname)));
-	SCR_UpdateScreen ();
 
 	void R_BeginRegistration (char *model);
 	R_BeginRegistration(mapname);
 
 	// precache status bar pics
 	add_line_to_console_log(STR("pics"));
-	SCR_UpdateScreen ();
 	SCR_TouchPics ();
 
 	CL_RegisterTEntModels ();
@@ -18536,7 +18531,6 @@ procedure void CL_PrepRefresh() {
 		if (name[0] != '*') {
 			add_line_to_console_log(string_from_cstring(name));
 		}
-		SCR_UpdateScreen ();
 		if (name[0] == '#')
 		{
 			// special player weapon model
@@ -18558,7 +18552,6 @@ procedure void CL_PrepRefresh() {
 	}
 
 	add_line_to_console_log(STR("images"));
-	SCR_UpdateScreen();
 	for (i=1 ; i<MAX_IMAGES && cl.configstrings[CS_IMAGES+i][0] ; i++)
 	{
 		cl.image_precache[i] = Draw_FindPic (cl.configstrings[CS_IMAGES+i]);
@@ -18568,7 +18561,6 @@ procedure void CL_PrepRefresh() {
 	{
 		if (!cl.configstrings[CS_PLAYERSKINS+i][0])
 			continue;
-		SCR_UpdateScreen ();
 		CL_ParseClientinfo (i);
 	}
 
@@ -18576,7 +18568,6 @@ procedure void CL_PrepRefresh() {
 
 	// set sky textures and speed
 	add_line_to_console_log(STR("sky"));
-	SCR_UpdateScreen ();
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f",
 		&axis[0], &axis[1], &axis[2]);
@@ -18587,7 +18578,6 @@ procedure void CL_PrepRefresh() {
 	void R_EndRegistration (void);
 	R_EndRegistration ();
 
-	SCR_UpdateScreen ();
 	cl.refresh_prepped = true;
 }
 
@@ -18760,10 +18750,6 @@ void Key_Console(int key) {
 		add_line_to_console_log((String){temp_global_console_input.ptr, temp_global_console_input.len});
 
 		clear_console_input();
-
-		if (cls.state == ca_disconnected) {
-			SCR_UpdateScreen(); // force an update, because the command may take some time
-		}
 
 	} else if (key == Key_Code_Backspace) {
 		temp_global_console_input.len = max(temp_global_console_input.len - 1, 0);
