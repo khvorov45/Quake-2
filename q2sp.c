@@ -16663,131 +16663,129 @@ procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
 
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 procedure void SCR_UpdateScreen() {
-	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
 	if (cls.disable_screen) {
 		if (Sys_Milliseconds() - cls.disable_screen > 120000) {
 			cls.disable_screen = 0;
 			add_line_to_console_log(STR("Loading plaque timed out."));
 		}
-		return;
-	}
+	} else {
+		R_BeginFrame();
 
-	R_BeginFrame();
+		// do 3D refresh drawing, and then update the screen
+		SCR_CalcVrect();
 
-	// do 3D refresh drawing, and then update the screen
-	SCR_CalcVrect();
+		V_RenderView();
 
-	V_RenderView();
+		SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 
-	SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
+		if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
+			SCR_ExecuteLayoutString(cl.layout);
+		}
 
-	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 1) {
-		SCR_ExecuteLayoutString(cl.layout);
-	}
+		if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
+			// NOTE Draw inventory
 
-	if (cl.frame.playerstate.stats[STAT_LAYOUTS] & 2) {
-		// NOTE Draw inventory
+			// NOTE Header
+			v2i header_topleft_px = temp_global_char_dim_px;
 
-		// NOTE Header
-		v2i header_topleft_px = temp_global_char_dim_px;
+			String header_strings[Inventory_Row_Layout_Count] = {
+				[Inventory_Row_Layout_Hotkey] = STR("hotkey"),
+				[Inventory_Row_Layout_Item_Count] = STR("###"),
+				[Inventory_Row_Layout_Item_Name] = STR("item"),
+			};
 
-		String header_strings[Inventory_Row_Layout_Count] = {
-			[Inventory_Row_Layout_Hotkey] = STR("hotkey"),
-			[Inventory_Row_Layout_Item_Count] = STR("###"),
-			[Inventory_Row_Layout_Item_Name] = STR("item"),
-		};
+			String longest_item_name = STR("Grenade Launcher");
+			i64 widths[Inventory_Row_Layout_Count] = {
+				[Inventory_Row_Layout_Hotkey] = header_strings[Inventory_Row_Layout_Hotkey].len,
+				[Inventory_Row_Layout_Item_Count] = header_strings[Inventory_Row_Layout_Item_Count].len,
+				[Inventory_Row_Layout_Item_Name] = longest_item_name.len,
+			};
+			draw_inventory_row(header_topleft_px, header_strings, widths);
 
-		String longest_item_name = STR("Grenade Launcher");
-		i64 widths[Inventory_Row_Layout_Count] = {
-			[Inventory_Row_Layout_Hotkey] = header_strings[Inventory_Row_Layout_Hotkey].len,
-			[Inventory_Row_Layout_Item_Count] = header_strings[Inventory_Row_Layout_Item_Count].len,
-			[Inventory_Row_Layout_Item_Name] = longest_item_name.len,
-		};
-		draw_inventory_row(header_topleft_px, header_strings, widths);
+			// NOTE Inventory state
+			i64 inventory_item_ids[MAX_ITEMS] = {};
+			i64 number_of_items_in_inventory = 0;
+			for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
+				i64 item_count_in_inventory = cl.inventory[item_id];
+				if (item_count_in_inventory > 0) {
+					inventory_item_ids[number_of_items_in_inventory++] = item_id;
+				}
+			}
 
-		// NOTE Inventory state
-		i64 inventory_item_ids[MAX_ITEMS] = {};
-		i64 number_of_items_in_inventory = 0;
-		for (i64 item_id = 0; item_id < MAX_ITEMS; item_id++) {
-			i64 item_count_in_inventory = cl.inventory[item_id];
-			if (item_count_in_inventory > 0) {
-				inventory_item_ids[number_of_items_in_inventory++] = item_id;
+			// NOTE Inventory content
+			v2i current_item_topleft_px = {header_topleft_px.x, header_topleft_px.y + temp_global_char_dim_px.y * 2};
+			for (i64 inventory_item_ind = 0; inventory_item_ind < number_of_items_in_inventory; inventory_item_ind++) {
+				i64 item_id = inventory_item_ids[inventory_item_ind];
+
+				String item_name = string_from_cstring(cl.configstrings[CS_ITEMS + item_id]);
+				String item_hotkey = {};
+				{
+					String use_this_item_cmd = concat(&context.memory.temp, STRS(STR("use "), item_name));
+					for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
+						Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
+						if (streq(use_this_item_cmd, string_from_fixed_string(this_binding))) {
+							item_hotkey = Key_Code_Strings[key_code];
+							break;
+						}
+					}
+				}
+
+				i64 item_count = cl.inventory[item_id];
+				String item_count_str = int_to_string(&context.memory.temp, item_count);
+
+				String row_strings[Inventory_Row_Layout_Count] = {
+					[Inventory_Row_Layout_Hotkey] = item_hotkey,
+					[Inventory_Row_Layout_Item_Count] = item_count_str,
+					[Inventory_Row_Layout_Item_Name] = item_name,
+				};
+
+				draw_inventory_row(current_item_topleft_px, row_strings, widths);
+				current_item_topleft_px.y += temp_global_char_dim_px.y;
 			}
 		}
 
-		// NOTE Inventory content
-		v2i current_item_topleft_px = {header_topleft_px.x, header_topleft_px.y + temp_global_char_dim_px.y * 2};
-		for (i64 inventory_item_ind = 0; inventory_item_ind < number_of_items_in_inventory; inventory_item_ind++) {
-			i64 item_id = inventory_item_ids[inventory_item_ind];
+		SCR_DrawNet();
+		SCR_CheckDrawCenterString();
 
-			String item_name = string_from_cstring(cl.configstrings[CS_ITEMS + item_id]);
-			String item_hotkey = {};
-			{
-				String use_this_item_cmd = concat(&context.memory.temp, STRS(STR("use "), item_name));
-				for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
-					Fixed_String* this_binding = temp_global_key_bindings->values + key_code;
-					if (streq(use_this_item_cmd, string_from_fixed_string(this_binding))) {
-						item_hotkey = Key_Code_Strings[key_code];
-						break;
+		// NOTE Draw console
+		if (cls.state == ca_disconnected || cls.state == ca_connecting) {
+			// NOTE forced full screen console
+			Con_DrawConsole(1.0);
+
+		} else if (cls.state != ca_active || !cl.refresh_prepped) {
+			// NOTE connected, but can't render
+			Con_DrawConsole(0.5);
+			Draw_Fill(0, viddef.height/2, viddef.width, viddef.height/2, 0);
+
+		} else if (scr_con_current) {
+			// NOTE console drop animation
+			Con_DrawConsole(scr_con_current);
+
+		} else if (cls.key_dest == key_game) {
+			// NOTE last few lines of output transparently over the game top
+			i64 lines_to_draw = 4;
+			for (i64 row = 0; row < lines_to_draw; row++) {
+				Log_Line line = get_log_line(row);
+				float time_passed_since = cls.realtime - line.timestamp;
+				i64 ycoord = (lines_to_draw - row) * temp_global_char_dim_px.y;
+				float keep_for_ms = 3000.0f;
+				if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
+					for (i64 column = 0; column < line.text.len; column++) {
+						char ch = line.text.ptr[column];
+						i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
+						Draw_Char(xcoord, ycoord, ch);
 					}
 				}
 			}
-
-			i64 item_count = cl.inventory[item_id];
-			String item_count_str = int_to_string(&context.memory.temp, item_count);
-
-			String row_strings[Inventory_Row_Layout_Count] = {
-				[Inventory_Row_Layout_Hotkey] = item_hotkey,
-				[Inventory_Row_Layout_Item_Count] = item_count_str,
-				[Inventory_Row_Layout_Item_Name] = item_name,
-			};
-
-			draw_inventory_row(current_item_topleft_px, row_strings, widths);
-			current_item_topleft_px.y += temp_global_char_dim_px.y;
 		}
+
+		void M_Draw();
+		M_Draw();
+
+		SCR_DrawLoading();
+
+		GLimp_EndFrame();
 	}
-
-	SCR_DrawNet();
-	SCR_CheckDrawCenterString();
-
-	// NOTE Draw console
-	if (cls.state == ca_disconnected || cls.state == ca_connecting) {
-		// NOTE forced full screen console
-		Con_DrawConsole(1.0);
-
-	} else if (cls.state != ca_active || !cl.refresh_prepped) {
-		// NOTE connected, but can't render
-		Con_DrawConsole(0.5);
-		Draw_Fill(0, viddef.height/2, viddef.width, viddef.height/2, 0);
-
-	} else if (scr_con_current) {
-		// NOTE console drop animation
-		Con_DrawConsole(scr_con_current);
-
-	} else if (cls.key_dest == key_game) {
-		// NOTE last few lines of output transparently over the game top
-		i64 lines_to_draw = 4;
-		for (i64 row = 0; row < lines_to_draw; row++) {
-			Log_Line line = get_log_line(row);
-			float time_passed_since = cls.realtime - line.timestamp;
-			i64 ycoord = (lines_to_draw - row) * temp_global_char_dim_px.y;
-			float keep_for_ms = 3000.0f;
-			if (time_passed_since > 0 && time_passed_since <= keep_for_ms) {
-				for (i64 column = 0; column < line.text.len; column++) {
-					char ch = line.text.ptr[column];
-					i64 xcoord = (column + 1) * temp_global_char_dim_px.x;
-					Draw_Char(xcoord, ycoord, ch);
-				}
-			}
-		}
-	}
-
-	void M_Draw();
-	M_Draw();
-
-	SCR_DrawLoading();
-
-	GLimp_EndFrame();
 }
 
 typedef struct {
