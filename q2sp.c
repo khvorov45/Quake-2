@@ -201,18 +201,16 @@ procedure String string_advance_by(String str, i64 by) {
 	return result;
 }
 
-typedef enum {
-	String_Count_Consecutive_Mode_Non_Whitespace = 0,
-	String_Count_Consecutive_Mode_Whitespace = 1,
-} String_Count_Consecutive_Mode;
+typedef bool (*Char_Counts_Proc)(char ch);
+procedure bool char_is_whitespace(char ch) {return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';}
+procedure bool char_is_not_whitespace(char ch) {return !char_is_whitespace(ch);}
+procedure bool char_is_not_newline(char ch) {return ch != '\n' && ch != '\r';}
 
-procedure i64 string_count_consecutive(String str, String_Count_Consecutive_Mode mode) {
+procedure i64 string_count_consecutive(String str, Char_Counts_Proc this_one_counts) {
 	i64 result = 0;
 	for (i64 ind = 0; ind < str.len; ind++) {
 		char ch = str.ptr[ind];
-		i32 is_whitespace = ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
-		bool this_one_counts = !(is_whitespace ^ mode);
-		if (this_one_counts) {
+		if (this_one_counts(ch)) {
 			result += 1;
 		} else {
 			break;
@@ -2227,9 +2225,9 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	// NOTE Get args (first one is command name)
 	ctx->user_args.len = 0;
 	for (String left_to_process = text_str; left_to_process.len;) {
-		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Whitespace);
+		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, char_is_whitespace);
 		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
-		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, String_Count_Consecutive_Mode_Non_Whitespace);
+		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, char_is_not_whitespace);
 		left_to_process = string_advance_by(left_to_process, consecutive_non_whitespaces);
 		String word = {.ptr = left_to_process.ptr - consecutive_non_whitespaces, .len = consecutive_non_whitespaces};
 		if (word.len) {
@@ -2322,16 +2320,23 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 	}
 }
 
-procedure void execute_config_string(String_Command_Context* ctx, String name) {
+procedure void execute_config_string(String_Command_Context* ctx, String name) {temp_memory_block(&context.memory.temp) {
 	Maybe_String find_result = context.maybe_load_config_string(name);
 	if (find_result.found) {
 		String config_string = find_result.string;
-		Cbuf_AddText(config_string.ptr);
-		Cmd_ExecuteCbuf(ctx);
+		for (String left_to_process = config_string; left_to_process.len;) {
+			i64 whitespaces = string_count_consecutive(left_to_process, char_is_whitespace);
+			left_to_process = string_advance_by(left_to_process, whitespaces);
+			i64 line_len = string_count_consecutive(left_to_process, char_is_not_newline);
+			String line = {left_to_process.ptr, line_len};
+			left_to_process = string_advance_by(left_to_process, line_len);
+			String line_null_terminated = copy_string(&context.memory.temp, line);
+			Cmd_ExecuteString(ctx, line_null_terminated.ptr);
+		}
 	} else {
 		cadd_line_to_console_log(STRS(STR("did not find config string named "), name));
 	}
-}
+}}
 
 #define	MAX_INFO_KEY	64
 #define	MAX_INFO_VALUE	64
