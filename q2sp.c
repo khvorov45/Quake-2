@@ -1223,7 +1223,7 @@ procedure int Q_stricmp(char *s1, char *s2) {
 }
 
 // does a varargs printf into a temp buffer, so I don't need to have varargs versions of all text functions.
-procedure char * va(char *format, ...) {
+procedure char* va(char* format, ...) {
 	local_persist char  string[1024];
 	va_list argptr;
 	va_start(argptr, format);
@@ -8009,35 +8009,17 @@ typedef struct
 	entity_state_t	*client_entities;		// [num_client_entities]
 } server_static_t;
 
-int SV_ModelIndex (char *name);
-int SV_SoundIndex (char *name);
-int SV_ImageIndex (char *name);
-
-void SV_WriteClientdataToMessage (client_t *client, sizebuf_t *msg);
-
-void SV_SendServerinfo (client_t *client);
-void Master_Packet (void);
-
-void SV_PrepWorldFrame (void);
-
+int SV_ModelIndex(char *name);
+void SV_SendServerinfo(client_t *client);
+void Master_Packet(void);
 void SV_SendClientMessages (void);
-
-void SV_Multicast (vec3_t origin, multicast_t to);
-void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
-					int soundindex, float volume,
-					float attenuation, float timeofs);
-void SV_BroadcastCommand (char *fmt, ...);
-
-void SV_WriteFrameToClient (client_t *client, sizebuf_t *msg);
-void SV_BuildClientFrame (client_t *client);
-
+void SV_Multicast(vec3_t origin, multicast_t to);
+void SV_StartSound(vec3_t origin, edict_t *entity, int channel, int soundindex, float volume, float attenuation, float timeofs);
 void SV_ClearWorld(void);
 void SV_LinkEdict(edict_t *ent);
 
 global_variable server_static_t	svs;
 global_variable server_t sv;
-
-void SCR_BeginLoadingPlaque();
 
 // Writes a delta update of an entity_state_t list to the message.
 void SV_EmitPacketEntities (client_frame_t *from, client_frame_t *to, sizebuf_t *msg)
@@ -14035,14 +14017,7 @@ void CL_Packet_f (void)
 	NET_SendLoopPacket(NS_CLIENT, out-send, send);
 }
 
-// Just sent as a hint to the client that they should drop to full console
-void CL_Changing_f(void* data) {
-	UNUSED(data);
-
-	SCR_BeginLoadingPlaque ();
-	cls.state = ca_connected;	// not active anymore, but not disconnected
-	add_line_to_console_log(STR("\nChanging map..."));
-}
+void SCR_BeginLoadingPlaque();
 
 global_variable int precache_check; // for autodownload of precache items
 global_variable int precache_spawncount;
@@ -15868,9 +15843,8 @@ typedef struct {
 	i64 len; // NOTE Does not include the null terminator
 	i64 cap; // NOTE Does include the null terminator
 } Console_Input;
-global_variable Console_Input temp_global_console_input;
 
-procedure void Con_DrawConsole(float frac) {
+procedure void Con_DrawConsole(Console_Input* console_input, float frac) {
 	i64 lines_px = (i64)(viddef.height * clamp(frac, 0.0f, 1.0f));
 	if (lines_px > 0) {
 
@@ -15899,8 +15873,8 @@ procedure void Con_DrawConsole(float frac) {
 			Draw_Char(current_x, ycoord, ']');
 
 			// NOTE Actual input
-			for (i64 ind = 0; ind < temp_global_console_input.len; ind++) {
-				char ch = temp_global_console_input.ptr[ind];
+			for (i64 ind = 0; ind < console_input->len; ind++) {
+				char ch = console_input->ptr[ind];
 				current_x = (ind + 1) * temp_global_char_dim_px.x;
 				Draw_Char(current_x, ycoord, ch);
 			}
@@ -18400,25 +18374,21 @@ void DrawAltString (int x, int y, char *s)
 	}
 }
 
+global_variable Console_Input* temp_global_console_input;
+
 procedure void clear_console_input() {
-	assert(temp_global_console_input.cap > 1);
-	temp_global_console_input.len = 0;
-	temp_global_console_input.ptr[0] = 0;
+	assert(temp_global_console_input->cap > 1);
+	temp_global_console_input->len = 0;
+	temp_global_console_input->ptr[0] = 0;
 }
 
 procedure void Con_ToggleConsole_f(void* data) {
 	UNUSED(data);
 
 	SCR_EndLoadingPlaque();
-
 	clear_console_input();
-
-	if (cls.key_dest == key_console) {
-		M_ForceMenuOff();
-	} else {
-		M_ForceMenuOff();
-		cls.key_dest = key_console;
-	}
+	M_ForceMenuOff();
+	cls.key_dest = key_console;
 }
 
 global_variable int shift_down;
@@ -18451,20 +18421,20 @@ void Key_Console(int key) {
 
 	if (key == Key_Code_Enter || key == Key_Code_Keypad_Enter) {
 
-		i64 to_skip = temp_global_console_input.ptr[1] == '\\' || temp_global_console_input.ptr[1] == '/' ? 1 : 0;
-		Cbuf_AddText(temp_global_console_input.ptr + to_skip);
+		i64 to_skip = temp_global_console_input->ptr[1] == '\\' || temp_global_console_input->ptr[1] == '/' ? 1 : 0;
+		Cbuf_AddText(temp_global_console_input->ptr + to_skip);
 		Cbuf_AddText("\n");
-		add_line_to_console_log((String){temp_global_console_input.ptr, temp_global_console_input.len});
+		add_line_to_console_log((String){temp_global_console_input->ptr, temp_global_console_input->len});
 
 		clear_console_input();
 
 	} else if (key == Key_Code_Backspace) {
-		temp_global_console_input.len = max(temp_global_console_input.len - 1, 0);
-		temp_global_console_input.ptr[temp_global_console_input.len] = 0;
+		temp_global_console_input->len = max(temp_global_console_input->len - 1, 0);
+		temp_global_console_input->ptr[temp_global_console_input->len] = 0;
 
-	} else if (key >= 32 && key <= 127 && temp_global_console_input.len < temp_global_console_input.cap - 1) {
-		temp_global_console_input.ptr[temp_global_console_input.len++] = key;
-		temp_global_console_input.ptr[temp_global_console_input.len] = 0;
+	} else if (key >= 32 && key <= 127 && temp_global_console_input->len < temp_global_console_input->cap - 1) {
+		temp_global_console_input->ptr[temp_global_console_input->len++] = key;
+		temp_global_console_input->ptr[temp_global_console_input->len] = 0;
 	} // NOTE ignore anything else
 }
 
@@ -19747,7 +19717,7 @@ procedure void ControlsResetDefaultsFunc(void* unused) {
 
 procedure void ConsoleFunc(void* unused) {
 	UNUSED(unused);
-	// the proper way to do this is probably to have ToggleConsole_f accept a parameter
+
 	clear_console_input();
 	M_ForceMenuOff();
 	cls.key_dest = key_console;
@@ -25137,35 +25107,31 @@ procedure void SV_Map_f(void* data) {
 	sv.state = ss_dead;
 
 	if (cmd_argc == 2) {
-		if (sv.state == ss_dead) {
-			// NOTE Init game
+		assert(cls.state == ca_disconnected);
 
-			assert(cls.state == ca_disconnected);
+		SCR_BeginLoadingPlaque();
 
-			SCR_BeginLoadingPlaque();
+		svs.spawncount = rand();
+		svs.num_client_entities = UPDATE_BACKUP * 64;
+		svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
 
-			svs.spawncount = rand();
-			svs.num_client_entities = UPDATE_BACKUP * 64;
-			svs.client_entities = tml_alloc(sizeof(entity_state_t) * svs.num_client_entities);
+		tml_free_all(TAG_LEVEL);
+		tml_free_all(TAG_GAME);
 
-			tml_free_all(TAG_LEVEL);
-			tml_free_all(TAG_GAME);
+		game.num_items = carray_count(itemlist) - 1;
+		Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
+		Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
 
-			game.num_items = carray_count(itemlist) - 1;
-			Com_sprintf(game.helpmessage1, sizeof(game.helpmessage1), "");
-			Com_sprintf(game.helpmessage2, sizeof(game.helpmessage2), "");
+		// initialize all entities for this game
+		game.maxentities = 1024;
+		g_edicts = tml_alloc_with_tag(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 
-			// initialize all entities for this game
-			game.maxentities = 1024;
-			g_edicts =  tml_alloc_with_tag (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+		// initialize all clients for this game
+		global_num_edicts = 2;
 
-			// initialize all clients for this game
-			global_num_edicts = 2;
-
-			edict_t* ent = EDICT_NUM(1);
-			ent->s.number = 1;
-			svs.client.edict = ent;
-		}
+		edict_t* ent = EDICT_NUM(1);
+		ent->s.number = 1;
+		svs.client.edict = ent;
 
 		// if there is a $, use the remainder as a spawnpoint
 		char level[MAX_QPATH] = {};
@@ -56161,10 +56127,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// NOTE Key Init
 	Key_Bindings* key_bindings = arena_alloc_one(&context.memory.perm, Key_Bindings);
+	Console_Input console_input = arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
 	// TODO: unglobal
 	temp_global_key_bindings = key_bindings;
+	temp_global_console_input = &console_input;
 	{
-		temp_global_console_input = (Console_Input)arena_alloc_fixed_cap(&context.memory.perm, char, 1024);
 		clear_console_input();
 
 		// init ascii characters in console mode
@@ -56272,7 +56239,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"), SCR_Loading_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"), SCR_Sky_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), CL_ForwardToServer_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("changing"), CL_Changing_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), CL_Precache_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
@@ -57522,16 +57488,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// NOTE Draw console
 				if (cls.state == ca_disconnected || cls.state == ca_connecting) {
 					// NOTE forced full screen console
-					Con_DrawConsole(1.0);
+					Con_DrawConsole(&console_input, 1.0);
 
 				} else if (cls.state != ca_active || !cl.refresh_prepped) {
 					// NOTE connected, but can't render
-					Con_DrawConsole(0.5);
+					Con_DrawConsole(&console_input, 0.5);
 					Draw_Fill(0, viddef.height/2, viddef.width, viddef.height/2, 0);
 
 				} else if (scr_con_current) {
 					// NOTE console drop animation
-					Con_DrawConsole(scr_con_current);
+					Con_DrawConsole(&console_input, scr_con_current);
 
 				} else if (cls.key_dest == key_game) {
 					// NOTE last few lines of output transparently over the game top
