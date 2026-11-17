@@ -16661,26 +16661,6 @@ procedure void draw_inventory_row(v2i topleft, String* strings, i64* widths) {
 	}
 }
 
-typedef void (*M_Draw_Proc)();
-global_variable M_Draw_Proc m_drawfunc = 0;
-global_variable bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
-global_variable char* menu_in_sound = "misc/menu1.wav";
-
-procedure void M_Draw() {
-	if (cls.key_dest == key_menu) {
-		void Draw_FadeScreen();
-		Draw_FadeScreen();
-
-		m_drawfunc();
-
-		// delay playing the enter sound until after the menu has been drawn, to avoid delay while caching images
-		if (m_entersound) {
-			S_StartLocalSound(menu_in_sound);
-			m_entersound = false;
-		}
-	}
-}
-
 // This is called every frame, and can also be called explicitly to flush text to the screen.
 procedure void SCR_UpdateScreen() {
 	// if the screen is disabled (loading plaque is up, or vid mode changing) do nothing at all
@@ -19061,19 +19041,20 @@ global_variable int	m_main_cursor;
 global_variable char *menu_move_sound	= "misc/menu2.wav";
 global_variable char *menu_out_sound		= "misc/menu3.wav";
 
-typedef char* (*M_Key_Proc)(int k);
-
-global_variable M_Key_Proc m_keyfunc = 0;
-
-global_variable struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
-global_variable int m_menudepth = 0;
-
 procedure void M_Banner(char* name) {
 	int w = 0;
 	int h = 0;
 	Draw_GetPicSize(&w, &h, name);
 	Draw_Pic(viddef.width / 2 - w / 2, viddef.height / 2 - 110, name);
 }
+
+typedef char* (*M_Key_Proc)(int k);
+typedef void (*M_Draw_Proc)();
+global_variable struct {M_Draw_Proc draw; M_Key_Proc key;} m_layers[8] = {};
+global_variable int m_menudepth = 0;
+global_variable M_Draw_Proc m_drawfunc = 0;
+global_variable bool m_entersound; // play after drawing a frame, so caching won't disrupt the sound
+global_variable M_Key_Proc m_keyfunc = 0;
 
 procedure void M_PushMenu(M_Draw_Proc draw, M_Key_Proc key) {
 	// if this menu is already present, drop back to that level to avoid stacking menus by hotkeys
@@ -20018,6 +19999,8 @@ procedure void KeyBindingFunc( void *self )
 
 	Menu_SetStatusBar( &s_keys_menu, "press a key or button for this action" );
 }
+
+global_variable char* menu_in_sound = "misc/menu1.wav";
 
 procedure char * Keys_MenuKey( int key )
 {
@@ -50638,22 +50621,33 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	glEnable (GL_TEXTURE_2D);
 }
 
-void Draw_FadeScreen (void)
-{
-	glEnable (GL_BLEND);
-	glDisable (GL_TEXTURE_2D);
-	glColor4f (0, 0, 0, 0.8);
-	glBegin (GL_QUADS);
+procedure void M_Draw() {
+	if (cls.key_dest == key_menu) {
 
-	glVertex2f (0,0);
-	glVertex2f (viddef.width, 0);
-	glVertex2f (viddef.width, viddef.height);
-	glVertex2f (0, viddef.height);
+		// NOTE Draw fadescreen
+		glEnable(GL_BLEND);
+		glDisable(GL_TEXTURE_2D);
+		glColor4f(0, 0, 0, 0.8);
+		glBegin(GL_QUADS);
 
-	glEnd ();
-	glColor4f (1,1,1,1);
-	glEnable (GL_TEXTURE_2D);
-	glDisable (GL_BLEND);
+		glVertex2f(0,0);
+		glVertex2f(viddef.width, 0);
+		glVertex2f(viddef.width, viddef.height);
+		glVertex2f(0, viddef.height);
+
+		glEnd();
+		glColor4f(1,1,1,1);
+		glEnable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+
+		m_drawfunc();
+
+		// delay playing the enter sound until after the menu has been drawn, to avoid delay while caching images
+		if (m_entersound) {
+			S_StartLocalSound(menu_in_sound);
+			m_entersound = false;
+		}
+	}
 }
 
 bool GL_Upload8 (u8 *data, int width, int height,  bool mipmap);
