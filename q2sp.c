@@ -25094,13 +25094,15 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
-procedure void SV_Map_f(void* data) {
-	UNUSED(data);
+procedure void builtin_string_command_map(void* ctx) {temp_memory_block(&context.memory.temp) {
+	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 
 	sv.state = ss_dead;
 
-	if (cmd_argc == 2) {
+	if (user_args.len == 2) {
 		assert(cls.state == ca_disconnected);
+		String map_name = user_args.ptr[1];
+		String map_name_null_terminated = copy_string(&context.memory.temp, map_name);
 
 		SCR_BeginLoadingPlaque();
 
@@ -25128,7 +25130,7 @@ procedure void SV_Map_f(void* data) {
 
 		// if there is a $, use the remainder as a spawnpoint
 		char level[MAX_QPATH] = {};
-		strcpy(level, Cmd_Argv(1));
+		strcpy(level, map_name_null_terminated.ptr);
 
 		char* ch = strstr(level, "$");
 		char spawnpoint[MAX_QPATH] = {};
@@ -25158,11 +25160,11 @@ procedure void SV_Map_f(void* data) {
 
 		SV_BroadcastCommand("reconnect\n");
 
-		strncpy(svs.mapcmd, Cmd_Argv(1), sizeof(svs.mapcmd) - 1);
+		strncpy(svs.mapcmd, map_name_null_terminated.ptr, sizeof(svs.mapcmd) - 1);
 	} else {
 		add_line_to_console_log(STR("USAGE: map <map_name>"));
 	}
-}
+}}
 
 void SelectNextItem (edict_t *ent, int itflags)
 {
@@ -56218,9 +56220,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), builtin_string_command_forward_to_server}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), builtin_string_command_map}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
