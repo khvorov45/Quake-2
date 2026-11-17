@@ -15842,18 +15842,6 @@ void SCR_DrawCenterString (void)
 	} while (1);
 }
 
-// Sets scr_vrect, the coordinates of the rendered window
-procedure void SCR_CalcVrect() {
-	scr_vrect.width = viddef.width;
-	scr_vrect.width &= ~7;
-
-	scr_vrect.height = viddef.height;
-	scr_vrect.height &= ~1;
-
-	scr_vrect.x = (viddef.width - scr_vrect.width)/2;
-	scr_vrect.y = (viddef.height - scr_vrect.height)/2;
-}
-
 void R_SetSky(char *name, float rotate, vec3_t axis);
 
 // Set a specific sky and rotation speed
@@ -18457,58 +18445,6 @@ void V_Gun_Model_f (void* data) {
 procedure void SCR_DrawCrosshair() {
 	assert(crosshair_pic[0]);
 	Draw_Pic(scr_vrect.x + ((scr_vrect.width - crosshair_width)>>1), scr_vrect.y + ((scr_vrect.height - crosshair_height)>>1), crosshair_pic);
-}
-
-void V_RenderView() {
-	if (cls.state != ca_active)
-		return;
-
-	if (!cl.refresh_prepped)
-		return;			// still loading
-
-	// an invalid frame will just use the exact previous refdef
-	// we can't use the old frame if the video mode has changed, though...
-	if (cl.frame.valid) {
-		V_ClearScene ();
-
-		// build a refresh entity list and calc cl.sim*
-		// this also calls CL_CalcViewValues which loads
-		// v_forward, etc.
-		CL_AddEntities ();
-
-		// never let it sit exactly on a node line, because a water plane can
-		// dissapear when viewed with the eye exactly on it.
-		// the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
-		cl.refdef.vieworg[0] += 1.0/16;
-		cl.refdef.vieworg[1] += 1.0/16;
-		cl.refdef.vieworg[2] += 1.0/16;
-
-		cl.refdef.x = scr_vrect.x;
-		cl.refdef.y = scr_vrect.y;
-		cl.refdef.width = scr_vrect.width;
-		cl.refdef.height = scr_vrect.height;
-		cl.refdef.fov_y = CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
-		cl.refdef.time = cl.time*0.001;
-
-		cl.refdef.areabits = cl.frame.areabits;
-
-		cl.refdef.num_entities = r_numentities;
-		cl.refdef.entities = r_entities;
-		cl.refdef.num_particles = r_numparticles;
-		cl.refdef.particles = r_particles;
-		cl.refdef.num_dlights = r_numdlights;
-		cl.refdef.dlights = r_dlights;
-		cl.refdef.lightstyles = r_lightstyles;
-
-		cl.refdef.rdflags = cl.frame.playerstate.rdflags;
-
-		// sort entities for better cache locality
-		qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (*)(const void *, const void *))entitycmpfnc );
-	}
-
-	R_RenderFrame(&cl.refdef);
-
-	SCR_DrawCrosshair ();
 }
 
 void DrawString (int x, int y, char *s)
@@ -50243,8 +50179,6 @@ global_variable struct {
 	unsigned char originalBlueGammaTable[256];
 } gl_state;
 
-void		GLimp_BeginFrame();
-
 global_variable image_t* draw_chars;
 
 #define	MAX_SCRAPS		1
@@ -53654,14 +53588,6 @@ void R_SetupGL (void)
 	glEnable(GL_DEPTH_TEST);
 }
 
-procedure void R_Clear() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	gldepthmin = 0;
-	gldepthmax = 1;
-	glDepthFunc(GL_LEQUAL);
-	glDepthRange(gldepthmin, gldepthmax);
-}
-
 void R_Flash( void )
 {
 	R_PolyBlend ();
@@ -53727,27 +53653,6 @@ global_variable struct {
 } glw_state;
 
 #define	WINDOW_CLASS_NAME	"Quake 2"
-
-procedure void R_BeginFrame() {
-	GLimp_BeginFrame();
-
-	/*
-	** go into 2D mode
-	*/
-	glViewport (0,0, viddef.width, viddef.height);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity ();
-	glOrtho  (0, viddef.width, viddef.height, 0, -99999, 99999);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity ();
-	glDisable (GL_DEPTH_TEST);
-	glDisable (GL_CULL_FACE);
-	glDisable (GL_BLEND);
-	glEnable (GL_ALPHA_TEST);
-	glColor4f (1,1,1,1);
-
-	R_Clear ();
-}
 
 void R_SetPalette() {
 	glClearColor(0,0,0,0);
@@ -56119,11 +56024,6 @@ procedure char * VID_MenuKey(int key) {
 	return sound;
 }
 
-void GLimp_BeginFrame()
-{
-	glDrawBuffer( GL_BACK );
-}
-
 //
 // SECTION Platform (windows)
 //
@@ -57025,6 +56925,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE Video init
 	// TODO: unglobal
 	{
+		glDrawBuffer(GL_BACK);
+
 		VID_MenuInit();
 
 		glClearColor(1,0, 0.5 , 0.5);
@@ -57521,12 +57423,75 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					add_line_to_console_log(STR("Loading plaque timed out."));
 				}
 			} else {
-				R_BeginFrame();
+				glViewport(0, 0, viddef.width, viddef.height);
+				glMatrixMode(GL_PROJECTION);
+				glLoadIdentity();
+				glOrtho(0, viddef.width, viddef.height, 0, -99999, 99999);
+				glMatrixMode(GL_MODELVIEW);
+				glLoadIdentity();
+				glDisable(GL_DEPTH_TEST);
+				glDisable(GL_CULL_FACE);
+				glDisable(GL_BLEND);
+				glEnable(GL_ALPHA_TEST);
+				glColor4f(1,1,1,1);
+
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				gldepthmin = 0;
+				gldepthmax = 1;
+				glDepthFunc(GL_LEQUAL);
+				glDepthRange(gldepthmin, gldepthmax);
 
 				// do 3D refresh drawing, and then update the screen
-				SCR_CalcVrect();
+				scr_vrect.width = viddef.width;
+				scr_vrect.width &= ~7;
+				scr_vrect.height = viddef.height;
+				scr_vrect.height &= ~1;
+				scr_vrect.x = (viddef.width - scr_vrect.width)/2;
+				scr_vrect.y = (viddef.height - scr_vrect.height)/2;
 
-				V_RenderView();
+				if (cls.state == ca_active && cl.refresh_prepped) {
+
+					if (cl.frame.valid) {
+						V_ClearScene ();
+
+						// build a refresh entity list and calc cl.sim*
+						// this also calls CL_CalcViewValues which loads
+						// v_forward, etc.
+						CL_AddEntities ();
+
+						// never let it sit exactly on a node line, because a water plane can
+						// dissapear when viewed with the eye exactly on it.
+						// the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
+						cl.refdef.vieworg[0] += 1.0/16;
+						cl.refdef.vieworg[1] += 1.0/16;
+						cl.refdef.vieworg[2] += 1.0/16;
+
+						cl.refdef.x = scr_vrect.x;
+						cl.refdef.y = scr_vrect.y;
+						cl.refdef.width = scr_vrect.width;
+						cl.refdef.height = scr_vrect.height;
+						cl.refdef.fov_y = CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
+						cl.refdef.time = cl.time*0.001;
+
+						cl.refdef.areabits = cl.frame.areabits;
+
+						cl.refdef.num_entities = r_numentities;
+						cl.refdef.entities = r_entities;
+						cl.refdef.num_particles = r_numparticles;
+						cl.refdef.particles = r_particles;
+						cl.refdef.num_dlights = r_numdlights;
+						cl.refdef.dlights = r_dlights;
+						cl.refdef.lightstyles = r_lightstyles;
+
+						cl.refdef.rdflags = cl.frame.playerstate.rdflags;
+
+						// sort entities for better cache locality
+						qsort(cl.refdef.entities, cl.refdef.num_entities, sizeof(cl.refdef.entities[0]), (void*)entitycmpfnc);
+					}
+
+					R_RenderFrame(&cl.refdef);
+					SCR_DrawCrosshair();
+				}
 
 				SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 
