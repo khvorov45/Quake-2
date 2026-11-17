@@ -13906,23 +13906,23 @@ void Draw_Pic(int x, int y, char *pic);
 global_variable Key_Bindings* temp_global_key_bindings;
 global_variable v2i temp_global_char_dim_px = {8, 8};
 
-void CL_ForwardToServer_f (void* data)
-{
-	UNUSED(data);
+procedure void builtin_string_command_forward_to_server(void* ctx) {temp_memory_block(&context.memory.temp) {
+	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 
-	if (cls.state != ca_connected && cls.state != ca_active)
-	{
+	if (cls.state == ca_connected || cls.state == ca_active) {
+		if (user_args.len > 1) {
+			String first_arg = user_args.ptr[1];
+			String last_arg = user_args.ptr[user_args.len - 1];
+			String for_server = {first_arg.ptr, last_arg.ptr - first_arg.ptr + last_arg.len};
+			String for_server_null_terminated = copy_string(&context.memory.temp, for_server);
+
+			MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
+			SZ_Print(&cls.netchan.message, for_server_null_terminated.ptr);
+		}
+	} else {
 		add_line_to_console_log(STR("not connected"));
-		return;
 	}
-
-	// don't forward the first argument
-	if (cmd_argc > 1)
-	{
-		MSG_WriteByte (&cls.netchan.message, clc_stringcmd);
-		SZ_Print (&cls.netchan.message, cmd_args);
-	}
-}
+}}
 
 procedure void S_StopAllSounds(void* data);
 
@@ -56217,6 +56217,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), builtin_string_command_forward_to_server}));
 
 		// TODO: Remove non-essentials
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), SV_Map_f}));
@@ -56230,7 +56231,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), M_Menu_Quit_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"), SCR_Loading_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"), SCR_Sky_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), CL_ForwardToServer_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), CL_Precache_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
