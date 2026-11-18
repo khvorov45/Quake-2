@@ -333,6 +333,29 @@ procedure String int_to_string(Arena* arena, i64 val) {
 	return result;
 }
 
+procedure i64 int_from_string(String str) {
+	i64 result = 0;
+	if (str.len) {
+		String left_to_process = str;
+		bool negative = str.ptr[0] == '-';
+		if (negative) {
+			left_to_process = string_advance_by(left_to_process, 1);
+		}
+
+		for (i64 multiplier = 1; left_to_process.len; multiplier *= 10) {
+			char last_ch = left_to_process.ptr[--left_to_process.len];
+			i64 last_char_val_digit = last_ch - '0';
+			i64 last_char_val_pos = last_char_val_digit * multiplier;
+			result += last_char_val_pos;
+		}
+
+		if (negative) {
+			result *= -1;
+		}
+	}
+	return result;
+}
+
 typedef struct {char buf[1024]; i64 len;} Fixed_String;
 
 procedure String string_from_fixed_string(Fixed_String* fstr) {
@@ -14026,11 +14049,12 @@ global_variable u8 *precache_model; // used for skin checking in alias models
 #define TEXTURE_CNT (ENV_CNT+13)
 
 // The server will send this command right before allowing the client into the server
-procedure void CL_Precache_f(void* data) {
-	UNUSED(data);
+procedure void bultin_string_command_precache(void* ctx) {
+	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+	assert(user_args.len == 2);
 
 	precache_check = CS_MODELS;
-	precache_spawncount = atoi(Cmd_Argv(1));
+	precache_spawncount = int_from_string(user_args.ptr[1]);
 	precache_model = 0;
 	precache_model_skin = 0;
 
@@ -15770,39 +15794,6 @@ void SCR_DrawCenterString (void)
 
 void R_SetSky(char *name, float rotate, vec3_t axis);
 
-// Set a specific sky and rotation speed
-void SCR_Sky_f (void* data)
-{
-	UNUSED(data);
-
-	float	rotate;
-	vec3_t	axis;
-
-	if (cmd_argc < 2)
-	{
-		add_line_to_console_log(STR("Usage: sky <basename> <rotate> <axis x y z>"));
-		return;
-	}
-	if (cmd_argc > 2)
-		rotate = atof(Cmd_Argv(2));
-	else
-		rotate = 0;
-	if (cmd_argc == 6)
-	{
-		axis[0] = atof(Cmd_Argv(3));
-		axis[1] = atof(Cmd_Argv(4));
-		axis[2] = atof(Cmd_Argv(5));
-	}
-	else
-	{
-		axis[0] = 0;
-		axis[1] = 0;
-		axis[2] = 1;
-	}
-
-	R_SetSky (Cmd_Argv(1), rotate, axis);
-}
-
 void Draw_GetPicSize (int *w, int *h, char *name);
 
 // Scroll it up or down
@@ -15892,11 +15883,6 @@ void SCR_BeginLoadingPlaque (void)
 	scr_draw_loading = 1;
 	cls.disable_screen = Sys_Milliseconds ();
 	cls.disable_servercount = cl.servercount;
-}
-
-void SCR_Loading_f(void* data) {
-	UNUSED(data);
-	SCR_BeginLoadingPlaque();
 }
 
 int entitycmpfnc( const Entity *a, const Entity *b )
@@ -18333,20 +18319,6 @@ float CalcFov (float fov_x, float width, float height)
 	return a;
 }
 
-void V_Gun_Model_f (void* data) {
-	UNUSED(data);
-
-	char name[MAX_QPATH];
-
-	if (cmd_argc != 2)
-	{
-		gun_model = NULL;
-		return;
-	}
-	Com_sprintf (name, sizeof(name), "models/%s/tris.md2", Cmd_Argv(1));
-	gun_model = R_RegisterModel (name);
-}
-
 void DrawString (int x, int y, char *s)
 {
 	while (*s)
@@ -18375,7 +18347,7 @@ procedure void clear_console_input() {
 	temp_global_console_input->ptr[0] = 0;
 }
 
-procedure void Con_ToggleConsole_f(void* data) {
+procedure void builtin_string_command_toggle_console(void* data) {
 	UNUSED(data);
 
 	SCR_EndLoadingPlaque();
@@ -18478,7 +18450,7 @@ void Key_Event (int key, bool down, unsigned time)
 	{
 		if (!down)
 			return;
-		Con_ToggleConsole_f(0);
+		builtin_string_command_toggle_console(0);
 		return;
 	}
 
@@ -18500,8 +18472,8 @@ void Key_Event (int key, bool down, unsigned time)
 			break;
 		case key_game:
 		case key_console:
-			void M_Menu_Main_f(void*);
-			M_Menu_Main_f(0);
+			void builtin_string_command_menu_main(void*);
+			builtin_string_command_menu_main(0);
 			break;
 		default: assert(!"unreachable");
 		}
@@ -19691,7 +19663,7 @@ procedure char * Keys_MenuKey( int key )
 	}
 }
 
-procedure void M_Menu_Keys_f(void* data) {
+procedure void builtin_string_command_menu_keys(void* data) {
 	UNUSED(data);
 	Keys_MenuInit();
 	M_PushMenu(Keys_MenuDraw, Keys_MenuKey);
@@ -19699,7 +19671,7 @@ procedure void M_Menu_Keys_f(void* data) {
 
 procedure void CustomizeControlsFunc(void* unused) {
 	UNUSED(unused);
-	M_Menu_Keys_f(0);
+	builtin_string_command_menu_keys(0);
 }
 
 procedure void ControlsResetDefaultsFunc(void* unused) {
@@ -19854,13 +19826,13 @@ procedure char * Options_MenuKey(int key) {
 	return Default_MenuKey(&s_options_menu, key);
 }
 
-procedure void M_Menu_Options_f(void* data) {
+procedure void builtin_string_command_menu_options(void* data) {
 	UNUSED(data);
 	Options_MenuInit();
 	M_PushMenu(Options_MenuDraw, Options_MenuKey);
 }
 
-procedure void M_Menu_Video_f(void* data) {
+procedure void builtin_string_command_menu_video(void* data) {
 	UNUSED(data);
 	VID_MenuInit();
 	char* VID_MenuKey(int key);
@@ -19935,7 +19907,7 @@ procedure char * Game_MenuKey(int key) {
 	return Default_MenuKey(&s_game_menu, key);
 }
 
-procedure void M_Menu_Game_f(void* data) {
+procedure void builtin_string_command_menu_game(void* data) {
 	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
@@ -19961,7 +19933,7 @@ procedure void M_Quit_Draw() {
 	Draw_Pic( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
-procedure void M_Menu_Quit_f(void* data) {
+procedure void builtin_string_command_menu_quit(void* data) {
 	UNUSED(data);
 	M_PushMenu(M_Quit_Draw, M_Quit_Key);
 }
@@ -19995,19 +19967,19 @@ procedure char * M_Main_Key(int key) {
 		switch (m_main_cursor)
 		{
 		case 0:
-			M_Menu_Game_f(0);
+			builtin_string_command_menu_game(0);
 			break;
 
 		case 1:
-			M_Menu_Options_f(0);
+			builtin_string_command_menu_options(0);
 			break;
 
 		case 2:
-			M_Menu_Video_f(0);
+			builtin_string_command_menu_video(0);
 			break;
 
 		case 3:
-			M_Menu_Quit_f(0);
+			builtin_string_command_menu_quit(0);
 			break;
 		}
 	}
@@ -20015,7 +19987,7 @@ procedure char * M_Main_Key(int key) {
 	return NULL;
 }
 
-procedure void M_Menu_Main_f (void* data)
+procedure void builtin_string_command_menu_main (void* data)
 {
 	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
@@ -56221,19 +56193,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), builtin_string_command_forward_to_server}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), builtin_string_command_map}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), builtin_string_command_toggle_console}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), builtin_string_command_menu_main}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), builtin_string_command_menu_game}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), builtin_string_command_menu_video}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), builtin_string_command_menu_options}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), builtin_string_command_menu_keys}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), builtin_string_command_menu_quit}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), bultin_string_command_precache}));
 
 		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), Con_ToggleConsole_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("gun_model"), V_Gun_Model_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), M_Menu_Main_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), M_Menu_Game_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), M_Menu_Video_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), M_Menu_Options_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), M_Menu_Keys_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), M_Menu_Quit_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("loading"), SCR_Loading_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("sky"), SCR_Sky_f}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), CL_Precache_f}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("use"), NULL}));
