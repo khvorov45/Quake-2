@@ -736,26 +736,27 @@ procedure void cdebug_log(String prefix, String_Slice line_chunks) {temp_memory_
 // SECTION String commands
 //
 
-typedef void (*String_Command_Proc)(void*);
+struct String_Command_Context;
+typedef void (*String_Command_Proc)(struct String_Command_Context*);
 typedef struct {String name; String_Command_Proc proc;} String_Command;
 typedef struct {String_Command* ptr; i64 len;} String_Commands;
 typedef struct {String* ptr; i64 len; i64 cap;} User_Args;
 
-typedef struct {
+typedef struct String_Command_Context {
 	String_Commands builtin;
 	User_Args user_args;
 	Client_State* client_state;
 	Key_Bindings* key_bindings;
 } String_Command_Context;
 
-procedure void string_command_quit(void* ctx) {
+procedure void string_command_quit(String_Command_Context* ctx) {
 	UNUSED(ctx);
 	context.exit_process();
 }
 
-procedure void string_command_write_config(void* ctx) {
-	Client_State* client_state = ((String_Command_Context*)ctx)->client_state;
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+procedure void string_command_write_config(String_Command_Context* ctx) {
+	Client_State* client_state = ctx->client_state;
+	Key_Bindings* key_bindings = ctx->key_bindings;
 
 	// TODO kinda wanna get rid of this condition
 	if (*client_state != ca_uninitialized) {temp_memory_block(&context.memory.temp) {
@@ -779,16 +780,16 @@ procedure void string_command_write_config(void* ctx) {
 	}}
 }
 
-procedure void string_command_cmdlist(void* ctx) {
-	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
+procedure void string_command_cmdlist(String_Command_Context* ctx) {
+	String_Commands cmds = ctx->builtin;
 	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
 
-procedure void string_command_bind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
-	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+procedure void string_command_bind(String_Command_Context* ctx) {
+	Key_Bindings* key_bindings = ctx->key_bindings;
+	User_Args user_args = ctx->user_args;
 	assert(user_args.len >= 1);
 	assert(streq(user_args.ptr[0], STR("bind")));
 
@@ -818,17 +819,17 @@ procedure void string_command_bind(void* ctx) {
 	}
 }
 
-procedure void string_command_unbindall(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+procedure void string_command_unbindall(String_Command_Context* ctx) {
+	Key_Bindings* key_bindings = ctx->key_bindings;
 	for (Fixed_String* fstr = key_bindings->values; fstr - key_bindings->values < Key_Code_Count; fstr++) {
 		fstr->len = 0;
 		fstr->buf[fstr->len] = 0;
 	}
 }
 
-procedure void string_command_unbind(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
-	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+procedure void string_command_unbind(String_Command_Context* ctx) {
+	Key_Bindings* key_bindings = ctx->key_bindings;
+	User_Args user_args = ctx->user_args;
 	assert(user_args.len >= 1);
 	assert(streq(user_args.ptr[0], STR("unbind")));
 
@@ -846,8 +847,8 @@ procedure void string_command_unbind(void* ctx) {
 	}
 }
 
-procedure void string_command_bindlist(void* ctx) {
-	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
+procedure void string_command_bindlist(String_Command_Context* ctx) {
+	Key_Bindings* key_bindings = ctx->key_bindings;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
 			String_Slice line = STRS(Key_Code_Strings[key_code], STR(" "), string_from_fixed_string(key_bindings->values + key_code));
@@ -13731,32 +13732,32 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-procedure void string_command_moveup_plus(void* data) {UNUSED(data); KeyDown(&in_up);}
-procedure void string_command_moveup_minus(void* data) {UNUSED(data); KeyUp(&in_up);}
-procedure void string_command_movedown_plus(void* data) {UNUSED(data); KeyDown(&in_down);}
-procedure void string_command_movedown_minus(void* data) {UNUSED(data); KeyUp(&in_down);}
-procedure void string_command_left_plus(void* data) {UNUSED(data); KeyDown(&in_left);}
-procedure void string_command_left_minus(void* data) {UNUSED(data); KeyUp(&in_left);}
-procedure void string_command_right_plus(void* data) {UNUSED(data); KeyDown(&in_right);}
-procedure void string_command_right_minus(void* data) {UNUSED(data); KeyUp(&in_right);}
-procedure void string_command_forward_plus(void* data) {UNUSED(data); KeyDown(&in_forward);}
-procedure void string_command_forward_minus(void* data) {UNUSED(data); KeyUp(&in_forward);}
-procedure void string_command_back_plus(void* data) {UNUSED(data); KeyDown(&in_back);}
-procedure void string_command_back_minus(void* data) {UNUSED(data); KeyUp(&in_back);}
-procedure void string_command_lookup_plus(void* data) {UNUSED(data); KeyDown(&in_lookup);}
-procedure void string_command_lookup_minus(void* data) {UNUSED(data); KeyUp(&in_lookup);}
-procedure void string_command_lookdown_plus(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
-procedure void string_command_lookdown_minus(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
-procedure void string_command_moveleft_plus(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
-procedure void string_command_moveleft_minus(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
-procedure void string_command_moveright_plus(void* data) {UNUSED(data); KeyDown(&in_moveright);}
-procedure void string_command_moveright_minus(void* data) {UNUSED(data); KeyUp(&in_moveright);}
-procedure void string_command_speed_plus(void* data) {UNUSED(data); KeyDown(&in_speed);}
-procedure void string_command_speed_minus(void* data) {UNUSED(data); KeyUp(&in_speed);}
-procedure void string_command_attack_plus(void* data) {UNUSED(data); KeyDown(&in_attack);}
-procedure void string_command_attack_minus(void* data) {UNUSED(data); KeyUp(&in_attack);}
-procedure void string_command_use_plus(void* data) {UNUSED(data); KeyDown(&in_use);}
-procedure void string_command_use_minus(void* data) {UNUSED(data); KeyUp(&in_use);}
+procedure void string_command_moveup_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_up);}
+procedure void string_command_moveup_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_up);}
+procedure void string_command_movedown_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_down);}
+procedure void string_command_movedown_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_down);}
+procedure void string_command_left_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_left);}
+procedure void string_command_left_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_left);}
+procedure void string_command_right_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_right);}
+procedure void string_command_right_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_right);}
+procedure void string_command_forward_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_forward);}
+procedure void string_command_forward_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_forward);}
+procedure void string_command_back_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_back);}
+procedure void string_command_back_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_back);}
+procedure void string_command_lookup_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_lookup);}
+procedure void string_command_lookup_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_lookup);}
+procedure void string_command_lookdown_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_lookdown);}
+procedure void string_command_lookdown_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_lookdown);}
+procedure void string_command_moveleft_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_moveleft);}
+procedure void string_command_moveleft_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_moveleft);}
+procedure void string_command_moveright_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_moveright);}
+procedure void string_command_moveright_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_moveright);}
+procedure void string_command_speed_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_speed);}
+procedure void string_command_speed_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_speed);}
+procedure void string_command_attack_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_attack);}
+procedure void string_command_attack_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_attack);}
+procedure void string_command_use_plus(String_Command_Context* data) {UNUSED(data); KeyDown(&in_use);}
+procedure void string_command_use_minus(String_Command_Context* data) {UNUSED(data); KeyUp(&in_use);}
 
 /*
 ===============
@@ -13853,7 +13854,7 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->lightlevel = cl_lightlevel;
 }
 
-void string_command_centerview(void* data) {
+void string_command_centerview(String_Command_Context* data) {
 	UNUSED(data);
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
@@ -13872,8 +13873,8 @@ void Draw_Pic(int x, int y, char *pic);
 global_variable Key_Bindings* temp_global_key_bindings;
 global_variable v2i temp_global_char_dim_px = {8, 8};
 
-procedure void string_command_forward_to_server(void* ctx) {temp_memory_block(&context.memory.temp) {
-	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+procedure void string_command_forward_to_server(String_Command_Context* ctx) {temp_memory_block(&context.memory.temp) {
+	User_Args user_args = ctx->user_args;
 	assert(user_args.len >= 1 && streq(user_args.ptr[0], STR("cmd")));
 
 	if (user_args.len >= 2) {
@@ -13995,8 +13996,8 @@ global_variable u8 *precache_model; // used for skin checking in alias models
 #define TEXTURE_CNT (ENV_CNT+13)
 
 // The server will send this command right before allowing the client into the server
-procedure void string_command_precache(void* ctx) {
-	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+procedure void string_command_precache(String_Command_Context* ctx) {
+	User_Args user_args = ctx->user_args;
 	assert(user_args.len == 2);
 
 	precache_check = CS_MODELS;
@@ -18293,7 +18294,7 @@ procedure void clear_console_input() {
 	temp_global_console_input->ptr[0] = 0;
 }
 
-procedure void string_command_toggle_console(void* data) {
+procedure void string_command_toggle_console(String_Command_Context* data) {
 	UNUSED(data);
 
 	SCR_EndLoadingPlaque();
@@ -18418,7 +18419,7 @@ void Key_Event (int key, bool down, unsigned time)
 			break;
 		case key_game:
 		case key_console:
-			void string_command_menu_main(void*);
+			void string_command_menu_main(String_Command_Context*);
 			string_command_menu_main(0);
 			break;
 		default: assert(!"unreachable");
@@ -19609,7 +19610,7 @@ procedure char * Keys_MenuKey( int key )
 	}
 }
 
-procedure void string_command_menu_keys(void* data) {
+procedure void string_command_menu_keys(String_Command_Context* data) {
 	UNUSED(data);
 	Keys_MenuInit();
 	M_PushMenu(Keys_MenuDraw, Keys_MenuKey);
@@ -19772,13 +19773,13 @@ procedure char * Options_MenuKey(int key) {
 	return Default_MenuKey(&s_options_menu, key);
 }
 
-procedure void string_command_menu_options(void* data) {
+procedure void string_command_menu_options(String_Command_Context* data) {
 	UNUSED(data);
 	Options_MenuInit();
 	M_PushMenu(Options_MenuDraw, Options_MenuKey);
 }
 
-procedure void string_command_menu_video(void* data) {
+procedure void string_command_menu_video(String_Command_Context* data) {
 	UNUSED(data);
 	VID_MenuInit();
 	char* VID_MenuKey(int key);
@@ -19853,7 +19854,7 @@ procedure char * Game_MenuKey(int key) {
 	return Default_MenuKey(&s_game_menu, key);
 }
 
-procedure void string_command_menu_game(void* data) {
+procedure void string_command_menu_game(String_Command_Context* data) {
 	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
@@ -19879,7 +19880,7 @@ procedure void M_Quit_Draw() {
 	Draw_Pic( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
-procedure void string_command_menu_quit(void* data) {
+procedure void string_command_menu_quit(String_Command_Context* data) {
 	UNUSED(data);
 	M_PushMenu(M_Quit_Draw, M_Quit_Key);
 }
@@ -19933,7 +19934,7 @@ procedure char * M_Main_Key(int key) {
 	return NULL;
 }
 
-procedure void string_command_menu_main (void* data)
+procedure void string_command_menu_main (String_Command_Context* data)
 {
 	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
@@ -22144,7 +22145,7 @@ void ai_run (edict_t* self, float dist)
 		self->goalentity = save;
 }
 
-procedure void string_command_god(void* ctx) {
+procedure void string_command_god(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -22159,7 +22160,7 @@ procedure void string_command_god(void* ctx) {
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-procedure void string_command_notarget(void* ctx) {
+procedure void string_command_notarget(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -22174,7 +22175,7 @@ procedure void string_command_notarget(void* ctx) {
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-procedure void string_command_noclip(void* ctx) {
+procedure void string_command_noclip(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -22194,7 +22195,7 @@ procedure void string_command_noclip(void* ctx) {
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-procedure void string_command_inven(void* ctx) {
+procedure void string_command_inven(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -22221,7 +22222,7 @@ procedure void string_command_inven(void* ctx) {
 	PF_Unicast (ent, true);
 }
 
-procedure void string_command_kill(void* ctx) {
+procedure void string_command_kill(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -22233,7 +22234,7 @@ procedure void string_command_kill(void* ctx) {
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
-procedure void string_command_putaway(void* ctx) {
+procedure void string_command_putaway(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -24995,8 +24996,8 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
-procedure void string_command_map(void* ctx) {temp_memory_block(&context.memory.temp) {
-	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+procedure void string_command_map(String_Command_Context* ctx) {temp_memory_block(&context.memory.temp) {
+	User_Args user_args = ctx->user_args;
 
 	sv.state = ss_dead;
 
@@ -25067,7 +25068,7 @@ procedure void string_command_map(void* ctx) {temp_memory_block(&context.memory.
 	}
 }}
 
-procedure void string_command_invnext(void* ctx) {
+procedure void string_command_invnext(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25097,7 +25098,7 @@ procedure void string_command_invnext(void* ctx) {
 	cl->pers.selected_item = -1;
 }
 
-procedure void string_command_invprev(void* ctx) {
+procedure void string_command_invprev(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25127,7 +25128,7 @@ procedure void string_command_invprev(void* ctx) {
 	cl->pers.selected_item = -1;
 }
 
-procedure void string_command_give(void* ctx) {
+procedure void string_command_give(String_Command_Context* ctx) {
 	UNUSED(ctx);
 	edict_t* ent = svs.client.edict;
 
@@ -25294,7 +25295,7 @@ gitem_t	*GetItemByIndex (int index)
 	return &itemlist[index];
 }
 
-procedure void string_command_invdrop(void* ctx) {
+procedure void string_command_invdrop(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25339,7 +25340,7 @@ void Cmd_WeapLast_f (edict_t *ent)
 	it->use (ent, it);
 }
 
-procedure void string_command_invuse(void* ctx) {
+procedure void string_command_invuse(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25362,7 +25363,7 @@ procedure void string_command_invuse(void* ctx) {
 	it->use (ent, it);
 }
 
-procedure void string_command_weapnext(void* ctx) {
+procedure void string_command_weapnext(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25395,7 +25396,7 @@ procedure void string_command_weapnext(void* ctx) {
 	}
 }
 
-procedure void string_command_weapprev(void* ctx) {
+procedure void string_command_weapprev(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t* ent = svs.client.edict;
@@ -25428,7 +25429,7 @@ procedure void string_command_weapprev(void* ctx) {
 	}
 }
 
-procedure void string_command_use(void* ctx) {
+procedure void string_command_use(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -25544,7 +25545,7 @@ procedure int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int da
 }
 
 // Drop an inventory item
-procedure void string_command_drop(void* ctx) {
+procedure void string_command_drop(String_Command_Context* ctx) {
 	UNUSED(ctx);
 
 	edict_t *ent = svs.client.edict;
@@ -47305,7 +47306,7 @@ void HelpComputer (edict_t *ent)
 }
 
 // Display the current help message
-procedure void string_command_help(void* ctx) {
+procedure void string_command_help(String_Command_Context* ctx) {
 	UNUSED(ctx);
 	edict_t* ent = svs.client.edict;
 
