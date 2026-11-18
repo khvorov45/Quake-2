@@ -13787,33 +13787,32 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-procedure void IN_UpDown(void* data) {UNUSED(data); KeyDown(&in_up);}
-procedure void IN_UpUp(void* data) {UNUSED(data); KeyUp(&in_up);}
-procedure void IN_DownDown(void* data) {UNUSED(data); KeyDown(&in_down);}
-procedure void IN_DownUp(void* data) {UNUSED(data); KeyUp(&in_down);}
-procedure void IN_LeftDown(void* data) {UNUSED(data); KeyDown(&in_left);}
-procedure void IN_LeftUp(void* data) {UNUSED(data); KeyUp(&in_left);}
-procedure void IN_RightDown(void* data) {UNUSED(data); KeyDown(&in_right);}
-procedure void IN_RightUp(void* data) {UNUSED(data); KeyUp(&in_right);}
-procedure void IN_ForwardDown(void* data) {UNUSED(data); KeyDown(&in_forward);}
-procedure void IN_ForwardUp(void* data) {UNUSED(data); KeyUp(&in_forward);}
-procedure void IN_BackDown(void* data) {UNUSED(data); KeyDown(&in_back);}
-procedure void IN_BackUp(void* data) {UNUSED(data); KeyUp(&in_back);}
-procedure void IN_LookupDown(void* data) {UNUSED(data); KeyDown(&in_lookup);}
-procedure void IN_LookupUp(void* data) {UNUSED(data); KeyUp(&in_lookup);}
-procedure void IN_LookdownDown(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
-procedure void IN_LookdownUp(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
-procedure void IN_MoveleftDown(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
-procedure void IN_MoveleftUp(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
-procedure void IN_MoverightDown(void* data) {UNUSED(data); KeyDown(&in_moveright);}
-procedure void IN_MoverightUp(void* data) {UNUSED(data); KeyUp(&in_moveright);}
-procedure void IN_SpeedDown(void* data) {UNUSED(data); KeyDown(&in_speed);}
-procedure void IN_SpeedUp(void* data) {UNUSED(data); KeyUp(&in_speed);}
-procedure void IN_AttackDown(void* data) {UNUSED(data); KeyDown(&in_attack);}
-procedure void IN_AttackUp(void* data) {UNUSED(data); KeyUp(&in_attack);}
-procedure void IN_UseDown(void* data) {UNUSED(data); KeyDown(&in_use);}
-procedure void IN_UseUp(void* data) {UNUSED(data); KeyUp(&in_use);}
-procedure void IN_Impulse(void* data) {UNUSED(data); in_impulse=atoi(Cmd_Argv(1));}
+procedure void builtin_string_command_moveup_plus(void* data) {UNUSED(data); KeyDown(&in_up);}
+procedure void builtin_string_command_moveup_minus(void* data) {UNUSED(data); KeyUp(&in_up);}
+procedure void builtin_string_command_movedown_plus(void* data) {UNUSED(data); KeyDown(&in_down);}
+procedure void builtin_string_command_movedown_minus(void* data) {UNUSED(data); KeyUp(&in_down);}
+procedure void builtin_string_command_left_plus(void* data) {UNUSED(data); KeyDown(&in_left);}
+procedure void builtin_string_command_left_minus(void* data) {UNUSED(data); KeyUp(&in_left);}
+procedure void builtin_string_command_right_plus(void* data) {UNUSED(data); KeyDown(&in_right);}
+procedure void builtin_string_command_right_minus(void* data) {UNUSED(data); KeyUp(&in_right);}
+procedure void builtin_string_command_forward_plus(void* data) {UNUSED(data); KeyDown(&in_forward);}
+procedure void builtin_string_command_forward_minus(void* data) {UNUSED(data); KeyUp(&in_forward);}
+procedure void builtin_string_command_back_plus(void* data) {UNUSED(data); KeyDown(&in_back);}
+procedure void builtin_string_command_back_minus(void* data) {UNUSED(data); KeyUp(&in_back);}
+procedure void builtin_string_command_lookup_plus(void* data) {UNUSED(data); KeyDown(&in_lookup);}
+procedure void builtin_string_command_lookup_minus(void* data) {UNUSED(data); KeyUp(&in_lookup);}
+procedure void builtin_string_command_lookdown_plus(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
+procedure void builtin_string_command_lookdown_minus(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
+procedure void builtin_string_command_moveleft_plus(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
+procedure void builtin_string_command_moveleft_minus(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
+procedure void builtin_string_command_moveright_plus(void* data) {UNUSED(data); KeyDown(&in_moveright);}
+procedure void builtin_string_command_moveright_minus(void* data) {UNUSED(data); KeyUp(&in_moveright);}
+procedure void builtin_string_command_speed_plus(void* data) {UNUSED(data); KeyDown(&in_speed);}
+procedure void builtin_string_command_speed_minus(void* data) {UNUSED(data); KeyUp(&in_speed);}
+procedure void builtin_string_command_attack_plus(void* data) {UNUSED(data); KeyDown(&in_attack);}
+procedure void builtin_string_command_attack_minus(void* data) {UNUSED(data); KeyUp(&in_attack);}
+procedure void builtin_string_command_use_plus(void* data) {UNUSED(data); KeyDown(&in_use);}
+procedure void builtin_string_command_use_minus(void* data) {UNUSED(data); KeyUp(&in_use);}
 
 /*
 ===============
@@ -13910,7 +13909,7 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->lightlevel = cl_lightlevel;
 }
 
-void IN_CenterView(void* data) {
+void builtin_string_command_centerview(void* data) {
 	UNUSED(data);
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
@@ -55360,10 +55359,6 @@ global_variable RECT window_rect;
 global_variable HWND cl_hwnd;
 
 global_variable bool in_appactive;
-global_variable bool mlooking;
-
-procedure void IN_MLookDown(void* data) {UNUSED(data); mlooking = true;}
-procedure void IN_MLookUp(void* data) {UNUSED(data); mlooking = false;}
 
 global_variable int			mouse_buttons;
 global_variable int			mouse_oldbuttonstate;
@@ -56201,6 +56196,33 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), builtin_string_command_menu_keys}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), builtin_string_command_menu_quit}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), bultin_string_command_precache}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("centerview"), builtin_string_command_centerview}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveup"), builtin_string_command_moveup_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveup"), builtin_string_command_moveup_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+movedown"), builtin_string_command_movedown_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-movedown"), builtin_string_command_movedown_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+left"), builtin_string_command_left_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-left"), builtin_string_command_left_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+right"), builtin_string_command_right_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-right"), builtin_string_command_right_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+forward"), builtin_string_command_forward_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-forward"), builtin_string_command_forward_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+back"), builtin_string_command_back_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-back"), builtin_string_command_back_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookup"), builtin_string_command_lookup_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookup"), builtin_string_command_lookup_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookdown"), builtin_string_command_lookdown_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookdown"), builtin_string_command_lookdown_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveleft"), builtin_string_command_moveleft_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveleft"), builtin_string_command_moveleft_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveright"), builtin_string_command_moveright_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveright"), builtin_string_command_moveright_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+speed"), builtin_string_command_speed_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-speed"), builtin_string_command_speed_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+attack"), builtin_string_command_attack_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-attack"), builtin_string_command_attack_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), builtin_string_command_use_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), builtin_string_command_use_minus}));
 
 		// TODO: Remove non-essentials
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
@@ -56219,36 +56241,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("centerview"), IN_CenterView}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveup"), IN_UpDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveup"), IN_UpUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+movedown"), IN_DownDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-movedown"), IN_DownUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+left"), IN_LeftDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-left"), IN_LeftUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+right"), IN_RightDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-right"), IN_RightUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+forward"), IN_ForwardDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-forward"), IN_ForwardUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+back"), IN_BackDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-back"), IN_BackUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookup"), IN_LookupDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookup"), IN_LookupUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookdown"), IN_LookdownDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookdown"), IN_LookdownUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveleft"), IN_MoveleftDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveleft"), IN_MoveleftUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveright"), IN_MoverightDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveright"), IN_MoverightUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+speed"), IN_SpeedDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-speed"), IN_SpeedUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+attack"), IN_AttackDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-attack"), IN_AttackUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), IN_UseDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), IN_UseUp}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("impulse"), IN_Impulse}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+mlook"), IN_MLookDown}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-mlook"), IN_MLookUp}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
