@@ -9142,10 +9142,7 @@ void SV_SendClientMessages() {
 	}
 }
 
-// Sends the first message from the server to a connected client.
-// This will be sent on the initial connection and upon each server load.
-void SV_New_f (void)
-{
+procedure void SV_New_f() {
 	int			playernum;
 	edict_t		*ent;
 
@@ -9182,13 +9179,7 @@ void SV_New_f (void)
 
 }
 
-/*
-==================
-SV_Configstrings_f
-==================
-*/
-void SV_Configstrings_f (void)
-{
+procedure void SV_Configstrings_f() {
 	int			start;
 
 	if (svs.client.state != cs_connected)
@@ -9197,13 +9188,7 @@ void SV_Configstrings_f (void)
 		return;
 	}
 
-	// handle the case of a level changing while a client was connecting
-	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
-	{
-		add_line_to_console_log(STR("SV_Configstrings_f from different level"));
-		SV_New_f ();
-		return;
-	}
+	assert(atoi(Cmd_Argv(1)) == svs.spawncount);
 
 	start = atoi(Cmd_Argv(2));
 
@@ -9235,13 +9220,7 @@ void SV_Configstrings_f (void)
 	}
 }
 
-/*
-==================
-SV_Baselines_f
-==================
-*/
-void SV_Baselines_f (void)
-{
+procedure void SV_Baselines_f() {
 	int		start;
 	entity_state_t	nullstate;
 	entity_state_t	*base;
@@ -9252,13 +9231,7 @@ void SV_Baselines_f (void)
 		return;
 	}
 
-	// handle the case of a level changing while a client was connecting
-	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
-	{
-		add_line_to_console_log(STR("SV_Baselines_f from different level"));
-		SV_New_f ();
-		return;
-	}
+	assert(atoi(Cmd_Argv(1)) == svs.spawncount);
 
 	start = atoi(Cmd_Argv(2));
 
@@ -9288,20 +9261,12 @@ void SV_Baselines_f (void)
 	else
 	{
 		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
-		MSG_WriteString (&svs.client.netchan.message, va("cmd baselines %i %i\n",svs.spawncount, start) );
+		MSG_WriteString (&svs.client.netchan.message, va("cmd baselines %i %i\n", svs.spawncount, start) );
 	}
 }
 
-void SV_Begin_f (void)
-{
-
-	// handle the case of a level changing while a client was connecting
-	if ( atoi(Cmd_Argv(1)) != svs.spawncount )
-	{
-		add_line_to_console_log(STR("SV_Begin_f from different level"));
-		SV_New_f ();
-		return;
-	}
+procedure void SV_Begin_f() {
+	assert(atoi(Cmd_Argv(1)) == svs.spawncount);
 
 	svs.client.state = cs_spawned;
 
@@ -9318,7 +9283,6 @@ procedure void SV_ExecuteUserCommand(char* s) {
 
 	typedef struct {char* name; void (*func)(void);} ucmd_t;
 	ucmd_t ucmds[] = {
-		{"new", SV_New_f},
 		{"configstrings", SV_Configstrings_f},
 		{"baselines", SV_Baselines_f},
 		{"begin", SV_Begin_f},
