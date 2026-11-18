@@ -56150,6 +56150,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		.key_bindings = key_bindings,
 		.user_args = arena_alloc_fixed_cap(&context.memory.perm, String, 64),
 	};
+	// TODO: unglobal
 	temp_global_string_command_context = &string_command_context;
 
 	temp_memory_block(&context.memory.temp) {
@@ -56217,7 +56218,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
 		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds);
 	}
