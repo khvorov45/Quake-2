@@ -56164,6 +56164,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	temp_memory_block(&context.memory.temp) {
 		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
+		// NOTE Client can execute directly
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), builtin_string_command_quit}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), builtin_string_command_write_config}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), builtin_string_command_cmdlist}));
@@ -56209,23 +56210,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), builtin_string_command_use_plus}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), builtin_string_command_use_minus}));
 
-		// TODO: Remove non-essentials
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("use"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("drop"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("info"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("prog"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("give"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("god"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("notarget"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("noclip"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("invuse"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("invprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("invnext"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), NULL}));
+		// NOTE Will be forwared to server
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("inven")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("kill")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("use")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("drop")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("info")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("prog")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("give")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("god")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("notarget")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("noclip")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invuse")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invprev")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invnext")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invdrop")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("weapnext")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("weapprev")}));
 
 		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds);
 	}
