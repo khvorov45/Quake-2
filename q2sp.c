@@ -2261,8 +2261,13 @@ procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
 	for (String_Command* cmd = ctx->builtin.ptr; cmd - ctx->builtin.ptr < ctx->builtin.len; cmd++) {
 		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
 			if (!cmd->proc) {
-				// forward to server command
-				Cmd_ExecuteString(ctx, va("cmd %s", text));
+				assert(ctx->user_args.len < ctx->user_args.cap);
+				for (i64 ind = ctx->user_args.len - 1; ind >= 0; ind--) {
+					ctx->user_args.ptr[ind + 1] = ctx->user_args.ptr[ind];
+				}
+				ctx->user_args.ptr[0] = STR("cmd");
+				void builtin_string_command_forward_to_server(void* ctx);
+				builtin_string_command_forward_to_server(ctx);
 			} else {
 				cmd->proc(ctx);
 			}
@@ -13930,9 +13935,10 @@ global_variable v2i temp_global_char_dim_px = {8, 8};
 
 procedure void builtin_string_command_forward_to_server(void* ctx) {temp_memory_block(&context.memory.temp) {
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
+	assert(user_args.len >= 1 && streq(user_args.ptr[0], STR("cmd")));
 
-	if (cls.state == ca_connected || cls.state == ca_active) {
-		if (user_args.len > 1) {
+	if (user_args.len >= 2) {
+		if (cls.state == ca_connected || cls.state == ca_active) {
 			String first_arg = user_args.ptr[1];
 			String last_arg = user_args.ptr[user_args.len - 1];
 			String for_server = {first_arg.ptr, last_arg.ptr - first_arg.ptr + last_arg.len};
@@ -13940,9 +13946,11 @@ procedure void builtin_string_command_forward_to_server(void* ctx) {temp_memory_
 
 			MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
 			SZ_Print(&cls.netchan.message, for_server_null_terminated.ptr);
+		} else {
+			add_line_to_console_log(STR("not connected"));
 		}
 	} else {
-		add_line_to_console_log(STR("not connected"));
+		add_line_to_console_log(STR("USAGE: cmd <command> <args> : Forward command to server"));
 	}
 }}
 
