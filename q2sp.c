@@ -748,12 +748,12 @@ typedef struct {
 	Key_Bindings* key_bindings;
 } String_Command_Context;
 
-procedure void builtin_string_command_quit(void* ctx) {
+procedure void string_command_quit(void* ctx) {
 	UNUSED(ctx);
 	context.exit_process();
 }
 
-procedure void builtin_string_command_write_config(void* ctx) {
+procedure void string_command_write_config(void* ctx) {
 	Client_State* client_state = ((String_Command_Context*)ctx)->client_state;
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 
@@ -779,14 +779,14 @@ procedure void builtin_string_command_write_config(void* ctx) {
 	}}
 }
 
-procedure void builtin_string_command_cmdlist(void* ctx) {
+procedure void string_command_cmdlist(void* ctx) {
 	String_Commands cmds = ((String_Command_Context*)ctx)->builtin;
 	for (String_Command* cmd = cmds.ptr; cmd - cmds.ptr < cmds.len; cmd++) {
 		add_line_to_console_log(cmd->name);
 	}
 }
 
-procedure void builtin_string_command_bind(void* ctx) {
+procedure void string_command_bind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 	assert(user_args.len >= 1);
@@ -818,7 +818,7 @@ procedure void builtin_string_command_bind(void* ctx) {
 	}
 }
 
-procedure void builtin_string_command_unbindall(void* ctx) {
+procedure void string_command_unbindall(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	for (Fixed_String* fstr = key_bindings->values; fstr - key_bindings->values < Key_Code_Count; fstr++) {
 		fstr->len = 0;
@@ -826,7 +826,7 @@ procedure void builtin_string_command_unbindall(void* ctx) {
 	}
 }
 
-procedure void builtin_string_command_unbind(void* ctx) {
+procedure void string_command_unbind(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 	assert(user_args.len >= 1);
@@ -846,7 +846,7 @@ procedure void builtin_string_command_unbind(void* ctx) {
 	}
 }
 
-procedure void builtin_string_command_bindlist(void* ctx) {
+procedure void string_command_bindlist(void* ctx) {
 	Key_Bindings* key_bindings = ((String_Command_Context*)ctx)->key_bindings;
 	for (i64 key_code = 0; key_code < Key_Code_Count; key_code++) {
 		if (key_bindings->values[key_code].len) {
@@ -2233,67 +2233,9 @@ procedure void Cmd_TokenizeString(char* text) {
 
 }
 
-procedure void Cmd_ExecuteString(String_Command_Context* ctx, char* text) {
-	String text_str = string_from_cstring(text);
-	context.debug_log(STR("STR_EXECUTE"), text_str);
+procedure void execute_string_command(String_Command_Context* ctx, String line);
 
-	Cmd_TokenizeString(text);
-
-	// NOTE Get args (first one is command name)
-	ctx->user_args.len = 0;
-	for (String left_to_process = text_str; left_to_process.len;) {
-		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, char_is_whitespace);
-		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
-		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, char_is_not_whitespace);
-		left_to_process = string_advance_by(left_to_process, consecutive_non_whitespaces);
-		String word = {.ptr = left_to_process.ptr - consecutive_non_whitespaces, .len = consecutive_non_whitespaces};
-		if (word.len) {
-			append_fixed_cap(&ctx->user_args, word);
-		}
-	}
-
-	// execute the command line
-	if (!cmd_argc) {
-		return; // no tokens
-	}
-
-	// check functions
-	for (String_Command* cmd = ctx->builtin.ptr; cmd - ctx->builtin.ptr < ctx->builtin.len; cmd++) {
-		if (streq(string_from_cstring(cmd_argv[0]), cmd->name)) {
-			if (!cmd->proc) {
-				assert(ctx->user_args.len < ctx->user_args.cap);
-				for (i64 ind = ctx->user_args.len - 1; ind >= 0; ind--) {
-					ctx->user_args.ptr[ind + 1] = ctx->user_args.ptr[ind];
-				}
-				ctx->user_args.ptr[0] = STR("cmd");
-				void builtin_string_command_forward_to_server(void* ctx);
-				builtin_string_command_forward_to_server(ctx);
-			} else {
-				cmd->proc(ctx);
-			}
-			return;
-		}
-	}
-
-	// send it as a server command if we are connected
-	{
-		char* cmd = Cmd_Argv(0);
-
-		if (cls.state <= ca_connected || *cmd == '-' || *cmd == '+') {
-			cadd_line_to_console_log(STRS(STR("Unknown command: "), text_str));
-			return;
-		}
-
-		MSG_WriteByte(&cls.netchan.message, clc_stringcmd);
-		SZ_Print(&cls.netchan.message, cmd);
-		if (cmd_argc > 1) {
-			SZ_Print(&cls.netchan.message, " ");
-			SZ_Print(&cls.netchan.message, cmd_args);
-		}
-	}
-}
-
-// Pulls off \n terminated lines of text from the command buffer and sends them through Cmd_ExecuteString.
+// Pulls off \n terminated lines of text from the command buffer and sends them through execute_string_command.
 // Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
@@ -2332,7 +2274,7 @@ procedure void Cmd_ExecuteCbuf(String_Command_Context* ctx) {
 			memmove (text, text+i, cmd_text.cursize);
 		}
 
-		Cmd_ExecuteString(ctx, line);
+		execute_string_command(ctx, string_from_cstring(line));
 	}
 }
 
@@ -2346,8 +2288,7 @@ procedure void execute_config_string(String_Command_Context* ctx, String name) {
 			i64 line_len = string_count_consecutive(left_to_process, char_is_not_newline);
 			String line = {left_to_process.ptr, line_len};
 			left_to_process = string_advance_by(left_to_process, line_len);
-			String line_null_terminated = copy_string(&context.memory.temp, line);
-			Cmd_ExecuteString(ctx, line_null_terminated.ptr);
+			execute_string_command(ctx, line);
 		}
 	} else {
 		cadd_line_to_console_log(STRS(STR("did not find config string named "), name));
@@ -8871,7 +8812,6 @@ procedure void SCR_EndLoadingPlaque() {
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
-void ClientCommand (edict_t *ent);
 
 // This has to be done before the world logic, because player processing happens outside RunWorldFrame
 void SV_PrepWorldFrame (void)
@@ -9390,15 +9330,14 @@ procedure void SV_ExecuteUserCommand(char* s) {
 
 	ucmd_t* u = ucmds;
 	bool found = false;
-	for (; u - ucmds < carray_count(ucmds) && !found; u++)
+	for (; u - ucmds < carray_count(ucmds) && !found; u++) {
 		if (!strcmp(Cmd_Argv(0), u->name) ) {
 			u->func();
 			found = true;
 		}
-
-	if (!found && sv.state == ss_game) {
-		ClientCommand(svs.client.edict);
 	}
+
+	assert(found);
 }
 
 // (type *)STRUCT_FROM_LINK(link_t *link, type, member)
@@ -13792,32 +13731,32 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-procedure void builtin_string_command_moveup_plus(void* data) {UNUSED(data); KeyDown(&in_up);}
-procedure void builtin_string_command_moveup_minus(void* data) {UNUSED(data); KeyUp(&in_up);}
-procedure void builtin_string_command_movedown_plus(void* data) {UNUSED(data); KeyDown(&in_down);}
-procedure void builtin_string_command_movedown_minus(void* data) {UNUSED(data); KeyUp(&in_down);}
-procedure void builtin_string_command_left_plus(void* data) {UNUSED(data); KeyDown(&in_left);}
-procedure void builtin_string_command_left_minus(void* data) {UNUSED(data); KeyUp(&in_left);}
-procedure void builtin_string_command_right_plus(void* data) {UNUSED(data); KeyDown(&in_right);}
-procedure void builtin_string_command_right_minus(void* data) {UNUSED(data); KeyUp(&in_right);}
-procedure void builtin_string_command_forward_plus(void* data) {UNUSED(data); KeyDown(&in_forward);}
-procedure void builtin_string_command_forward_minus(void* data) {UNUSED(data); KeyUp(&in_forward);}
-procedure void builtin_string_command_back_plus(void* data) {UNUSED(data); KeyDown(&in_back);}
-procedure void builtin_string_command_back_minus(void* data) {UNUSED(data); KeyUp(&in_back);}
-procedure void builtin_string_command_lookup_plus(void* data) {UNUSED(data); KeyDown(&in_lookup);}
-procedure void builtin_string_command_lookup_minus(void* data) {UNUSED(data); KeyUp(&in_lookup);}
-procedure void builtin_string_command_lookdown_plus(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
-procedure void builtin_string_command_lookdown_minus(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
-procedure void builtin_string_command_moveleft_plus(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
-procedure void builtin_string_command_moveleft_minus(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
-procedure void builtin_string_command_moveright_plus(void* data) {UNUSED(data); KeyDown(&in_moveright);}
-procedure void builtin_string_command_moveright_minus(void* data) {UNUSED(data); KeyUp(&in_moveright);}
-procedure void builtin_string_command_speed_plus(void* data) {UNUSED(data); KeyDown(&in_speed);}
-procedure void builtin_string_command_speed_minus(void* data) {UNUSED(data); KeyUp(&in_speed);}
-procedure void builtin_string_command_attack_plus(void* data) {UNUSED(data); KeyDown(&in_attack);}
-procedure void builtin_string_command_attack_minus(void* data) {UNUSED(data); KeyUp(&in_attack);}
-procedure void builtin_string_command_use_plus(void* data) {UNUSED(data); KeyDown(&in_use);}
-procedure void builtin_string_command_use_minus(void* data) {UNUSED(data); KeyUp(&in_use);}
+procedure void string_command_moveup_plus(void* data) {UNUSED(data); KeyDown(&in_up);}
+procedure void string_command_moveup_minus(void* data) {UNUSED(data); KeyUp(&in_up);}
+procedure void string_command_movedown_plus(void* data) {UNUSED(data); KeyDown(&in_down);}
+procedure void string_command_movedown_minus(void* data) {UNUSED(data); KeyUp(&in_down);}
+procedure void string_command_left_plus(void* data) {UNUSED(data); KeyDown(&in_left);}
+procedure void string_command_left_minus(void* data) {UNUSED(data); KeyUp(&in_left);}
+procedure void string_command_right_plus(void* data) {UNUSED(data); KeyDown(&in_right);}
+procedure void string_command_right_minus(void* data) {UNUSED(data); KeyUp(&in_right);}
+procedure void string_command_forward_plus(void* data) {UNUSED(data); KeyDown(&in_forward);}
+procedure void string_command_forward_minus(void* data) {UNUSED(data); KeyUp(&in_forward);}
+procedure void string_command_back_plus(void* data) {UNUSED(data); KeyDown(&in_back);}
+procedure void string_command_back_minus(void* data) {UNUSED(data); KeyUp(&in_back);}
+procedure void string_command_lookup_plus(void* data) {UNUSED(data); KeyDown(&in_lookup);}
+procedure void string_command_lookup_minus(void* data) {UNUSED(data); KeyUp(&in_lookup);}
+procedure void string_command_lookdown_plus(void* data) {UNUSED(data); KeyDown(&in_lookdown);}
+procedure void string_command_lookdown_minus(void* data) {UNUSED(data); KeyUp(&in_lookdown);}
+procedure void string_command_moveleft_plus(void* data) {UNUSED(data); KeyDown(&in_moveleft);}
+procedure void string_command_moveleft_minus(void* data) {UNUSED(data); KeyUp(&in_moveleft);}
+procedure void string_command_moveright_plus(void* data) {UNUSED(data); KeyDown(&in_moveright);}
+procedure void string_command_moveright_minus(void* data) {UNUSED(data); KeyUp(&in_moveright);}
+procedure void string_command_speed_plus(void* data) {UNUSED(data); KeyDown(&in_speed);}
+procedure void string_command_speed_minus(void* data) {UNUSED(data); KeyUp(&in_speed);}
+procedure void string_command_attack_plus(void* data) {UNUSED(data); KeyDown(&in_attack);}
+procedure void string_command_attack_minus(void* data) {UNUSED(data); KeyUp(&in_attack);}
+procedure void string_command_use_plus(void* data) {UNUSED(data); KeyDown(&in_use);}
+procedure void string_command_use_minus(void* data) {UNUSED(data); KeyUp(&in_use);}
 
 /*
 ===============
@@ -13914,7 +13853,7 @@ void CL_FinishMove (usercmd_t *cmd)
 	cmd->lightlevel = cl_lightlevel;
 }
 
-void builtin_string_command_centerview(void* data) {
+void string_command_centerview(void* data) {
 	UNUSED(data);
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.frame.playerstate.pmove.delta_angles[PITCH]);
 }
@@ -13933,7 +13872,7 @@ void Draw_Pic(int x, int y, char *pic);
 global_variable Key_Bindings* temp_global_key_bindings;
 global_variable v2i temp_global_char_dim_px = {8, 8};
 
-procedure void builtin_string_command_forward_to_server(void* ctx) {temp_memory_block(&context.memory.temp) {
+procedure void string_command_forward_to_server(void* ctx) {temp_memory_block(&context.memory.temp) {
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 	assert(user_args.len >= 1 && streq(user_args.ptr[0], STR("cmd")));
 
@@ -14056,7 +13995,7 @@ global_variable u8 *precache_model; // used for skin checking in alias models
 #define TEXTURE_CNT (ENV_CNT+13)
 
 // The server will send this command right before allowing the client into the server
-procedure void bultin_string_command_precache(void* ctx) {
+procedure void string_command_precache(void* ctx) {
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 	assert(user_args.len == 2);
 
@@ -18354,7 +18293,7 @@ procedure void clear_console_input() {
 	temp_global_console_input->ptr[0] = 0;
 }
 
-procedure void builtin_string_command_toggle_console(void* data) {
+procedure void string_command_toggle_console(void* data) {
 	UNUSED(data);
 
 	SCR_EndLoadingPlaque();
@@ -18457,7 +18396,7 @@ void Key_Event (int key, bool down, unsigned time)
 	{
 		if (!down)
 			return;
-		builtin_string_command_toggle_console(0);
+		string_command_toggle_console(0);
 		return;
 	}
 
@@ -18479,8 +18418,8 @@ void Key_Event (int key, bool down, unsigned time)
 			break;
 		case key_game:
 		case key_console:
-			void builtin_string_command_menu_main(void*);
-			builtin_string_command_menu_main(0);
+			void string_command_menu_main(void*);
+			string_command_menu_main(0);
 			break;
 		default: assert(!"unreachable");
 		}
@@ -19670,7 +19609,7 @@ procedure char * Keys_MenuKey( int key )
 	}
 }
 
-procedure void builtin_string_command_menu_keys(void* data) {
+procedure void string_command_menu_keys(void* data) {
 	UNUSED(data);
 	Keys_MenuInit();
 	M_PushMenu(Keys_MenuDraw, Keys_MenuKey);
@@ -19678,7 +19617,7 @@ procedure void builtin_string_command_menu_keys(void* data) {
 
 procedure void CustomizeControlsFunc(void* unused) {
 	UNUSED(unused);
-	builtin_string_command_menu_keys(0);
+	string_command_menu_keys(0);
 }
 
 procedure void ControlsResetDefaultsFunc(void* unused) {
@@ -19833,13 +19772,13 @@ procedure char * Options_MenuKey(int key) {
 	return Default_MenuKey(&s_options_menu, key);
 }
 
-procedure void builtin_string_command_menu_options(void* data) {
+procedure void string_command_menu_options(void* data) {
 	UNUSED(data);
 	Options_MenuInit();
 	M_PushMenu(Options_MenuDraw, Options_MenuKey);
 }
 
-procedure void builtin_string_command_menu_video(void* data) {
+procedure void string_command_menu_video(void* data) {
 	UNUSED(data);
 	VID_MenuInit();
 	char* VID_MenuKey(int key);
@@ -19914,7 +19853,7 @@ procedure char * Game_MenuKey(int key) {
 	return Default_MenuKey(&s_game_menu, key);
 }
 
-procedure void builtin_string_command_menu_game(void* data) {
+procedure void string_command_menu_game(void* data) {
 	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
@@ -19940,7 +19879,7 @@ procedure void M_Quit_Draw() {
 	Draw_Pic( (viddef.width-w)/2, (viddef.height-h)/2, "quit");
 }
 
-procedure void builtin_string_command_menu_quit(void* data) {
+procedure void string_command_menu_quit(void* data) {
 	UNUSED(data);
 	M_PushMenu(M_Quit_Draw, M_Quit_Key);
 }
@@ -19974,19 +19913,19 @@ procedure char * M_Main_Key(int key) {
 		switch (m_main_cursor)
 		{
 		case 0:
-			builtin_string_command_menu_game(0);
+			string_command_menu_game(0);
 			break;
 
 		case 1:
-			builtin_string_command_menu_options(0);
+			string_command_menu_options(0);
 			break;
 
 		case 2:
-			builtin_string_command_menu_video(0);
+			string_command_menu_video(0);
 			break;
 
 		case 3:
-			builtin_string_command_menu_quit(0);
+			string_command_menu_quit(0);
 			break;
 		}
 	}
@@ -19994,7 +19933,7 @@ procedure char * M_Main_Key(int key) {
 	return NULL;
 }
 
-procedure void builtin_string_command_menu_main (void* data)
+procedure void string_command_menu_main (void* data)
 {
 	UNUSED(data);
 	M_PushMenu (M_Main_Draw, M_Main_Key);
@@ -22205,9 +22144,10 @@ void ai_run (edict_t* self, float dist)
 		self->goalentity = save;
 }
 
-// argv(0) god
-void Cmd_God_f (edict_t *ent)
-{
+procedure void string_command_god(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
 	char	*msg;
 
 	ent->flags ^= FL_GODMODE;
@@ -22219,9 +22159,10 @@ void Cmd_God_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-// argv(0) notarget
-void Cmd_Notarget_f (edict_t *ent)
-{
+procedure void string_command_notarget(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
 	char	*msg;
 
 	ent->flags ^= FL_NOTARGET;
@@ -22233,9 +22174,10 @@ void Cmd_Notarget_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-// argv(0) noclip
-void Cmd_Noclip_f (edict_t *ent)
-{
+procedure void string_command_noclip(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
 	char	*msg;
 
 	if (ent->movetype == MOVETYPE_NOCLIP)
@@ -22252,8 +22194,10 @@ void Cmd_Noclip_f (edict_t *ent)
 	PF_cprintf (ent, PRINT_HIGH, msg);
 }
 
-void Cmd_Inven_f (edict_t *ent)
-{
+procedure void string_command_inven(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
 	int			i;
 	gclient_t	*cl;
 
@@ -22277,7 +22221,11 @@ void Cmd_Inven_f (edict_t *ent)
 	PF_Unicast (ent, true);
 }
 
-procedure void Cmd_Kill_f(edict_t* ent) {
+procedure void string_command_kill(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
+
 	if((level.time - ent->client->respawn_time) < 5)
 		return;
 	ent->flags &= ~FL_GODMODE;
@@ -22285,15 +22233,13 @@ procedure void Cmd_Kill_f(edict_t* ent) {
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
-procedure void Cmd_PutAway_f(edict_t* ent) {
+procedure void string_command_putaway(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
+
 	ent->client->showhelp = false;
 	ent->client->showinventory = false;
-}
-
-procedure void Cmd_Players_f(edict_t* ent) {
-	char print_info[1280] = {};
-	Com_sprintf(print_info, sizeof(print_info), "%3i %s\n", game.client.ps.stats[STAT_FRAGS], game.client.pers.netname);
-	PF_cprintf(ent, PRINT_HIGH, "%s\n 1 player\n", print_info);
 }
 
 // Returns true if the inflictor can directly damage the target.
@@ -25049,7 +24995,7 @@ global_variable gitem_t itemlist[] = {
 	{}
 };
 
-procedure void builtin_string_command_map(void* ctx) {temp_memory_block(&context.memory.temp) {
+procedure void string_command_map(void* ctx) {temp_memory_block(&context.memory.temp) {
 	User_Args user_args = ((String_Command_Context*)ctx)->user_args;
 
 	sv.state = ss_dead;
@@ -25121,8 +25067,11 @@ procedure void builtin_string_command_map(void* ctx) {temp_memory_block(&context
 	}
 }}
 
-void SelectNextItem (edict_t *ent, int itflags)
-{
+procedure void string_command_invnext(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
+	i32 itflags = -1;
 	gclient_t	*cl;
 	int			i, index;
 	gitem_t		*it;
@@ -25148,8 +25097,11 @@ void SelectNextItem (edict_t *ent, int itflags)
 	cl->pers.selected_item = -1;
 }
 
-void SelectPrevItem (edict_t *ent, int itflags)
-{
+procedure void string_command_invprev(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
+	i32 itflags = -1;
 	gclient_t	*cl;
 	int			i, index;
 	gitem_t		*it;
@@ -25175,8 +25127,10 @@ void SelectPrevItem (edict_t *ent, int itflags)
 	cl->pers.selected_item = -1;
 }
 
-procedure void Cmd_Give_f (edict_t *ent)
-{
+procedure void string_command_give(void* ctx) {
+	UNUSED(ctx);
+	edict_t* ent = svs.client.edict;
+
 	char		*name;
 	gitem_t		*it;
 	int			index;
@@ -25340,8 +25294,10 @@ gitem_t	*GetItemByIndex (int index)
 	return &itemlist[index];
 }
 
-void Cmd_InvDrop_f (edict_t *ent)
-{
+procedure void string_command_invdrop(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
 	gitem_t		*it;
 
 	ValidateSelectedItem (ent);
@@ -25383,8 +25339,10 @@ void Cmd_WeapLast_f (edict_t *ent)
 	it->use (ent, it);
 }
 
-void Cmd_InvUse_f (edict_t *ent)
-{
+procedure void string_command_invuse(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
 	gitem_t		*it;
 
 	ValidateSelectedItem (ent);
@@ -25404,8 +25362,10 @@ void Cmd_InvUse_f (edict_t *ent)
 	it->use (ent, it);
 }
 
-void Cmd_WeapNext_f (edict_t *ent)
-{
+procedure void string_command_weapnext(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
 	gclient_t	*cl;
 	int			i, index;
 	gitem_t		*it;
@@ -25435,8 +25395,10 @@ void Cmd_WeapNext_f (edict_t *ent)
 	}
 }
 
-void Cmd_WeapPrev_f (edict_t *ent)
-{
+procedure void string_command_weapprev(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t* ent = svs.client.edict;
 	gclient_t	*cl;
 	int			i, index;
 	gitem_t		*it;
@@ -25466,8 +25428,11 @@ void Cmd_WeapPrev_f (edict_t *ent)
 	}
 }
 
-void Cmd_Use_f (edict_t *ent)
-{
+procedure void string_command_use(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
+
 	int			index;
 	gitem_t		*it;
 	char		*s;
@@ -25579,8 +25544,11 @@ procedure int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int da
 }
 
 // Drop an inventory item
-void Cmd_Drop_f (edict_t *ent)
-{
+procedure void string_command_drop(void* ctx) {
+	UNUSED(ctx);
+
+	edict_t *ent = svs.client.edict;
+
 	int			index;
 	gitem_t		*it;
 	char		*s;
@@ -25774,54 +25742,40 @@ void T_RadiusDamage (edict_t* inflictor, edict_t* attacker, float damage, edict_
 	}
 }
 
-void ClientCommand (edict_t *ent)
-{
-	char	*cmd;
+procedure void execute_string_command(String_Command_Context* ctx, String line) {
+	context.debug_log(STR("STR_EXECUTE"), line);
 
-	if (!ent->client)
-		return;		// not fully in game yet
-
-	cmd = Cmd_Argv(0);
-
-	if (Q_stricmp (cmd, "players") == 0)
-	{
-		Cmd_Players_f (ent);
-		return;
+	// NOTE Get args (first one is command name)
+	ctx->user_args.len = 0;
+	for (String left_to_process = line; left_to_process.len;) {
+		i64 consecutive_whitespaces = string_count_consecutive(left_to_process, char_is_whitespace);
+		left_to_process = string_advance_by(left_to_process, consecutive_whitespaces);
+		i64 consecutive_non_whitespaces = string_count_consecutive(left_to_process, char_is_not_whitespace);
+		left_to_process = string_advance_by(left_to_process, consecutive_non_whitespaces);
+		String word = {.ptr = left_to_process.ptr - consecutive_non_whitespaces, .len = consecutive_non_whitespaces};
+		if (word.len) {
+			append_fixed_cap(&ctx->user_args, word);
+		}
 	}
 
-	if (Q_stricmp (cmd, "help") == 0)
-	{
-		Cmd_Help_f (ent);
-		return;
+	if (ctx->user_args.len > 0) {
+		// NOTE Find the proc
+		String target_name = ctx->user_args.ptr[0];
+		bool found = false;
+		for (String_Command* cmd = ctx->builtin.ptr; !found && cmd - ctx->builtin.ptr < ctx->builtin.len; cmd++) {
+			if (streq(target_name, cmd->name)) {
+				cmd->proc(ctx);
+				found = true;
+			}
+		}
+
+		if (!found) {
+			cadd_line_to_console_log(STRS(STR("Unknown command: "), target_name));
+		}
 	}
-
-	if (level.intermissiontime)
-		return;
-
-	if (Q_stricmp (cmd, "use") == 0) Cmd_Use_f (ent);
-	else if (Q_stricmp (cmd, "drop") == 0) Cmd_Drop_f (ent);
-	else if (Q_stricmp (cmd, "give") == 0) Cmd_Give_f (ent);
-	else if (Q_stricmp (cmd, "god") == 0) Cmd_God_f (ent);
-	else if (Q_stricmp (cmd, "notarget") == 0) Cmd_Notarget_f (ent);
-	else if (Q_stricmp (cmd, "noclip") == 0) Cmd_Noclip_f (ent);
-	else if (Q_stricmp (cmd, "inven") == 0) Cmd_Inven_f (ent);
-	else if (Q_stricmp (cmd, "invnext") == 0) SelectNextItem (ent, -1);
-	else if (Q_stricmp (cmd, "invprev") == 0) SelectPrevItem (ent, -1);
-	else if (Q_stricmp (cmd, "invnextw") == 0) SelectNextItem (ent, IT_WEAPON);
-	else if (Q_stricmp (cmd, "invprevw") == 0) SelectPrevItem (ent, IT_WEAPON);
-	else if (Q_stricmp (cmd, "invnextp") == 0) SelectNextItem (ent, IT_POWERUP);
-	else if (Q_stricmp (cmd, "invprevp") == 0) SelectPrevItem (ent, IT_POWERUP);
-	else if (Q_stricmp (cmd, "invuse") == 0) Cmd_InvUse_f (ent);
-	else if (Q_stricmp (cmd, "invdrop") == 0) Cmd_InvDrop_f (ent);
-	else if (Q_stricmp (cmd, "weapnext") == 0) Cmd_WeapNext_f (ent);
-	else if (Q_stricmp (cmd, "weapprev") == 0) Cmd_WeapPrev_f (ent);
-	else if (Q_stricmp (cmd, "weaplast") == 0) Cmd_WeapLast_f (ent);
-	else if (Q_stricmp (cmd, "kill") == 0) Cmd_Kill_f (ent);
-	else if (Q_stricmp (cmd, "putaway") == 0) Cmd_PutAway_f (ent);
 }
 
-void ValidateSelectedItem (edict_t *ent)
-{
+void ValidateSelectedItem(edict_t *ent) {
 	gclient_t	*cl;
 
 	cl = ent->client;
@@ -25829,7 +25783,7 @@ void ValidateSelectedItem (edict_t *ent)
 	if (cl->pers.inventory[cl->pers.selected_item])
 		return;		// valid
 
-	SelectNextItem (ent, -1);
+	string_command_invnext(0);
 }
 
 gitem_t	*FindItem (char *pickup_name)
@@ -47351,8 +47305,10 @@ void HelpComputer (edict_t *ent)
 }
 
 // Display the current help message
-void Cmd_Help_f (edict_t *ent)
-{
+procedure void string_command_help(void* ctx) {
+	UNUSED(ctx);
+	edict_t* ent = svs.client.edict;
+
 	ent->client->showinventory = false;
 
 	if (ent->client->showhelp && (ent->client->pers.game_helpchanged == game.helpchanged))
@@ -56144,67 +56100,66 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	temp_memory_block(&context.memory.temp) {
 		struct {String_Command* ptr; i64 len; i64 cap;} temp_cmds = arena_alloc_fixed_cap(&context.memory.temp, String_Command, 1024);
 
-		// NOTE Client can execute directly
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), builtin_string_command_quit}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), builtin_string_command_write_config}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), builtin_string_command_cmdlist}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), builtin_string_command_bind}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), builtin_string_command_unbindall}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), builtin_string_command_unbind}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), builtin_string_command_bindlist}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), builtin_string_command_forward_to_server}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), builtin_string_command_map}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), builtin_string_command_toggle_console}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), builtin_string_command_menu_main}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), builtin_string_command_menu_game}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), builtin_string_command_menu_video}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), builtin_string_command_menu_options}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), builtin_string_command_menu_keys}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), builtin_string_command_menu_quit}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), bultin_string_command_precache}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("centerview"), builtin_string_command_centerview}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveup"), builtin_string_command_moveup_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveup"), builtin_string_command_moveup_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+movedown"), builtin_string_command_movedown_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-movedown"), builtin_string_command_movedown_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+left"), builtin_string_command_left_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-left"), builtin_string_command_left_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+right"), builtin_string_command_right_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-right"), builtin_string_command_right_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+forward"), builtin_string_command_forward_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-forward"), builtin_string_command_forward_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+back"), builtin_string_command_back_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-back"), builtin_string_command_back_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookup"), builtin_string_command_lookup_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookup"), builtin_string_command_lookup_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookdown"), builtin_string_command_lookdown_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookdown"), builtin_string_command_lookdown_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveleft"), builtin_string_command_moveleft_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveleft"), builtin_string_command_moveleft_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveright"), builtin_string_command_moveright_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveright"), builtin_string_command_moveright_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+speed"), builtin_string_command_speed_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-speed"), builtin_string_command_speed_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+attack"), builtin_string_command_attack_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-attack"), builtin_string_command_attack_minus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), builtin_string_command_use_plus}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), builtin_string_command_use_minus}));
-
-		// NOTE Round trip
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("use")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("drop")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("give")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("god")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("notarget")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("noclip")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("inven")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invnext")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invprev")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invuse")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("invdrop")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("weapnext")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("weapprev")}));
-		append_fixed_cap(&temp_cmds, ((String_Command){.name = STR("kill")}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("quit"), string_command_quit}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("write_config"), string_command_write_config}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmdlist"), string_command_cmdlist}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bind"), string_command_bind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbindall"), string_command_unbindall}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("unbind"), string_command_unbind}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("bindlist"), string_command_bindlist}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("cmd"), string_command_forward_to_server}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("map"), string_command_map}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("toggleconsole"), string_command_toggle_console}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_main"), string_command_menu_main}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_game"), string_command_menu_game}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_video"), string_command_menu_video}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_options"), string_command_menu_options}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_keys"), string_command_menu_keys}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("menu_quit"), string_command_menu_quit}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("precache"), string_command_precache}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("centerview"), string_command_centerview}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveup"), string_command_moveup_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveup"), string_command_moveup_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+movedown"), string_command_movedown_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-movedown"), string_command_movedown_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+left"), string_command_left_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-left"), string_command_left_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+right"), string_command_right_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-right"), string_command_right_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+forward"), string_command_forward_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-forward"), string_command_forward_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+back"), string_command_back_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-back"), string_command_back_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookup"), string_command_lookup_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookup"), string_command_lookup_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+lookdown"), string_command_lookdown_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-lookdown"), string_command_lookdown_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveleft"), string_command_moveleft_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveleft"), string_command_moveleft_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+moveright"), string_command_moveright_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-moveright"), string_command_moveright_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+speed"), string_command_speed_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-speed"), string_command_speed_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+attack"), string_command_attack_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-attack"), string_command_attack_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("+use"), string_command_use_plus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("-use"), string_command_use_minus}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("use"), string_command_use}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("drop"), string_command_drop}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("give"), string_command_give}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("god"), string_command_god}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("notarget"), string_command_notarget}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("noclip"), string_command_noclip}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("inven"), string_command_inven}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("kill"), string_command_kill}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("putaway"), string_command_putaway}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("help"), string_command_help}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invnext"), string_command_invnext}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invprev"), string_command_invprev}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invuse"), string_command_invuse}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), string_command_invdrop}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), string_command_weapnext}));
+		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), string_command_weapprev}));
 
 		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds);
 	}
