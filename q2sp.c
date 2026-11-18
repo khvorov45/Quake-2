@@ -9292,11 +9292,6 @@ void SV_Baselines_f (void)
 	}
 }
 
-/*
-==================
-SV_Begin_f
-==================
-*/
 void SV_Begin_f (void)
 {
 
@@ -56901,6 +56896,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	execute_config_string(&string_command_context, STR("config.cfg"));
 	execute_config_string(&string_command_context, STR("autoexec.cfg"));
 
+	// NOTE Server-side connection init
+	{
+		svs.client.edict = g_edicts + 1;
+		svs.client.edict->client = &game.client;
+		assert(!svs.client.edict->inuse);
+		InitClientResp(svs.client.edict->client);
+
+		assert(!game.autosaved);
+		InitClientPersistant(svs.client.edict->client);
+
+		svs.client.edict->client->pers.connected = true;
+
+		Netchan_Setup(NS_SERVER, &svs.client.netchan);
+
+		svs.client.state = cs_connected;
+		SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
+		svs.client.datagram.allowoverflow = true;
+		svs.client.lastmessage = svs.realtime;
+		svs.client.lastconnect = svs.realtime;
+	}
+
+	// NOTE Client-side connection init
+	{
+		Netchan_Setup(NS_CLIENT, &cls.netchan);
+		SV_New_f();
+		cls.state = ca_connected;
+	}
+
 	// NOTE Mainloop
 	assert(context.memory.temp.used == 0); // NOTE make sure temp wasn't used for something permanent
 	for (int oldtime = Sys_Milliseconds();;) {temp_memory_block(&context.memory.temp) {
@@ -56945,31 +56968,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			// NOTE Messages for server
 			while (NET_GetLoopPacket(NS_SERVER, &net_message)) {
-				if (*(i32*)net_message.data == Connect_Message_First_Int_Value) {
-
-					MSG_BeginReading(&net_message);
-					MSG_ReadLong(&net_message); // skip the -1 marker
-
-					svs.client.edict = g_edicts + 1;
-					svs.client.edict->client = &game.client;
-					assert(!svs.client.edict->inuse);
-					InitClientResp(svs.client.edict->client);
-					assert(!game.autosaved);
-					InitClientPersistant(svs.client.edict->client);
-
-					svs.client.edict->client->pers.connected = true;
-
-					write_connect_message(NS_SERVER);
-					Netchan_Setup(NS_SERVER, &svs.client.netchan);
-
-					svs.client.state = cs_connected;
-
-					SZ_Init(&svs.client.datagram, svs.client.datagram_buf, sizeof(svs.client.datagram_buf));
-					svs.client.datagram.allowoverflow = true;
-					svs.client.lastmessage = svs.realtime;
-					svs.client.lastconnect = svs.realtime;
-
-				} else if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
+				if (svs.client.state != cs_free && Netchan_Process(&svs.client.netchan, &net_message) && svs.client.state != cs_zombie) {
 					svs.client.lastmessage = svs.realtime;
 
 					for (bool done = false; !done;) {
@@ -56996,10 +56995,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 							case -1: done = true; break;
 							default: assert(!"unreachable"); break;
-						}
-					} // loop
-				}
-			}
+						} // switch msg type
+					} // loop msg parse server-side
+				} // if should process msg
+			} // messages for server
 
 			// move autonomous things around if enough time has passed
 			if (svs.realtime < (i32)sv.time) {
@@ -57037,20 +57036,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 			// NOTE Messages for client
 			while (NET_GetLoopPacket(NS_CLIENT, &net_message)) {
-				if (*(i32*)net_message.data == Connect_Message_First_Int_Value) {
-					// NOTE Connect message
-
-					MSG_BeginReading(&net_message);
-					MSG_ReadLong(&net_message); // skip the -1
-
-					assert(cls.state != ca_connected);
-
-					Netchan_Setup(NS_CLIENT, &cls.netchan);
-					MSG_WriteChar(&cls.netchan.message, clc_stringcmd);
-					MSG_WriteString(&cls.netchan.message, "new");
-					cls.state = ca_connected;
-
-				} else if (cls.state != ca_disconnected && cls.state != ca_connecting) {
+				if (cls.state != ca_disconnected && cls.state != ca_connecting) {
 					assert(net_message.cursize >= 8);
 					if (Netchan_Process(&cls.netchan, &net_message)) {
 						CL_ParseServerMessage();
