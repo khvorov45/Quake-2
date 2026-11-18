@@ -9142,43 +9142,6 @@ void SV_SendClientMessages() {
 	}
 }
 
-procedure void SV_New_f() {
-	int			playernum;
-	edict_t		*ent;
-
-	if (svs.client.state != cs_connected)
-	{
-		add_line_to_console_log(STR("New not valid -- already spawned"));
-		return;
-	}
-
-	// send the serverdata
-	MSG_WriteByte (&svs.client.netchan.message, svc_serverdata);
-	MSG_WriteLong (&svs.client.netchan.message, svs.spawncount);
-
-	playernum = 0;
-	MSG_WriteShort (&svs.client.netchan.message, playernum);
-
-	// send full levelname
-	MSG_WriteString (&svs.client.netchan.message, sv.configstrings[CS_NAME]);
-
-	//
-	// game server
-	//
-	if (sv.state == ss_game)
-	{
-		// set up the entity for the client
-		ent = EDICT_NUM(playernum+1);
-		ent->s.number = playernum+1;
-		svs.client.edict = ent;
-
-		// begin fetching configstrings
-		MSG_WriteByte (&svs.client.netchan.message, svc_stufftext);
-		MSG_WriteString (&svs.client.netchan.message, va("cmd configstrings %i 0\n",svs.spawncount) );
-	}
-
-}
-
 procedure void SV_Configstrings_f() {
 	int			start;
 
@@ -56884,7 +56847,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// NOTE Client-side connection init
 	{
 		Netchan_Setup(NS_CLIENT, &cls.netchan);
-		SV_New_f();
+
+		assert(svs.client.state == cs_connected);
+
+		// NOTE send the serverdata
+		MSG_WriteByte(&svs.client.netchan.message, svc_serverdata);
+		MSG_WriteLong(&svs.client.netchan.message, svs.spawncount);
+
+		MSG_WriteShort(&svs.client.netchan.message, 0);
+
+		// NOTE send full levelname
+		MSG_WriteString(&svs.client.netchan.message, sv.configstrings[CS_NAME]);
+
+		if (sv.state == ss_game) {
+			// NOTE set up the entity for the client
+			edict_t* ent = g_edicts + 1;
+			ent->s.number = 1;
+			svs.client.edict = ent;
+
+			// NOTE begin fetching configstrings
+			MSG_WriteByte(&svs.client.netchan.message, svc_stufftext);
+			MSG_WriteString(&svs.client.netchan.message, va("cmd configstrings %i 0\n",svs.spawncount) );
+		}
+
 		cls.state = ca_connected;
 	}
 
