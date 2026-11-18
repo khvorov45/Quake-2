@@ -20762,30 +20762,6 @@ procedure void S_StopAllSounds(void* data) {
 	S_ClearBuffer();
 }
 
-void S_Play(void* data)
-{
-	UNUSED(data);
-
-	int 	i;
-	char name[256];
-	sfx_t	*sfx;
-
-	i = 1;
-	while (i<cmd_argc)
-	{
-		if (!strrchr(Cmd_Argv(i), '.'))
-		{
-			strcpy(name, Cmd_Argv(i));
-			strcat(name, ".wav");
-		}
-		else
-			strcpy(name, Cmd_Argv(i));
-		sfx = S_RegisterSound(name);
-		S_StartSound(NULL, cl.playernum+1, 0, sfx, 1.0, 1.0, 0);
-		i++;
-	}
-}
-
 u8 *S_Alloc (int size);
 
 void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, u8 *data)
@@ -56241,7 +56217,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("invdrop"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapnext"), NULL}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("weapprev"), NULL}));
-		append_fixed_cap(&temp_cmds, ((String_Command){STR("play"), S_Play}));
 		append_fixed_cap(&temp_cmds, ((String_Command){STR("stopsound"), S_StopAllSounds}));
 
 		copy_slice(&context.memory.perm, &string_command_context.builtin, &temp_cmds);
