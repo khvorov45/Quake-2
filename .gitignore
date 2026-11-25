@@ -8,3 +8,4 @@ build.bat
 .github
 *temp*
 *codeql*
+build

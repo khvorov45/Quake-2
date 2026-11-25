@@ -65,6 +65,7 @@ typedef struct {
 	i64 width;
 	i64 height;
 } Texture;
+typedef struct {bool found; Texture texture;} Maybe_Texture;
 
 typedef struct {
 	u8_Slice raw;
@@ -79,7 +80,7 @@ typedef struct {bool found; Sound sound;} Maybe_Sound;
 typedef void (*Exit_Process_Proc)(void);
 typedef void (*Write_Config_String_Proc)(String text);
 typedef void (*Debug_Log_Proc)(String prefix, String text);
-typedef Texture (*Load_Texture_Proc)(String name);
+typedef Maybe_Texture (*Maybe_Load_Texture_Proc)(String name);
 typedef Maybe_Model (*Maybe_Load_Model_Proc)(String name);
 typedef Maybe_Sound (*Maybe_Load_Sound_Proc)(String name);
 typedef Maybe_String (*Maybe_Load_Config_String_Proc)(String name);
@@ -92,7 +93,7 @@ global_variable struct {
 	Exit_Process_Proc exit_process;
 	Write_Config_String_Proc write_config_string;
 	Debug_Log_Proc debug_log;
-	Load_Texture_Proc load_texture;
+	Maybe_Load_Texture_Proc maybe_load_texture;
 	Maybe_Load_Model_Proc maybe_load_model;
 	Maybe_Load_Sound_Proc maybe_load_sound;
 	Maybe_Load_Config_String_Proc maybe_load_config_string;
@@ -3653,7 +3654,7 @@ global_variable int				numnodes;
 global_variable cnode_t			map_nodes[MAX_MAP_NODES+6];		// extra for box hull
 global_variable int				numleafs = 1;					// allow leaf funcs to be called without a map
 global_variable cleaf_t			map_leafs[MAX_MAP_LEAFS];
-global_variable int				emptyleaf, solidleaf;
+global_variable int				emptyleaf;
 global_variable int				numleafbrushes;
 global_variable unsigned short	map_leafbrushes[MAX_MAP_LEAFBRUSHES];
 global_variable int				numcmodels;
@@ -3662,7 +3663,6 @@ global_variable cbrush_t			map_brushes[MAX_MAP_BRUSHES];
 global_variable int				numvisibility;
 global_variable u8				map_visibility[MAX_MAP_VISIBILITY];
 global_variable dvis_t			*map_vis = (dvis_t *)map_visibility;
-global_variable int				numentitychars;
 global_variable char				map_entitystring[MAX_MAP_ENTSTRING];
 global_variable int				numareas = 1;
 global_variable carea_t			map_areas[MAX_MAP_AREAS];
@@ -3879,7 +3879,6 @@ void CMod_LoadLeafs (lump_t *l)
 	}
 
 	assert(map_leafs[0].contents == CONTENTS_SOLID);
-	solidleaf = 0;
 	emptyleaf = -1;
 	for (i=1 ; i<numleafs ; i++)
 	{
@@ -4042,7 +4041,6 @@ void CMod_LoadVisibility (lump_t *l)
 
 void CMod_LoadEntityString (lump_t *l)
 {
-	numentitychars = l->filelen;
 	assert(l->filelen <= MAX_MAP_ENTSTRING);
 	memcpy (map_entitystring, cmod_base + l->fileofs, l->filelen);
 }
@@ -4065,7 +4063,6 @@ procedure cmodel_t* CM_LoadMap(char* name, bool clientload, unsigned* checksum) 
 	numleafs = 0;
 	numcmodels = 0;
 	numvisibility = 0;
-	numentitychars = 0;
 	map_entitystring[0] = 0;
 	map_name[0] = 0;
 
@@ -13906,10 +13903,6 @@ void SCR_BeginLoadingPlaque();
 
 global_variable int precache_check; // for autodownload of precache items
 global_variable int precache_spawncount;
-global_variable int precache_tex;
-global_variable int precache_model_skin;
-
-global_variable u8 *precache_model; // used for skin checking in alias models
 
 #define PLAYER_MULT 5
 
@@ -13924,8 +13917,6 @@ procedure void string_command_precache(String_Command_Context* ctx) {
 
 	precache_check = CS_MODELS;
 	precache_spawncount = int_from_string(user_args.ptr[1]);
-	precache_model = 0;
-	precache_model_skin = 0;
 
 	if (cls.state == ca_connected) {
 		if (precache_check < ENV_CNT) {
@@ -13972,7 +13963,6 @@ procedure void string_command_precache(String_Command_Context* ctx) {
 
 		if (precache_check == TEXTURE_CNT) {
 			precache_check = TEXTURE_CNT+1;
-			precache_tex = 0;
 		}
 
 		// confirm existance of textures, download any that don't exist
@@ -15562,10 +15552,8 @@ typedef struct
 void Draw_Fill (int x, int y, int w, int h, int c);
 
 global_variable char		scr_centerstring[1024];
-global_variable float		scr_centertime_start;	// for slow victory printing
 global_variable float		scr_centertime_off;
 global_variable int			scr_center_lines;
-global_variable int			scr_erase_center;
 
 // Called for important messages that should stay in the center of the screen for a few moments
 void SCR_CenterPrint (char *str)
@@ -15576,7 +15564,6 @@ void SCR_CenterPrint (char *str)
 
 	strncpy (scr_centerstring, str, sizeof(scr_centerstring)-1);
 	scr_centertime_off = 2.5f;
-	scr_centertime_start = cl.time;
 
 	// count the number of lines for centering
 	scr_center_lines = 1;
@@ -15628,7 +15615,6 @@ void SCR_DrawCenterString (void)
 // the finale prints the characters one at a time
 	remaining = 9999;
 
-	scr_erase_center = 0;
 	start = scr_centerstring;
 
 	if (scr_center_lines <= 4)
@@ -16457,7 +16443,6 @@ global_variable struct model_s	*cl_mod_explode;
 global_variable struct model_s	*cl_mod_flash;
 global_variable struct model_s	*cl_mod_parasite_segment;
 global_variable struct model_s	*cl_mod_grapple_cable;
-global_variable struct model_s	*cl_mod_parasite_tip;
 global_variable struct model_s	*cl_mod_explo4;
 global_variable struct model_s	*cl_mod_bfg_explo;
 
@@ -16524,7 +16509,6 @@ void CL_RegisterTEntModels (void)
 	cl_mod_flash = R_RegisterModel ("models/objects/flash/tris.md2");
 	cl_mod_parasite_segment = R_RegisterModel ("models/monsters/parasite/segment/tris.md2");
 	cl_mod_grapple_cable = R_RegisterModel ("models/ctf/segment/tris.md2");
-	cl_mod_parasite_tip = R_RegisterModel ("models/monsters/parasite/tip/tris.md2");
 	cl_mod_explo4 = R_RegisterModel ("models/objects/r_explode/tris.md2");
 	cl_mod_bfg_explo = R_RegisterModel ("sprites/s_bfg2.sp2");
 	cl_mod_powerscreen = R_RegisterModel ("models/items/armor/effect/tris.md2");
@@ -18940,8 +18924,6 @@ global_variable menuaction_s		s_keys_inv_prev_action;
 global_variable menuaction_s		s_keys_inv_next_action;
 global_variable menuaction_s		s_keys_help_computer_action;
 
-global_variable int m_game_cursor;
-
 global_variable menuframework_s	s_game_menu;
 global_variable menuaction_s		s_easy_game_action;
 global_variable menuaction_s		s_medium_game_action;
@@ -19780,7 +19762,6 @@ procedure void string_command_menu_game(String_Command_Context* data) {
 	UNUSED(data);
 	Game_MenuInit();
 	M_PushMenu(Game_MenuDraw, Game_MenuKey);
-	m_game_cursor = 1;
 }
 
 procedure char * M_Quit_Key(int key) {
@@ -20146,21 +20127,10 @@ sfx_t *S_RegisterSound (char *name)
 	return sfx;
 }
 
-/*
-=====================
-S_EndRegistration
-
-=====================
-*/
-
-// written by the sound paging loop to keep the reads alive, never read
-global_variable int paged_total;
-
 void S_EndRegistration (void)
 {
 	int		i;
 	sfx_t	*sfx;
-	int		size;
 
 	// free any sounds not from this registration sequence
 	for (i=0, sfx=known_sfx ; i < num_sfx ; i++,sfx++)
@@ -20172,16 +20142,6 @@ void S_EndRegistration (void)
 			if (sfx->cache)	// it is possible to have a leftover
 				tml_free (sfx->cache);	// from a server that didn't finish loading
 			memset (sfx, 0, sizeof(*sfx));
-		}
-		else
-		{	// make sure it is paged in
-			if (sfx->cache)
-			{
-				size = sfx->cache->length*sfx->cache->width;
-				for (int j = size-1 ; j>0 ; j-=4096) {
-					paged_total += ((u8*)sfx->cache)[j];
-				}
-			}
 		}
 	}
 
@@ -21070,7 +21030,6 @@ bool FindTarget (edict_t* self);
 procedure bool ai_checkattack(edict_t* self);
 
 global_variable bool	enemy_vis;
-global_variable bool	enemy_infront;
 global_variable int			enemy_range;
 global_variable float		enemy_yaw;
 
@@ -21862,7 +21821,6 @@ procedure bool ai_checkattack(edict_t* self) {
 		VectorCopy (self->enemy->s.origin, self->monsterinfo.last_sighting);
 	}
 
-	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -34980,7 +34938,6 @@ global_variable int	jorg_sound_search2;
 global_variable int	jorg_sound_search3;
 global_variable int	jorg_sound_attack1;
 global_variable int	jorg_sound_attack2;
-global_variable int	jorg_sound_firegun;
 global_variable int	jorg_sound_step_left;
 global_variable int	jorg_sound_step_right;
 global_variable int	jorg_sound_death_hit;
@@ -35574,7 +35531,6 @@ void SP_monster_jorg (edict_t* self)
 	jorg_sound_idle = SV_SoundIndex ("boss3/bs3idle1.wav");
 	jorg_sound_step_left = SV_SoundIndex ("boss3/step1.wav");
 	jorg_sound_step_right = SV_SoundIndex ("boss3/step2.wav");
-	jorg_sound_firegun = SV_SoundIndex ("boss3/xfire.wav");
 	jorg_sound_death_hit = SV_SoundIndex ("boss3/d_hit.wav");
 
 	MakronPrecache ();
@@ -36445,11 +36401,8 @@ brain
 // G:\quake2\baseq2\models/monsters/brain
 
 global_variable int	brain_sound_chest_open;
-global_variable int	brain_sound_tentacles_extend;
 global_variable int	brain_sound_tentacles_retract;
 global_variable int	brain_sound_death;
-global_variable int	brain_sound_idle1;
-global_variable int	brain_sound_idle2;
 global_variable int	brain_sound_idle3;
 global_variable int	brain_sound_pain1;
 global_variable int	brain_sound_pain2;
@@ -36950,11 +36903,8 @@ procedure void brain_die (edict_t* self, edict_t* inflictor, edict_t* attacker, 
 void SP_monster_brain (edict_t* self)
 {
 	brain_sound_chest_open = SV_SoundIndex ("brain/brnatck1.wav");
-	brain_sound_tentacles_extend = SV_SoundIndex ("brain/brnatck2.wav");
 	brain_sound_tentacles_retract = SV_SoundIndex ("brain/brnatck3.wav");
 	brain_sound_death = SV_SoundIndex ("brain/brndeth1.wav");
-	brain_sound_idle1 = SV_SoundIndex ("brain/brnidle1.wav");
-	brain_sound_idle2 = SV_SoundIndex ("brain/brnidle2.wav");
 	brain_sound_idle3 = SV_SoundIndex ("brain/brnlens1.wav");
 	brain_sound_pain1 = SV_SoundIndex ("brain/brnpain1.wav");
 	brain_sound_pain2 = SV_SoundIndex ("brain/brnpain2.wav");
@@ -37016,20 +36966,16 @@ void chick_rerocket(edict_t* self);
 void chick_attack1(edict_t* self);
 
 global_variable int	chick_sound_missile_prelaunch;
-global_variable int	chick_sound_missile_launch;
 global_variable int	chick_sound_melee_swing;
-global_variable int	chick_sound_melee_hit;
 global_variable int	chick_sound_missile_reload;
 global_variable int	chick_sound_death1;
 global_variable int	chick_sound_death2;
-global_variable int	chick_sound_fall_down;
 global_variable int	chick_sound_idle1;
 global_variable int	chick_sound_idle2;
 global_variable int	chick_sound_pain1;
 global_variable int	chick_sound_pain2;
 global_variable int	chick_sound_pain3;
 global_variable int	chick_sound_sight;
-global_variable int	chick_sound_search;
 
 void ChickMoan (edict_t* self)
 {
@@ -37600,20 +37546,16 @@ procedure void chick_sight(edict_t* self, edict_t* other) {
 void SP_monster_chick (edict_t* self)
 {
 	chick_sound_missile_prelaunch	= SV_SoundIndex ("chick/chkatck1.wav");
-	chick_sound_missile_launch	= SV_SoundIndex ("chick/chkatck2.wav");
 	chick_sound_melee_swing		= SV_SoundIndex ("chick/chkatck3.wav");
-	chick_sound_melee_hit			= SV_SoundIndex ("chick/chkatck4.wav");
 	chick_sound_missile_reload	= SV_SoundIndex ("chick/chkatck5.wav");
 	chick_sound_death1			= SV_SoundIndex ("chick/chkdeth1.wav");
 	chick_sound_death2			= SV_SoundIndex ("chick/chkdeth2.wav");
-	chick_sound_fall_down			= SV_SoundIndex ("chick/chkfall1.wav");
 	chick_sound_idle1				= SV_SoundIndex ("chick/chkidle1.wav");
 	chick_sound_idle2				= SV_SoundIndex ("chick/chkidle2.wav");
 	chick_sound_pain1				= SV_SoundIndex ("chick/chkpain1.wav");
 	chick_sound_pain2				= SV_SoundIndex ("chick/chkpain2.wav");
 	chick_sound_pain3				= SV_SoundIndex ("chick/chkpain3.wav");
 	chick_sound_sight				= SV_SoundIndex ("chick/chksght1.wav");
-	chick_sound_search			= SV_SoundIndex ("chick/chksrch1.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -37655,12 +37597,9 @@ FLIPPER
 // G:\quake2\baseq2\models/monsters/flipper
 
 global_variable int	flipper_sound_chomp;
-global_variable int	flipper_sound_attack;
 global_variable int	flipper_sound_pain1;
 global_variable int	flipper_sound_pain2;
 global_variable int	flipper_sound_death;
-global_variable int	flipper_sound_idle;
-global_variable int	flipper_sound_search;
 global_variable int	flipper_sound_sight;
 
 void flipper_stand (edict_t* self);
@@ -37990,9 +37929,6 @@ void SP_monster_flipper (edict_t* self)
 	flipper_sound_pain2		= SV_SoundIndex ("flipper/flppain2.wav");
 	flipper_sound_death		= SV_SoundIndex ("flipper/flpdeth1.wav");
 	flipper_sound_chomp		= SV_SoundIndex ("flipper/flpatck1.wav");
-	flipper_sound_attack	= SV_SoundIndex ("flipper/flpatck2.wav");
-	flipper_sound_idle		= SV_SoundIndex ("flipper/flpidle1.wav");
-	flipper_sound_search	= SV_SoundIndex ("flipper/flpsrch1.wav");
 	flipper_sound_sight		= SV_SoundIndex ("flipper/flpsght1.wav");
 
 	self->movetype = MOVETYPE_STEP;
@@ -40533,12 +40469,10 @@ global_variable int	infantry_sound_pain1;
 global_variable int	infantry_sound_pain2;
 global_variable int	infantry_sound_die1;
 global_variable int	infantry_sound_die2;
-global_variable int	infantry_sound_gunshot;
 global_variable int	infantry_sound_weapon_cock;
 global_variable int	infantry_sound_punch_swing;
 global_variable int	infantry_sound_punch_hit;
 global_variable int	infantry_sound_sight;
-global_variable int	infantry_sound_search;
 global_variable int	infantry_sound_idle;
 
 global_variable mframe_t infantry_frames_stand [] =
@@ -41049,12 +40983,10 @@ void SP_monster_infantry (edict_t* self)
 	infantry_sound_pain2 = SV_SoundIndex ("infantry/infpain2.wav");
 	infantry_sound_die1 = SV_SoundIndex ("infantry/infdeth1.wav");
 	infantry_sound_die2 = SV_SoundIndex ("infantry/infdeth2.wav");
-	infantry_sound_gunshot = SV_SoundIndex ("infantry/infatck1.wav");
 	infantry_sound_weapon_cock = SV_SoundIndex ("infantry/infatck3.wav");
 	infantry_sound_punch_swing = SV_SoundIndex ("infantry/infatck2.wav");
 	infantry_sound_punch_hit = SV_SoundIndex ("infantry/melee2.wav");
 	infantry_sound_sight = SV_SoundIndex ("infantry/infsght1.wav");
-	infantry_sound_search = SV_SoundIndex ("infantry/infsrch1.wav");
 	infantry_sound_idle = SV_SoundIndex ("infantry/infidle1.wav");
 
 	self->movetype = MOVETYPE_STEP;
@@ -42485,17 +42417,6 @@ void SP_monster_medic (edict_t* self)
 
 #define	STEPSIZE	18
 
-/*
-=============
-M_CheckBottom
-
-Returns false if any part of the bottom of the entity is off an edge that
-is not a staircase.
-
-=============
-*/
-global_variable int c_yes, c_no;
-
 bool M_CheckBottom (edict_t *ent)
 {
 	vec3_t	mins, maxs, start, stop;
@@ -42519,11 +42440,9 @@ bool M_CheckBottom (edict_t *ent)
 				goto realcheck;
 		}
 
-	c_yes++;
 	return true;		// we got out easy
 
 realcheck:
-	c_no++;
 //
 // check it for real...
 //
@@ -42554,7 +42473,6 @@ realcheck:
 				return false;
 		}
 
-	c_yes++;
 	return true;
 }
 
@@ -49963,10 +49881,13 @@ procedure image_t* GL_FindImage(char* name, imagetype_t type) {
 			bool is_wal = string_ends_with(name_str, STR(".wal"));
 			bool is_tga = string_ends_with(name_str, STR(".tga"));
 			if (is_pcx || is_wal || is_tga) {
-				Texture texture = context.load_texture(name_str);
-				imagetype_t actual_type = is_wal ? it_wall : type;
-				int bits = is_tga ? 32 : 8;
-				target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, actual_type, bits);
+				Maybe_Texture maybe_texture = context.maybe_load_texture(name_str);
+				if (maybe_texture.found) {
+					Texture texture = maybe_texture.texture;
+					imagetype_t actual_type = is_wal ? it_wall : type;
+					int bits = is_tga ? 32 : 8;
+					target_image = GL_LoadPic(name, texture.pixels, texture.width, texture.height, actual_type, bits);
+				}
 			}
 		}
 	}
@@ -50249,11 +50170,8 @@ int Scrap_AllocBlock (int w, int h, int *x, int *y)
 	return -1;
 }
 
-global_variable int	scrap_uploads;
-
 void Scrap_Upload (void)
 {
-	scrap_uploads++;
 	GL_Bind(TEXNUM_SCRAPS);
 	GL_Upload8 (scrap_texels[0], BLOCK_WIDTH, BLOCK_HEIGHT, false);
 	scrap_dirty = false;
@@ -50786,7 +50704,6 @@ LIGHT SAMPLING
 */
 
 global_variable vec3_t			pointcolor;
-global_variable cplane_t		*lightplane;		// used as shadow plane
 global_variable vec3_t			lightspot;
 
 int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
@@ -50832,7 +50749,6 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 
 // check for impact on this node
 	VectorCopy (mid, lightspot);
-	lightplane = plane;
 
 	surf = r_worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
@@ -52319,11 +52235,6 @@ void Mod_LoadEdges (lump_t *l)
 	}
 }
 
-/*
-=================
-Mod_LoadTexinfo
-=================
-*/
 void Mod_LoadTexinfo (lump_t *l)
 {
 	texinfo_t *in;
@@ -52354,7 +52265,9 @@ void Mod_LoadTexinfo (lump_t *l)
 		Com_sprintf (name, sizeof(name), "textures/%s.wal", in->texture);
 
 		out->image = GL_FindImage(name, it_wall);
-		assert(out->image);
+		if (!out->image) {
+			out->image = r_notexture;
+		}
 	}
 
 	// count animation frames
@@ -55206,9 +55119,7 @@ global_variable bool in_appactive;
 global_variable int			mouse_buttons;
 global_variable int			mouse_oldbuttonstate;
 global_variable POINT		current_pos;
-global_variable int			mouse_x, mouse_y, mx_accum, my_accum;
-
-global_variable int			old_x, old_y;
+global_variable int			mouse_x, mouse_y;
 
 global_variable bool	mouseactive;	// false when not focus app
 
@@ -55250,9 +55161,6 @@ void IN_ActivateMouse (void)
 	window_center_y = (window_rect.top + window_rect.bottom)/2;
 
 	SetCursorPos (window_center_x, window_center_y);
-
-	old_x = window_center_x;
-	old_y = window_center_y;
 
 	SetCapture ( cl_hwnd );
 	ClipCursor (&window_rect);
@@ -55316,8 +55224,6 @@ void IN_Activate(bool active) {
 
 void IN_ClearStates (void)
 {
-	mx_accum = 0;
-	my_accum = 0;
 	mouse_oldbuttonstate = 0;
 }
 
@@ -55867,10 +55773,9 @@ procedure Maybe_Asset windows_maybe_find_asset(String target_name, Asset_Categor
 	return result;
 }
 
-procedure Texture windows_load_texture(String name) {
+procedure Maybe_Texture windows_maybe_load_texture(String name) {
 	Maybe_Asset find_result = windows_maybe_find_asset(name, Asset_Category_Texture);
-	assert(find_result.found);
-	Texture result = find_result.asset->texture;
+	Maybe_Texture result = {find_result.found, find_result.asset->texture};
 	return result;
 }
 
@@ -55920,7 +55825,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		context.exit_process = windows_exit_process;
 		context.write_config_string = windows_write_config_string;
 		context.debug_log = windows_debug_log;
-		context.load_texture = windows_load_texture;
+		context.maybe_load_texture = windows_maybe_load_texture;
 		context.maybe_load_model = windows_maybe_load_model;
 		context.maybe_load_sound = windows_maybe_load_sound;
 		context.maybe_load_config_string = windows_maybe_load_config_string;
@@ -56121,7 +56026,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		typedef struct {Windows_Pak_File_Entry* ptr; i64 len;} Windows_Pak_File_Entries;
 
 		// NOTE Load pre-existing pak files
-		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("baseq2/pak3.pak"), STR("loose_files")); // NOTE All names need to live forever
+		String_Slice preexisting_pak_paths = STRS(STR("baseq2/pak0.pak"), STR("baseq2/pak1.pak"), STR("baseq2/pak2.pak"), STR("loose_files")); // NOTE All names need to live forever
 		Windows_Pak_File_Entries paks = (Windows_Pak_File_Entries)arena_alloc_slice(&context.memory.temp, Windows_Pak_File_Entry, preexisting_pak_paths.len);
 		for (i64 ind = 0; ind < preexisting_pak_paths.len - 1; ind++) {
 			String file_path = preexisting_pak_paths.ptr[ind];
@@ -56142,14 +56047,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// NOTE Create a fake pak in-memory from the loose files
 		String_Slice loose_files_dir_paths = STRS(
 			STR("baseq2/*"),
-			STR("baseq2/maps/*"),
-			STR("baseq2/music/*"),
 			STR("baseq2/players/crakhor/*"),
 			STR("baseq2/players/cyborg/*"),
 			STR("baseq2/players/female/*"),
-			STR("baseq2/players/homer/*"),
 			STR("baseq2/players/male/*"),
-			STR("baseq2/players/zumlin/*"),
 		);
 		Windows_Pak_File_Entry* loose_files_pak = paks.ptr + paks.len - 1;
 		loose_files_pak->whole_file = (u8_Slice)arena_alloc_slice(&context.memory.temp, u8, 500 * Megabyte);
